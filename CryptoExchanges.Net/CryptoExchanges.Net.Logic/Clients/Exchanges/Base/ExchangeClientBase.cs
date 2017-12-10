@@ -1,11 +1,7 @@
 ﻿using CryptoExchanges.Net.Domain.Clients;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using CryptoExchanges.Net.Domain.Enums;
 
-namespace CryptoExchanges.Net.Logic.Clients.Base
+namespace CryptoExchanges.Net.Logic.Clients.Exchanges.Base
 {
     /// <summary>
     /// 

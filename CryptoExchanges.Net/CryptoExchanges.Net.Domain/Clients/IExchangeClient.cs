@@ -4,8 +4,6 @@ using CryptoExchanges.Net.Models.Account;
 using CryptoExchanges.Net.Models.Market;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace CryptoExchanges.Net.Domain.Clients
@@ -15,33 +13,6 @@ namespace CryptoExchanges.Net.Domain.Clients
     /// </summary>
     public interface IExchangeClient
     {
-        #region Properties
-        /// <summary>
-        /// Represents the key that identifies the Exchange
-        /// </summary>
-        ExchangeName Key { get; set; }
-
-        /// <summary>
-        /// Represents the Name of the Exchange
-        /// </summary>
-        string Name { get; set; }
-
-        /// <summary>
-        /// Represents the URL of the Exchange
-        /// </summary>
-        string Url { get; set; }
-
-        /// <summary>
-        /// Key used to authenticate within the API.
-        /// </summary>
-        string ApiKey { get; set; }
-
-        /// <summary>
-        /// API secret used to signed API calls.
-        /// </summary>
-        string ApiSecret { get; set; }
-        #endregion
-
         #region Market Data Methods
         /// <summary>
         /// Get order book for a particular symbol.

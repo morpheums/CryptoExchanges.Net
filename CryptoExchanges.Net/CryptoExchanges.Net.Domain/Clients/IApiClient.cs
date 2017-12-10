@@ -1,8 +1,5 @@
 ﻿using CryptoExchanges.Net.Domain.Enums;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+using CryptoExchanges.Net.Domain.Exchanges;
 using System.Threading.Tasks;
 
 namespace CryptoExchanges.Net.Domain.Clients

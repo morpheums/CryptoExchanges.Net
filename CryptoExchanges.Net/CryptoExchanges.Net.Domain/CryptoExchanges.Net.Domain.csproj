@@ -40,9 +40,9 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="CustomParsers\IBinanceCustomParser.cs" />
     <Compile Include="Enums\ApiMethod.cs" />
     <Compile Include="Enums\DepositStatus.cs" />
-    <Compile Include="Enums\ExchangeName.cs" />
     <Compile Include="Enums\OrderSide.cs" />
     <Compile Include="Enums\OrderType.cs" />
     <Compile Include="Enums\TimeInForce.cs" />
@@ -50,6 +50,9 @@
     <Compile Include="Enums\WithdrawStatus.cs" />
     <Compile Include="Clients\IApiClient.cs" />
     <Compile Include="Clients\IExchangeClient.cs" />
+    <Compile Include="ExchangesConfiguration\IExchange.cs" />
+    <Compile Include="ExchangesConfiguration\IExchangeConfiguration.cs" />
+    <Compile Include="Resolvers\IExchangeResolver.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
@@ -58,5 +61,6 @@
       <Name>CryptoExchanges.Net.Models</Name>
     </ProjectReference>
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

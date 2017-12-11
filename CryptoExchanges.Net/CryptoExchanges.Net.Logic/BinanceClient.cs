@@ -1,34 +1,83 @@
-﻿using CryptoExchanges.Net.Domain.Clients;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using CryptoExchanges.Net.Domain.Enums;
 using CryptoExchanges.Net.Enums;
 using CryptoExchanges.Net.Models.Account;
 using CryptoExchanges.Net.Models.Market;
-using CryptoExchanges.Net.Logic.Clients.Exchanges.Base;
-using CryptoExchanges.Net.Logic.CustomParsers;
+using CryptoExchanges.Net.Binance.CustomParsers;
+using CryptoExchanges.Net.Binance.Utils;
+using CryptoExchanges.Net.Domain;
+using CryptoExchanges.Net.Binance.Clients.API;
 using CryptoExchanges.Net.Logic.Utils;
-using CryptoExchanges.Net.Domain.CustomParsers;
 
-namespace CryptoExchanges.Net.Logic.Clients.Exchanges
+namespace CryptoExchanges.Net.Binance
 {
-    public class BinanceClient : ExchangeClientBase, IExchangeClient
+    public class BinanceClient : IExchangeClient
     {
+        #region Variables
+        /// <summary>
+        /// 
+        /// </summary>
+        private string _apiKey;
+        /// <summary>
+        /// 
+        /// </summary>
+        private string _apiSecret;
+        /// <summary>
+        /// Client to be used to call the API.
+        /// </summary>
+        public readonly IBinanceApiHelper _apiClient;
+        /// <summary>
+        /// 
+        /// </summary>
+        private IBinanceCustomParser _binanceCustomParser;
+        #endregion
+
         #region Properties
-        private IBinanceCustomParser _binanceCustomParser { get; set; }
-        private readonly string _exchangeKey;
+        /// <summary>
+        /// Represents the key that identifies the Exchange.
+        /// </summary>
+        public string Key => "Binance";
+
+        /// <summary>
+        /// Represents the Name of the Exchange.
+        /// </summary>
+        public string Name => "Binance Exchange";
+
+        /// <summary>
+        /// Represents the URL of the API.
+        /// </summary>
+        public string Url => "https://www.binance.com";
+
+        /// <summary>
+        /// States if the credentials (Key and Secret) were provided.
+        /// </summary>
+        public bool HasCredentials => !(string.IsNullOrWhiteSpace(_apiKey) && string.IsNullOrWhiteSpace(_apiSecret));
         #endregion
 
         /// <summary>
         /// ctor.
         /// </summary>
         /// <param name="apiClient">API client to be used for API calls.</param>
-        public BinanceClient(IApiClient apiClient, IBinanceCustomParser binanceCustomParser) : base(apiClient)
+        public BinanceClient(IBinanceApiHelper apiClient, IBinanceCustomParser binanceCustomParser)
         {
-            _exchangeKey = "Binance";
             _binanceCustomParser = binanceCustomParser;
+            _apiClient = apiClient;
         }
+
+        #region Methods
+        /// <summary>
+        /// Sets the credentials (Key & Secret) to be used for calls to the exchange API.
+        /// </summary>
+        /// <param name="apiKey">Key to be used to authenticate within the exchange.</param>
+        /// <param name="apiSecret">Secret to be used to authenticate within the exchange.</param>
+        public void SetCredentials(string apiKey, string apiSecret)
+        {
+            _apiKey = apiKey;
+            _apiSecret = apiSecret;
+        }
+        #endregion
 
         #region Market Data
         /// <summary>
@@ -44,7 +93,7 @@ namespace CryptoExchanges.Net.Logic.Clients.Exchanges
                 throw new ArgumentException("symbol cannot be empty. ", "symbol");
             }
 
-            var result = await _apiClient.CallAsync<dynamic>(ApiMethod.GET,Endpoints.OrderBook, false, $"symbol={symbol.ToUpper()}&limit={limit}");
+            var result = await _apiClient.CallAsync<dynamic>(ApiMethod.GET, Endpoints.OrderBook, false, $"symbol={symbol.ToUpper()}&limit={limit}");
 
             return _binanceCustomParser.GetParsedOrderBook(result);
         }
@@ -62,7 +111,7 @@ namespace CryptoExchanges.Net.Logic.Clients.Exchanges
                 throw new ArgumentException("symbol cannot be empty. ", "symbol");
             }
 
-            var result = await _apiClient.CallAsync<IEnumerable<AggregateTrade>>(ApiMethod.GET,Endpoints.AggregateTrades, false, $"symbol={symbol.ToUpper()}&limit={limit}");
+            var result = await _apiClient.CallAsync<IEnumerable<AggregateTrade>>(ApiMethod.GET, Endpoints.AggregateTrades, false, $"symbol={symbol.ToUpper()}&limit={limit}");
 
             return result;
         }
@@ -81,7 +130,7 @@ namespace CryptoExchanges.Net.Logic.Clients.Exchanges
                 throw new ArgumentException("symbol cannot be empty. ", "symbol");
             }
 
-            var result = await _apiClient.CallAsync<dynamic>(ApiMethod.GET,Endpoints.Candlesticks, false, $"symbol={symbol.ToUpper()}&interval={interval.GetDescription()}&limit={limit}");
+            var result = await _apiClient.CallAsync<dynamic>(ApiMethod.GET, Endpoints.Candlesticks, false, $"symbol={symbol.ToUpper()}&interval={interval.GetDescription()}&limit={limit}");
 
             return _binanceCustomParser.GetParsedCandlestick(result);
         }
@@ -98,7 +147,7 @@ namespace CryptoExchanges.Net.Logic.Clients.Exchanges
                 throw new ArgumentException("symbol cannot be empty. ", "symbol");
             }
 
-            var result = await _apiClient.CallAsync<PriceChangeInfo>(ApiMethod.GET,Endpoints.TickerPriceChange24H, false, $"symbol={symbol.ToUpper()}");
+            var result = await _apiClient.CallAsync<PriceChangeInfo>(ApiMethod.GET, Endpoints.TickerPriceChange24H, false, $"symbol={symbol.ToUpper()}");
 
             return result;
         }
@@ -109,7 +158,7 @@ namespace CryptoExchanges.Net.Logic.Clients.Exchanges
         /// <returns></returns>
         public async Task<IEnumerable<SymbolPrice>> GetAllPrices()
         {
-            var result = await _apiClient.CallAsync<IEnumerable<SymbolPrice>>(ApiMethod.GET,Endpoints.AllPrices, false);
+            var result = await _apiClient.CallAsync<IEnumerable<SymbolPrice>>(ApiMethod.GET, Endpoints.AllPrices, false);
 
             return result;
         }
@@ -120,7 +169,7 @@ namespace CryptoExchanges.Net.Logic.Clients.Exchanges
         /// <returns></returns>
         public async Task<IEnumerable<OrderBookTicker>> GetOrderBookTicker()
         {
-            var result = await _apiClient.CallAsync<IEnumerable<OrderBookTicker>>(ApiMethod.GET,Endpoints.OrderBookTicker, false);
+            var result = await _apiClient.CallAsync<IEnumerable<OrderBookTicker>>(ApiMethod.GET, Endpoints.OrderBookTicker, false);
 
             return result;
         }
@@ -148,7 +197,7 @@ namespace CryptoExchanges.Net.Logic.Clients.Exchanges
                 + (orderType == OrderType.LIMIT ? $"&price={price}" : "")
                 + (icebergQty > 0m ? $"&icebergQty={icebergQty}" : "")
                 + $"&recvWindow={recvWindow}";
-            var result = await _apiClient.CallAsync<NewOrder>(ApiMethod.POST,Endpoints.NewOrder, true, args);
+            var result = await _apiClient.CallAsync<NewOrder>(ApiMethod.POST, Endpoints.NewOrder, true, args);
 
             return result;
         }
@@ -174,7 +223,7 @@ namespace CryptoExchanges.Net.Logic.Clients.Exchanges
                 + (orderType == OrderType.LIMIT ? $"&price={price}" : "")
                 + (icebergQty > 0m ? $"&icebergQty={icebergQty}" : "")
                 + $"&recvWindow={recvWindow}";
-            var result = await _apiClient.CallAsync<dynamic>(ApiMethod.POST,Endpoints.NewOrderTest, true, args);
+            var result = await _apiClient.CallAsync<dynamic>(ApiMethod.POST, Endpoints.NewOrderTest, true, args);
 
             return result;
         }
@@ -209,7 +258,7 @@ namespace CryptoExchanges.Net.Logic.Clients.Exchanges
                 throw new ArgumentException("Either orderId or origClientOrderId must be sent.");
             }
 
-            var result = await _apiClient.CallAsync<Order>(ApiMethod.GET,Endpoints.QueryOrder, true, args);
+            var result = await _apiClient.CallAsync<Order>(ApiMethod.GET, Endpoints.QueryOrder, true, args);
 
             return result;
         }
@@ -244,7 +293,7 @@ namespace CryptoExchanges.Net.Logic.Clients.Exchanges
                 throw new ArgumentException("Either orderId or origClientOrderId must be sent.");
             }
 
-            var result = await _apiClient.CallAsync<CanceledOrder>(ApiMethod.DELETE,Endpoints.CancelOrder, true, args);
+            var result = await _apiClient.CallAsync<CanceledOrder>(ApiMethod.DELETE, Endpoints.CancelOrder, true, args);
 
             return result;
         }
@@ -262,7 +311,7 @@ namespace CryptoExchanges.Net.Logic.Clients.Exchanges
                 throw new ArgumentException("symbol cannot be empty. ", "symbol");
             }
 
-            var result = await _apiClient.CallAsync<IEnumerable<Order>>(ApiMethod.GET,Endpoints.CurrentOpenOrders, true, $"symbol={symbol.ToUpper()}&recvWindow={recvWindow}");
+            var result = await _apiClient.CallAsync<IEnumerable<Order>>(ApiMethod.GET, Endpoints.CurrentOpenOrders, true, $"symbol={symbol.ToUpper()}&recvWindow={recvWindow}");
 
             return result;
         }
@@ -282,7 +331,7 @@ namespace CryptoExchanges.Net.Logic.Clients.Exchanges
                 throw new ArgumentException("symbol cannot be empty. ", "symbol");
             }
 
-            var result = await _apiClient.CallAsync<IEnumerable<Order>>(ApiMethod.GET,Endpoints.AllOrders, true, $"symbol={symbol.ToUpper()}&limit={limit}&recvWindow={recvWindow}" + (orderId.HasValue ? $"&orderId={orderId.Value}" : ""));
+            var result = await _apiClient.CallAsync<IEnumerable<Order>>(ApiMethod.GET, Endpoints.AllOrders, true, $"symbol={symbol.ToUpper()}&limit={limit}&recvWindow={recvWindow}" + (orderId.HasValue ? $"&orderId={orderId.Value}" : ""));
 
             return result;
         }
@@ -294,7 +343,7 @@ namespace CryptoExchanges.Net.Logic.Clients.Exchanges
         /// <returns></returns>
         public async Task<AccountInfo> GetAccountInfo(long recvWindow = 6000000)
         {
-            var result = await _apiClient.CallAsync<AccountInfo>(ApiMethod.GET,Endpoints.AccountInformation, true, $"recvWindow={recvWindow}");
+            var result = await _apiClient.CallAsync<AccountInfo>(ApiMethod.GET, Endpoints.AccountInformation, true, $"recvWindow={recvWindow}");
 
             return result;
         }
@@ -312,7 +361,7 @@ namespace CryptoExchanges.Net.Logic.Clients.Exchanges
                 throw new ArgumentException("symbol cannot be empty. ", "symbol");
             }
 
-            var result = await _apiClient.CallAsync<IEnumerable<Trade>>(ApiMethod.GET,Endpoints.TradeList, true, $"symbol={symbol.ToUpper()}&recvWindow={recvWindow}");
+            var result = await _apiClient.CallAsync<IEnumerable<Trade>>(ApiMethod.GET, Endpoints.TradeList, true, $"symbol={symbol.ToUpper()}&recvWindow={recvWindow}");
 
             return result;
         }
@@ -345,7 +394,7 @@ namespace CryptoExchanges.Net.Logic.Clients.Exchanges
               + (!string.IsNullOrWhiteSpace(addressName) ? $"&name={addressName}" : "")
               + $"&recvWindow={recvWindow}";
 
-            var result = await _apiClient.CallAsync<WithdrawResponse>(ApiMethod.POST,Endpoints.Withdraw, true, args);
+            var result = await _apiClient.CallAsync<WithdrawResponse>(ApiMethod.POST, Endpoints.Withdraw, true, args);
 
             return result;
         }
@@ -372,7 +421,7 @@ namespace CryptoExchanges.Net.Logic.Clients.Exchanges
               + (endTime.HasValue ? $"&endTime={Utilities.GenerateTimeStamp(endTime.Value)}" : "")
               + $"&recvWindow={recvWindow}";
 
-            var result = await _apiClient.CallAsync<DepositHistory>(ApiMethod.POST,Endpoints.DepositHistory, true, args);
+            var result = await _apiClient.CallAsync<DepositHistory>(ApiMethod.POST, Endpoints.DepositHistory, true, args);
 
             return result;
         }
@@ -399,7 +448,7 @@ namespace CryptoExchanges.Net.Logic.Clients.Exchanges
               + (endTime.HasValue ? $"&endTime={Utilities.GenerateTimeStamp(endTime.Value)}" : "")
               + $"&recvWindow={recvWindow}";
 
-            var result = await _apiClient.CallAsync<WithdrawHistory>(ApiMethod.POST,Endpoints.WithdrawHistory, true, args);
+            var result = await _apiClient.CallAsync<WithdrawHistory>(ApiMethod.POST, Endpoints.WithdrawHistory, true, args);
 
             return result;
         }

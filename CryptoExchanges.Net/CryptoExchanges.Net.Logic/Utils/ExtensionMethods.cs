@@ -3,7 +3,7 @@ using System.ComponentModel;
 using System.Linq;
 using System.Reflection;
 
-namespace CryptoExchanges.Net.Logic.Utils
+namespace CryptoExchanges.Net.Binance.Utils
 {
     /// <summary>
     /// Class to define extension methods.

@@ -1,7 +1,7 @@
 ﻿using CryptoExchanges.Net.Models.Market;
 using System.Collections.Generic;
 
-namespace CryptoExchanges.Net.Domain.CustomParsers
+namespace CryptoExchanges.Net.Binance.CustomParsers
 {
     /// <summary>
     /// Class to parse some specific entities.

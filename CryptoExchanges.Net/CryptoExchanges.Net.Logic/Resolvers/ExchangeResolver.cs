@@ -1,26 +1,22 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using CryptoExchanges.Net.Domain.Enums;
-using CryptoExchanges.Net.Domain.Exchanges;
 using CryptoExchanges.Net.Domain.Resolvers;
+using CryptoExchanges.Net.Domain;
 
-namespace CryptoExchanges.Net.Logic.Resolver
+namespace CryptoExchanges.Net.Binance.Resolver
 {
-    public class ExchangeResolver : IExchangeResolver
+    public class ExchangeClientResolver : IExchangeClientResolver
     {
-        private readonly IEnumerable<IExchange> _exchanges;
+        private readonly IEnumerable<IExchangeClient> _exchangeClient;
 
-        public ExchangeResolver(IEnumerable<IExchange> exchanges)
+        public ExchangeClientResolver(IEnumerable<IExchangeClient> exchanges)
         {
-            _exchanges = exchanges;
+            _exchangeClient = exchanges;
         }
 
-        public IExchange GetExchange(string exchangeKey)
+        public IExchangeClient GetExchangeClient(string exchangeKey)
         {
-            return _exchanges.FirstOrDefault(e => e.Key == exchangeKey);
+            return _exchangeClient.FirstOrDefault(e => e.Key == exchangeKey);
         }
     }
 }

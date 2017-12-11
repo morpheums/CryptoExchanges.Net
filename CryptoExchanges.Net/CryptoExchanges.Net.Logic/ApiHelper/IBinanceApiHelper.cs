@@ -1,10 +1,9 @@
 ﻿using CryptoExchanges.Net.Domain.Enums;
-using CryptoExchanges.Net.Domain.Exchanges;
 using System.Threading.Tasks;
 
-namespace CryptoExchanges.Net.Domain.Clients
+namespace CryptoExchanges.Net.Binance.Clients.API
 {
-    public interface IApiClient
+    public interface IBinanceApiHelper
     {
         /// <summary>
         /// Calls API Methods.

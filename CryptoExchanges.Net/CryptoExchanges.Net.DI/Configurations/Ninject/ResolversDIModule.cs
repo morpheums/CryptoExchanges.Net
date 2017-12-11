@@ -1,11 +1,6 @@
-﻿using CryptoExchanges.Net.Domain.Resolvers;
-using CryptoExchanges.Net.Logic.Resolver;
+﻿using CryptoExchanges.Net.Binance.Resolver;
+using CryptoExchanges.Net.Domain.Resolvers;
 using Ninject.Modules;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace CryptoExchanges.Net.DI.Configurations.Ninject
 {
@@ -13,7 +8,7 @@ namespace CryptoExchanges.Net.DI.Configurations.Ninject
     {
         public override void Load()
         {
-            Bind<IExchangeResolver>().To<ExchangeResolver>();
+            Bind<IExchangeClientResolver>().To<ExchangeClientResolver>();
         }
     }
 }

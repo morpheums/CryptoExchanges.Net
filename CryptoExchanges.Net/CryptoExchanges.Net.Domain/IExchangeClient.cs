@@ -1,18 +1,48 @@
-﻿using CryptoExchanges.Net.Domain.Enums;
-using CryptoExchanges.Net.Enums;
+﻿using CryptoExchanges.Net.Enums;
 using CryptoExchanges.Net.Models.Account;
 using CryptoExchanges.Net.Models.Market;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
-namespace CryptoExchanges.Net.Domain.Clients
+namespace CryptoExchanges.Net.Domain
 {
     /// <summary>
     /// Interface that defines the behaviour of the exchanges clients.
     /// </summary>
     public interface IExchangeClient
     {
+        #region Properties
+        /// <summary>
+        /// Represents the key that identifies the Exchange.
+        /// </summary>
+        string Key { get; }
+
+        /// <summary>
+        /// Represents the Name of the Exchange.
+        /// </summary>
+        string Name { get; }
+
+        /// <summary>
+        /// Represents the URL of the API.
+        /// </summary>
+        string Url { get; }
+
+        /// <summary>
+        /// States if the credentials (Key and Secret) were setted.
+        /// </summary>
+        bool HasCredentials { get; }
+        #endregion
+
+        #region Methods and Functions
+        /// <summary>
+        /// Sets the exchange credentials (Key and Secret).
+        /// </summary>
+        /// <param name="apiKey">Key to set for the exchange.</param>
+        /// <param name="apiSecret">Secret to set for the exchange.</param>
+        void SetCredentials(string apiKey, string apiSecret);
+        #endregion
+
         #region Market Data Methods
         /// <summary>
         /// Get order book for a particular symbol.

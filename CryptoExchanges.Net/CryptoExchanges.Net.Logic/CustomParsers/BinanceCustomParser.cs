@@ -1,10 +1,9 @@
-﻿using CryptoExchanges.Net.Domain.CustomParsers;
-using CryptoExchanges.Net.Models.Market;
+﻿using CryptoExchanges.Net.Models.Market;
 using Newtonsoft.Json.Linq;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace CryptoExchanges.Net.Logic.CustomParsers
+namespace CryptoExchanges.Net.Binance.CustomParsers
 {
     /// <summary>
     /// Class to parse some specific entities.

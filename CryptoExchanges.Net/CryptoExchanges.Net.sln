@@ -13,9 +13,11 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CryptoExchanges.Net.Domain"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CryptoExchanges.Net.Models", "CryptoExchanges.Net.Models\CryptoExchanges.Net.Models.csproj", "{D27B812F-8BAF-4718-A121-93BF4430BCC3}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CryptoExchanges.Net.Logic", "CryptoExchanges.Net.Logic\CryptoExchanges.Net.Logic.csproj", "{73E75EFB-FC5D-46E8-B73F-30270A4C2760}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CryptoExchanges.Net.Binance", "CryptoExchanges.Net.Logic\CryptoExchanges.Net.Binance.csproj", "{73E75EFB-FC5D-46E8-B73F-30270A4C2760}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CryptoExchanges.Net.Test", "CryptoExchanges.Net.Test\CryptoExchanges.Net.Test.csproj", "{79F15A68-E9B2-4D18-B43C-1401397F13D7}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Exchanges Implementation", "Exchanges Implementation", "{C37412D0-7C22-4454-8A9B-D8FE76273E89}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -55,7 +57,7 @@ Global
 		{9E27D673-8FED-497E-BB51-05A557999FEA} = {C08F659A-59C9-4675-8CB0-2DCE5C5A00CF}
 		{4EADF056-78C8-45A6-87CE-8AF994BAEA92} = {C08F659A-59C9-4675-8CB0-2DCE5C5A00CF}
 		{D27B812F-8BAF-4718-A121-93BF4430BCC3} = {C08F659A-59C9-4675-8CB0-2DCE5C5A00CF}
-		{73E75EFB-FC5D-46E8-B73F-30270A4C2760} = {C08F659A-59C9-4675-8CB0-2DCE5C5A00CF}
+		{73E75EFB-FC5D-46E8-B73F-30270A4C2760} = {C37412D0-7C22-4454-8A9B-D8FE76273E89}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {760ACA1C-5997-4AC5-B849-2C0EB646E343}

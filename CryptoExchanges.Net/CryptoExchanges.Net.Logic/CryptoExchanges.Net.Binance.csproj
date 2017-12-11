@@ -7,8 +7,8 @@
     <ProjectGuid>{73E75EFB-FC5D-46E8-B73F-30270A4C2760}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>CryptoExchanges.Net.Logic</RootNamespace>
-    <AssemblyName>CryptoExchanges.Net.Logic</AssemblyName>
+    <RootNamespace>CryptoExchanges.Net.Binance</RootNamespace>
+    <AssemblyName>CryptoExchanges.Net.Binance</AssemblyName>
     <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
   </PropertyGroup>
@@ -36,6 +36,9 @@
     <Reference Include="Newtonsoft.Json, Version=10.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
       <HintPath>..\packages\Newtonsoft.Json.10.0.3\lib\net45\Newtonsoft.Json.dll</HintPath>
     </Reference>
+    <Reference Include="RestSharp, Version=106.1.0.0, Culture=neutral, PublicKeyToken=598062e77f915f75, processorArchitecture=MSIL">
+      <HintPath>..\packages\RestSharp.106.1.0\lib\net452\RestSharp.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Configuration" />
     <Reference Include="System.Core" />
@@ -49,12 +52,11 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Clients\API\ApiClient.cs" />
-    <Compile Include="Clients\API\Base\ApiClientBase.cs" />
-    <Compile Include="Clients\Exchanges\Base\ExchangeClientBase.cs" />
-    <Compile Include="Clients\Exchanges\BinanceClient.cs" />
+    <Compile Include="ApiHelper\BinanceApiHelper.cs" />
+    <Compile Include="ApiHelper\IBinanceApiHelper.cs" />
+    <Compile Include="BinanceClient.cs" />
     <Compile Include="CustomParsers\BinanceCustomParser.cs" />
-    <Compile Include="Exchanges\BinanceExchange.cs" />
+    <Compile Include="CustomParsers\ICustomParser.cs" />
     <Compile Include="Resolvers\ExchangeResolver.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Utils\ExtensionMethods.cs" />

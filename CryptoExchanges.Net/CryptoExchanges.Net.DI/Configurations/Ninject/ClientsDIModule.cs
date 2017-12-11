@@ -1,11 +1,7 @@
-﻿using CryptoExchanges.Net.Domain.Clients;
-using CryptoExchanges.Net.Logic.Clients.Exchanges;
+﻿using CryptoExchanges.Net.Binance;
+using CryptoExchanges.Net.Binance.Clients.API;
+using CryptoExchanges.Net.Domain;
 using Ninject.Modules;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace CryptoExchanges.Net.DI.Configurations.Ninject
 {
@@ -14,6 +10,7 @@ namespace CryptoExchanges.Net.DI.Configurations.Ninject
         public override void Load()
         {
             Bind<IExchangeClient>().To<BinanceClient>();
+            Bind<IBinanceApiHelper>().To<BinanceApiHelper>();
         }
     }
 

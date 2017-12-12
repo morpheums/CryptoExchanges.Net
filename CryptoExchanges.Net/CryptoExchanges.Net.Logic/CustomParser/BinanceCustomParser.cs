@@ -3,7 +3,7 @@ using Newtonsoft.Json.Linq;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace CryptoExchanges.Net.Binance.CustomParsers
+namespace CryptoExchanges.Net.Binance.CustomParser
 {
     /// <summary>
     /// Class to parse some specific entities.

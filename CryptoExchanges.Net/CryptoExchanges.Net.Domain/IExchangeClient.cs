@@ -28,6 +28,8 @@ namespace CryptoExchanges.Net.Domain
         /// </summary>
         string Url { get; }
 
+        string ApiVersion { get; }
+
         /// <summary>
         /// States if the credentials (Key and Secret) were setted.
         /// </summary>

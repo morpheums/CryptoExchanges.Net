@@ -5,11 +5,12 @@ using CryptoExchanges.Net.Domain.Enums;
 using CryptoExchanges.Net.Enums;
 using CryptoExchanges.Net.Models.Account;
 using CryptoExchanges.Net.Models.Market;
-using CryptoExchanges.Net.Binance.CustomParsers;
+using CryptoExchanges.Net.Binance.CustomParser;
 using CryptoExchanges.Net.Binance.Utils;
 using CryptoExchanges.Net.Domain;
 using CryptoExchanges.Net.Binance.Clients.API;
 using CryptoExchanges.Net.Logic.Utils;
+using CryptoExchanges.Net.Binance.Constants;
 
 namespace CryptoExchanges.Net.Binance
 {
@@ -49,6 +50,11 @@ namespace CryptoExchanges.Net.Binance
         /// Represents the URL of the API.
         /// </summary>
         public string Url => "https://www.binance.com";
+        
+        /// <summary>
+        /// Specifies the implemented API version.
+        /// </summary>
+        public string ApiVersion =>  "v3";
 
         /// <summary>
         /// States if the credentials (Key and Secret) were provided.
@@ -452,36 +458,6 @@ namespace CryptoExchanges.Net.Binance
 
             return result;
         }
-        #endregion
-    }
-
-    /// <summary>
-    /// API endpoints of the exchange.
-    /// </summary>
-    public static class Endpoints
-    {
-        #region Market Data Endpoints
-        public const string OrderBook = "/api/v1/depth";
-        public const string AggregateTrades = "/api/v1/aggTrades";
-        public const string Candlesticks = "/api/v1/klines";
-        public const string TickerPriceChange24H = "/api/v1/ticker/24hr";
-        public const string AllPrices = "/api/v1/ticker/allPrices";
-        public const string OrderBookTicker = "/api/v1/ticker/allBookTickers";
-        #endregion
-
-        #region Account Endpoints
-        public const string NewOrder = "/api/v3/order";
-        public const string NewOrderTest = "/api/v3/order/test";
-        public const string QueryOrder = "/api/v3/order";
-        public const string CancelOrder = "/api/v3/order";
-        public const string CurrentOpenOrders = "/api/v3/openOrders";
-        public const string AllOrders = "/api/v3/allOrders";
-        public const string AccountInformation = "/api/v3/account";
-        public const string TradeList = "/api/v3/myTrades";
-
-        public const string Withdraw = "/wapi/v1/withdraw.html";
-        public const string DepositHistory = "/wapi/v1/getDepositHistory.html";
-        public const string WithdrawHistory = "/wapi/v1/getWithdrawHistory.html";
         #endregion
     }
 }

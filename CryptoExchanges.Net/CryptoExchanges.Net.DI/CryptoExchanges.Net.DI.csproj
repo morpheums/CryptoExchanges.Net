@@ -43,9 +43,8 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Configurations\Ninject\ClientsDIModule.cs" />
-    <Compile Include="Configurations\Ninject\CustomParsersDIModule.cs" />
-    <Compile Include="Configurations\Ninject\ResolversDIModule.cs" />
+    <Compile Include="BuiltinModule.cs" />
+    <Compile Include="Kernel.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
@@ -55,10 +54,6 @@
     <ProjectReference Include="..\CryptoExchanges.Net.Domain\CryptoExchanges.Net.Domain.csproj">
       <Project>{4eadf056-78c8-45a6-87ce-8af994baea92}</Project>
       <Name>CryptoExchanges.Net.Domain</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\CryptoExchanges.Net.Logic\CryptoExchanges.Net.Binance.csproj">
-      <Project>{73e75efb-fc5d-46e8-b73f-30270a4c2760}</Project>
-      <Name>CryptoExchanges.Net.Binance</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

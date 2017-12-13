@@ -40,6 +40,8 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Providers\ApiCredentials.cs" />
+    <Compile Include="Providers\IApiCredentialsProvider.cs" />
     <Compile Include="CryptoClient.cs" />
     <Compile Include="Enums\ApiMethod.cs" />
     <Compile Include="Enums\DepositStatus.cs" />

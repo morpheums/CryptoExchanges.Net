@@ -6,7 +6,6 @@ using CryptoExchanges.Net.Enums;
 using CryptoExchanges.Net.Models.Account;
 using CryptoExchanges.Net.Models.Market;
 using CryptoExchanges.Net.Binance.CustomParser;
-using CryptoExchanges.Net.Binance.Utils;
 using CryptoExchanges.Net.Domain;
 using CryptoExchanges.Net.Binance.Clients.API;
 using CryptoExchanges.Net.Logic.Utils;
@@ -17,14 +16,6 @@ namespace CryptoExchanges.Net.Binance
     public class BinanceClient : IExchangeClient
     {
         #region Variables
-        /// <summary>
-        /// 
-        /// </summary>
-        private string _apiKey;
-        /// <summary>
-        /// 
-        /// </summary>
-        private string _apiSecret;
         /// <summary>
         /// Client to be used to call the API.
         /// </summary>
@@ -50,16 +41,11 @@ namespace CryptoExchanges.Net.Binance
         /// Represents the URL of the API.
         /// </summary>
         public string Url => "https://www.binance.com";
-        
+
         /// <summary>
         /// Specifies the implemented API version.
         /// </summary>
-        public string ApiVersion =>  "v3";
-
-        /// <summary>
-        /// States if the credentials (Key and Secret) were provided.
-        /// </summary>
-        public bool HasCredentials => !(string.IsNullOrWhiteSpace(_apiKey) && string.IsNullOrWhiteSpace(_apiSecret));
+        public string ApiVersion => "v3";
         #endregion
 
         /// <summary>
@@ -80,8 +66,14 @@ namespace CryptoExchanges.Net.Binance
         /// <param name="apiSecret">Secret to be used to authenticate within the exchange.</param>
         public void SetCredentials(string apiKey, string apiSecret)
         {
-            _apiKey = apiKey;
-            _apiSecret = apiSecret;
+            _apiClient.SetCredentials(Url, apiKey, apiSecret);
+        }
+
+        /// <summary>
+        /// States if the credentials (Key and Secret) were provided.
+        /// </summary>
+        public bool HasCredentials() {
+            return _apiClient.HasCredentials();
         }
         #endregion
 

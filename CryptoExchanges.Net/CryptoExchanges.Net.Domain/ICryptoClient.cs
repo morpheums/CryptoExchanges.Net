@@ -2,6 +2,6 @@
 {
     public interface ICryptoClient
     {
-        IExchangeClient GetExchange(string exchangeKey);
+        IExchangeClient GetExchangeClient(string exchangeKey);
     }
 }

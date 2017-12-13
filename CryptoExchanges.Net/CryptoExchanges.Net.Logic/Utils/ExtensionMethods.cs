@@ -1,10 +1,9 @@
-﻿using System;
+﻿using CryptoExchanges.Net.Domain;
+using System;
 using System.ComponentModel;
 using System.Linq;
 using System.Reflection;
 
-namespace CryptoExchanges.Net.Binance.Utils
-{
     /// <summary>
     /// Class to define extension methods.
     /// </summary>
@@ -22,5 +21,15 @@ namespace CryptoExchanges.Net.Binance.Utils
                     .Single(x => x.GetValue(null).Equals(value)),
                 typeof(DescriptionAttribute)))?.Description ?? value.ToString();
         }
+
+        /// <summary>
+        /// Extension method to get a enum description.
+        /// </summary>
+        /// <param name="value">Enum to get the description from.</param>
+        /// <returns></returns>
+        public static IExchangeClient GetBinanceClient(this ICryptoClient value)
+        {
+            return value.GetExchangeClient("Binance");
+        }
     }
-}
+

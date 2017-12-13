@@ -17,7 +17,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CryptoExchanges.Net.Binance
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CryptoExchanges.Net.Test", "CryptoExchanges.Net.Test\CryptoExchanges.Net.Test.csproj", "{79F15A68-E9B2-4D18-B43C-1401397F13D7}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Exchanges Implementation", "Exchanges Implementation", "{C37412D0-7C22-4454-8A9B-D8FE76273E89}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Implementations", "Implementations", "{C37412D0-7C22-4454-8A9B-D8FE76273E89}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

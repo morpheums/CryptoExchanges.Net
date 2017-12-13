@@ -13,44 +13,29 @@ namespace CryptoExchanges.Net.Binance.Clients.API
         /// <summary>
         /// URL of the API.
         /// </summary>
-        public readonly string _apiUrl;
+        public string _apiUrl;
 
         /// <summary>
         /// Key used to authenticate within the API.
         /// </summary>
-        public readonly string _apiKey;
+        public string _apiKey;
 
         /// <summary>
         /// API secret used to signed API calls.
         /// </summary>
-        public readonly string _apiSecret;
+        public string _apiSecret;
 
         /// <summary>
         /// HttpClient to be used to call the API.
         /// </summary>
-        public readonly HttpClient _httpClient;
+        public HttpClient _httpClient;
         #endregion
 
         /// <summary>
         /// Defines the constructor of the Api Client.
         /// </summary>
-        /// <param name="apiKey">Key used to authenticate within the API.</param>
-        /// <param name="apiSecret">API secret used to signed API calls.</param>
-        /// <param name="apiUrl">API based url.</param>
-        public BinanceApiHelper(string apiKey, string apiSecret, string apiUrl, bool addDefaultHeaders = true)
+        public BinanceApiHelper()
         {
-            _apiUrl = apiUrl;
-            _apiKey = apiKey;
-            _apiSecret = apiSecret;
-            _httpClient = new HttpClient
-            {
-                BaseAddress = new Uri(_apiUrl)
-            };
-
-            if (addDefaultHeaders)
-            {
-                ConfigureHttpClient();
-            }
         }
 
         #region Methods
@@ -59,12 +44,32 @@ namespace CryptoExchanges.Net.Binance.Clients.API
         /// </summary>
         private void ConfigureHttpClient()
         {
+            _httpClient = new HttpClient
+            {
+                BaseAddress = new Uri(_apiUrl)
+            };
+
             _httpClient.DefaultRequestHeaders
                  .Add("X-MBX-APIKEY", _apiKey);
 
             _httpClient.DefaultRequestHeaders
                     .Accept
                     .Add(new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("application/json"));
+        }
+
+        /// <summary>
+        /// Method used to set the configuration for the exchange.
+        /// </summary>
+        /// <param name="apiKey">Key used to authenticate within the API.</param>
+        /// <param name="apiSecret">API secret used to signed API calls.</param>
+        /// <param name="apiUrl">API based url.</param>
+        public void SetCredentials(string apiUrl, string apiKey, string apiSecret)
+        {
+            _apiUrl = apiUrl;
+            _apiKey = apiKey;
+            _apiSecret = apiSecret;
+
+            ConfigureHttpClient();
         }
 
         /// <summary>
@@ -94,6 +99,14 @@ namespace CryptoExchanges.Net.Binance.Clients.API
 
             var result = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
             return JsonConvert.DeserializeObject<T>(result);
+        }
+
+        /// <summary>
+        /// States if the credentials (Key and Secret) were provided.
+        /// </summary>
+        public bool HasCredentials()
+        {
+            return !(string.IsNullOrWhiteSpace(_apiKey) && string.IsNullOrWhiteSpace(_apiSecret));
         }
         #endregion
     }

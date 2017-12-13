@@ -1,4 +1,6 @@
-﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System.Configuration;
 
 namespace CryptoExchanges.Net.Test
 {
@@ -8,13 +10,17 @@ namespace CryptoExchanges.Net.Test
         [TestMethod]
         public void Test()
         {
-            var f = new CryptoClientFactory();
-            
-            var cryptoClient = f.CreateCryptoClient();
+            var cryptoClient = new CryptoClientFactory().CreateCryptoClient();
+            var binanceClient = cryptoClient.GetBinanceClient();
 
-            var a = cryptoClient.GetExchange("Binance");
+            var apiKey = ConfigurationManager.AppSettings["BinanceApiKey"];
+            var apiSecret = ConfigurationManager.AppSettings["BinanceApiSecret"];
+
+            //Set Credentials
+            binanceClient.SetCredentials(apiKey, apiSecret);
+
+            var a = binanceClient.GetAccountInfo();
         }
-
     }
 }
 

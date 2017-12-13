@@ -11,7 +11,7 @@ namespace CryptoExchanges.Net.Domain
             _exchangeClientResolver = exchangeClientResolver;
         }
 
-        public IExchangeClient GetExchange(string exchangeKey)
+        public IExchangeClient GetExchangeClient(string exchangeKey)
         {
             return _exchangeClientResolver.GetExchangeClient(exchangeKey);
         }

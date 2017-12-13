@@ -29,14 +29,14 @@ namespace CryptoExchanges.Net.Domain
         string Url { get; }
 
         string ApiVersion { get; }
-
-        /// <summary>
-        /// States if the credentials (Key and Secret) were setted.
-        /// </summary>
-        bool HasCredentials { get; }
         #endregion
 
         #region Methods and Functions
+        /// <summary>
+        /// States if the credentials (Key and Secret) were setted.
+        /// </summary>
+        bool HasCredentials();
+
         /// <summary>
         /// Sets the exchange credentials (Key and Secret).
         /// </summary>

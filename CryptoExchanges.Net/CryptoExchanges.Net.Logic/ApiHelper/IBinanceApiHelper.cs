@@ -15,5 +15,18 @@ namespace CryptoExchanges.Net.Binance.Clients.API
         /// <param name="parameters">Request parameters.</param>
         /// <returns></returns>
         Task<T> CallAsync<T>(ApiMethod method, string endpoint, bool isSigned = false, string parameters = null);
+
+        /// <summary>
+        /// Method used to set the configuration for the exchange.
+        /// </summary>
+        /// <param name="apiKey">Key used to authenticate within the API.</param>
+        /// <param name="apiSecret">API secret used to signed API calls.</param>
+        /// <param name="apiUrl">API based url.</param>
+        void SetCredentials(string apiUrl, string apiKey, string apiSecret);
+
+        /// <summary>
+        /// States if the credentials (Key and Secret) were provided.
+        /// </summary>
+        bool HasCredentials();
     }
 }

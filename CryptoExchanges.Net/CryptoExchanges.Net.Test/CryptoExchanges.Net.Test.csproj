@@ -44,7 +44,11 @@
     <Reference Include="Microsoft.VisualStudio.TestPlatform.TestFramework.Extensions, Version=14.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
       <HintPath>..\packages\MSTest.TestFramework.1.2.0\lib\net45\Microsoft.VisualStudio.TestPlatform.TestFramework.Extensions.dll</HintPath>
     </Reference>
+    <Reference Include="Ninject, Version=3.3.4.0, Culture=neutral, PublicKeyToken=c7192dc5380945e7, processorArchitecture=MSIL">
+      <HintPath>..\packages\Ninject.3.3.4\lib\net45\Ninject.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
+    <Reference Include="System.Configuration" />
     <Reference Include="System.Core" />
   </ItemGroup>
   <ItemGroup>
@@ -52,6 +56,7 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="App.config" />
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
@@ -62,6 +67,10 @@
     <ProjectReference Include="..\CryptoExchanges.Net.Logic\CryptoExchanges.Net.Binance.csproj">
       <Project>{73e75efb-fc5d-46e8-b73f-30270a4c2760}</Project>
       <Name>CryptoExchanges.Net.Binance</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\CryptoExchanges.Net.Models\CryptoExchanges.Net.Models.csproj">
+      <Project>{D27B812F-8BAF-4718-A121-93BF4430BCC3}</Project>
+      <Name>CryptoExchanges.Net.Models</Name>
     </ProjectReference>
     <ProjectReference Include="..\CryptoExchanges.Net\CryptoExchanges.Net.csproj">
       <Project>{f46890e6-d9cd-4324-a636-21ce7ca1f153}</Project>

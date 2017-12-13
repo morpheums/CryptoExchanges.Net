@@ -43,5 +43,22 @@ namespace CryptoExchanges.Net.DI
 
             return allAssemblies;
         }
+
+        private void Test()
+        {
+            //_ninjectKernel.Bind(x => x
+            //        .FromThisAssembly()
+            //        .IncludingNonePublicTypes()
+            //        .SelectAllClasses()
+            //        .InheritedFrom(typeof(ICredentialsProvider<>))
+            //        .BindDefaultInterface()
+            //        .Configure(y => y.InRequestScope()));
+
+            //_ninjectKernel.Bind(x => x
+            //.FromAssembliesMatching("*")
+            //.SelectAllClasses()
+            //.InheritedFrom(typeof(IRepository<>))
+            //.BindDefaultInterface());
+        }
     }
 }

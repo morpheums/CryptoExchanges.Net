@@ -13,17 +13,17 @@ namespace CryptoExchanges.Net.Binance.Clients.API
         /// <summary>
         /// URL of the API.
         /// </summary>
-        public string _apiUrl;
+        private string _apiUrl;
 
         /// <summary>
         /// Key used to authenticate within the API.
         /// </summary>
-        public string _apiKey;
+        private string _apiKey;
 
         /// <summary>
         /// API secret used to signed API calls.
         /// </summary>
-        public string _apiSecret;
+        private string _apiSecret;
 
         /// <summary>
         /// HttpClient to be used to call the API.
@@ -93,6 +93,7 @@ namespace CryptoExchanges.Net.Binance.Clients.API
             }
 
             var request = new HttpRequestMessage(Utilities.CreateHttpMethod(method.ToString()), finalEndpoint);
+
 
             var response = await _httpClient.SendAsync(request).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();

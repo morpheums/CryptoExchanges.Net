@@ -19,7 +19,13 @@ namespace CryptoExchanges.Net.Test
             //Set Credentials
             binanceClient.SetCredentials(apiKey, apiSecret);
 
-            var a = binanceClient.GetAccountInfo();
+            //var test = binanceClient.HasCredentials();
+
+            var accountInfo = binanceClient.GetAccountInfo().Result;
+
+            //var t = binanceClient.GetTradeList("ethbtc").Result;
+
+            var v = binanceClient.GetOrderBook("omgbtc").Result;
         }
     }
 }

@@ -5,55 +5,56 @@ using CryptoExchanges.Net.Domain.Enums;
 using CryptoExchanges.Net.Enums;
 using CryptoExchanges.Net.Models.Account;
 using CryptoExchanges.Net.Models.Market;
+using CryptoExchanges.Net.Bittrex.CustomParser;
 using CryptoExchanges.Net.Domain;
-using CryptoExchanges.Net.Binance.Clients.API;
-using CryptoExchanges.Net.Binance.Constants;
-using CryptoExchanges.Net.Binance.Utils;
-using Newtonsoft.Json.Linq;
-using AutoMapper;
+using CryptoExchanges.Net.Bittrex.Clients.API;
+using CryptoExchanges.Net.Bittrex.Constants;
+using CryptoExchanges.Net.Bittrex.Utils;
 
-namespace CryptoExchanges.Net.Binance
+namespace CryptoExchanges.Net.Bittrex
 {
-    public class BinanceClient : IExchangeClient
+    public class BittrexClient : IExchangeClient
     {
         #region Variables
         /// <summary>
         /// Client to be used to call the API.
         /// </summary>
-        public readonly IBinanceApiHelper _apiClient;
+        public readonly IBittrexApiHelper _apiClient;
         /// <summary>
         /// 
         /// </summary>
+        private IBittrexCustomParser _BittrexCustomParser;
         #endregion
 
         #region Properties
         /// <summary>
         /// Represents the key that identifies the Exchange.
         /// </summary>
-        public string Key => "Binance";
+        public string Key => "Bittrex";
 
         /// <summary>
         /// Represents the Name of the Exchange.
         /// </summary>
-        public string Name => "Binance Exchange";
+        public string Name => "Bittrex Exchange";
 
         /// <summary>
         /// Represents the URL of the API.
         /// </summary>
-        public string Url => "https://www.binance.com";
+        public string Url => "https://bittrex.com/api";
 
         /// <summary>
         /// Specifies the implemented API version.
         /// </summary>
-        public string ApiVersion => "v3";
+        public string ApiVersion => "v1.1";
         #endregion
 
         /// <summary>
         /// ctor.
         /// </summary>
         /// <param name="apiClient">API client to be used for API calls.</param>
-        public BinanceClient(IBinanceApiHelper apiClient)
+        public BittrexClient(IBittrexApiHelper apiClient, IBittrexCustomParser BittrexCustomParser)
         {
+            _BittrexCustomParser = BittrexCustomParser;
             _apiClient = apiClient;
         }
 
@@ -77,84 +78,98 @@ namespace CryptoExchanges.Net.Binance
         #endregion
 
         #region Market Data
-        public async Task<IEnumerable<CurrencyInfo>> GetExchangeCurrenciesInfo()
+        /// <summary>
+        /// Get order book for a particular symbol.
+        /// </summary>
+        /// <param name="symbol">Ticker symbol.</param>
+        /// <param name="limit">Limit of records to retrieve.</param>
+        /// <returns></returns>
+        public async Task<OrderBook> GetOrderBook(string symbol, int limit = 100)
         {
-            var result = await _apiClient.CallAsync<JObject>(ApiMethod.GET, Endpoints.ExchangeCurrencies, false);
+            if (string.IsNullOrWhiteSpace(symbol))
+            {
+                throw new ArgumentException("symbol cannot be empty. ", "symbol");
+            }
 
-            var symbolsInfo = (JArray)result.GetValue("symbols");
+            var result = await _apiClient.CallAsync<dynamic>(ApiMethod.GET, Endpoints.OrderBook, false, $"symbol={symbol.ToUpper()}&limit={limit}");
 
-            return Mapper.Map<IEnumerable<CurrencyInfo>>(symbolsInfo);
+            return _BittrexCustomParser.GetParsedOrderBook(result);
         }
 
-        public async Task<IEnumerable<TickerInfo>> GetAllTickersInfo()
+        /// <summary>
+        /// Get compressed, aggregate trades. Trades that fill at the time, from the same order, with the same price will have the quantity aggregated.
+        /// </summary>
+        /// <param name="symbol">Ticker symbol.</param>
+        /// <param name="limit">Limit of records to retrieve.</param>
+        /// <returns></returns>
+        public async Task<IEnumerable<AggregateTrade>> GetAggregateTrades(string symbol, int limit = 500)
         {
-            var result = await _apiClient.CallAsync<JArray>(ApiMethod.GET, Endpoints.TickersInfo, false);
+            if (string.IsNullOrWhiteSpace(symbol))
+            {
+                throw new ArgumentException("symbol cannot be empty. ", "symbol");
+            }
 
-            return Mapper.Map<IEnumerable<TickerInfo>>(result);
+            var result = await _apiClient.CallAsync<IEnumerable<AggregateTrade>>(ApiMethod.GET, Endpoints.AggregateTrades, false, $"symbol={symbol.ToUpper()}&limit={limit}");
+
+            return result;
         }
 
-        public async Task<TickerInfo> GetTickerInfo(string quoteSymbol, string baseSymbol)
+        /// <summary>
+        /// Kline/candlestick bars for a symbol. Klines are uniquely identified by their open time.
+        /// </summary>
+        /// <param name="symbol">Ticker symbol.</param>
+        /// <param name="interval">Time interval to retreive.</param>
+        /// <param name="limit">Limit of records to retrieve.</param>
+        /// <returns></returns>
+        public async Task<IEnumerable<Candlestick>> GetCandleSticks(string symbol, TimeInterval interval, int limit = 500)
         {
-            if (string.IsNullOrWhiteSpace(quoteSymbol))
+            if (string.IsNullOrWhiteSpace(symbol))
             {
-                throw new ArgumentException("QuoteSymbol cannot be empty. ", "quoteSymbol");
+                throw new ArgumentException("symbol cannot be empty. ", "symbol");
             }
 
-            if (string.IsNullOrWhiteSpace(baseSymbol))
-            {
-                throw new ArgumentException("BaseSymbol cannot be empty. ", "baseSymbol");
-            }
+            var result = await _apiClient.CallAsync<dynamic>(ApiMethod.GET, Endpoints.Candlesticks, false, $"symbol={symbol.ToUpper()}&interval={interval.GetDescription()}&limit={limit}");
 
-            var pair = quoteSymbol + baseSymbol;
-
-            var result = await _apiClient.CallAsync<JArray>(ApiMethod.GET, Endpoints.TickersInfo, false, $"symbol={pair.ToUpper()}");
-
-            return Mapper.Map<TickerInfo>(result);
+            return _BittrexCustomParser.GetParsedCandlestick(result);
         }
 
-        public async Task<IEnumerable<TickerPrice>> GetAllTickersPrice()
+        /// <summary>
+        /// 24 hour price change statistics.
+        /// </summary>
+        /// <param name="symbol">Ticker symbol.</param>
+        /// <returns></returns>
+        public async Task<PriceChangeInfo> GetTickerInfo(string symbol)
         {
-            var result = await _apiClient.CallAsync<JArray>(ApiMethod.GET, Endpoints.TickerPrice, false);
+            if (string.IsNullOrWhiteSpace(symbol))
+            {
+                throw new ArgumentException("symbol cannot be empty. ", "symbol");
+            }
 
-            return Mapper.Map<IEnumerable<TickerPrice>>(result);
+            var result = await _apiClient.CallAsync<PriceChangeInfo>(ApiMethod.GET, Endpoints.TickerPriceChange24H, false, $"symbol={symbol.ToUpper()}");
+
+            return result;
         }
 
-        public async Task<TickerPrice> GetTickerPrice(string quoteSymbol, string baseSymbol)
+        /// <summary>
+        /// Latest price for all symbols.
+        /// </summary>
+        /// <returns></returns>
+        public async Task<IEnumerable<SymbolPrice>> GetAllPrices()
         {
-            if (string.IsNullOrWhiteSpace(quoteSymbol))
-            {
-                throw new ArgumentException("QuoteSymbol cannot be empty. ", "quoteSymbol");
-            }
+            var result = await _apiClient.CallAsync<IEnumerable<SymbolPrice>>(ApiMethod.GET, Endpoints.AllPrices, false);
 
-            if (string.IsNullOrWhiteSpace(baseSymbol))
-            {
-                throw new ArgumentException("BaseSymbol cannot be empty. ", "baseSymbol");
-            }
-
-            var pair = quoteSymbol + baseSymbol;
-
-            var result = await _apiClient.CallAsync<JArray>(ApiMethod.GET, Endpoints.TickerPrice, false, $"symbol={pair.ToUpper()}");
-
-            return Mapper.Map<TickerPrice>(result);
+            return result;
         }
 
-        public async Task<OrderBook> GetOrderBook(string quoteSymbol, string baseSymbol)
+        /// <summary>
+        /// Best price/qty on the order book for all symbols.
+        /// </summary>
+        /// <returns></returns>
+        public async Task<IEnumerable<OrderBookTicker>> GetOrderBookTicker()
         {
-            if (string.IsNullOrWhiteSpace(quoteSymbol))
-            {
-                throw new ArgumentException("QuoteSymbol cannot be empty. ", "quoteSymbol");
-            }
+            var result = await _apiClient.CallAsync<IEnumerable<OrderBookTicker>>(ApiMethod.GET, Endpoints.OrderBookTicker, false);
 
-            if (string.IsNullOrWhiteSpace(baseSymbol))
-            {
-                throw new ArgumentException("BaseSymbol cannot be empty. ", "baseSymbol");
-            }
-
-            var pair = quoteSymbol + baseSymbol;
-
-            var result = await _apiClient.CallAsync<JArray>(ApiMethod.GET, Endpoints.OrderBook, false, $"symbol={pair.ToUpper()}&limit=20");
-
-            return Mapper.Map<OrderBook>(result);
+            return result;
         }
         #endregion
 
@@ -435,10 +450,6 @@ namespace CryptoExchanges.Net.Binance
 
             return result;
         }
-
-      
-
-
         #endregion
     }
 }

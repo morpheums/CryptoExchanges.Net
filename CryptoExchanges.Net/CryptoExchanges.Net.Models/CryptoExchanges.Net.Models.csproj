@@ -50,13 +50,17 @@
     <Compile Include="Account\WithdrawResponse.cs" />
     <Compile Include="Market\AggregateTrade.cs" />
     <Compile Include="Market\Candlestick.cs" />
+    <Compile Include="Market\CurrencyInfo.cs" />
     <Compile Include="Market\OrderBook.cs" />
     <Compile Include="Market\OrderBookOffer.cs" />
     <Compile Include="Market\OrderBookTicker.cs" />
-    <Compile Include="Market\PriceChangeInfo.cs" />
+    <Compile Include="Market\TickerInfo.cs" />
     <Compile Include="Market\SymbolPrice.cs" />
+    <Compile Include="Market\TickerPrice.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <Folder Include="Params\" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

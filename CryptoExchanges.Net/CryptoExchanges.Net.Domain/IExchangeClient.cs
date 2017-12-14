@@ -28,6 +28,9 @@ namespace CryptoExchanges.Net.Domain
         /// </summary>
         string Url { get; }
 
+        /// <summary>
+        /// Represents the current version of the API.
+        /// </summary>
         string ApiVersion { get; }
         #endregion
 
@@ -46,49 +49,45 @@ namespace CryptoExchanges.Net.Domain
         #endregion
 
         #region Market Data Methods
+
+        /// <summary>
+        /// Get exchange markets information and price limits.
+        /// </summary>
+        /// <returns></returns>
+        Task<IEnumerable<CurrencyInfo>> GetExchangeCurrenciesInfo();
+
+        /// <summary>
+        /// Get 24 hour price statistics for all tickers.
+        /// </summary>
+        /// <returns></returns>
+        Task<IEnumerable<TickerInfo>> GetAllTickersInfo();
+
+        /// <summary>
+        /// Get 24 hour price statistics for an specific ticker.
+        /// </summary>
+        /// <param name="getTickerInfoParams">Ticker symbol to look for.</param>
+        /// <returns></returns>
+        Task<TickerInfo> GetTickerInfo(string quoteSymbol, string baseSymbol);
+
+        /// <summary>
+        /// Get latest price for all tickers.
+        /// </summary>
+        /// <returns></returns>
+        Task<IEnumerable<TickerPrice>> GetAllTickersPrice();
+
+        /// <summary>
+        ///  Latest price for an specific ticker.
+        /// </summary>
+        /// <param name="getTickerInfoParams">Ticker symbol to look for.</param>
+        /// <returns></returns>
+        Task<TickerPrice> GetTickerPrice(string quoteSymbol, string baseSymbol);
+
         /// <summary>
         /// Get order book for a particular symbol.
         /// </summary>
-        /// <param name="symbol">Ticker symbol.</param>
-        /// <param name="limit">Limit of records to retrieve.</param>
+        /// <param name="symbolParams">Ticker symbol to look for.</param>
         /// <returns></returns>
-        Task<OrderBook> GetOrderBook(string symbol, int limit = 100);
-
-        /// <summary>
-        /// Get compressed, aggregate trades. Trades that fill at the time, from the same order, with the same price will have the quantity aggregated.
-        /// </summary>
-        /// <param name="symbol">Ticker symbol.</param>
-        /// <param name="limit">Limit of records to retrieve.</param>
-        /// <returns></returns>
-        Task<IEnumerable<AggregateTrade>> GetAggregateTrades(string symbol, int limit = 500);
-
-        /// <summary>
-        /// Kline/candlestick bars for a symbol. Klines are uniquely identified by their open time.
-        /// </summary>
-        /// <param name="symbol">Ticker symbol.</param>
-        /// <param name="interval">Time interval to retreive.</param>
-        /// <param name="limit">Limit of records to retrieve.</param>
-        /// <returns></returns>
-        Task<IEnumerable<Candlestick>> GetCandleSticks(string symbol, TimeInterval interval, int limit = 500);
-
-        /// <summary>
-        /// 24 hour price change statistics.
-        /// </summary>
-        /// <param name="symbol">Ticker symbol.</param>
-        /// <returns></returns>
-        Task<PriceChangeInfo> GetPriceChange24H(string symbol);
-
-        /// <summary>
-        /// Latest price for all symbols.
-        /// </summary>
-        /// <returns></returns>
-        Task<IEnumerable<SymbolPrice>> GetAllPrices();
-
-        /// <summary>
-        /// Best price/qty on the order book for all symbols.
-        /// </summary>
-        /// <returns></returns>
-        Task<IEnumerable<OrderBookTicker>> GetOrderBookTicker();
+        Task<OrderBook> GetOrderBook(string quoteSymbol, string baseSymbol);
         #endregion
 
         #region Account Information Methods

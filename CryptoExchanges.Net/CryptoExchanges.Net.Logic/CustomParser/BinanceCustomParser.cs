@@ -17,10 +17,7 @@ namespace CryptoExchanges.Net.Binance.CustomParser
         /// <returns></returns>
         public OrderBook GetParsedOrderBook(dynamic orderBookData)
         {
-            var result = new OrderBook
-            {
-                LastUpdateId = orderBookData.lastUpdateId.Value
-            };
+            var result = new OrderBook();
 
             var bids = new List<OrderBookOffer>();
             var asks = new List<OrderBookOffer>();
@@ -37,36 +34,6 @@ namespace CryptoExchanges.Net.Binance.CustomParser
 
             result.Bids = bids;
             result.Asks = asks;
-
-            return result;
-        }
-
-        /// <summary>
-        /// Gets the candlestick data and generates an Candlestick object.
-        /// </summary>
-        /// <param name="candlestickData">Dynamic containing the candlestick data.</param>
-        /// <returns></returns>
-        public IEnumerable<Candlestick> GetParsedCandlestick(dynamic candlestickData)
-        {
-            var result = new List<Candlestick>();
-
-            foreach (JToken item in ((JArray)candlestickData).ToArray())
-            {
-                result.Add(new Candlestick()
-                {
-                    OpenTime = long.Parse(item[0].ToString()),
-                    Open = decimal.Parse(item[1].ToString()),
-                    High = decimal.Parse(item[2].ToString()),
-                    Low = decimal.Parse(item[3].ToString()),
-                    Close = decimal.Parse(item[4].ToString()),
-                    Volume = decimal.Parse(item[5].ToString()),
-                    CloseTime = long.Parse(item[6].ToString()),
-                    QuoteAssetVolume = decimal.Parse(item[7].ToString()),
-                    NumberOfTrades = int.Parse(item[8].ToString()),
-                    TakerBuyBaseAssetVolume = decimal.Parse(item[9].ToString()),
-                    TakerBuyQuoteAssetVolume = decimal.Parse(item[10].ToString())
-                });
-            }
 
             return result;
         }

@@ -1,15 +1,20 @@
-﻿namespace CryptoExchanges.Net.Binance.Constants
+﻿namespace CryptoExchanges.Net.Bittrex.Constants
 {
     /// <summary>
     /// API endpoints of the exchange.
     /// </summary>
     public static class Endpoints
     {
-        #region Market Data Endpoints
-        public const string ExchangeCurrencies = "/api/v1/exchangeInfo";
+        #region Public Endpoints
+        //public const string OrderBook = "/api/v1/depth";
+        
+        
         public const string OrderBook = "/api/v1/depth";
-        public const string TickerPrice = "/api/v3/ticker/price";
-        public const string TickersInfo = "/api/v1/ticker/24hr";
+        public const string AggregateTrades = "/api/v1/aggTrades";
+        public const string Candlesticks = "/api/v1/klines";
+        public const string TickerPriceChange24H = "/api/v1/ticker/24hr";
+        public const string AllPrices = "/api/v1/ticker/allPrices";
+        public const string OrderBookTicker = "/api/v1/ticker/allBookTickers";
         #endregion
 
         #region Account Endpoints

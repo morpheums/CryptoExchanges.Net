@@ -3,11 +3,11 @@ using CryptoExchanges.Net.Domain.Enums;
 using System;
 using System.Net.Http;
 using Newtonsoft.Json;
-using CryptoExchanges.Net.Binance.Utils;
+using CryptoExchanges.Net.Bittrex.Utils;
 
-namespace CryptoExchanges.Net.Binance.Clients.API
+namespace CryptoExchanges.Net.Bittrex.Clients.API
 {
-    public class BinanceApiHelper : IBinanceApiHelper
+    public class BittrexApiHelper : IBittrexApiHelper
     {
         #region Variables
         /// <summary>
@@ -34,7 +34,7 @@ namespace CryptoExchanges.Net.Binance.Clients.API
         /// <summary>
         /// Defines the constructor of the Api Client.
         /// </summary>
-        public BinanceApiHelper()
+        public BittrexApiHelper()
         {
         }
 

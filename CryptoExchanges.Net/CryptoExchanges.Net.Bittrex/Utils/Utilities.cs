@@ -3,7 +3,7 @@ using System.Net.Http;
 using System.Security.Cryptography;
 using System.Text;
 
-namespace CryptoExchanges.Net.Binance.Utils
+namespace CryptoExchanges.Net.Bittrex.Utils
 {
     /// <summary>
     /// Utility class for common tasks. 

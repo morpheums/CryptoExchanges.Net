@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel;
 
-namespace CryptoExchanges.Net.Enums
+namespace CryptoExchanges.Net.Models.Enums
 {
     /// <summary>
     /// Time interval for the candlestick.

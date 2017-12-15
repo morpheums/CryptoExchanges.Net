@@ -40,22 +40,23 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Account\AccountInfo.cs" />
-    <Compile Include="Account\CanceledOrder.cs" />
-    <Compile Include="Account\DepositHistory.cs" />
-    <Compile Include="Account\NewOrder.cs" />
+    <Compile Include="Account\AssetBalance.cs" />
+    <Compile Include="Account\Deposit.cs" />
     <Compile Include="Account\Order.cs" />
-    <Compile Include="Account\Trade.cs" />
-    <Compile Include="Account\WithdrawHistory.cs" />
-    <Compile Include="Account\WithdrawResponse.cs" />
-    <Compile Include="Market\AggregateTrade.cs" />
-    <Compile Include="Market\Candlestick.cs" />
+    <Compile Include="Account\Withdraw.cs" />
+    <Compile Include="Common\RequestResponse.cs" />
+    <Compile Include="Enums\ApiMethod.cs" />
+    <Compile Include="Enums\DepositStatus.cs" />
+    <Compile Include="Enums\OrderSide.cs" />
+    <Compile Include="Enums\OrderStatus.cs" />
+    <Compile Include="Enums\OrderType.cs" />
+    <Compile Include="Enums\TimeInForce.cs" />
+    <Compile Include="Enums\TimeInterval.cs" />
+    <Compile Include="Enums\WithdrawStatus.cs" />
     <Compile Include="Market\CurrencyInfo.cs" />
     <Compile Include="Market\OrderBook.cs" />
     <Compile Include="Market\OrderBookOffer.cs" />
-    <Compile Include="Market\OrderBookTicker.cs" />
     <Compile Include="Market\TickerInfo.cs" />
-    <Compile Include="Market\SymbolPrice.cs" />
     <Compile Include="Market\TickerPrice.cs" />
     <Compile Include="Params\NewOrderParams.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

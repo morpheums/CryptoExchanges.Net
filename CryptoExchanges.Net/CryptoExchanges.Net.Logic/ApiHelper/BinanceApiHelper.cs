@@ -1,9 +1,9 @@
 ﻿using System.Threading.Tasks;
-using CryptoExchanges.Net.Domain.Enums;
 using System;
 using System.Net.Http;
 using Newtonsoft.Json;
 using CryptoExchanges.Net.Binance.Utils;
+using CryptoExchanges.Net.Models.Enums;
 
 namespace CryptoExchanges.Net.Binance.Clients.API
 {

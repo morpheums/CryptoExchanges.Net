@@ -1,4 +1,4 @@
-﻿using CryptoExchanges.Net.Domain.Enums;
+﻿using CryptoExchanges.Net.Models.Enums;
 using System.Threading.Tasks;
 
 namespace CryptoExchanges.Net.Binance.Clients.API

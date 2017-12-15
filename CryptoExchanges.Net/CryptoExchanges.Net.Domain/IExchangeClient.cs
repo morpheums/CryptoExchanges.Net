@@ -1,6 +1,9 @@
 ﻿using CryptoExchanges.Net.Enums;
 using CryptoExchanges.Net.Models.Account;
+using CryptoExchanges.Net.Models.Common;
+using CryptoExchanges.Net.Models.Enums;
 using CryptoExchanges.Net.Models.Market;
+using CryptoExchanges.Net.Models.Params;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -51,10 +54,15 @@ namespace CryptoExchanges.Net.Domain
         /// <param name="apiKey">Key to set for the exchange.</param>
         /// <param name="apiSecret">Secret to set for the exchange.</param>
         void SetCredentials(string apiKey, string apiSecret);
+
+        /// <summary>
+        /// Validates if a new order request is valid before posting it.
+        /// </summary>
+        /// <param name="newOrderParams">Params to post a new order</param>
+        void ValidateNewOrder(NewOrderParams newOrderParams);
         #endregion
 
         #region Market Data Methods
-
         /// <summary>
         /// Get exchange markets information and price limits.
         /// </summary>
@@ -70,7 +78,8 @@ namespace CryptoExchanges.Net.Domain
         /// <summary>
         /// Get 24 hour price statistics for an specific ticker.
         /// </summary>
-        /// <param name="getTickerInfoParams">Ticker symbol to look for.</param>
+        /// <param name="quoteSymbol">Quote symbol to look for.</param>
+        /// <param name="baseSymbol">Base symbol to look for.</param>
         /// <returns></returns>
         Task<TickerInfo> GetTickerInfo(string quoteSymbol, string baseSymbol);
 
@@ -83,117 +92,99 @@ namespace CryptoExchanges.Net.Domain
         /// <summary>
         ///  Latest price for an specific ticker.
         /// </summary>
-        /// <param name="getTickerInfoParams">Ticker symbol to look for.</param>
+        /// <param name="quoteSymbol">Quote symbol to look for.</param>
+        /// <param name="baseSymbol">Base symbol to look for.</param>
         /// <returns></returns>
         Task<TickerPrice> GetTickerPrice(string quoteSymbol, string baseSymbol);
 
         /// <summary>
         /// Get order book for a particular symbol.
         /// </summary>
-        /// <param name="symbolParams">Ticker symbol to look for.</param>
+        /// <param name="quoteSymbol">Quote symbol to look for.</param>
+        /// <param name="baseSymbol">Base symbol to look for.</param>
         /// <returns></returns>
         Task<OrderBook> GetOrderBook(string quoteSymbol, string baseSymbol);
         #endregion
 
         #region Account Information Methods
         /// <summary>
+        /// Get current account balances.
+        /// </summary>
+        /// <returns></returns>
+        Task<IEnumerable<AssetBalance>> GetAccoungBalance();
+
+        /// <summary>
         /// Send in a new order.
         /// </summary>
-        /// <param name="symbol">Ticker symbol.</param>
-        /// <param name="quantity">Quantity to transaction.</param>
-        /// <param name="price">Price of the transaction.</param>
-        /// <param name="orderType">Order type (LIMIT-MARKET).</param>
-        /// <param name="side">Order side (BUY-SELL).</param>
-        /// <param name="timeInForce">Indicates how long an order will remain active before it is executed or expires.</param>
-        /// <param name="recvWindow">Specific number of milliseconds the request is valid for.</param>
+        /// <param name="newOrderParams">Params to post a new order.</param>
         /// <returns></returns>
-        Task<NewOrder> PostNewOrder(string symbol, decimal quantity, decimal price, OrderSide side, OrderType orderType = OrderType.LIMIT, TimeInForce timeInForce = TimeInForce.GTC);
+        Task<RequestResponse> PostNewOrder(NewOrderParams newOrderParams);
 
         /// <summary>
         /// Check an order's status.
         /// </summary>
-        /// <param name="symbol">Ticker symbol.</param>
         /// <param name="orderId">Id of the order to retrieve.</param>
-        /// <param name="origClientOrderId">origClientOrderId of the order to retrieve.</param>
-        /// <param name="recvWindow">Specific number of milliseconds the request is valid for.</param>
+        /// <param name="quoteSymbol">Quote symbol to look for.</param>
+        /// <param name="baseSymbol">Base symbol to look for.</param>
         /// <returns></returns>
-        Task<Order> GetOrder(string symbol, long? orderId = null, string origClientOrderId = null);
+        Task<Order> GetOrder(string orderId, string quoteSymbol, string baseSymbol);
 
         /// <summary>
         /// Cancel an active order.
         /// </summary>
-        /// <param name="symbol">Ticker symbol.</param>
-        /// <param name="orderId">Id of the order to cancel.</param>
-        /// <param name="origClientOrderId">origClientOrderId of the order to cancel.</param>
-        /// <param name="recvWindow">Specific number of milliseconds the request is valid for.</param>
+        /// <param name="orderId">Id of the order to retrieve.</param>
+        /// <param name="quoteSymbol">Quote symbol to look for.</param>
+        /// <param name="baseSymbol">Base symbol to look for.</param>
         /// <returns></returns>
-        Task<CanceledOrder> CancelOrder(string symbol, long? orderId = null, string origClientOrderId = null);
+        Task<RequestResponse> CancelOrder(string orderId, string quoteSymbol = null, string baseSymbol = null);
 
         /// <summary>
         /// Get all open orders on a symbol.
         /// </summary>
-        /// <param name="symbol">Ticker symbol.</param>
-        /// <param name="recvWindow">Specific number of milliseconds the request is valid for.</param>
+        /// <param name="quoteSymbol">Quote symbol to look for.</param>
+        /// <param name="baseSymbol">Base symbol to look for.</param>
         /// <returns></returns>
-        Task<IEnumerable<Order>> GetCurrentOpenOrders(string symbol);
+        Task<IEnumerable<Order>> GetCurrentOpenOrders(string quoteSymbol, string baseSymbol);
 
         /// <summary>
         /// Get all account orders; active, canceled, or filled.
         /// </summary>
-        /// <param name="symbol">Ticker symbol.</param>
-        /// <param name="orderId">If is set, it will get orders >= that orderId. Otherwise most recent orders are returned.</param>
-        /// <param name="limit">Limit of records to retrieve.</param>
-        /// <param name="recvWindow">Specific number of milliseconds the request is valid for.</param>
+        /// <param name="quoteSymbol">Quote symbol to look for.</param>
+        /// <param name="baseSymbol">Base symbol to look for.</param>
         /// <returns></returns>
-        Task<IEnumerable<Order>> GetAllOrders(string symbol, long? orderId = null, int limit = 500);
+        Task<IEnumerable<Order>> GetAllOrders(string quoteSymbol, string baseSymbol);
 
-        /// <summary>
-        /// Get current account information.
-        /// </summary>
-        /// <param name="recvWindow">Specific number of milliseconds the request is valid for.</param>
-        /// <returns></returns>
-        Task<AccountInfo> GetAccountInfo();
-
-        /// <summary>
-        /// Get trades for a specific account and symbol.
-        /// </summary>
-        /// <param name="symbol">Ticker symbol.</param>
-        /// <param name="recvWindow">Specific number of milliseconds the request is valid for.</param>
-        /// <returns></returns>
-        Task<IEnumerable<Trade>> GetTradeList(string symbol);
+        ///// <summary>
+        ///// Get trades for a specific account and symbol.
+        ///// </summary>
+        ///// <param name="quoteSymbol">Quote symbol to look for.</param>
+        ///// <param name="baseSymbol">Base symbol to look for.</param>
+        ///// <returns></returns>
+        //Task<IEnumerable<Trade>> GetTradeList(string quoteSymbol, string baseSymbol);
 
         /// <summary>
         /// Submit a withdraw request.
         /// </summary>
-        /// <param name="asset">Asset to withdraw.</param>
+        /// <param name="quoteSymbol">Quote symbol to look for.</param>
+        /// <param name="baseSymbol">Base symbol to look for.</param>
         /// <param name="amount">Amount to withdraw.</param>
         /// <param name="address">Address where the asset will be deposited.</param>
-        /// <param name="addressName">Address name.</param>
-        /// <param name="recvWindow">Specific number of milliseconds the request is valid for.</param>
         /// <returns></returns>
-        Task<WithdrawResponse> Withdraw(string asset, decimal amount, string address, string addressName = "");
+        Task<RequestResponse> Withdraw(string quoteSymbol, string baseSymbol, decimal amount, string address);
 
         /// <summary>
         /// Fetch deposit history.
         /// </summary>
-        /// <param name="asset">Asset you want to see the information for.</param>
-        /// <param name="status">Deposit status.</param>
-        /// <param name="startTime">Start time. </param>
-        /// <param name="endTime">End time.</param>
-        /// <param name="recvWindow">Specific number of milliseconds the request is valid for.</param>
+        /// <param name="symbol">Asset you want to see the information for.</param>
         /// <returns></returns>
-        Task<DepositHistory> GetDepositHistory(string asset, DepositStatus? status = null, DateTime? startTime = null, DateTime? endTime = null);
+        Task<IEnumerable<Deposit>> GetDepositHistory(string symbol);
 
         /// <summary>
         /// Fetch withdraw history.
         /// </summary>
-        /// <param name="asset">Asset you want to see the information for.</param>
-        /// <param name="status">Withdraw status.</param>
-        /// <param name="startTime">Start time. </param>
-        /// <param name="endTime">End time.</param>
-        /// <param name="recvWindow">Specific number of milliseconds the request is valid for.</param>
+        /// <param name="symbol">Asset you want to see the information for.</param>
         /// <returns></returns>
-        Task<WithdrawHistory> GetWithdrawHistory(string asset, WithdrawStatus? status = null, DateTime? startTime = null, DateTime? endTime = null);
+        Task<IEnumerable<Withdraw>> GetWithdrawHistory(string symbol);
         #endregion
     }
 }

@@ -22,9 +22,9 @@
         public const string AccountInformation = "/api/v3/account";
         public const string TradeList = "/api/v3/myTrades";
 
-        public const string Withdraw = "/wapi/v1/withdraw.html";
-        public const string DepositHistory = "/wapi/v1/getDepositHistory.html";
-        public const string WithdrawHistory = "/wapi/v1/getWithdrawHistory.html";
+        public const string Withdraw = "/wapi/v3/withdraw.html";
+        public const string DepositHistory = "/wapi/v3/depositHistory.html";
+        public const string WithdrawHistory = "/wapi/v3/withdrawHistory.html";
         #endregion
     }
 }

@@ -1,4 +1,4 @@
-﻿namespace CryptoExchanges.Net.Enums
+﻿namespace CryptoExchanges.Net.Models.Enums
 {
     /// <summary>
     /// Different types of an order.

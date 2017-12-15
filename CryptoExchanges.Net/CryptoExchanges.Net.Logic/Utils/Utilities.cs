@@ -30,13 +30,26 @@ namespace CryptoExchanges.Net.Binance.Utils
         }
 
         /// <summary>
-        /// Gets a timestamp in milliseconds.
+        /// Converts a DateTime to a UNIX timestamp.
         /// </summary>
-        /// <returns>Timestamp in milliseconds.</returns>
+        /// <param name="baseDateTime">Datetime to convert.</param>
+        /// <returns>UNIX Timestamp.</returns>
         public static string GenerateTimeStamp(DateTime baseDateTime)
         {
             var dtOffset = new DateTimeOffset(baseDateTime);
             return dtOffset.ToUnixTimeMilliseconds().ToString();
+        }
+
+        /// <summary>
+        /// Converts a UNIX timestamp to a DateTime.
+        /// </summary>
+        /// <param name="unixTimeStamp">UNIX timestamp to convert.</param>
+        /// <returns>DateTime</returns>
+        public static DateTime UnixTimeStampToDateTime(double unixTimeStamp)
+        {
+            var dtDateTime = new DateTime(1970, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc);
+            dtDateTime = dtDateTime.AddMilliseconds(unixTimeStamp);
+            return dtDateTime;
         }
 
         /// <summary>

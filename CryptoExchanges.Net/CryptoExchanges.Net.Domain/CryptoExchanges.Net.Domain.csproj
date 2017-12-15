@@ -43,13 +43,6 @@
     <Compile Include="Providers\ApiCredentials.cs" />
     <Compile Include="Providers\IApiCredentialsProvider.cs" />
     <Compile Include="CryptoClient.cs" />
-    <Compile Include="Enums\ApiMethod.cs" />
-    <Compile Include="Enums\DepositStatus.cs" />
-    <Compile Include="Enums\OrderSide.cs" />
-    <Compile Include="Enums\OrderType.cs" />
-    <Compile Include="Enums\TimeInForce.cs" />
-    <Compile Include="Enums\TimeInterval.cs" />
-    <Compile Include="Enums\WithdrawStatus.cs" />
     <Compile Include="ICryptoClient.cs" />
     <Compile Include="IExchangeClient.cs" />
     <Compile Include="Resolvers\ExchangeClientResolver.cs" />

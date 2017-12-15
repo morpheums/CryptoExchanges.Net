@@ -1,4 +1,6 @@
 ﻿using AutoMapper;
+using CryptoExchanges.Net.Binance.Utils;
+using CryptoExchanges.Net.Models.Account;
 using CryptoExchanges.Net.Models.Market;
 using Newtonsoft.Json.Linq;
 using System;
@@ -35,6 +37,7 @@ namespace CryptoExchanges.Net.Binance.Configurations
         public static void Initialize()
         {
 
+            // Market entities
             Mapper.Initialize(configuration =>
             {
                 configuration.CreateMap<JToken, CurrencyInfo>()
@@ -63,6 +66,38 @@ namespace CryptoExchanges.Net.Binance.Configurations
                 configuration.CreateMap<JToken, OrderBook>()
                     .ForMember(o => o.Asks, cfg => cfg.ResolveUsing(jo => OrderBookOfferResolver((JArray)jo["asks"])))
                     .ForMember(o => o.Bids, cfg => cfg.ResolveUsing(jo => OrderBookOfferResolver((JArray)jo["bids"])));
+
+                // Account entitites
+                configuration.CreateMap<JToken, AssetBalance>()
+                    .ForMember(o => o.Asset, cfg => { cfg.MapFrom(jo => jo["asset"]); })
+                    .ForMember(o => o.Free, cfg => { cfg.MapFrom(jo => decimal.Parse(jo["free"].ToString())); })
+                    .ForMember(o => o.Locked, cfg => { cfg.MapFrom(jo => decimal.Parse(jo["locked"].ToString())); });
+
+                configuration.CreateMap<JToken, Deposit>()
+                    .ForMember(o => o.Asset, cfg => { cfg.MapFrom(jo => jo["asset"]); })
+                    .ForMember(o => o.Amount, cfg => { cfg.MapFrom(jo => decimal.Parse(jo["amount"].ToString())); })
+                    .ForMember(o => o.Date, cfg => { cfg.MapFrom(jo => Utilities.UnixTimeStampToDateTime(double.Parse(jo["insertTime"].ToString()))); })
+                    .ForMember(o => o.Status, cfg => { cfg.MapFrom(jo => jo["status"]); });
+
+                configuration.CreateMap<JToken, Withdraw>()
+                    .ForMember(o => o.Asset, cfg => { cfg.MapFrom(jo => jo["asset"]); })
+                    .ForMember(o => o.Amount, cfg => { cfg.MapFrom(jo => decimal.Parse(jo["amount"].ToString())); })
+                    .ForMember(o => o.Address, cfg => { cfg.MapFrom(jo => jo["address"]); })
+                    .ForMember(o => o.Date, cfg => { cfg.MapFrom(jo => Utilities.UnixTimeStampToDateTime(double.Parse(jo["applyTime"].ToString()))); })
+                    .ForMember(o => o.Status, cfg => { cfg.MapFrom(jo => jo["status"]); });
+
+                configuration.CreateMap<JToken, Order>()
+                    .ForMember(o => o.OrderId, cfg => { cfg.MapFrom(jo => jo["orderId"]); })
+                    .ForMember(o => o.Symbol, cfg => { cfg.MapFrom(jo => jo["symbol"]); })
+                    .ForMember(o => o.Type, cfg => { cfg.MapFrom(jo => jo["type"]); })
+                    .ForMember(o => o.Side, cfg => { cfg.MapFrom(jo => jo["side"]); })
+                    .ForMember(o => o.TimeInForce, cfg => { cfg.MapFrom(jo => jo["timeInForce"]); })
+                    .ForMember(o => o.Status, cfg => { cfg.MapFrom(jo => jo["status"]); })
+                    .ForMember(o => o.Price, cfg => { cfg.MapFrom(jo => decimal.Parse(jo["price"].ToString())); })
+                    .ForMember(o => o.StopPrice, cfg => { cfg.MapFrom(jo => decimal.Parse(jo["stopPrice"].ToString())); })
+                    .ForMember(o => o.OriginalQuantity, cfg => { cfg.MapFrom(jo => decimal.Parse(jo["origQty"].ToString())); })
+                    .ForMember(o => o.ExecutedQuantity, cfg => { cfg.MapFrom(jo => decimal.Parse(jo["executedQty"].ToString())); })
+                    .ForMember(o => o.Date, cfg => { cfg.MapFrom(jo => Utilities.UnixTimeStampToDateTime(double.Parse(jo["time"].ToString()))); });
 
             });
         }

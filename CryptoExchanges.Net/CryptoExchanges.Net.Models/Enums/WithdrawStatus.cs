@@ -1,4 +1,4 @@
-﻿namespace CryptoExchanges.Net.Enums
+﻿namespace CryptoExchanges.Net.Models.Enums
 {
     /// <summary>
     /// Represents the different statuses of a withdraw.

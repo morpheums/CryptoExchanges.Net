@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using CryptoExchanges.Net.Domain.Enums;
 using CryptoExchanges.Net.Enums;
 using CryptoExchanges.Net.Models.Account;
 using CryptoExchanges.Net.Models.Market;
@@ -11,6 +10,9 @@ using CryptoExchanges.Net.Binance.Constants;
 using CryptoExchanges.Net.Binance.Utils;
 using Newtonsoft.Json.Linq;
 using AutoMapper;
+using CryptoExchanges.Net.Models.Enums;
+using CryptoExchanges.Net.Models.Common;
+using CryptoExchanges.Net.Models.Params;
 
 namespace CryptoExchanges.Net.Binance
 {
@@ -47,7 +49,7 @@ namespace CryptoExchanges.Net.Binance
         /// </summary>
         public string ApiVersion => "v3";
 
-        public List<OrderType> SupportedOrderTypes => new List<OrderType>() { OrderType.LIMIT, OrderType.MARKET,OrderType.STOP_LOSS, OrderType.STOP_LOSS_LIMIT, OrderType.TAKE_PROFIT, OrderType.TAKE_PROFIT_LIMIT};
+        public List<OrderType> SupportedOrderTypes => new List<OrderType>() { OrderType.LIMIT, OrderType.MARKET, OrderType.STOP_LOSS, OrderType.STOP_LOSS_LIMIT, OrderType.TAKE_PROFIT, OrderType.TAKE_PROFIT_LIMIT };
         #endregion
 
         /// <summary>
@@ -73,8 +75,14 @@ namespace CryptoExchanges.Net.Binance
         /// <summary>
         /// States if the credentials (Key and Secret) were provided.
         /// </summary>
-        public bool HasCredentials() {
+        public bool HasCredentials()
+        {
             return _apiClient.HasCredentials();
+        }
+
+        public void ValidateNewOrder(NewOrderParams newOrderParams)
+        {
+            throw new NotImplementedException();
         }
         #endregion
 
@@ -161,340 +169,143 @@ namespace CryptoExchanges.Net.Binance
         #endregion
 
         #region Account Information
-        /// <summary>
-        /// Send in a new order.
-        /// </summary>
-        /// <param name="symbol">Ticker symbol.</param>
-        /// <param name="quantity">Quantity to transaction.</param>
-        /// <param name="price">Price of the transaction.</param>
-        /// <param name="orderType">Order type (LIMIT-MARKET).</param>
-        /// <param name="side">Order side (BUY-SELL).</param>
-        /// <param name="timeInForce">Indicates how long an order will remain active before it is executed or expires.</param>
-        /// <param name="recvWindow">Specific number of milliseconds the request is valid for.</param>
-        /// <returns></returns>
-        public async Task<NewOrder> PostNewOrder(string symbol, decimal quantity, decimal price, OrderSide side, OrderType orderType = OrderType.LIMIT, TimeInForce timeInForce = TimeInForce.GTC, decimal icebergQty = 0m, long recvWindow = 6000000)
-        {
-            //Validates that the order is valid.
-            //ValidateOrderValue(symbol, orderType, price, quantity, icebergQty);
 
-            var args = $"symbol={symbol.ToUpper()}&side={side}&type={orderType}&quantity={quantity}"
-                + (orderType == OrderType.LIMIT ? $"&timeInForce={timeInForce}" : "")
-                + (orderType == OrderType.LIMIT ? $"&price={price}" : "")
-                + (icebergQty > 0m ? $"&icebergQty={icebergQty}" : "")
-                + $"&recvWindow={recvWindow}";
-            var result = await _apiClient.CallAsync<NewOrder>(ApiMethod.POST, Endpoints.NewOrder, true, args);
-
-            return result;
-        }
-
-        /// <summary>
-        /// Test new order creation and signature/recvWindow long. Creates and validates a new order but does not send it into the matching engine.
-        /// </summary>
-        /// <param name="symbol">Ticker symbol.</param>
-        /// <param name="quantity">Quantity to transaction.</param>
-        /// <param name="price">Price of the transaction.</param>
-        /// <param name="orderType">Order type (LIMIT-MARKET).</param>
-        /// <param name="side">Order side (BUY-SELL).</param>
-        /// <param name="timeInForce">Indicates how long an order will remain active before it is executed or expires.</param>
-        /// <param name="recvWindow">Specific number of milliseconds the request is valid for.</param>
-        /// <returns></returns>
-        public async Task<dynamic> PostNewOrderTest(string symbol, decimal quantity, decimal price, OrderSide side, OrderType orderType = OrderType.LIMIT, TimeInForce timeInForce = TimeInForce.GTC, decimal icebergQty = 0m, long recvWindow = 6000000)
-        {
-            //Validates that the order is valid.
-            //ValidateOrderValue(symbol, orderType, price, quantity, icebergQty);
-
-            var args = $"symbol={symbol.ToUpper()}&side={side}&type={orderType}&quantity={quantity}"
-                + (orderType == OrderType.LIMIT ? $"&timeInForce={timeInForce}" : "")
-                + (orderType == OrderType.LIMIT ? $"&price={price}" : "")
-                + (icebergQty > 0m ? $"&icebergQty={icebergQty}" : "")
-                + $"&recvWindow={recvWindow}";
-            var result = await _apiClient.CallAsync<dynamic>(ApiMethod.POST, Endpoints.NewOrderTest, true, args);
-
-            return result;
-        }
-
-        /// <summary>
-        /// Check an order's status.
-        /// </summary>
-        /// <param name="symbol">Ticker symbol.</param>
-        /// <param name="orderId">Id of the order to retrieve.</param>
-        /// <param name="origClientOrderId">origClientOrderId of the order to retrieve.</param>
-        /// <param name="recvWindow">Specific number of milliseconds the request is valid for.</param>
-        /// <returns></returns>
-        public async Task<Order> GetOrder(string symbol, long? orderId = null, string origClientOrderId = null, long recvWindow = 6000000)
-        {
-            var args = $"symbol={symbol.ToUpper()}&recvWindow={recvWindow}";
-
-            if (string.IsNullOrWhiteSpace(symbol))
-            {
-                throw new ArgumentException("symbol cannot be empty. ", "symbol");
-            }
-
-            if (orderId.HasValue)
-            {
-                args += $"&orderId={orderId.Value}";
-            }
-            else if (!string.IsNullOrWhiteSpace(origClientOrderId))
-            {
-                args += $"&origClientOrderId={origClientOrderId}";
-            }
-            else
-            {
-                throw new ArgumentException("Either orderId or origClientOrderId must be sent.");
-            }
-
-            var result = await _apiClient.CallAsync<Order>(ApiMethod.GET, Endpoints.QueryOrder, true, args);
-
-            return result;
-        }
-
-        /// <summary>
-        /// Cancel an active order.
-        /// </summary>
-        /// <param name="symbol">Ticker symbol.</param>
-        /// <param name="orderId">Id of the order to cancel.</param>
-        /// <param name="origClientOrderId">origClientOrderId of the order to cancel.</param>
-        /// <param name="recvWindow">Specific number of milliseconds the request is valid for.</param>
-        /// <returns></returns>
-        public async Task<CanceledOrder> CancelOrder(string symbol, long? orderId = null, string origClientOrderId = null, long recvWindow = 6000000)
-        {
-            if (string.IsNullOrWhiteSpace(symbol))
-            {
-                throw new ArgumentException("symbol cannot be empty. ", "symbol");
-            }
-
-            var args = $"symbol={symbol.ToUpper()}&recvWindow={recvWindow}";
-
-            if (orderId.HasValue)
-            {
-                args += $"&orderId={orderId.Value}";
-            }
-            else if (string.IsNullOrWhiteSpace(origClientOrderId))
-            {
-                args += $"&origClientOrderId={origClientOrderId}";
-            }
-            else
-            {
-                throw new ArgumentException("Either orderId or origClientOrderId must be sent.");
-            }
-
-            var result = await _apiClient.CallAsync<CanceledOrder>(ApiMethod.DELETE, Endpoints.CancelOrder, true, args);
-
-            return result;
-        }
-
-        /// <summary>
-        /// Get all open orders on a symbol.
-        /// </summary>
-        /// <param name="symbol">Ticker symbol.</param>
-        /// <param name="recvWindow">Specific number of milliseconds the request is valid for.</param>
-        /// <returns></returns>
-        public async Task<IEnumerable<Order>> GetCurrentOpenOrders(string symbol, long recvWindow = 6000000)
-        {
-            if (string.IsNullOrWhiteSpace(symbol))
-            {
-                throw new ArgumentException("symbol cannot be empty. ", "symbol");
-            }
-
-            var result = await _apiClient.CallAsync<IEnumerable<Order>>(ApiMethod.GET, Endpoints.CurrentOpenOrders, true, $"symbol={symbol.ToUpper()}&recvWindow={recvWindow}");
-
-            return result;
-        }
-
-        /// <summary>
-        /// Get all account orders; active, canceled, or filled.
-        /// </summary>
-        /// <param name="symbol">Ticker symbol.</param>
-        /// <param name="orderId">If is set, it will get orders >= that orderId. Otherwise most recent orders are returned.</param>
-        /// <param name="limit">Limit of records to retrieve.</param>
-        /// <param name="recvWindow">Specific number of milliseconds the request is valid for.</param>
-        /// <returns></returns>
-        public async Task<IEnumerable<Order>> GetAllOrders(string symbol, long? orderId = null, int limit = 500, long recvWindow = 6000000)
-        {
-            if (string.IsNullOrWhiteSpace(symbol))
-            {
-                throw new ArgumentException("symbol cannot be empty. ", "symbol");
-            }
-
-            var result = await _apiClient.CallAsync<IEnumerable<Order>>(ApiMethod.GET, Endpoints.AllOrders, true, $"symbol={symbol.ToUpper()}&limit={limit}&recvWindow={recvWindow}" + (orderId.HasValue ? $"&orderId={orderId.Value}" : ""));
-
-            return result;
-        }
-
-        /// <summary>
-        /// Get current account information.
-        /// </summary>
-        /// <param name="recvWindow">Specific number of milliseconds the request is valid for.</param>
-        /// <returns></returns>
-        public async Task<AccountInfo> GetAccountInfo(long recvWindow = 6000000)
-        {
-            var result = await _apiClient.CallAsync<AccountInfo>(ApiMethod.GET, Endpoints.AccountInformation, true, $"recvWindow={recvWindow}");
-
-            return result;
-        }
-
-        /// <summary>
-        /// Get trades for a specific account and symbol.
-        /// </summary>
-        /// <param name="symbol">Ticker symbol.</param>
-        /// <param name="recvWindow">Specific number of milliseconds the request is valid for.</param>
-        /// <returns></returns>
-        public async Task<IEnumerable<Trade>> GetTradeList(string symbol, long recvWindow = 6000000)
-        {
-            if (string.IsNullOrWhiteSpace(symbol))
-            {
-                throw new ArgumentException("symbol cannot be empty. ", "symbol");
-            }
-
-            var result = await _apiClient.CallAsync<IEnumerable<Trade>>(ApiMethod.GET, Endpoints.TradeList, true, $"symbol={symbol.ToUpper()}&recvWindow={recvWindow}");
-
-            return result;
-        }
-
-        /// <summary>
-        /// Submit a withdraw request.
-        /// </summary>
-        /// <param name="asset">Asset to withdraw.</param>
-        /// <param name="amount">Amount to withdraw.</param>
-        /// <param name="address">Address where the asset will be deposited.</param>
-        /// <param name="addressName">Address name.</param>
-        /// <param name="recvWindow">Specific number of milliseconds the request is valid for.</param>
-        /// <returns></returns>
-        public async Task<WithdrawResponse> Withdraw(string asset, decimal amount, string address, string addressName = "", long recvWindow = 6000000)
-        {
-            if (string.IsNullOrWhiteSpace(asset))
-            {
-                throw new ArgumentException("asset cannot be empty. ", "asset");
-            }
-            if (amount <= 0m)
-            {
-                throw new ArgumentException("amount must be greater than zero.", "amount");
-            }
-            if (string.IsNullOrWhiteSpace(address))
-            {
-                throw new ArgumentException("address cannot be empty. ", "address");
-            }
-
-            var args = $"asset={asset.ToUpper()}&amount={amount}&address={address}"
-              + (!string.IsNullOrWhiteSpace(addressName) ? $"&name={addressName}" : "")
-              + $"&recvWindow={recvWindow}";
-
-            var result = await _apiClient.CallAsync<WithdrawResponse>(ApiMethod.POST, Endpoints.Withdraw, true, args);
-
-            return result;
-        }
-
-        /// <summary>
-        /// Fetch deposit history.
-        /// </summary>
-        /// <param name="asset">Asset you want to see the information for.</param>
-        /// <param name="status">Deposit status.</param>
-        /// <param name="startTime">Start time. </param>
-        /// <param name="endTime">End time.</param>
-        /// <param name="recvWindow">Specific number of milliseconds the request is valid for.</param>
-        /// <returns></returns>
-        public async Task<DepositHistory> GetDepositHistory(string asset, DepositStatus? status = null, DateTime? startTime = null, DateTime? endTime = null, long recvWindow = 6000000)
-        {
-            if (string.IsNullOrWhiteSpace(asset))
-            {
-                throw new ArgumentException("asset cannot be empty. ", "asset");
-            }
-
-            var args = $"asset={asset.ToUpper()}"
-              + (status.HasValue ? $"&status={(int)status}" : "")
-              + (startTime.HasValue ? $"&startTime={Utilities.GenerateTimeStamp(startTime.Value)}" : "")
-              + (endTime.HasValue ? $"&endTime={Utilities.GenerateTimeStamp(endTime.Value)}" : "")
-              + $"&recvWindow={recvWindow}";
-
-            var result = await _apiClient.CallAsync<DepositHistory>(ApiMethod.POST, Endpoints.DepositHistory, true, args);
-
-            return result;
-        }
-
-        /// <summary>
-        /// Fetch withdraw history.
-        /// </summary>
-        /// <param name="asset">Asset you want to see the information for.</param>
-        /// <param name="status">Withdraw status.</param>
-        /// <param name="startTime">Start time. </param>
-        /// <param name="endTime">End time.</param>
-        /// <param name="recvWindow">Specific number of milliseconds the request is valid for.</param>
-        /// <returns></returns>
-        public async Task<WithdrawHistory> GetWithdrawHistory(string asset, WithdrawStatus? status = null, DateTime? startTime = null, DateTime? endTime = null, long recvWindow = 6000000)
-        {
-            if (string.IsNullOrWhiteSpace(asset))
-            {
-                throw new ArgumentException("asset cannot be empty. ", "asset");
-            }
-
-            var args = $"asset={asset.ToUpper()}"
-              + (status.HasValue ? $"&status={(int)status}" : "")
-              + (startTime.HasValue ? $"&startTime={Utilities.GenerateTimeStamp(startTime.Value)}" : "")
-              + (endTime.HasValue ? $"&endTime={Utilities.GenerateTimeStamp(endTime.Value)}" : "")
-              + $"&recvWindow={recvWindow}";
-
-            var result = await _apiClient.CallAsync<WithdrawHistory>(ApiMethod.POST, Endpoints.WithdrawHistory, true, args);
-
-            return result;
-        }
-
-        public Task<NewOrder> PostNewOrder(string quoteSymbol, string baseSymbol, decimal quantity, decimal price, OrderSide side, OrderType orderType = OrderType.LIMIT, TimeInForce timeInForce = TimeInForce.GTC)
+        public async Task<RequestResponse> PostNewOrder(NewOrderParams newOrderParams)
         {
             throw new NotImplementedException();
         }
 
-        public Task<Order> GetOrder(string symbol, long? orderId = null, string origClientOrderId = null)
+        public async Task<IEnumerable<AssetBalance>> GetAccoungBalance()
+        {
+            var result = await _apiClient.CallAsync<JObject>(ApiMethod.GET, Endpoints.AccountInformation, true);
+
+            var balances = (JArray)result.GetValue("balances");
+
+            return Mapper.Map<IEnumerable<AssetBalance>>(balances);
+        }
+
+        public async Task<Order> GetOrder(string orderId, string quoteSymbol, string baseSymbol)
+        {
+            var pair = quoteSymbol + baseSymbol;
+
+            if (string.IsNullOrWhiteSpace(quoteSymbol))
+            {
+                throw new ArgumentException("QuoteSymbol cannot be empty. ", "quoteSymbol");
+            }
+
+            if (string.IsNullOrWhiteSpace(baseSymbol))
+            {
+                throw new ArgumentException("BaseSymbol cannot be empty. ", "baseSymbol");
+            }
+
+            if (string.IsNullOrWhiteSpace(orderId))
+            {
+                throw new ArgumentException("OrderId cannot be empty. ", "orderId");
+            }
+
+            if (!orderId.IsValidInt())
+            {
+                throw new ArgumentException("OrderId must be a valid integer. ", "orderId");
+            }
+
+            var args = $"symbol={pair.ToUpper()}&orderId={orderId}";
+
+            var result = await _apiClient.CallAsync<JObject>(ApiMethod.GET, Endpoints.QueryOrder, true, args);
+
+            return Mapper.Map<Order>(result);
+        }
+
+        public async Task<RequestResponse> CancelOrder(string orderId, string quoteSymbol = null, string baseSymbol = null)
+        {
+            var pair = quoteSymbol + baseSymbol;
+
+            if (string.IsNullOrWhiteSpace(quoteSymbol))
+            {
+                throw new ArgumentException("QuoteSymbol cannot be empty. ", "quoteSymbol");
+            }
+
+            if (string.IsNullOrWhiteSpace(baseSymbol))
+            {
+                throw new ArgumentException("BaseSymbol cannot be empty. ", "baseSymbol");
+            }
+
+            if (string.IsNullOrWhiteSpace(orderId))
+            {
+                throw new ArgumentException("OrderId cannot be empty. ", "orderId");
+            }
+
+            if (!orderId.IsValidInt())
+            {
+                throw new ArgumentException("OrderId must be a valid integer. ", "orderId");
+            }
+
+            var args = $"symbol={pair.ToUpper()}&orderId={orderId}";
+
+            var result = await _apiClient.CallAsync<JObject>(ApiMethod.GET, Endpoints.QueryOrder, true, args);
+
+            return new RequestResponse();
+        }
+
+        public async Task<IEnumerable<Order>> GetCurrentOpenOrders(string quoteSymbol, string baseSymbol)
+        {
+            var pair = quoteSymbol + baseSymbol;
+
+            if (string.IsNullOrWhiteSpace(quoteSymbol))
+            {
+                throw new ArgumentException("QuoteSymbol cannot be empty. ", "quoteSymbol");
+            }
+
+            if (string.IsNullOrWhiteSpace(baseSymbol))
+            {
+                throw new ArgumentException("BaseSymbol cannot be empty. ", "baseSymbol");
+            }
+
+            var result = await _apiClient.CallAsync<JToken>(ApiMethod.GET, Endpoints.CurrentOpenOrders, true, $"symbol={pair.ToUpper()}");
+
+            return Mapper.Map<IEnumerable<Order>>(result);
+        }
+
+        public async Task<IEnumerable<Order>> GetAllOrders(string quoteSymbol, string baseSymbol)
+        {
+            var pair = quoteSymbol + baseSymbol;
+
+            if (string.IsNullOrWhiteSpace(quoteSymbol))
+            {
+                throw new ArgumentException("QuoteSymbol cannot be empty. ", "quoteSymbol");
+            }
+
+            if (string.IsNullOrWhiteSpace(baseSymbol))
+            {
+                throw new ArgumentException("BaseSymbol cannot be empty. ", "baseSymbol");
+            }
+
+            var result = await _apiClient.CallAsync<JToken>(ApiMethod.GET, Endpoints.AllOrders, true, $"symbol={pair.ToUpper()}");
+
+            return Mapper.Map<IEnumerable<Order>>(result);
+        }
+
+        public async Task<RequestResponse> Withdraw(string quoteSymbol, string baseSymbol, decimal amount, string address)
         {
             throw new NotImplementedException();
         }
 
-        public Task<CanceledOrder> CancelOrder(string symbol, long? orderId = null, string origClientOrderId = null)
+        public async Task<IEnumerable<Deposit>> GetDepositHistory(string symbol)
         {
-            throw new NotImplementedException();
+            var result = await _apiClient.CallAsync<JToken>(ApiMethod.GET, Endpoints.DepositHistory, true);
+
+            var history = (JArray)result["depositList"];
+
+            return Mapper.Map<IEnumerable<Deposit>>(history);
         }
 
-        public Task<IEnumerable<Order>> GetCurrentOpenOrders(string symbol)
+        public async Task<IEnumerable<Withdraw>> GetWithdrawHistory(string symbol)
         {
-            throw new NotImplementedException();
+            var result = await _apiClient.CallAsync<JToken>(ApiMethod.GET, Endpoints.WithdrawHistory, true);
+
+            var history = (JArray)result["withdrawList"];
+
+            return Mapper.Map<IEnumerable<Withdraw>>(history);
         }
-
-        public Task<IEnumerable<Order>> GetAllOrders(string symbol, long? orderId = null, int limit = 500)
-        {
-            throw new NotImplementedException();
-        }
-
-        public Task<AccountInfo> GetAccountInfo()
-        {
-            throw new NotImplementedException();
-        }
-
-        public Task<IEnumerable<Trade>> GetTradeList(string symbol)
-        {
-            throw new NotImplementedException();
-        }
-
-        public Task<WithdrawResponse> Withdraw(string asset, decimal amount, string address, string addressName = "")
-        {
-            throw new NotImplementedException();
-        }
-
-        public Task<DepositHistory> GetDepositHistory(string asset, DepositStatus? status = null, DateTime? startTime = null, DateTime? endTime = null)
-        {
-            throw new NotImplementedException();
-        }
-
-        public Task<WithdrawHistory> GetWithdrawHistory(string asset, WithdrawStatus? status = null, DateTime? startTime = null, DateTime? endTime = null)
-        {
-            throw new NotImplementedException();
-        }
-
-        public Task<NewOrder> PostNewOrder(string symbol, decimal quantity, decimal price, OrderSide side, OrderType orderType = OrderType.LIMIT, TimeInForce timeInForce = TimeInForce.GTC)
-        {
-            throw new NotImplementedException();
-        }
-
-
-
 
         #endregion
     }

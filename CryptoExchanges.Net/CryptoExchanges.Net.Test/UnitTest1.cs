@@ -34,6 +34,17 @@ namespace CryptoExchanges.Net.Test
             var e = _binanceClient.GetTickerPrice("ETH", "BTC").Result;
             var f = _binanceClient.GetOrderBook("ETH", "BTC").Result;
         }
+
+        [TestMethod]
+        public void TestAccountMethods()
+        {
+            //var a = _binanceClient.GetAccoungBalance().Result;
+            //var b = _binanceClient.GetCurrentOpenOrders("ETH", "BTC").Result;
+            var c = _binanceClient.GetAllOrders("ETH", "BTC").Result;
+
+            var e = _binanceClient.GetDepositHistory("ETH").Result;
+            var f = _binanceClient.GetWithdrawHistory("ETH").Result;
+        }
     }
 }
 

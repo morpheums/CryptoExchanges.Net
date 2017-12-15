@@ -1,4 +1,4 @@
-﻿namespace CryptoExchanges.Net.Domain.Enums
+﻿namespace CryptoExchanges.Net.Models.Enums
 {
     /// <summary>
     /// HTTPMethods to be used by the API.

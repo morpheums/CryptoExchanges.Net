@@ -57,10 +57,9 @@
     <Compile Include="Market\TickerInfo.cs" />
     <Compile Include="Market\SymbolPrice.cs" />
     <Compile Include="Market\TickerPrice.cs" />
+    <Compile Include="Params\NewOrderParams.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
-  <ItemGroup>
-    <Folder Include="Params\" />
-  </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

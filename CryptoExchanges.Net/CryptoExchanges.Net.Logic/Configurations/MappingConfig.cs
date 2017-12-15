@@ -20,6 +20,18 @@ namespace CryptoExchanges.Net.Binance.Configurations
             return filterType.Value<decimal>("minNotional");
         }
 
+        private static List<OrderBookOffer> OrderBookOfferResolver(JArray source)
+        {
+            var result = new List<OrderBookOffer>();
+
+            foreach (JToken item in source)
+            {
+                result.Add(new OrderBookOffer() { Price = decimal.Parse(item[0].ToString()), Quantity = decimal.Parse(item[1].ToString()) });
+            }
+
+            return result;
+        }
+
         public static void Initialize()
         {
 
@@ -31,30 +43,27 @@ namespace CryptoExchanges.Net.Binance.Configurations
                     .ForMember(o => o.Pair, cfg => { cfg.MapFrom(jo => jo["symbol"]); })
                     .ForMember(o => o.MinTradePrice, cfg => cfg.ResolveUsing(jo => MinTradeResolver(jo)));
 
+                configuration.CreateMap<JToken, TickerInfo>()
+                    .ForMember(o => o.Pair, cfg => { cfg.MapFrom(jo => jo["symbol"]); })
+                    .ForMember(o => o.Symbol, cfg => { cfg.MapFrom(jo => jo["symbol"]); })
+                    .ForMember(o => o.BaseSymbol, cfg => { cfg.MapFrom(jo => jo["symbol"]); })
+                    .ForMember(o => o.AskPrice, cfg => { cfg.MapFrom(jo => jo["askPrice"]); })
+                    .ForMember(o => o.BidPrice, cfg => { cfg.MapFrom(jo => jo["bidPrice"]); })
+                    .ForMember(o => o.HighPrice, cfg => { cfg.MapFrom(jo => jo["highPrice"]); })
+                    .ForMember(o => o.LowPrice, cfg => { cfg.MapFrom(jo => jo["lowPrice"]); })
+                    .ForMember(o => o.LastPrice, cfg => { cfg.MapFrom(jo => jo["lastPrice"]); })
+                    .ForMember(o => o.Volume, cfg => { cfg.MapFrom(jo => jo["volume"]); });
 
-                //cfg.CreateMap<Agreement, DMAgreement>()
-                //.ForMember(o => o.AgreementStatus, o => o.Ignore())
-                //.ForMember(o => o.AgreementType, o => o.Ignore());
-                //cfg.CreateMap<DMAgreementDetail, AgreementDetail>().ReverseMap();
-                //cfg.CreateMap<DMPaymentStatus, PaymentStatus>().ReverseMap();
-                //cfg.CreateMap<DMAccountBalanceDistributionType, AccountBalanceDistributionType>().ReverseMap();
-                //cfg.CreateMap<DMAgreementConfiguration, AgreementConfiguration>().ReverseMap();
-                //cfg.CreateMap<DMAgreementConfigurationDataType, AgreementConfigurationDataType>().ReverseMap();
-                //cfg.CreateMap<DMAgreementConfigurationChangeStatus, AgreementConfigurationChangeStatus>().ReverseMap();
-                //cfg.CreateMap<DMStateConfigurationChange, ConfigurationChange>().ReverseMap();
-                //cfg.CreateMap<DMStateConfigurationChangeApproval, ConfigurationChangeApproval>().ReverseMap();
-                //cfg.CreateMap<DMAccountBalanceDistributionType, AccountBalanceDistributionType>().ReverseMap();
-                //cfg.CreateMap<DMStateConfigurationChangeValue, ConfigurationChangeValue>().ReverseMap();
-                //cfg.CreateMap<DMStateConfigurationValue, ConfigurationValue>().ReverseMap();
-                //cfg.CreateMap<DMAgreementDetailStatus, AgreementDetailStatus>().ReverseMap();
-                //cfg.CreateMap<DMAgreementStatus, AgreementStatus>().ReverseMap();
-                //cfg.CreateMap<DMAgreementType, AgreementType>().ReverseMap();
-                //cfg.CreateMap<DMConsumerToken, ConsumerToken>().ReverseMap();
-                //cfg.CreateMap<DMCustomerAccountBalanceDistributionType, CustomerAccountBalanceDistributionType>().ReverseMap();
-                //cfg.CreateMap<DMPayment, DTO.Payment.Payment>().ReverseMap();
-                //cfg.CreateMap<DMPaymentProcessor, PaymentProcessor>().ReverseMap();
-                //cfg.CreateMap<DMPaymentProcessorResponse, PaymentProcessorResponse>().ReverseMap();
-                //cfg.CreateMap<DMPaymentType, PaymentType>().ReverseMap();
+                configuration.CreateMap<JToken, TickerPrice>()
+                    .ForMember(o => o.Pair, cfg => { cfg.MapFrom(jo => jo["symbol"]); })
+                    .ForMember(o => o.Symbol, cfg => { cfg.MapFrom(jo => jo["symbol"]); })
+                    .ForMember(o => o.BaseSymbol, cfg => { cfg.MapFrom(jo => jo["symbol"]); })
+                    .ForMember(o => o.Price, cfg => { cfg.MapFrom(jo => jo["price"]); });
+
+                configuration.CreateMap<JToken, OrderBook>()
+                    .ForMember(o => o.Asks, cfg => cfg.ResolveUsing(jo => OrderBookOfferResolver((JArray)jo["asks"])))
+                    .ForMember(o => o.Bids, cfg => cfg.ResolveUsing(jo => OrderBookOfferResolver((JArray)jo["bids"])));
+
             });
         }
     }

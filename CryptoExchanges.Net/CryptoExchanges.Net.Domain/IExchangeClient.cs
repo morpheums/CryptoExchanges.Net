@@ -32,6 +32,11 @@ namespace CryptoExchanges.Net.Domain
         /// Represents the current version of the API.
         /// </summary>
         string ApiVersion { get; }
+
+        /// <summary>
+        /// Specifies which are the order types supported by the exchange.
+        /// </summary>
+        List<OrderType> SupportedOrderTypes { get; }
         #endregion
 
         #region Methods and Functions
@@ -102,20 +107,7 @@ namespace CryptoExchanges.Net.Domain
         /// <param name="timeInForce">Indicates how long an order will remain active before it is executed or expires.</param>
         /// <param name="recvWindow">Specific number of milliseconds the request is valid for.</param>
         /// <returns></returns>
-        Task<NewOrder> PostNewOrder(string symbol, decimal quantity, decimal price, OrderSide side, OrderType orderType = OrderType.LIMIT, TimeInForce timeInForce = TimeInForce.GTC, decimal icebergQty = 0m, long recvWindow = 6000000);
-
-        /// <summary>
-        /// Test new order creation and signature/recvWindow long. Creates and validates a new order but does not send it into the matching engine.
-        /// </summary>
-        /// <param name="symbol">Ticker symbol.</param>
-        /// <param name="quantity">Quantity to transaction.</param>
-        /// <param name="price">Price of the transaction.</param>
-        /// <param name="orderType">Order type (LIMIT-MARKET).</param>
-        /// <param name="side">Order side (BUY-SELL).</param>
-        /// <param name="timeInForce">Indicates how long an order will remain active before it is executed or expires.</param>
-        /// <param name="recvWindow">Specific number of milliseconds the request is valid for.</param>
-        /// <returns></returns>
-        Task<dynamic> PostNewOrderTest(string symbol, decimal quantity, decimal price, OrderSide side, OrderType orderType = OrderType.LIMIT, TimeInForce timeInForce = TimeInForce.GTC, decimal icebergQty = 0m, long recvWindow = 6000000);
+        Task<NewOrder> PostNewOrder(string symbol, decimal quantity, decimal price, OrderSide side, OrderType orderType = OrderType.LIMIT, TimeInForce timeInForce = TimeInForce.GTC);
 
         /// <summary>
         /// Check an order's status.
@@ -125,7 +117,7 @@ namespace CryptoExchanges.Net.Domain
         /// <param name="origClientOrderId">origClientOrderId of the order to retrieve.</param>
         /// <param name="recvWindow">Specific number of milliseconds the request is valid for.</param>
         /// <returns></returns>
-        Task<Order> GetOrder(string symbol, long? orderId = null, string origClientOrderId = null, long recvWindow = 6000000);
+        Task<Order> GetOrder(string symbol, long? orderId = null, string origClientOrderId = null);
 
         /// <summary>
         /// Cancel an active order.
@@ -135,7 +127,7 @@ namespace CryptoExchanges.Net.Domain
         /// <param name="origClientOrderId">origClientOrderId of the order to cancel.</param>
         /// <param name="recvWindow">Specific number of milliseconds the request is valid for.</param>
         /// <returns></returns>
-        Task<CanceledOrder> CancelOrder(string symbol, long? orderId = null, string origClientOrderId = null, long recvWindow = 6000000);
+        Task<CanceledOrder> CancelOrder(string symbol, long? orderId = null, string origClientOrderId = null);
 
         /// <summary>
         /// Get all open orders on a symbol.
@@ -143,7 +135,7 @@ namespace CryptoExchanges.Net.Domain
         /// <param name="symbol">Ticker symbol.</param>
         /// <param name="recvWindow">Specific number of milliseconds the request is valid for.</param>
         /// <returns></returns>
-        Task<IEnumerable<Order>> GetCurrentOpenOrders(string symbol, long recvWindow = 6000000);
+        Task<IEnumerable<Order>> GetCurrentOpenOrders(string symbol);
 
         /// <summary>
         /// Get all account orders; active, canceled, or filled.
@@ -153,14 +145,14 @@ namespace CryptoExchanges.Net.Domain
         /// <param name="limit">Limit of records to retrieve.</param>
         /// <param name="recvWindow">Specific number of milliseconds the request is valid for.</param>
         /// <returns></returns>
-        Task<IEnumerable<Order>> GetAllOrders(string symbol, long? orderId = null, int limit = 500, long recvWindow = 6000000);
+        Task<IEnumerable<Order>> GetAllOrders(string symbol, long? orderId = null, int limit = 500);
 
         /// <summary>
         /// Get current account information.
         /// </summary>
         /// <param name="recvWindow">Specific number of milliseconds the request is valid for.</param>
         /// <returns></returns>
-        Task<AccountInfo> GetAccountInfo(long recvWindow = 6000000);
+        Task<AccountInfo> GetAccountInfo();
 
         /// <summary>
         /// Get trades for a specific account and symbol.
@@ -168,7 +160,7 @@ namespace CryptoExchanges.Net.Domain
         /// <param name="symbol">Ticker symbol.</param>
         /// <param name="recvWindow">Specific number of milliseconds the request is valid for.</param>
         /// <returns></returns>
-        Task<IEnumerable<Trade>> GetTradeList(string symbol, long recvWindow = 6000000);
+        Task<IEnumerable<Trade>> GetTradeList(string symbol);
 
         /// <summary>
         /// Submit a withdraw request.
@@ -179,7 +171,7 @@ namespace CryptoExchanges.Net.Domain
         /// <param name="addressName">Address name.</param>
         /// <param name="recvWindow">Specific number of milliseconds the request is valid for.</param>
         /// <returns></returns>
-        Task<WithdrawResponse> Withdraw(string asset, decimal amount, string address, string addressName = "", long recvWindow = 6000000);
+        Task<WithdrawResponse> Withdraw(string asset, decimal amount, string address, string addressName = "");
 
         /// <summary>
         /// Fetch deposit history.
@@ -190,7 +182,7 @@ namespace CryptoExchanges.Net.Domain
         /// <param name="endTime">End time.</param>
         /// <param name="recvWindow">Specific number of milliseconds the request is valid for.</param>
         /// <returns></returns>
-        Task<DepositHistory> GetDepositHistory(string asset, DepositStatus? status = null, DateTime? startTime = null, DateTime? endTime = null, long recvWindow = 6000000);
+        Task<DepositHistory> GetDepositHistory(string asset, DepositStatus? status = null, DateTime? startTime = null, DateTime? endTime = null);
 
         /// <summary>
         /// Fetch withdraw history.
@@ -201,7 +193,7 @@ namespace CryptoExchanges.Net.Domain
         /// <param name="endTime">End time.</param>
         /// <param name="recvWindow">Specific number of milliseconds the request is valid for.</param>
         /// <returns></returns>
-        Task<WithdrawHistory> GetWithdrawHistory(string asset, WithdrawStatus? status = null, DateTime? startTime = null, DateTime? endTime = null, long recvWindow = 6000000);
+        Task<WithdrawHistory> GetWithdrawHistory(string asset, WithdrawStatus? status = null, DateTime? startTime = null, DateTime? endTime = null);
         #endregion
     }
 }

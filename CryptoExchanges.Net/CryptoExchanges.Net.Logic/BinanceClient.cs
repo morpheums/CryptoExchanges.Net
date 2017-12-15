@@ -46,6 +46,8 @@ namespace CryptoExchanges.Net.Binance
         /// Specifies the implemented API version.
         /// </summary>
         public string ApiVersion => "v3";
+
+        public List<OrderType> SupportedOrderTypes => new List<OrderType>() { OrderType.LIMIT, OrderType.MARKET,OrderType.STOP_LOSS, OrderType.STOP_LOSS_LIMIT, OrderType.TAKE_PROFIT, OrderType.TAKE_PROFIT_LIMIT};
         #endregion
 
         /// <summary>
@@ -107,7 +109,7 @@ namespace CryptoExchanges.Net.Binance
 
             var pair = quoteSymbol + baseSymbol;
 
-            var result = await _apiClient.CallAsync<JArray>(ApiMethod.GET, Endpoints.TickersInfo, false, $"symbol={pair.ToUpper()}");
+            var result = await _apiClient.CallAsync<JToken>(ApiMethod.GET, Endpoints.TickersInfo, false, $"symbol={pair.ToUpper()}");
 
             return Mapper.Map<TickerInfo>(result);
         }
@@ -133,7 +135,7 @@ namespace CryptoExchanges.Net.Binance
 
             var pair = quoteSymbol + baseSymbol;
 
-            var result = await _apiClient.CallAsync<JArray>(ApiMethod.GET, Endpoints.TickerPrice, false, $"symbol={pair.ToUpper()}");
+            var result = await _apiClient.CallAsync<JToken>(ApiMethod.GET, Endpoints.TickerPrice, false, $"symbol={pair.ToUpper()}");
 
             return Mapper.Map<TickerPrice>(result);
         }
@@ -152,7 +154,7 @@ namespace CryptoExchanges.Net.Binance
 
             var pair = quoteSymbol + baseSymbol;
 
-            var result = await _apiClient.CallAsync<JArray>(ApiMethod.GET, Endpoints.OrderBook, false, $"symbol={pair.ToUpper()}&limit=20");
+            var result = await _apiClient.CallAsync<JObject>(ApiMethod.GET, Endpoints.OrderBook, false, $"symbol={pair.ToUpper()}&limit=20");
 
             return Mapper.Map<OrderBook>(result);
         }
@@ -436,7 +438,62 @@ namespace CryptoExchanges.Net.Binance
             return result;
         }
 
-      
+        public Task<NewOrder> PostNewOrder(string quoteSymbol, string baseSymbol, decimal quantity, decimal price, OrderSide side, OrderType orderType = OrderType.LIMIT, TimeInForce timeInForce = TimeInForce.GTC)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<Order> GetOrder(string symbol, long? orderId = null, string origClientOrderId = null)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<CanceledOrder> CancelOrder(string symbol, long? orderId = null, string origClientOrderId = null)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<IEnumerable<Order>> GetCurrentOpenOrders(string symbol)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<IEnumerable<Order>> GetAllOrders(string symbol, long? orderId = null, int limit = 500)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<AccountInfo> GetAccountInfo()
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<IEnumerable<Trade>> GetTradeList(string symbol)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<WithdrawResponse> Withdraw(string asset, decimal amount, string address, string addressName = "")
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<DepositHistory> GetDepositHistory(string asset, DepositStatus? status = null, DateTime? startTime = null, DateTime? endTime = null)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<WithdrawHistory> GetWithdrawHistory(string asset, WithdrawStatus? status = null, DateTime? startTime = null, DateTime? endTime = null)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<NewOrder> PostNewOrder(string symbol, decimal quantity, decimal price, OrderSide side, OrderType orderType = OrderType.LIMIT, TimeInForce timeInForce = TimeInForce.GTC)
+        {
+            throw new NotImplementedException();
+        }
+
+
 
 
         #endregion

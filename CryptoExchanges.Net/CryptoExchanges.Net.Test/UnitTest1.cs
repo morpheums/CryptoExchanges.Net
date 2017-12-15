@@ -26,9 +26,9 @@ namespace CryptoExchanges.Net.Test
 
             //var t = binanceClient.GetTradeList("ethbtc").Result;
 
-            var a = _binanceClient.GetExchangeCurrenciesInfo().Result;
-            var b = _binanceClient.GetAllTickersInfo().Result;
-            var c = _binanceClient.GetTickerInfo("ETH", "BTC").Result;
+            //var a = _binanceClient.GetExchangeCurrenciesInfo().Result;
+            //var b = _binanceClient.GetAllTickersInfo().Result;
+            //var c = _binanceClient.GetTickerInfo("ETH", "BTC").Result;
 
             var d = _binanceClient.GetAllTickersPrice().Result;
             var e = _binanceClient.GetTickerPrice("ETH", "BTC").Result;

@@ -1,7 +1,7 @@
 ﻿using AutoMapper;
-using CryptoExchanges.Net.Binance.Utils;
 using CryptoExchanges.Net.Models.Account;
 using CryptoExchanges.Net.Models.Market;
+using CryptoExchanges.Net.Utils;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;

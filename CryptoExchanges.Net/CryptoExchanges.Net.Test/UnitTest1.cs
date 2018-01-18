@@ -13,26 +13,42 @@ namespace CryptoExchanges.Net.Test
 
         public UnitTest1()
         {
-            _binanceClient = _cryptoClient.GetBinanceClient();
+            _binanceClient = _cryptoClient.GetExchangeClient("Binance");
             var apiKey = ConfigurationManager.AppSettings["BinanceApiKey"];
             var apiSecret = ConfigurationManager.AppSettings["BinanceApiSecret"];
             _binanceClient.SetCredentials(apiKey, apiSecret);
         }
 
         [TestMethod]
-        public void Test()
+        public void TestMarketMethods()
         {
-            //var accountInfo = _binanceClient.GetAccountInfo().Result;
+            var currenciesInfo = _binanceClient.GetExchangeCurrenciesInfo();
 
-            //var t = binanceClient.GetTradeList("ethbtc").Result;
+            var allTickersInfo = _binanceClient.GetAllTickersInfo();
 
-            //var a = _binanceClient.GetExchangeCurrenciesInfo().Result;
-            //var b = _binanceClient.GetAllTickersInfo().Result;
-            //var c = _binanceClient.GetTickerInfo("ETH", "BTC").Result;
+            var tickerInfo = _binanceClient.GetTickerInfo("ETH", "BTC");
 
-            var d = _binanceClient.GetAllTickersPrice().Result;
-            var e = _binanceClient.GetTickerPrice("ETH", "BTC").Result;
-            var f = _binanceClient.GetOrderBook("ETH", "BTC").Result;
+            var allTickersPrice = _binanceClient.GetAllTickersPrice();
+
+            var tickerPrice = _binanceClient.GetTickerPrice("ETH", "BTC");
+
+            var orderBook = _binanceClient.GetOrderBook("ETH", "BTC");
+        }
+
+        [TestMethod]
+        public void TestMarketAsyncMethods()
+        {
+            var currenciesInfo = _binanceClient.GetExchangeCurrenciesInfoAsync().Result;
+
+            var allTickersInfo = _binanceClient.GetAllTickersInfoAsync().Result;
+
+            var tickerInfo = _binanceClient.GetTickerInfoAsync("ETH", "BTC").Result;
+
+            var allTickersPrice = _binanceClient.GetAllTickersPriceAsync().Result;
+
+            var tickerPrice = _binanceClient.GetTickerPriceAsync("ETH", "BTC").Result;
+
+            var orderBook = _binanceClient.GetOrderBookAsync("ETH", "BTC").Result;
         }
 
         [TestMethod]
@@ -40,10 +56,21 @@ namespace CryptoExchanges.Net.Test
         {
             //var a = _binanceClient.GetAccoungBalance().Result;
             //var b = _binanceClient.GetCurrentOpenOrders("ETH", "BTC").Result;
-            var c = _binanceClient.GetAllOrders("ETH", "BTC").Result;
+            var c = _binanceClient.GetAllOrdersAsync("ETH", "BTC").Result;
 
-            var e = _binanceClient.GetDepositHistory("ETH").Result;
-            var f = _binanceClient.GetWithdrawHistory("ETH").Result;
+            var e = _binanceClient.GetDepositHistoryAsync("ETH").Result;
+            var f = _binanceClient.GetWithdrawHistoryAsync("ETH").Result;
+        }
+
+        [TestMethod]
+        public void TestAccountAsyncMethods()
+        {
+            //var a = _binanceClient.GetAccoungBalance().Result;
+            //var b = _binanceClient.GetCurrentOpenOrders("ETH", "BTC").Result;
+            var c = _binanceClient.GetAllOrdersAsync("ETH", "BTC").Result;
+
+            var e = _binanceClient.GetDepositHistoryAsync("ETH").Result;
+            var f = _binanceClient.GetWithdrawHistoryAsync("ETH").Result;
         }
     }
 }

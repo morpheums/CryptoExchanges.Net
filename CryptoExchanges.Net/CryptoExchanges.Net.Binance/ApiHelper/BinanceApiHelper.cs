@@ -2,8 +2,8 @@
 using System;
 using System.Net.Http;
 using Newtonsoft.Json;
-using CryptoExchanges.Net.Binance.Utils;
 using CryptoExchanges.Net.Models.Enums;
+using CryptoExchanges.Net.Utils;
 
 namespace CryptoExchanges.Net.Binance.Clients.API
 {
@@ -28,7 +28,7 @@ namespace CryptoExchanges.Net.Binance.Clients.API
         /// <summary>
         /// HttpClient to be used to call the API.
         /// </summary>
-        public HttpClient _httpClient;
+        private HttpClient _httpClient;
         #endregion
 
         /// <summary>
@@ -57,12 +57,7 @@ namespace CryptoExchanges.Net.Binance.Clients.API
                     .Add(new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("application/json"));
         }
 
-        /// <summary>
-        /// Method used to set the configuration for the exchange.
-        /// </summary>
-        /// <param name="apiKey">Key used to authenticate within the API.</param>
-        /// <param name="apiSecret">API secret used to signed API calls.</param>
-        /// <param name="apiUrl">API based url.</param>
+        /// <see cref="IBinanceApiHelper.SetCredentials(string, string, string)"/>
         public void SetCredentials(string apiUrl, string apiKey, string apiSecret)
         {
             _apiUrl = apiUrl;
@@ -72,15 +67,29 @@ namespace CryptoExchanges.Net.Binance.Clients.API
             ConfigureHttpClient();
         }
 
-        /// <summary>
-        /// Calls API Methods.
-        /// </summary>
-        /// <typeparam name="T">Type to which the response content will be converted.</typeparam>
-        /// <param name="method">HTTPMethod (POST-GET-PUT-DELETE)</param>
-        /// <param name="endpoint">Url endpoing.</param>
-        /// <param name="isSigned">Specifies if the request needs a signature.</param>
-        /// <param name="parameters">Request parameters.</param>
-        /// <returns></returns>
+        /// <see cref="IBinanceApiHelper.Call{T}(ApiMethod, string, bool, string)"/>
+        public T Call<T>(ApiMethod method, string endpoint, bool isSigned = false, string parameters = null)
+        {
+            var finalEndpoint = endpoint + (string.IsNullOrWhiteSpace(parameters) ? "" : $"?{parameters}");
+
+            if (isSigned)
+            {
+                parameters += (!string.IsNullOrWhiteSpace(parameters) ? "&timestamp=" : "timestamp=") + Utilities.GenerateTimeStamp(DateTime.Now);
+                var signature = Utilities.GenerateSignature(_apiSecret, parameters);
+                finalEndpoint = $"{endpoint}?{parameters}&signature={signature}";
+            }
+
+            var request = new HttpRequestMessage(Utilities.CreateHttpMethod(method.ToString()), finalEndpoint);
+
+
+            var response =  _httpClient.SendAsync(request).ConfigureAwait(false).GetAwaiter().GetResult();
+            response.EnsureSuccessStatusCode();
+
+            var result = response.Content.ReadAsStringAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+            return JsonConvert.DeserializeObject<T>(result);
+        }
+
+        /// <see cref="IBinanceApiHelper.CallAsync{T}(ApiMethod, string, bool, string)"/>
         public async Task<T> CallAsync<T>(ApiMethod method, string endpoint, bool isSigned = false, string parameters = null)
         {
             var finalEndpoint = endpoint + (string.IsNullOrWhiteSpace(parameters) ? "" : $"?{parameters}");
@@ -102,9 +111,7 @@ namespace CryptoExchanges.Net.Binance.Clients.API
             return JsonConvert.DeserializeObject<T>(result);
         }
 
-        /// <summary>
-        /// States if the credentials (Key and Secret) were provided.
-        /// </summary>
+        /// <see cref="IBinanceApiHelper.HasCredentials"/>
         public bool HasCredentials()
         {
             return !(string.IsNullOrWhiteSpace(_apiKey) && string.IsNullOrWhiteSpace(_apiSecret));

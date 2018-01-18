@@ -63,13 +63,13 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\CryptoExchanges.Net.Binance\CryptoExchanges.Net.Binance.csproj">
+      <Project>{73e75efb-fc5d-46e8-b73f-30270a4c2760}</Project>
+      <Name>CryptoExchanges.Net.Binance</Name>
+    </ProjectReference>
     <ProjectReference Include="..\CryptoExchanges.Net.Domain\CryptoExchanges.Net.Domain.csproj">
       <Project>{4eadf056-78c8-45a6-87ce-8af994baea92}</Project>
       <Name>CryptoExchanges.Net.Domain</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\CryptoExchanges.Net.Logic\CryptoExchanges.Net.Binance.csproj">
-      <Project>{73e75efb-fc5d-46e8-b73f-30270a4c2760}</Project>
-      <Name>CryptoExchanges.Net.Binance</Name>
     </ProjectReference>
     <ProjectReference Include="..\CryptoExchanges.Net.Models\CryptoExchanges.Net.Models.csproj">
       <Project>{D27B812F-8BAF-4718-A121-93BF4430BCC3}</Project>

@@ -17,6 +17,17 @@ namespace CryptoExchanges.Net.Binance.Clients.API
         Task<T> CallAsync<T>(ApiMethod method, string endpoint, bool isSigned = false, string parameters = null);
 
         /// <summary>
+        /// Calls API Methods.
+        /// </summary>
+        /// <typeparam name="T">Type to which the response content will be converted.</typeparam>
+        /// <param name="method">HTTPMethod (POST-GET-PUT-DELETE)</param>
+        /// <param name="endpoint">Url endpoint.</param>
+        /// <param name="isSigned">Specifies if the request needs a signature.</param>
+        /// <param name="parameters">Request parameters.</param>
+        /// <returns></returns>
+        T Call<T>(ApiMethod method, string endpoint, bool isSigned = false, string parameters = null);
+
+        /// <summary>
         /// Method used to set the configuration for the exchange.
         /// </summary>
         /// <param name="apiKey">Key used to authenticate within the API.</param>

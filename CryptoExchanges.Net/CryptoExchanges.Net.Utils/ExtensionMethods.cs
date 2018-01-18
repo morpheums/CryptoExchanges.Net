@@ -1,4 +1,5 @@
-﻿using CryptoExchanges.Net.Domain;
+﻿using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using System;
 using System.ComponentModel;
 using System.Linq;
@@ -23,19 +24,45 @@ public static class ExtensionMethods
     }
 
     /// <summary>
-    /// Extension method to get a enum description.
+    /// Validates if a string is a valid int.
     /// </summary>
-    /// <param name="value">Enum to get the description from.</param>
+    /// <param name="value">String to validate.</param>
     /// <returns></returns>
-    public static IExchangeClient GetBinanceClient(this ICryptoClient value)
-    {
-        return value.GetExchangeClient("Binance");
-    }
-
     public static bool IsValidInt(this string value)
     {
         var result = int.TryParse(value, out int parsedValue);
         return result;
+    }
+
+    /// <summary>
+    /// Validates if string is a valid JSON
+    /// </summary>
+    /// <param name="stringValue">String to validate</param>
+    /// <returns></returns>
+    public static bool IsValidJson(this string stringValue)
+    {
+        if (string.IsNullOrWhiteSpace(stringValue))
+        {
+            return false;
+        }
+
+        var value = stringValue.Trim();
+
+        if ((value.StartsWith("{") && value.EndsWith("}")) || //For object
+            (value.StartsWith("[") && value.EndsWith("]"))) //For array
+        {
+            try
+            {
+                var obj = JToken.Parse(value);
+                return true;
+            }
+            catch (JsonReaderException)
+            {
+                return false;
+            }
+        }
+
+        return false;
     }
 }
 

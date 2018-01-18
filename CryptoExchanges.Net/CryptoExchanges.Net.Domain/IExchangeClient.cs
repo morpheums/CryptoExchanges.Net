@@ -67,13 +67,25 @@ namespace CryptoExchanges.Net.Domain
         /// Get exchange markets information and price limits.
         /// </summary>
         /// <returns></returns>
-        Task<IEnumerable<CurrencyInfo>> GetExchangeCurrenciesInfo();
+        IEnumerable<CurrencyInfo> GetExchangeCurrenciesInfo();
+
+        /// <summary>
+        /// Get exchange markets information and price limits.
+        /// </summary>
+        /// <returns></returns>
+        Task<IEnumerable<CurrencyInfo>> GetExchangeCurrenciesInfoAsync();
 
         /// <summary>
         /// Get 24 hour price statistics for all tickers.
         /// </summary>
         /// <returns></returns>
-        Task<IEnumerable<TickerInfo>> GetAllTickersInfo();
+        IEnumerable<TickerInfo> GetAllTickersInfo();
+
+        /// <summary>
+        /// Get 24 hour price statistics for all tickers.
+        /// </summary>
+        /// <returns></returns>
+        Task<IEnumerable<TickerInfo>> GetAllTickersInfoAsync();
 
         /// <summary>
         /// Get 24 hour price statistics for an specific ticker.
@@ -81,13 +93,27 @@ namespace CryptoExchanges.Net.Domain
         /// <param name="quoteSymbol">Quote symbol to look for.</param>
         /// <param name="baseSymbol">Base symbol to look for.</param>
         /// <returns></returns>
-        Task<TickerInfo> GetTickerInfo(string quoteSymbol, string baseSymbol);
+        TickerInfo GetTickerInfo(string quoteSymbol, string baseSymbol);
+
+        /// <summary>
+        /// Get 24 hour price statistics for an specific ticker.
+        /// </summary>
+        /// <param name="quoteSymbol">Quote symbol to look for.</param>
+        /// <param name="baseSymbol">Base symbol to look for.</param>
+        /// <returns></returns>
+        Task<TickerInfo> GetTickerInfoAsync(string quoteSymbol, string baseSymbol);
 
         /// <summary>
         /// Get latest price for all tickers.
         /// </summary>
         /// <returns></returns>
-        Task<IEnumerable<TickerPrice>> GetAllTickersPrice();
+        IEnumerable<TickerPrice> GetAllTickersPrice();
+
+        /// <summary>
+        /// Get latest price for all tickers.
+        /// </summary>
+        /// <returns></returns>
+        Task<IEnumerable<TickerPrice>> GetAllTickersPriceAsync();
 
         /// <summary>
         ///  Latest price for an specific ticker.
@@ -95,7 +121,15 @@ namespace CryptoExchanges.Net.Domain
         /// <param name="quoteSymbol">Quote symbol to look for.</param>
         /// <param name="baseSymbol">Base symbol to look for.</param>
         /// <returns></returns>
-        Task<TickerPrice> GetTickerPrice(string quoteSymbol, string baseSymbol);
+        TickerPrice GetTickerPrice(string quoteSymbol, string baseSymbol);
+
+        /// <summary>
+        ///  Latest price for an specific ticker.
+        /// </summary>
+        /// <param name="quoteSymbol">Quote symbol to look for.</param>
+        /// <param name="baseSymbol">Base symbol to look for.</param>
+        /// <returns></returns>
+        Task<TickerPrice> GetTickerPriceAsync(string quoteSymbol, string baseSymbol);
 
         /// <summary>
         /// Get order book for a particular symbol.
@@ -103,7 +137,15 @@ namespace CryptoExchanges.Net.Domain
         /// <param name="quoteSymbol">Quote symbol to look for.</param>
         /// <param name="baseSymbol">Base symbol to look for.</param>
         /// <returns></returns>
-        Task<OrderBook> GetOrderBook(string quoteSymbol, string baseSymbol);
+        OrderBook GetOrderBook(string quoteSymbol, string baseSymbol);
+
+        /// <summary>
+        /// Get order book for a particular symbol.
+        /// </summary>
+        /// <param name="quoteSymbol">Quote symbol to look for.</param>
+        /// <param name="baseSymbol">Base symbol to look for.</param>
+        /// <returns></returns>
+        Task<OrderBook> GetOrderBookAsync(string quoteSymbol, string baseSymbol);
         #endregion
 
         #region Account Information Methods
@@ -111,14 +153,27 @@ namespace CryptoExchanges.Net.Domain
         /// Get current account balances.
         /// </summary>
         /// <returns></returns>
-        Task<IEnumerable<AssetBalance>> GetAccoungBalance();
+        IEnumerable<AssetBalance> GetAccoungBalance();
+
+        /// <summary>
+        /// Get current account balances.
+        /// </summary>
+        /// <returns></returns>
+        Task<IEnumerable<AssetBalance>> GetAccoungBalanceAsync();
 
         /// <summary>
         /// Send in a new order.
         /// </summary>
         /// <param name="newOrderParams">Params to post a new order.</param>
         /// <returns></returns>
-        Task<RequestResponse> PostNewOrder(NewOrderParams newOrderParams);
+        RequestResponse PostNewOrder(NewOrderParams newOrderParams);
+
+        /// <summary>
+        /// Send in a new order.
+        /// </summary>
+        /// <param name="newOrderParams">Params to post a new order.</param>
+        /// <returns></returns>
+        Task<RequestResponse> PostNewOrderAsync(NewOrderParams newOrderParams);
 
         /// <summary>
         /// Check an order's status.
@@ -127,7 +182,16 @@ namespace CryptoExchanges.Net.Domain
         /// <param name="quoteSymbol">Quote symbol to look for.</param>
         /// <param name="baseSymbol">Base symbol to look for.</param>
         /// <returns></returns>
-        Task<Order> GetOrder(string orderId, string quoteSymbol, string baseSymbol);
+        Order GetOrder(string orderId, string quoteSymbol, string baseSymbol);
+
+        /// <summary>
+        /// Check an order's status.
+        /// </summary>
+        /// <param name="orderId">Id of the order to retrieve.</param>
+        /// <param name="quoteSymbol">Quote symbol to look for.</param>
+        /// <param name="baseSymbol">Base symbol to look for.</param>
+        /// <returns></returns>
+        Task<Order> GetOrderAsync(string orderId, string quoteSymbol, string baseSymbol);
 
         /// <summary>
         /// Cancel an active order.
@@ -136,7 +200,16 @@ namespace CryptoExchanges.Net.Domain
         /// <param name="quoteSymbol">Quote symbol to look for.</param>
         /// <param name="baseSymbol">Base symbol to look for.</param>
         /// <returns></returns>
-        Task<RequestResponse> CancelOrder(string orderId, string quoteSymbol = null, string baseSymbol = null);
+        RequestResponse CancelOrder(string orderId, string quoteSymbol = null, string baseSymbol = null);
+
+        /// <summary>
+        /// Cancel an active order.
+        /// </summary>
+        /// <param name="orderId">Id of the order to retrieve.</param>
+        /// <param name="quoteSymbol">Quote symbol to look for.</param>
+        /// <param name="baseSymbol">Base symbol to look for.</param>
+        /// <returns></returns>
+        Task<RequestResponse> CancelOrderAsync(string orderId, string quoteSymbol = null, string baseSymbol = null);
 
         /// <summary>
         /// Get all open orders on a symbol.
@@ -144,7 +217,15 @@ namespace CryptoExchanges.Net.Domain
         /// <param name="quoteSymbol">Quote symbol to look for.</param>
         /// <param name="baseSymbol">Base symbol to look for.</param>
         /// <returns></returns>
-        Task<IEnumerable<Order>> GetCurrentOpenOrders(string quoteSymbol, string baseSymbol);
+        IEnumerable<Order> GetCurrentOpenOrders(string quoteSymbol, string baseSymbol);
+
+        /// <summary>
+        /// Get all open orders on a symbol.
+        /// </summary>
+        /// <param name="quoteSymbol">Quote symbol to look for.</param>
+        /// <param name="baseSymbol">Base symbol to look for.</param>
+        /// <returns></returns>
+        Task<IEnumerable<Order>> GetCurrentOpenOrdersAsync(string quoteSymbol, string baseSymbol);
 
         /// <summary>
         /// Get all account orders; active, canceled, or filled.
@@ -152,15 +233,15 @@ namespace CryptoExchanges.Net.Domain
         /// <param name="quoteSymbol">Quote symbol to look for.</param>
         /// <param name="baseSymbol">Base symbol to look for.</param>
         /// <returns></returns>
-        Task<IEnumerable<Order>> GetAllOrders(string quoteSymbol, string baseSymbol);
+        IEnumerable<Order> GetAllOrders(string quoteSymbol, string baseSymbol);
 
-        ///// <summary>
-        ///// Get trades for a specific account and symbol.
-        ///// </summary>
-        ///// <param name="quoteSymbol">Quote symbol to look for.</param>
-        ///// <param name="baseSymbol">Base symbol to look for.</param>
-        ///// <returns></returns>
-        //Task<IEnumerable<Trade>> GetTradeList(string quoteSymbol, string baseSymbol);
+        /// <summary>
+        /// Get all account orders; active, canceled, or filled.
+        /// </summary>
+        /// <param name="quoteSymbol">Quote symbol to look for.</param>
+        /// <param name="baseSymbol">Base symbol to look for.</param>
+        /// <returns></returns>
+        Task<IEnumerable<Order>> GetAllOrdersAsync(string quoteSymbol, string baseSymbol);
 
         /// <summary>
         /// Submit a withdraw request.
@@ -170,21 +251,45 @@ namespace CryptoExchanges.Net.Domain
         /// <param name="amount">Amount to withdraw.</param>
         /// <param name="address">Address where the asset will be deposited.</param>
         /// <returns></returns>
-        Task<RequestResponse> Withdraw(string quoteSymbol, string baseSymbol, decimal amount, string address);
+        RequestResponse Withdraw(string quoteSymbol, string baseSymbol, decimal amount, string address);
+
+        /// <summary>
+        /// Submit a withdraw request.
+        /// </summary>
+        /// <param name="quoteSymbol">Quote symbol to look for.</param>
+        /// <param name="baseSymbol">Base symbol to look for.</param>
+        /// <param name="amount">Amount to withdraw.</param>
+        /// <param name="address">Address where the asset will be deposited.</param>
+        /// <returns></returns>
+        Task<RequestResponse> WithdrawAsync(string quoteSymbol, string baseSymbol, decimal amount, string address);
 
         /// <summary>
         /// Fetch deposit history.
         /// </summary>
         /// <param name="symbol">Asset you want to see the information for.</param>
         /// <returns></returns>
-        Task<IEnumerable<Deposit>> GetDepositHistory(string symbol);
+        IEnumerable<Deposit> GetDepositHistory(string symbol);
+
+        /// <summary>
+        /// Fetch deposit history.
+        /// </summary>
+        /// <param name="symbol">Asset you want to see the information for.</param>
+        /// <returns></returns>
+        Task<IEnumerable<Deposit>> GetDepositHistoryAsync(string symbol);
 
         /// <summary>
         /// Fetch withdraw history.
         /// </summary>
         /// <param name="symbol">Asset you want to see the information for.</param>
         /// <returns></returns>
-        Task<IEnumerable<Withdraw>> GetWithdrawHistory(string symbol);
+        IEnumerable<Withdraw> GetWithdrawHistory(string symbol);
+
+        /// <summary>
+        /// Fetch withdraw history.
+        /// </summary>
+        /// <param name="symbol">Asset you want to see the information for.</param>
+        /// <returns></returns>
+        Task<IEnumerable<Withdraw>> GetWithdrawHistoryAsync(string symbol);
         #endregion
     }
 }

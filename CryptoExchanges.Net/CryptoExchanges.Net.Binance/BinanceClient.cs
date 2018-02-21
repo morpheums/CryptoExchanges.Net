@@ -203,7 +203,7 @@ namespace CryptoExchanges.Net.Binance
             return Mapper.Map<TickerPrice>(result);
         }
 
-        /// <see cref="IExchangeClient.GetOrderBook(string, string)(string, string)"/>
+        /// <see cref="IExchangeClient.GetOrderBook(string, string)"/>
         public OrderBook GetOrderBook(string quoteSymbol, string baseSymbol)
         {
             if (string.IsNullOrWhiteSpace(quoteSymbol))
@@ -223,7 +223,7 @@ namespace CryptoExchanges.Net.Binance
             return Mapper.Map<OrderBook>(result);
         }
 
-        /// <see cref="IExchangeClient.GetOrderBookAsync(string, string)(string, string)"/>
+        /// <see cref="IExchangeClient.GetOrderBookAsync(string, string)"/>
         public async Task<OrderBook> GetOrderBookAsync(string quoteSymbol, string baseSymbol)
         {
             if (string.IsNullOrWhiteSpace(quoteSymbol))
@@ -258,8 +258,8 @@ namespace CryptoExchanges.Net.Binance
             throw new NotImplementedException();
         }
 
-        /// <see cref="IExchangeClient.GetAccoungBalance()"/>
-        public IEnumerable<AssetBalance> GetAccoungBalance()
+        /// <see cref="IExchangeClient.GetAccountBalance()"/>
+        public IEnumerable<AssetBalance> GetAccountBalance()
         {
             var result = _apiClient.Call<JObject>(ApiMethod.GET, Endpoints.AccountInformation, true);
 
@@ -268,8 +268,8 @@ namespace CryptoExchanges.Net.Binance
             return Mapper.Map<IEnumerable<AssetBalance>>(balances);
         }
 
-        /// <see cref="IExchangeClient.GetAccoungBalanceAsync()"/>
-        public async Task<IEnumerable<AssetBalance>> GetAccoungBalanceAsync()
+        /// <see cref="IExchangeClient.GetAccountBalanceAsync()"/>
+        public async Task<IEnumerable<AssetBalance>> GetAccountBalanceAsync()
         {
             var result = await _apiClient.CallAsync<JObject>(ApiMethod.GET, Endpoints.AccountInformation, true);
 
@@ -278,7 +278,7 @@ namespace CryptoExchanges.Net.Binance
             return Mapper.Map<IEnumerable<AssetBalance>>(balances);
         }
 
-        /// <see cref="IExchangeClient.GetOrder(string, string, string)(string, string, string)"/>
+        /// <see cref="IExchangeClient.GetOrder(string, string, string)/>
         public Order GetOrder(string orderId, string quoteSymbol, string baseSymbol)
         {
             var pair = quoteSymbol + baseSymbol;
@@ -310,7 +310,7 @@ namespace CryptoExchanges.Net.Binance
             return Mapper.Map<Order>(result);
         }
 
-        /// <see cref="IExchangeClient.GetOrderAsync(string, string, string)(string, string, string)"/>
+        /// <see cref="IExchangeClient.GetOrderAsync(string, string, string)"/>
         public async Task<Order> GetOrderAsync(string orderId, string quoteSymbol, string baseSymbol)
         {
             var pair = quoteSymbol + baseSymbol;
@@ -342,7 +342,7 @@ namespace CryptoExchanges.Net.Binance
             return Mapper.Map<Order>(result);
         }
 
-        /// <see cref="IExchangeClient.CancelOrder(string, string, string)(string, string, string)"/>
+        /// <see cref="IExchangeClient.CancelOrder(string, string, string)"/>
         public RequestResponse CancelOrder(string orderId, string quoteSymbol = null, string baseSymbol = null)
         {
             var pair = quoteSymbol + baseSymbol;
@@ -374,7 +374,7 @@ namespace CryptoExchanges.Net.Binance
             return new RequestResponse();
         }
 
-        /// <see cref="IExchangeClient.CancelOrderAsync(string, string, string)(string, string, string)"/>
+        /// <see cref="IExchangeClient.CancelOrderAsync(string, string, string)"/>
         public async Task<RequestResponse> CancelOrderAsync(string orderId, string quoteSymbol = null, string baseSymbol = null)
         {
             var pair = quoteSymbol + baseSymbol;
@@ -406,7 +406,7 @@ namespace CryptoExchanges.Net.Binance
             return new RequestResponse();
         }
 
-        /// <see cref="IExchangeClient.GetCurrentOpenOrders(string, string)(string, string)"/>
+        /// <see cref="IExchangeClient.GetCurrentOpenOrders(string, string)"/>
         public IEnumerable<Order> GetCurrentOpenOrders(string quoteSymbol, string baseSymbol)
         {
             var pair = quoteSymbol + baseSymbol;
@@ -426,7 +426,7 @@ namespace CryptoExchanges.Net.Binance
             return Mapper.Map<IEnumerable<Order>>(result);
         }
 
-        /// <see cref="IExchangeClient.GetCurrentOpenOrdersAsync(string, string)(string, string)"/>
+        /// <see cref="IExchangeClient.GetCurrentOpenOrdersAsync(string, string)"/>
         public async Task<IEnumerable<Order>> GetCurrentOpenOrdersAsync(string quoteSymbol, string baseSymbol)
         {
             var pair = quoteSymbol + baseSymbol;
@@ -446,7 +446,7 @@ namespace CryptoExchanges.Net.Binance
             return Mapper.Map<IEnumerable<Order>>(result);
         }
 
-        /// <see cref="IExchangeClient.GetAllOrders(string, string)(string, string)"/>
+        /// <see cref="IExchangeClient.GetAllOrders(string, string)"/>
         public IEnumerable<Order> GetAllOrders(string quoteSymbol, string baseSymbol)
         {
             var pair = quoteSymbol + baseSymbol;
@@ -466,7 +466,7 @@ namespace CryptoExchanges.Net.Binance
             return Mapper.Map<IEnumerable<Order>>(result);
         }
 
-        /// <see cref="IExchangeClient.GetAllOrdersAsync(string, string)(string, string)"/>
+        /// <see cref="IExchangeClient.GetAllOrdersAsync(string, string)"/>
         public async Task<IEnumerable<Order>> GetAllOrdersAsync(string quoteSymbol, string baseSymbol)
         {
             var pair = quoteSymbol + baseSymbol;
@@ -486,19 +486,19 @@ namespace CryptoExchanges.Net.Binance
             return Mapper.Map<IEnumerable<Order>>(result);
         }
 
-        /// <see cref="IExchangeClient.Withdraw(string, string, decimal, string)(string, string, decimal, string)"/>
+        /// <see cref="IExchangeClient.Withdraw(string, string, decimal, string)"/>
         public RequestResponse Withdraw(string quoteSymbol, string baseSymbol, decimal amount, string address)
         {
             throw new NotImplementedException();
         }
 
-        /// <see cref="IExchangeClient.WithdrawAsync(string, string, decimal, string)(string, string, decimal, string)"/>
+        /// <see cref="IExchangeClient.WithdrawAsync(string, string, decimal, string)"/>
         public async Task<RequestResponse> WithdrawAsync(string quoteSymbol, string baseSymbol, decimal amount, string address)
         {
             throw new NotImplementedException();
         }
 
-        /// <see cref="IExchangeClient.GetDepositHistory(string)(string)"/>
+        /// <see cref="IExchangeClient.GetDepositHistory(string)"/>
         public IEnumerable<Deposit> GetDepositHistory(string symbol)
         {
             var result = _apiClient.Call<JToken>(ApiMethod.GET, Endpoints.DepositHistory, true);
@@ -508,7 +508,7 @@ namespace CryptoExchanges.Net.Binance
             return Mapper.Map<IEnumerable<Deposit>>(history);
         }
 
-        /// <see cref="IExchangeClient.GetDepositHistoryAsync(string)(string)"/>
+        /// <see cref="IExchangeClient.GetDepositHistoryAsync(string)"/>
         public async Task<IEnumerable<Deposit>> GetDepositHistoryAsync(string symbol)
         {
             var result = await _apiClient.CallAsync<JToken>(ApiMethod.GET, Endpoints.DepositHistory, true);
@@ -518,7 +518,7 @@ namespace CryptoExchanges.Net.Binance
             return Mapper.Map<IEnumerable<Deposit>>(history);
         }
 
-        /// <see cref="IExchangeClient.GetWithdrawHistory(string)(string)"/>
+        /// <see cref="IExchangeClient.GetWithdrawHistory(string)"/>
         public IEnumerable<Withdraw> GetWithdrawHistory(string symbol)
         {
             var result = _apiClient.Call<JToken>(ApiMethod.GET, Endpoints.WithdrawHistory, true);
@@ -528,7 +528,7 @@ namespace CryptoExchanges.Net.Binance
             return Mapper.Map<IEnumerable<Withdraw>>(history);
         }
 
-        /// <see cref="IExchangeClient.GetWithdrawHistoryAsync(string)(string)"/>
+        /// <see cref="IExchangeClient.GetWithdrawHistoryAsync(string)/>
         public async Task<IEnumerable<Withdraw>> GetWithdrawHistoryAsync(string symbol)
         {
             var result = await _apiClient.CallAsync<JToken>(ApiMethod.GET, Endpoints.WithdrawHistory, true);

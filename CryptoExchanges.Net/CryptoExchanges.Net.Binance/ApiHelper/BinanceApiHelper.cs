@@ -4,6 +4,8 @@ using System.Net.Http;
 using Newtonsoft.Json;
 using CryptoExchanges.Net.Models.Enums;
 using CryptoExchanges.Net.Utils;
+using Newtonsoft.Json.Linq;
+using System.Net;
 
 namespace CryptoExchanges.Net.Binance.Clients.API
 {
@@ -74,19 +76,53 @@ namespace CryptoExchanges.Net.Binance.Clients.API
 
             if (isSigned)
             {
-                parameters += (!string.IsNullOrWhiteSpace(parameters) ? "&timestamp=" : "timestamp=") + Utilities.GenerateTimeStamp(DateTime.Now);
+                // Joining provided parameters
+                parameters += (!string.IsNullOrWhiteSpace(parameters) ? "&timestamp=" : "timestamp=") + Utilities.GenerateTimeStamp(DateTime.Now.ToUniversalTime());
+
+                // Creating request signature
                 var signature = Utilities.GenerateSignature(_apiSecret, parameters);
                 finalEndpoint = $"{endpoint}?{parameters}&signature={signature}";
             }
 
             var request = new HttpRequestMessage(Utilities.CreateHttpMethod(method.ToString()), finalEndpoint);
+            var response = _httpClient.SendAsync(request).ConfigureAwait(false).GetAwaiter().GetResult();
+            if (response.IsSuccessStatusCode)
+            {
+                // Api return is OK
+                response.EnsureSuccessStatusCode();
 
+                // Get the result
+                var result = response.Content.ReadAsStringAsync().ConfigureAwait(false).GetAwaiter().GetResult();
 
-            var response =  _httpClient.SendAsync(request).ConfigureAwait(false).GetAwaiter().GetResult();
-            response.EnsureSuccessStatusCode();
+                // Serialize and return result
+                return JsonConvert.DeserializeObject<T>(result);
+            }
 
-            var result = response.Content.ReadAsStringAsync().ConfigureAwait(false).GetAwaiter().GetResult();
-            return JsonConvert.DeserializeObject<T>(result);
+            // We received an error
+            if (response.StatusCode == HttpStatusCode.GatewayTimeout)
+            {
+                throw new Exception("Api Request Timeout.");
+            }
+
+            // Get te error code and message
+            var e = response.Content.ReadAsStringAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+
+            // Error Values
+            var errorCode = 0;
+            string errorMessage = "";
+            if (e.IsValidJson())
+            {
+                try
+                {
+                    var i = JObject.Parse(e);
+
+                    errorCode = i["code"]?.Value<int>() ?? 0;
+                    errorMessage = i["msg"]?.Value<string>();
+                }
+                catch { }
+            }
+
+            throw new Exception(string.Format("Api Error Code: {0} Message: {1}", errorCode, errorMessage));
         }
 
         /// <see cref="IBinanceApiHelper.CallAsync{T}(ApiMethod, string, bool, string)"/>
@@ -96,19 +132,53 @@ namespace CryptoExchanges.Net.Binance.Clients.API
 
             if (isSigned)
             {
-                parameters += (!string.IsNullOrWhiteSpace(parameters) ? "&timestamp=" : "timestamp=") + Utilities.GenerateTimeStamp(DateTime.Now);
+                // Joining provided parameters
+                parameters += (!string.IsNullOrWhiteSpace(parameters) ? "&timestamp=" : "timestamp=") + Utilities.GenerateTimeStamp(DateTime.Now.ToUniversalTime());
+
+                // Creating request signature
                 var signature = Utilities.GenerateSignature(_apiSecret, parameters);
                 finalEndpoint = $"{endpoint}?{parameters}&signature={signature}";
             }
 
             var request = new HttpRequestMessage(Utilities.CreateHttpMethod(method.ToString()), finalEndpoint);
-
-
             var response = await _httpClient.SendAsync(request).ConfigureAwait(false);
-            response.EnsureSuccessStatusCode();
+            if (response.IsSuccessStatusCode)
+            {
+                // Api return is OK
+                response.EnsureSuccessStatusCode();
 
-            var result = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-            return JsonConvert.DeserializeObject<T>(result);
+                // Get the result
+                var result = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+
+                // Serialize and return result
+                return JsonConvert.DeserializeObject<T>(result);
+            }
+
+            // We received an error
+            if (response.StatusCode == HttpStatusCode.GatewayTimeout)
+            {
+                throw new Exception("Api Request Timeout.");
+            }
+
+            // Get te error code and message
+            var e = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+
+            // Error Values
+            var errorCode = 0;
+            string errorMessage = "";
+            if (e.IsValidJson())
+            {
+                try
+                {
+                    var i = JObject.Parse(e);
+
+                    errorCode = i["code"]?.Value<int>() ?? 0;
+                    errorMessage = i["msg"]?.Value<string>();
+                }
+                catch { }
+            }
+
+            throw new Exception(string.Format("Api Error Code: {0} Message: {1}", errorCode, errorMessage));
         }
 
         /// <see cref="IBinanceApiHelper.HasCredentials"/>

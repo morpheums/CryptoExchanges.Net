@@ -54,23 +54,29 @@ namespace CryptoExchanges.Net.Test
         [TestMethod]
         public void TestAccountMethods()
         {
-            //var a = _binanceClient.GetAccoungBalance().Result;
-            //var b = _binanceClient.GetCurrentOpenOrders("ETH", "BTC").Result;
-            var c = _binanceClient.GetAllOrdersAsync("ETH", "BTC").Result;
+            var accountBalance = _binanceClient.GetAccountBalance();
 
-            var e = _binanceClient.GetDepositHistoryAsync("ETH").Result;
-            var f = _binanceClient.GetWithdrawHistoryAsync("ETH").Result;
+            var currentOpenOrders = _binanceClient.GetCurrentOpenOrders("ETH", "BTC");
+
+            var allOrders = _binanceClient.GetAllOrders("ETH", "BTC");
+
+            var depositHistory = _binanceClient.GetDepositHistory("ETH");
+
+            var withdrawHistory = _binanceClient.GetWithdrawHistory("ETH");
         }
 
         [TestMethod]
         public void TestAccountAsyncMethods()
         {
-            //var a = _binanceClient.GetAccoungBalance().Result;
-            //var b = _binanceClient.GetCurrentOpenOrders("ETH", "BTC").Result;
-            var c = _binanceClient.GetAllOrdersAsync("ETH", "BTC").Result;
+            var accountBalance = _binanceClient.GetAccountBalanceAsync().Result;
 
-            var e = _binanceClient.GetDepositHistoryAsync("ETH").Result;
-            var f = _binanceClient.GetWithdrawHistoryAsync("ETH").Result;
+            var currentOpenOrders = _binanceClient.GetCurrentOpenOrdersAsync("ETH", "BTC").Result;
+
+            var allOrders = _binanceClient.GetAllOrdersAsync("ETH", "BTC").Result;
+
+            var depositHistory = _binanceClient.GetDepositHistoryAsync("ETH").Result;
+
+            var withdrawHistory = _binanceClient.GetWithdrawHistoryAsync("ETH").Result;
         }
     }
 }

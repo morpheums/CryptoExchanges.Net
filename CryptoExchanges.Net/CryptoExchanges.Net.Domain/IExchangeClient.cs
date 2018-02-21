@@ -153,13 +153,13 @@ namespace CryptoExchanges.Net.Domain
         /// Get current account balances.
         /// </summary>
         /// <returns></returns>
-        IEnumerable<AssetBalance> GetAccoungBalance();
+        IEnumerable<AssetBalance> GetAccountBalance();
 
         /// <summary>
         /// Get current account balances.
         /// </summary>
         /// <returns></returns>
-        Task<IEnumerable<AssetBalance>> GetAccoungBalanceAsync();
+        Task<IEnumerable<AssetBalance>> GetAccountBalanceAsync();
 
         /// <summary>
         /// Send in a new order.

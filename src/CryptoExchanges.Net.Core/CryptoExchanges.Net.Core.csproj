@@ -4,6 +4,8 @@
     <AssemblyName>CryptoExchanges.Net.Core</AssemblyName>
     <Description>Core abstractions, interfaces, and models for the CryptoExchanges.Net unified exchange SDK.</Description>
     <PackageId>CryptoExchanges.Net.Core</PackageId>
+    <!-- CA1032: custom exception ctors intentionally omitted — domain exceptions carry typed parameters -->
+    <NoWarn>$(NoWarn);CA1032</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>

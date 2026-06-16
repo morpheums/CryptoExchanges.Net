@@ -52,15 +52,11 @@ internal sealed class BinanceResponseProfile : Profile
             .ForMember(d => d.PriceChangePercent, o => o.MapFrom(s => BinanceValueParsers.ParseDecimal(s.PriceChangePercent)))
             .ForMember(d => d.Timestamp, o => o.MapFrom(s => s.CloseTime > 0 ? DateTimeOffset.FromUnixTimeMilliseconds(s.CloseTime) : (DateTimeOffset?)null));
 
-        // BinanceTradeHistoryResponse -> Trade (account trade history; carries its own symbol).
-        CreateMap<BinanceTradeHistoryResponse, Trade>()
-            .ForMember(d => d.Symbol, o => o.MapFrom(s => symbolMapper.FromWire(s.Symbol)))
-            .ForMember(d => d.Id, o => o.MapFrom(s => s.Id.ToString()))
-            .ForMember(d => d.Price, o => o.MapFrom(s => BinanceValueParsers.ParseDecimal(s.Price)))
-            .ForMember(d => d.Quantity, o => o.MapFrom(s => BinanceValueParsers.ParseDecimal(s.Qty)))
-            .ForMember(d => d.Timestamp, o => o.MapFrom(s => (DateTimeOffset?)DateTimeOffset.FromUnixTimeMilliseconds(s.Time)))
-            .ForMember(d => d.IsBuyerMaker, o => o.MapFrom(s => s.IsBuyer))
-            .ForMember(d => d.OrderId, o => o.MapFrom(s => s.OrderId.ToString()));
+        // NOTE: BinanceTradeHistoryResponse -> Trade is intentionally NOT mapped here.
+        // Trade.Symbol for account trade history comes from the caller's typed Symbol argument
+        // (which the caller already holds), not from resolving the wire string — resolving via
+        // FromWire could throw on a cold mapper cache for pairs outside the fallback-quote list.
+        // That projection stays hand-written in BinanceAccountService.GetTradeHistoryAsync.
 
         // BinanceSymbolInfo -> SymbolInfo (exchangeInfo symbol projection; explicit base/quote legs).
         CreateMap<BinanceSymbolInfo, SymbolInfo>()

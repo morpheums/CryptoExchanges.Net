@@ -117,7 +117,17 @@ internal sealed class BinanceAccountService(BinanceHttpClient http, BinanceSymbo
 
         var results = await http.GetAsync<List<BinanceTradeHistoryResponse>>("/api/v3/myTrades", parameters, true, ct).ConfigureAwait(false);
 
-        return modelMapper.Map<BinanceTradeHistoryResponse, Trade>(results);
+        // Trade.Symbol is taken from the caller's typed argument (the caller already holds it),
+        // not resolved from the wire string, so a cold mapper cache can never make this throw.
+        return results.Select(t => new Trade(
+            symbol,
+            t.Id.ToString(),
+            BinanceValueParsers.ParseDecimal(t.Price),
+            BinanceValueParsers.ParseDecimal(t.Qty),
+            DateTimeOffset.FromUnixTimeMilliseconds(t.Time),
+            t.IsBuyer,
+            t.OrderId.ToString()
+        )).ToList();
     }
 
 }

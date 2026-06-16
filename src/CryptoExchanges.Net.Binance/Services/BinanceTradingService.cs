@@ -71,12 +71,6 @@ internal sealed record BinanceOrderResponse
     public string SelfTradePreventionMode { get; init; } = "NONE";
 }
 
-internal sealed record BinanceCancelAllResponse
-{
-    [JsonPropertyName("orders")]
-    public List<BinanceOrderResponse> Orders { get; init; } = [];
-}
-
 // ---------------------------------------------------------------------------
 //  BinanceTradingService
 // ---------------------------------------------------------------------------
@@ -119,9 +113,6 @@ internal sealed class BinanceTradingService(BinanceHttpClient http) : ITradingSe
         if (request.IcebergQuantity.HasValue)
             parameters["icebergQty"] = request.IcebergQuantity.Value.ToString(System.Globalization.CultureInfo.InvariantCulture);
 
-        // Binance 2026: recvWindow as decimal with up to 3 places
-        parameters["recvWindow"] = "5000";
-
         var response = await http.PostAsync<BinanceOrderResponse>("/api/v3/order", parameters, true, ct).ConfigureAwait(false);
         return MapOrder(response);
     }
@@ -132,8 +123,7 @@ internal sealed class BinanceTradingService(BinanceHttpClient http) : ITradingSe
         var parameters = new Dictionary<string, string>
         {
             ["symbol"] = symbol.ToString(),
-            ["orderId"] = orderId,
-            ["recvWindow"] = "5000"
+            ["orderId"] = orderId
         };
 
         var response = await http.DeleteAsync<BinanceOrderResponse>("/api/v3/order", parameters, true, ct).ConfigureAwait(false);
@@ -146,8 +136,7 @@ internal sealed class BinanceTradingService(BinanceHttpClient http) : ITradingSe
         var parameters = new Dictionary<string, string>
         {
             ["symbol"] = symbol.ToString(),
-            ["origClientOrderId"] = clientOrderId,
-            ["recvWindow"] = "5000"
+            ["origClientOrderId"] = clientOrderId
         };
 
         var response = await http.DeleteAsync<BinanceOrderResponse>("/api/v3/order", parameters, true, ct).ConfigureAwait(false);
@@ -159,12 +148,13 @@ internal sealed class BinanceTradingService(BinanceHttpClient http) : ITradingSe
     {
         var parameters = new Dictionary<string, string>
         {
-            ["symbol"] = symbol.ToString(),
-            ["recvWindow"] = "5000"
+            ["symbol"] = symbol.ToString()
         };
 
-        var response = await http.DeleteAsync<BinanceCancelAllResponse>("/api/v3/openOrders", parameters, true, ct).ConfigureAwait(false);
-        return response.Orders.Select(MapOrder).ToList();
+        // Binance returns a bare JSON array of cancelled orders (and OCO reports),
+        // not an object wrapper.
+        var response = await http.DeleteAsync<List<BinanceOrderResponse>>("/api/v3/openOrders", parameters, true, ct).ConfigureAwait(false);
+        return response.Select(MapOrder).ToList();
     }
 
     /// <inheritdoc />
@@ -173,8 +163,7 @@ internal sealed class BinanceTradingService(BinanceHttpClient http) : ITradingSe
         var parameters = new Dictionary<string, string>
         {
             ["symbol"] = symbol.ToString(),
-            ["orderId"] = orderId,
-            ["recvWindow"] = "5000"
+            ["orderId"] = orderId
         };
 
         var response = await http.GetAsync<BinanceOrderResponse>("/api/v3/order", parameters, true, ct).ConfigureAwait(false);
@@ -184,10 +173,7 @@ internal sealed class BinanceTradingService(BinanceHttpClient http) : ITradingSe
     /// <inheritdoc />
     public async Task<IReadOnlyList<Order>> GetOpenOrdersAsync(Symbol? symbol = null, CancellationToken ct = default)
     {
-        var parameters = new Dictionary<string, string>
-        {
-            ["recvWindow"] = "5000"
-        };
+        var parameters = new Dictionary<string, string>();
 
         if (symbol.HasValue)
             parameters["symbol"] = symbol.Value.ToString();
@@ -207,8 +193,7 @@ internal sealed class BinanceTradingService(BinanceHttpClient http) : ITradingSe
         var parameters = new Dictionary<string, string>
         {
             ["symbol"] = symbol.ToString(),
-            ["limit"] = limit.ToString(),
-            ["recvWindow"] = "5000"
+            ["limit"] = limit.ToString()
         };
 
         if (startTime.HasValue)

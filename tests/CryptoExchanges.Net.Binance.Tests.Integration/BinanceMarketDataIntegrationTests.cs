@@ -14,8 +14,7 @@ public class BinanceMarketDataIntegrationTests : IAsyncLifetime
 
     public async Task InitializeAsync()
     {
-        var http = new HttpClient { BaseAddress = new Uri("https://api.binance.com") };
-        _exchange = new BinanceExchangeClient(http, "", null);
+        _exchange = BinanceExchangeClient.Create(new BinanceOptions());
 
         // Verify connectivity before running tests
         try

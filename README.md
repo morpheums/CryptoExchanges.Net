@@ -16,7 +16,11 @@ Every crypto exchange has a different API. CryptoExchanges.Net gives you **one u
 
 ```csharp
 // Same code works on any exchange
-IExchangeClient exchange = new BinanceExchangeClient(http, apiKey, secretKey);
+IExchangeClient exchange = BinanceExchangeClient.Create(new BinanceOptions
+{
+    ApiKey = apiKey,
+    SecretKey = secretKey
+});
 var price = await exchange.MarketData.GetPriceAsync("BTCUSDT");
 var order = await exchange.Trading.PlaceOrderAsync(new PlaceOrderRequest
 {
@@ -59,8 +63,11 @@ dotnet add package CryptoExchanges.Net.Binance
 ### 2. Use directly
 
 ```csharp
-using var http = new HttpClient { BaseAddress = new Uri("https://api.binance.com") };
-var exchange = new BinanceExchangeClient(http, "your-api-key", "your-secret-key");
+await using var exchange = BinanceExchangeClient.Create(new BinanceOptions
+{
+    ApiKey = "your-api-key",
+    SecretKey = "your-secret-key"
+});
 
 var btcPrice = await exchange.MarketData.GetPriceAsync("BTCUSDT");
 Console.WriteLine($"BTC: ${btcPrice}");
@@ -72,11 +79,8 @@ Console.WriteLine($"BTC: ${btcPrice}");
 // Program.cs
 builder.Services.AddCryptoExchanges(cfg =>
 {
-    cfg.AddBinance(options =>
-    {
-        options.ApiKey = builder.Configuration["Binance:ApiKey"]!;
-        options.SecretKey = builder.Configuration["Binance:SecretKey"]!;
-    });
+    cfg.BinanceApiKey = builder.Configuration["Binance:ApiKey"];
+    cfg.BinanceSecretKey = builder.Configuration["Binance:SecretKey"];
 });
 
 // appsettings.json

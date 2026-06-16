@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
@@ -12,7 +13,8 @@ namespace CryptoExchanges.Net.Binance;
 internal sealed class BinanceHttpClient(
     HttpClient httpClient,
     string apiKey,
-    BinanceSignatureService? signatureService)
+    BinanceSignatureService? signatureService,
+    decimal receiveWindow = 5000m)
 {
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -157,9 +159,20 @@ internal sealed class BinanceHttpClient(
 
     private string AppendTimestamp(string queryString)
     {
-        var timestamp = (DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() + TimeOffset).ToString();
-        var prefix = string.IsNullOrEmpty(queryString) ? string.Empty : "&";
-        return $"{queryString}{prefix}timestamp={timestamp}";
+        var sb = new StringBuilder(queryString);
+
+        // Inject recvWindow from configuration unless the caller already supplied one.
+        if (!queryString.Contains("recvWindow=", StringComparison.Ordinal))
+        {
+            if (sb.Length > 0) sb.Append('&');
+            sb.Append("recvWindow=").Append(receiveWindow.ToString(CultureInfo.InvariantCulture));
+        }
+
+        var timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() + TimeOffset;
+        if (sb.Length > 0) sb.Append('&');
+        sb.Append("timestamp=").Append(timestamp.ToString(CultureInfo.InvariantCulture));
+
+        return sb.ToString();
     }
 
     private void AddHeaders(HttpRequestMessage request)

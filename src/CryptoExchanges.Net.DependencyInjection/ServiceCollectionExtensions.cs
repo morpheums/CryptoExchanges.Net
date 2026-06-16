@@ -21,6 +21,8 @@ public static class ServiceCollectionExtensions
         this IServiceCollection services,
         Action<BinanceOptions>? configure = null)
     {
+        ArgumentNullException.ThrowIfNull(services);
+
         var options = new BinanceOptions();
 
         // Apply environment variables as defaults
@@ -63,6 +65,8 @@ public static class ServiceCollectionExtensions
         this IServiceCollection services,
         Action<CryptoExchangesOptions>? configure = null)
     {
+        ArgumentNullException.ThrowIfNull(services);
+
         var options = new CryptoExchangesOptions();
         configure?.Invoke(options);
 

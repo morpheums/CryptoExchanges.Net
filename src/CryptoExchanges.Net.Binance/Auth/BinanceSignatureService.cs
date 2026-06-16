@@ -30,7 +30,8 @@ public sealed class BinanceSignatureService(string secretKey)
     public string BuildSignedQuery(string queryString)
     {
         var signature = Sign(queryString);
-        return $"{queryString}&signature={signature}";
+        var separator = string.IsNullOrEmpty(queryString) ? string.Empty : "&";
+        return $"{queryString}{separator}signature={signature}";
     }
 
     private static byte[] InitializeSecretKey(string secretKey)

@@ -1,3 +1,4 @@
+using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace CryptoExchanges.Net.Core.Models;
@@ -48,13 +49,12 @@ public readonly record struct Asset
             return false;
 
         var normalized = ticker.Trim().ToUpperInvariant();
-        if (normalized.Length is 0 or > MaxTickerLength)
+        if (normalized.Length > MaxTickerLength)
             return false;
 
         foreach (var c in normalized)
         {
-            var ok = c is >= 'A' and <= 'Z' or >= '0' and <= '9';
-            if (!ok)
+            if (c is not (>= 'A' and <= 'Z' or >= '0' and <= '9'))
                 return false;
         }
 
@@ -64,25 +64,38 @@ public readonly record struct Asset
 }
 
 /// <summary>Serializes <see cref="Asset"/> as its ticker string.</summary>
-public sealed class AssetJsonConverter : System.Text.Json.Serialization.JsonConverter<Asset>
+[System.Diagnostics.CodeAnalysis.SuppressMessage(
+    "Performance",
+    "CA1812:Avoid uninstantiated internal classes",
+    Justification = "Instantiated by System.Text.Json via the [JsonConverter(typeof(...))] attribute on Asset.")]
+internal sealed class AssetJsonConverter : JsonConverter<Asset>
 {
     /// <inheritdoc/>
     public override Asset Read(
-        ref System.Text.Json.Utf8JsonReader reader,
+        ref Utf8JsonReader reader,
         Type typeToConvert,
-        System.Text.Json.JsonSerializerOptions options)
+        JsonSerializerOptions options)
     {
-        var s = reader.GetString();
-        return Asset.TryOf(s, out var asset) ? asset : Asset.None;
+        if (reader.TokenType == JsonTokenType.Null)
+            return Asset.None;
+
+        if (reader.TokenType != JsonTokenType.String)
+            throw new JsonException($"Expected a string token for {nameof(Asset)} but found {reader.TokenType}.");
+
+        return Asset.TryOf(reader.GetString(), out var asset) ? asset : Asset.None;
     }
 
     /// <inheritdoc/>
     public override void Write(
-        System.Text.Json.Utf8JsonWriter writer,
+        Utf8JsonWriter writer,
         Asset value,
-        System.Text.Json.JsonSerializerOptions options)
+        JsonSerializerOptions options)
     {
         ArgumentNullException.ThrowIfNull(writer);
-        writer.WriteStringValue(value.Ticker);
+
+        if (value.IsNone)
+            writer.WriteNullValue();
+        else
+            writer.WriteStringValue(value.Ticker);
     }
 }

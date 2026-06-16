@@ -62,4 +62,15 @@ public class AssetTests
     [Fact]
     public void ToString_ReturnsTicker()
         => Asset.Of("BTC").ToString().Should().Be("BTC");
+
+    [Fact]
+    public void Of_Accepts_MaxLengthTicker()
+        => Asset.Of(new string('A', 32)).Ticker.Length.Should().Be(32);
+
+    [Fact]
+    public void Of_Throws_OnTooLongTicker()
+    {
+        var act = () => Asset.Of(new string('A', 33));
+        act.Should().Throw<ArgumentException>();
+    }
 }

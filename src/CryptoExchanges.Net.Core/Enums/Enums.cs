@@ -44,7 +44,11 @@ public enum OrderStatus
     /// <summary>Order was rejected by the exchange.</summary>
     Rejected,
     /// <summary>Order expired without being filled.</summary>
-    Expired
+    Expired,
+    /// <summary>Order is part of an order list (e.g. OCO) awaiting activation.</summary>
+    PendingNew,
+    /// <summary>The exchange reported a status this SDK does not recognize.</summary>
+    Unknown
 }
 
 /// <summary>Controls how long an order remains active once placed.</summary>

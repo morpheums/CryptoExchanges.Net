@@ -1,4 +1,6 @@
+using System.Text.Json;
 using System.Text.Json.Serialization;
+using CryptoExchanges.Net.Binance.Internal;
 
 namespace CryptoExchanges.Net.Binance.Services;
 
@@ -151,10 +153,23 @@ internal sealed class BinanceTradingService(BinanceHttpClient http) : ITradingSe
             ["symbol"] = symbol.ToString()
         };
 
-        // Binance returns a bare JSON array of cancelled orders (and OCO reports),
-        // not an object wrapper.
-        var response = await http.DeleteAsync<List<BinanceOrderResponse>>("/api/v3/openOrders", parameters, true, ct).ConfigureAwait(false);
-        return response.Select(MapOrder).ToList();
+        // Binance returns a top-level JSON array whose items are either plain order
+        // objects or order-list wrappers (e.g. OCO) carrying nested orderReports.
+        var payload = await http.DeleteAsync<JsonElement[]>("/api/v3/openOrders", parameters, true, ct).ConfigureAwait(false);
+        return payload.SelectMany(ExtractCanceledOrders).Select(MapOrder).ToList();
+    }
+
+    /// <summary>
+    /// Yields the canceled order(s) from a single cancel-all response item, unwrapping
+    /// order-list entries (e.g. OCO) that carry their orders under <c>orderReports</c>.
+    /// </summary>
+    private static IEnumerable<BinanceOrderResponse> ExtractCanceledOrders(JsonElement item)
+    {
+        if (item.TryGetProperty("orderReports", out var reports) && reports.ValueKind == JsonValueKind.Array)
+            return reports.Deserialize<List<BinanceOrderResponse>>() ?? [];
+
+        var order = item.Deserialize<BinanceOrderResponse>();
+        return order is null ? [] : [order];
     }
 
     /// <inheritdoc />
@@ -190,6 +205,8 @@ internal sealed class BinanceTradingService(BinanceHttpClient http) : ITradingSe
         DateTimeOffset? endTime = null,
         CancellationToken ct = default)
     {
+        BinanceRequestValidation.ValidateHistoryWindow(limit, startTime, endTime);
+
         var parameters = new Dictionary<string, string>
         {
             ["symbol"] = symbol.ToString(),
@@ -282,7 +299,8 @@ internal sealed class BinanceTradingService(BinanceHttpClient http) : ITradingSe
         "PENDING_CANCEL" => OrderStatus.PendingCancel,
         "REJECTED" => OrderStatus.Rejected,
         "EXPIRED" or "EXPIRED_IN_MATCH" => OrderStatus.Expired,
-        _ => OrderStatus.New
+        "PENDING_NEW" => OrderStatus.PendingNew,
+        _ => OrderStatus.Unknown
     };
 
     private static TimeInForce ParseTimeInForce(string s) => s switch

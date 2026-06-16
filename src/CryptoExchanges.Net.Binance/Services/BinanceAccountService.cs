@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using CryptoExchanges.Net.Binance.Internal;
 
 namespace CryptoExchanges.Net.Binance.Services;
 
@@ -102,6 +103,8 @@ internal sealed class BinanceAccountService(BinanceHttpClient http) : IAccountSe
         DateTimeOffset? endTime = null,
         CancellationToken ct = default)
     {
+        BinanceRequestValidation.ValidateHistoryWindow(limit, startTime, endTime);
+
         var parameters = new Dictionary<string, string>
         {
             ["symbol"] = symbol.ToString(),

@@ -1,5 +1,6 @@
 using System.Text.Json.Serialization;
 using CryptoExchanges.Net.Binance.Internal;
+using DeltaMapper;
 
 namespace CryptoExchanges.Net.Binance.Services;
 
@@ -130,7 +131,7 @@ internal sealed record BinanceRateLimit
 /// <summary>
 /// Binance implementation of <see cref="IMarketDataService"/>.
 /// </summary>
-internal sealed class BinanceMarketDataService(BinanceHttpClient http, ISymbolMapper mapper) : IMarketDataService
+internal sealed class BinanceMarketDataService(BinanceHttpClient http, BinanceSymbolMapper mapper, IMapper modelMapper) : IMarketDataService
 {
     /// <inheritdoc />
     public async Task<IReadOnlyList<Ticker>> GetTickersAsync(Symbol? symbol = null, CancellationToken ct = default)
@@ -148,14 +149,15 @@ internal sealed class BinanceMarketDataService(BinanceHttpClient http, ISymbolMa
             // Single symbol returns an object, not an array. The caller asked for a specific
             // symbol, so an unresolvable wire string is a genuine error — let MapTicker throw.
             var single = await http.GetAsync<BinanceTickerResponse>("/api/v3/ticker/24hr", parameters, false, ct).ConfigureAwait(false);
-            results = [single];
-            return results.Select(MapTicker).ToList();
+            return [modelMapper.Map<BinanceTickerResponse, Ticker>(single)];
         }
 
         results = await http.GetAsync<List<BinanceTickerResponse>>("/api/v3/ticker/24hr", parameters, false, ct).ConfigureAwait(false);
 
         // The full universe includes obscure/delisted pairs that may not resolve against a
         // cold cache or any known quote suffix; skip those rather than failing the whole batch.
+        // The skip is intentional for obscure/transitional symbols — callers needing a complete
+        // set should first warm the wire-lookup cache via GetExchangeInfoAsync.
         return results.SelectMany(TryMapTicker).ToList();
     }
 
@@ -267,20 +269,12 @@ internal sealed class BinanceMarketDataService(BinanceHttpClient http, ISymbolMa
 
         // Binance exchangeInfo can include non-standard entries whose base/quote are not
         // representable assets (e.g. non-ASCII test symbols); skip those rather than throw.
-        var symbols = response.Symbols
-            .Where(s => Asset.TryOf(s.BaseAsset, out _) && Asset.TryOf(s.QuoteAsset, out _))
-            .Select(s =>
-            {
-                var types = s.OrderTypes.Select(BinanceValueParsers.ParseOrderType).ToArray();
-                return new SymbolInfo(
-                    Symbol: mapper.FromComponents(s.BaseAsset, s.QuoteAsset),
-                    AllowedOrderTypes: types
-                );
-            }).ToList();
+        var representable = response.Symbols
+            .Where(s => Asset.TryOf(s.BaseAsset, out _) && Asset.TryOf(s.QuoteAsset, out _));
+        var symbols = modelMapper.Map<BinanceSymbolInfo, SymbolInfo>(representable);
 
         // Populate the mapper's wire->Symbol lookup table from the freshly fetched symbols.
-        if (mapper is BinanceSymbolMapper binanceMapper)
-            binanceMapper.Update(symbols);
+        mapper.Update(symbols);
 
         var rateLimits = response.RateLimits.Select(r =>
             new RateLimit(MapRateLimitType(r.RateLimitType), MapRateLimitInterval(r.Interval), r.Limit)
@@ -300,7 +294,7 @@ internal sealed class BinanceMarketDataService(BinanceHttpClient http, ISymbolMa
         Ticker ticker;
         try
         {
-            ticker = MapTicker(t);
+            ticker = modelMapper.Map<BinanceTickerResponse, Ticker>(t);
         }
         catch (FormatException)
         {
@@ -308,23 +302,6 @@ internal sealed class BinanceMarketDataService(BinanceHttpClient http, ISymbolMa
         }
 
         yield return ticker;
-    }
-
-    private Ticker MapTicker(BinanceTickerResponse t)
-    {
-        var sym = mapper.FromWire(t.Symbol);
-        return new Ticker(
-            sym,
-            BinanceValueParsers.ParseDecimal(t.LastPrice),
-            BinanceValueParsers.ParseDecimal(t.OpenPrice),
-            BinanceValueParsers.ParseDecimal(t.HighPrice),
-            BinanceValueParsers.ParseDecimal(t.LowPrice),
-            BinanceValueParsers.ParseDecimal(t.Volume),
-            BinanceValueParsers.ParseDecimal(t.QuoteVolume),
-            BinanceValueParsers.ParseDecimal(t.PriceChange),
-            BinanceValueParsers.ParseDecimal(t.PriceChangePercent),
-            t.CloseTime > 0 ? DateTimeOffset.FromUnixTimeMilliseconds(t.CloseTime) : null
-        );
     }
 
     private static string MapKlineInterval(KlineInterval interval) => interval switch

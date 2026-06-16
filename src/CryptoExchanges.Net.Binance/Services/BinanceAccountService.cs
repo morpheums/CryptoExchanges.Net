@@ -1,5 +1,6 @@
 using System.Text.Json.Serialization;
 using CryptoExchanges.Net.Binance.Internal;
+using DeltaMapper;
 
 namespace CryptoExchanges.Net.Binance.Services;
 
@@ -59,7 +60,7 @@ internal sealed record BinanceTradeHistoryResponse
 /// <summary>
 /// Binance implementation of <see cref="IAccountService"/>.
 /// </summary>
-internal sealed class BinanceAccountService(BinanceHttpClient http, ISymbolMapper mapper) : IAccountService
+internal sealed class BinanceAccountService(BinanceHttpClient http, BinanceSymbolMapper mapper, IMapper modelMapper) : IAccountService
 {
     /// <inheritdoc />
     public async Task<IReadOnlyList<AssetBalance>> GetBalancesAsync(CancellationToken ct = default)
@@ -71,9 +72,7 @@ internal sealed class BinanceAccountService(BinanceHttpClient http, ISymbolMappe
 
         var response = await http.GetAsync<BinanceAccountResponse>("/api/v3/account", parameters, true, ct).ConfigureAwait(false);
 
-        return response.Balances
-            .Select(b => new AssetBalance(b.Asset, BinanceValueParsers.ParseDecimal(b.Free), BinanceValueParsers.ParseDecimal(b.Locked)))
-            .ToList();
+        return modelMapper.Map<BinanceBalance, AssetBalance>(response.Balances);
     }
 
     /// <inheritdoc />
@@ -92,7 +91,7 @@ internal sealed class BinanceAccountService(BinanceHttpClient http, ISymbolMappe
         if (match is null)
             return new AssetBalance(asset, 0, 0);
 
-        return new AssetBalance(match.Asset, BinanceValueParsers.ParseDecimal(match.Free), BinanceValueParsers.ParseDecimal(match.Locked));
+        return modelMapper.Map<BinanceBalance, AssetBalance>(match);
     }
 
     /// <inheritdoc />
@@ -118,15 +117,7 @@ internal sealed class BinanceAccountService(BinanceHttpClient http, ISymbolMappe
 
         var results = await http.GetAsync<List<BinanceTradeHistoryResponse>>("/api/v3/myTrades", parameters, true, ct).ConfigureAwait(false);
 
-        return results.Select(t => new Trade(
-            symbol,
-            t.Id.ToString(),
-            BinanceValueParsers.ParseDecimal(t.Price),
-            BinanceValueParsers.ParseDecimal(t.Qty),
-            DateTimeOffset.FromUnixTimeMilliseconds(t.Time),
-            t.IsBuyer,
-            t.OrderId.ToString()
-        )).ToList();
+        return modelMapper.Map<BinanceTradeHistoryResponse, Trade>(results);
     }
 
 }

@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using CryptoExchanges.Net.Binance.Internal;
+using DeltaMapper;
 
 namespace CryptoExchanges.Net.Binance.Services;
 
@@ -80,7 +81,7 @@ internal sealed record BinanceOrderResponse
 /// <summary>
 /// Binance implementation of <see cref="ITradingService"/>.
 /// </summary>
-internal sealed class BinanceTradingService(BinanceHttpClient http, ISymbolMapper mapper) : ITradingService
+internal sealed class BinanceTradingService(BinanceHttpClient http, BinanceSymbolMapper mapper, IMapper modelMapper) : ITradingService
 {
     /// <inheritdoc />
     public async Task<Order> PlaceOrderAsync(PlaceOrderRequest request, CancellationToken ct = default)
@@ -116,7 +117,7 @@ internal sealed class BinanceTradingService(BinanceHttpClient http, ISymbolMappe
             parameters["icebergQty"] = request.IcebergQuantity.Value.ToString(System.Globalization.CultureInfo.InvariantCulture);
 
         var response = await http.PostAsync<BinanceOrderResponse>("/api/v3/order", parameters, true, ct).ConfigureAwait(false);
-        return MapOrder(response);
+        return modelMapper.Map<BinanceOrderResponse, Order>(response);
     }
 
     /// <inheritdoc />
@@ -129,7 +130,7 @@ internal sealed class BinanceTradingService(BinanceHttpClient http, ISymbolMappe
         };
 
         var response = await http.DeleteAsync<BinanceOrderResponse>("/api/v3/order", parameters, true, ct).ConfigureAwait(false);
-        return MapOrder(response);
+        return modelMapper.Map<BinanceOrderResponse, Order>(response);
     }
 
     /// <inheritdoc />
@@ -142,7 +143,7 @@ internal sealed class BinanceTradingService(BinanceHttpClient http, ISymbolMappe
         };
 
         var response = await http.DeleteAsync<BinanceOrderResponse>("/api/v3/order", parameters, true, ct).ConfigureAwait(false);
-        return MapOrder(response);
+        return modelMapper.Map<BinanceOrderResponse, Order>(response);
     }
 
     /// <inheritdoc />
@@ -156,7 +157,8 @@ internal sealed class BinanceTradingService(BinanceHttpClient http, ISymbolMappe
         // Binance returns a top-level JSON array whose items are either plain order
         // objects or order-list wrappers (e.g. OCO) carrying nested orderReports.
         var payload = await http.DeleteAsync<JsonElement[]>("/api/v3/openOrders", parameters, true, ct).ConfigureAwait(false);
-        return payload.SelectMany(ExtractCanceledOrders).Select(MapOrder).ToList();
+        var orders = payload.SelectMany(ExtractCanceledOrders).ToList();
+        return modelMapper.Map<BinanceOrderResponse, Order>(orders);
     }
 
     /// <summary>
@@ -182,7 +184,7 @@ internal sealed class BinanceTradingService(BinanceHttpClient http, ISymbolMappe
         };
 
         var response = await http.GetAsync<BinanceOrderResponse>("/api/v3/order", parameters, true, ct).ConfigureAwait(false);
-        return MapOrder(response);
+        return modelMapper.Map<BinanceOrderResponse, Order>(response);
     }
 
     /// <inheritdoc />
@@ -194,7 +196,7 @@ internal sealed class BinanceTradingService(BinanceHttpClient http, ISymbolMappe
             parameters["symbol"] = mapper.ToWire(symbol.Value);
 
         var results = await http.GetAsync<List<BinanceOrderResponse>>("/api/v3/openOrders", parameters, true, ct).ConfigureAwait(false);
-        return results.Select(MapOrder).ToList();
+        return modelMapper.Map<BinanceOrderResponse, Order>(results);
     }
 
     /// <inheritdoc />
@@ -219,30 +221,10 @@ internal sealed class BinanceTradingService(BinanceHttpClient http, ISymbolMappe
             parameters["endTime"] = endTime.Value.ToUnixTimeMilliseconds().ToString();
 
         var results = await http.GetAsync<List<BinanceOrderResponse>>("/api/v3/allOrders", parameters, true, ct).ConfigureAwait(false);
-        return results.Select(MapOrder).ToList();
+        return modelMapper.Map<BinanceOrderResponse, Order>(results);
     }
 
-    // ── Mapping helpers ──
-
-    private Order MapOrder(BinanceOrderResponse r) => new Order(
-        mapper.FromWire(r.Symbol),
-        r.OrderId.ToString(),
-        string.IsNullOrEmpty(r.ClientOrderId) ? null : r.ClientOrderId,
-        BinanceValueParsers.ParseDecimal(r.Price),
-        BinanceValueParsers.ParseDecimal(r.OrigQty),
-        BinanceValueParsers.ParseDecimal(r.ExecutedQty),
-        BinanceValueParsers.ParseOrderSide(r.Side),
-        BinanceValueParsers.ParseOrderType(r.Type),
-        BinanceValueParsers.ParseOrderStatus(r.Status),
-        BinanceValueParsers.ParseTimeInForce(r.TimeInForce),
-        BinanceValueParsers.ParseOptionalDecimal(r.StopPrice),
-        BinanceValueParsers.ParseOptionalDecimal(r.IcebergQty),
-        r.Time > 0 ? DateTimeOffset.FromUnixTimeMilliseconds(r.Time) : null,
-        r.UpdateTime > 0 ? DateTimeOffset.FromUnixTimeMilliseconds(r.UpdateTime) : null
-    )
-    {
-        CumulativeQuoteQuantity = BinanceValueParsers.ParseDecimal(r.CumulativeQuoteQty)
-    };
+    // ── Request-direction mapping helpers ──
 
     private static string MapOrderSide(OrderSide side) => side switch
     {

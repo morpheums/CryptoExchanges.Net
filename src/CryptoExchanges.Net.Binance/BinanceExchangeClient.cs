@@ -1,7 +1,9 @@
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
+using CryptoExchanges.Net.Binance.Mapping;
 using CryptoExchanges.Net.Core.Interfaces;
 using CryptoExchanges.Net.Core.Models;
+using DeltaMapper;
 
 namespace CryptoExchanges.Net.Binance;
 
@@ -59,11 +61,16 @@ public sealed class BinanceExchangeClient : IExchangeClient, IAsyncDisposable
         _ownsHttpClient = ownsHttpClient;
 
         var http = new BinanceHttpClient(httpClient, apiKey, signatureService, receiveWindow);
-        var mapper = new BinanceSymbolMapper();
+        var symbolMapper = new BinanceSymbolMapper();
 
-        MarketData = new BinanceMarketDataService(http, mapper);
-        Trading = new BinanceTradingService(http, mapper);
-        Account = new BinanceAccountService(http, mapper);
+        var mapperConfig = MapperConfiguration.Create(cfg =>
+            cfg.AddProfile(new BinanceResponseProfile(symbolMapper)));
+        mapperConfig.AssertConfigurationIsValid();
+        var mapper = mapperConfig.CreateMapper();
+
+        MarketData = new BinanceMarketDataService(http, symbolMapper, mapper);
+        Trading = new BinanceTradingService(http, symbolMapper, mapper);
+        Account = new BinanceAccountService(http, symbolMapper, mapper);
     }
 
     /// <inheritdoc />

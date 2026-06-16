@@ -228,20 +228,20 @@ internal sealed class BinanceTradingService(BinanceHttpClient http, ISymbolMappe
         mapper.FromWire(r.Symbol),
         r.OrderId.ToString(),
         string.IsNullOrEmpty(r.ClientOrderId) ? null : r.ClientOrderId,
-        ParseDecimal(r.Price),
-        ParseDecimal(r.OrigQty),
-        ParseDecimal(r.ExecutedQty),
-        ParseOrderSide(r.Side),
-        ParseOrderTypeEnum(r.Type),
-        ParseOrderStatus(r.Status),
-        ParseTimeInForce(r.TimeInForce),
-        ParseOptionalDecimal(r.StopPrice),
-        ParseOptionalDecimal(r.IcebergQty),
+        BinanceValueParsers.ParseDecimal(r.Price),
+        BinanceValueParsers.ParseDecimal(r.OrigQty),
+        BinanceValueParsers.ParseDecimal(r.ExecutedQty),
+        BinanceValueParsers.ParseOrderSide(r.Side),
+        BinanceValueParsers.ParseOrderType(r.Type),
+        BinanceValueParsers.ParseOrderStatus(r.Status),
+        BinanceValueParsers.ParseTimeInForce(r.TimeInForce),
+        BinanceValueParsers.ParseOptionalDecimal(r.StopPrice),
+        BinanceValueParsers.ParseOptionalDecimal(r.IcebergQty),
         r.Time > 0 ? DateTimeOffset.FromUnixTimeMilliseconds(r.Time) : null,
         r.UpdateTime > 0 ? DateTimeOffset.FromUnixTimeMilliseconds(r.UpdateTime) : null
     )
     {
-        CumulativeQuoteQuantity = ParseDecimal(r.CumulativeQuoteQty)
+        CumulativeQuoteQuantity = BinanceValueParsers.ParseDecimal(r.CumulativeQuoteQty)
     };
 
     private static string MapOrderSide(OrderSide side) => side switch
@@ -271,57 +271,4 @@ internal sealed class BinanceTradingService(BinanceHttpClient http, ISymbolMappe
         _ => throw new ArgumentOutOfRangeException(nameof(tif), tif, $"Unsupported TimeInForce: {tif}")
     };
 
-    private static OrderSide ParseOrderSide(string s) => s switch
-    {
-        "BUY" => OrderSide.Buy,
-        "SELL" => OrderSide.Sell,
-        _ => throw new ArgumentOutOfRangeException(nameof(s), s, $"Unknown order side: {s}")
-    };
-
-    private static OrderType ParseOrderTypeEnum(string s) => s switch
-    {
-        "LIMIT" => OrderType.Limit,
-        "MARKET" => OrderType.Market,
-        "STOP_LOSS" => OrderType.StopLoss,
-        "STOP_LOSS_LIMIT" => OrderType.StopLossLimit,
-        "TAKE_PROFIT" => OrderType.TakeProfit,
-        "TAKE_PROFIT_LIMIT" => OrderType.TakeProfitLimit,
-        "LIMIT_MAKER" => OrderType.LimitMaker,
-        _ => throw new ArgumentOutOfRangeException(nameof(s), s, $"Unknown order type: {s}")
-    };
-
-    private static OrderStatus ParseOrderStatus(string s) => s switch
-    {
-        "NEW" => OrderStatus.New,
-        "PARTIALLY_FILLED" => OrderStatus.PartiallyFilled,
-        "FILLED" => OrderStatus.Filled,
-        "CANCELED" => OrderStatus.Canceled,
-        "PENDING_CANCEL" => OrderStatus.PendingCancel,
-        "REJECTED" => OrderStatus.Rejected,
-        "EXPIRED" or "EXPIRED_IN_MATCH" => OrderStatus.Expired,
-        "PENDING_NEW" => OrderStatus.PendingNew,
-        _ => OrderStatus.Unknown
-    };
-
-    private static TimeInForce ParseTimeInForce(string s) => s switch
-    {
-        "GTC" => TimeInForce.Gtc,
-        "IOC" => TimeInForce.Ioc,
-        "FOK" => TimeInForce.Fok,
-        _ => throw new ArgumentOutOfRangeException(nameof(s), s, $"Unknown TimeInForce: {s}")
-    };
-
-    private static decimal ParseDecimal(string value)
-    {
-        if (string.IsNullOrEmpty(value))
-            return 0m;
-        return decimal.Parse(value, System.Globalization.CultureInfo.InvariantCulture);
-    }
-
-    private static decimal? ParseOptionalDecimal(string value)
-    {
-        if (string.IsNullOrEmpty(value) || value == "0")
-            return null;
-        return decimal.Parse(value, System.Globalization.CultureInfo.InvariantCulture);
-    }
 }

@@ -72,7 +72,7 @@ internal sealed class BinanceAccountService(BinanceHttpClient http, ISymbolMappe
         var response = await http.GetAsync<BinanceAccountResponse>("/api/v3/account", parameters, true, ct).ConfigureAwait(false);
 
         return response.Balances
-            .Select(b => new AssetBalance(b.Asset, ParseDecimal(b.Free), ParseDecimal(b.Locked)))
+            .Select(b => new AssetBalance(b.Asset, BinanceValueParsers.ParseDecimal(b.Free), BinanceValueParsers.ParseDecimal(b.Locked)))
             .ToList();
     }
 
@@ -92,7 +92,7 @@ internal sealed class BinanceAccountService(BinanceHttpClient http, ISymbolMappe
         if (match is null)
             return new AssetBalance(asset, 0, 0);
 
-        return new AssetBalance(match.Asset, ParseDecimal(match.Free), ParseDecimal(match.Locked));
+        return new AssetBalance(match.Asset, BinanceValueParsers.ParseDecimal(match.Free), BinanceValueParsers.ParseDecimal(match.Locked));
     }
 
     /// <inheritdoc />
@@ -121,18 +121,12 @@ internal sealed class BinanceAccountService(BinanceHttpClient http, ISymbolMappe
         return results.Select(t => new Trade(
             symbol,
             t.Id.ToString(),
-            ParseDecimal(t.Price),
-            ParseDecimal(t.Qty),
+            BinanceValueParsers.ParseDecimal(t.Price),
+            BinanceValueParsers.ParseDecimal(t.Qty),
             DateTimeOffset.FromUnixTimeMilliseconds(t.Time),
             t.IsBuyer,
             t.OrderId.ToString()
         )).ToList();
     }
 
-    private static decimal ParseDecimal(string value)
-    {
-        if (string.IsNullOrEmpty(value))
-            return 0m;
-        return decimal.Parse(value, System.Globalization.CultureInfo.InvariantCulture);
-    }
 }

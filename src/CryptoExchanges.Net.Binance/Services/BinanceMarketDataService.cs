@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using CryptoExchanges.Net.Binance.Internal;
 
 namespace CryptoExchanges.Net.Binance.Services;
 
@@ -169,8 +170,8 @@ internal sealed class BinanceMarketDataService(BinanceHttpClient http, ISymbolMa
 
         var response = await http.GetAsync<BinanceOrderBookResponse>("/api/v3/depth", parameters, false, ct).ConfigureAwait(false);
 
-        var bids = response.Bids.Select(b => new OrderBookEntry(ParseDecimal(b[0]), ParseDecimal(b[1]))).ToList();
-        var asks = response.Asks.Select(a => new OrderBookEntry(ParseDecimal(a[0]), ParseDecimal(a[1]))).ToList();
+        var bids = response.Bids.Select(b => new OrderBookEntry(BinanceValueParsers.ParseDecimal(b[0]), BinanceValueParsers.ParseDecimal(b[1]))).ToList();
+        var asks = response.Asks.Select(a => new OrderBookEntry(BinanceValueParsers.ParseDecimal(a[0]), BinanceValueParsers.ParseDecimal(a[1]))).ToList();
 
         return new OrderBook(symbol, bids, asks, null, response.LastUpdateId);
     }
@@ -211,12 +212,12 @@ internal sealed class BinanceMarketDataService(BinanceHttpClient http, ISymbolMa
             candles.Add(new Candlestick(
                 OpenTime: DateTimeOffset.FromUnixTimeMilliseconds(arr[0].GetInt64()),
                 CloseTime: DateTimeOffset.FromUnixTimeMilliseconds(arr[6].GetInt64()),
-                Open: ParseDecimal(arr[1].GetString()!),
-                High: ParseDecimal(arr[2].GetString()!),
-                Low: ParseDecimal(arr[3].GetString()!),
-                Close: ParseDecimal(arr[4].GetString()!),
-                Volume: ParseDecimal(arr[5].GetString()!),
-                QuoteVolume: ParseDecimal(arr[7].GetString()!),
+                Open: BinanceValueParsers.ParseDecimal(arr[1].GetString()!),
+                High: BinanceValueParsers.ParseDecimal(arr[2].GetString()!),
+                Low: BinanceValueParsers.ParseDecimal(arr[3].GetString()!),
+                Close: BinanceValueParsers.ParseDecimal(arr[4].GetString()!),
+                Volume: BinanceValueParsers.ParseDecimal(arr[5].GetString()!),
+                QuoteVolume: BinanceValueParsers.ParseDecimal(arr[7].GetString()!),
                 TradeCount: arr[8].GetInt32(),
                 Interval: interval,
                 TradingSymbol: symbol
@@ -235,7 +236,7 @@ internal sealed class BinanceMarketDataService(BinanceHttpClient http, ISymbolMa
         };
 
         var response = await http.GetAsync<BinancePriceResponse>("/api/v3/ticker/price", parameters, false, ct).ConfigureAwait(false);
-        return ParseDecimal(response.Price);
+        return BinanceValueParsers.ParseDecimal(response.Price);
     }
 
     /// <inheritdoc />
@@ -252,8 +253,8 @@ internal sealed class BinanceMarketDataService(BinanceHttpClient http, ISymbolMa
         return results.Select(t => new Trade(
             symbol,
             t.Id.ToString(),
-            ParseDecimal(t.Price),
-            ParseDecimal(t.Qty),
+            BinanceValueParsers.ParseDecimal(t.Price),
+            BinanceValueParsers.ParseDecimal(t.Qty),
             DateTimeOffset.FromUnixTimeMilliseconds(t.Time),
             t.IsBuyerMaker
         )).ToList();
@@ -270,7 +271,7 @@ internal sealed class BinanceMarketDataService(BinanceHttpClient http, ISymbolMa
             .Where(s => Asset.TryOf(s.BaseAsset, out _) && Asset.TryOf(s.QuoteAsset, out _))
             .Select(s =>
             {
-                var types = s.OrderTypes.Select(ParseOrderType).ToArray();
+                var types = s.OrderTypes.Select(BinanceValueParsers.ParseOrderType).ToArray();
                 return new SymbolInfo(
                     Symbol: mapper.FromComponents(s.BaseAsset, s.QuoteAsset),
                     AllowedOrderTypes: types
@@ -314,14 +315,14 @@ internal sealed class BinanceMarketDataService(BinanceHttpClient http, ISymbolMa
         var sym = mapper.FromWire(t.Symbol);
         return new Ticker(
             sym,
-            ParseDecimal(t.LastPrice),
-            ParseDecimal(t.OpenPrice),
-            ParseDecimal(t.HighPrice),
-            ParseDecimal(t.LowPrice),
-            ParseDecimal(t.Volume),
-            ParseDecimal(t.QuoteVolume),
-            ParseDecimal(t.PriceChange),
-            ParseDecimal(t.PriceChangePercent),
+            BinanceValueParsers.ParseDecimal(t.LastPrice),
+            BinanceValueParsers.ParseDecimal(t.OpenPrice),
+            BinanceValueParsers.ParseDecimal(t.HighPrice),
+            BinanceValueParsers.ParseDecimal(t.LowPrice),
+            BinanceValueParsers.ParseDecimal(t.Volume),
+            BinanceValueParsers.ParseDecimal(t.QuoteVolume),
+            BinanceValueParsers.ParseDecimal(t.PriceChange),
+            BinanceValueParsers.ParseDecimal(t.PriceChangePercent),
             t.CloseTime > 0 ? DateTimeOffset.FromUnixTimeMilliseconds(t.CloseTime) : null
         );
     }
@@ -346,18 +347,6 @@ internal sealed class BinanceMarketDataService(BinanceHttpClient http, ISymbolMa
         _ => throw new ArgumentOutOfRangeException(nameof(interval), interval, $"Unsupported kline interval: {interval}")
     };
 
-    private static OrderType ParseOrderType(string type) => type switch
-    {
-        "LIMIT" => OrderType.Limit,
-        "MARKET" => OrderType.Market,
-        "STOP_LOSS" => OrderType.StopLoss,
-        "STOP_LOSS_LIMIT" => OrderType.StopLossLimit,
-        "TAKE_PROFIT" => OrderType.TakeProfit,
-        "TAKE_PROFIT_LIMIT" => OrderType.TakeProfitLimit,
-        "LIMIT_MAKER" => OrderType.LimitMaker,
-        _ => throw new ArgumentOutOfRangeException(nameof(type), type, $"Unknown order type: {type}")
-    };
-
     private static RateLimitType MapRateLimitType(string type) => type switch
     {
         "REQUEST_WEIGHT" => RateLimitType.RequestWeight,
@@ -374,10 +363,4 @@ internal sealed class BinanceMarketDataService(BinanceHttpClient http, ISymbolMa
         _ => throw new ArgumentOutOfRangeException(nameof(interval), interval, $"Unknown rate limit interval: {interval}")
     };
 
-    private static decimal ParseDecimal(string value)
-    {
-        if (string.IsNullOrEmpty(value))
-            return 0m;
-        return decimal.Parse(value, System.Globalization.CultureInfo.InvariantCulture);
-    }
 }

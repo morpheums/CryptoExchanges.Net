@@ -20,13 +20,16 @@ internal static class BinanceValueParsers
 
     /// <summary>
     /// Parses an optional decimal string from a Binance response field.
-    /// Returns <see langword="null"/> for null, empty, or <c>"0"</c> input.
+    /// Returns <see langword="null"/> for null/empty input or any zero-valued
+    /// amount (e.g. <c>"0"</c>, <c>"0.00000000"</c>), which Binance uses for unset
+    /// optional fields such as stopPrice/icebergQty.
     /// </summary>
     public static decimal? ParseOptionalDecimal(string value)
     {
-        if (string.IsNullOrEmpty(value) || value == "0")
+        if (string.IsNullOrEmpty(value))
             return null;
-        return decimal.Parse(value, System.Globalization.CultureInfo.InvariantCulture);
+        var parsed = decimal.Parse(value, System.Globalization.CultureInfo.InvariantCulture);
+        return parsed == 0m ? null : parsed;
     }
 
     /// <summary>

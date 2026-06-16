@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Xunit;
 using FluentAssertions;
 using CryptoExchanges.Net.Core.Models;
@@ -72,5 +73,70 @@ public class AssetTests
     {
         var act = () => Asset.Of(new string('A', 33));
         act.Should().Throw<ArgumentException>();
+    }
+}
+
+public class AssetJsonTests
+{
+    private static readonly JsonSerializerOptions Options = new JsonSerializerOptions();
+
+    [Fact]
+    public void Serialize_ValidAsset_ProducesQuotedTicker()
+    {
+        var json = JsonSerializer.Serialize(Asset.Of("BTC"), Options);
+        json.Should().Be("\"BTC\"");
+    }
+
+    [Fact]
+    public void Deserialize_LowercaseTicker_ProducesNormalizedAsset()
+    {
+        var asset = JsonSerializer.Deserialize<Asset>("\"usdt\"", Options);
+        asset.Should().Be(Asset.Of("USDT"));
+    }
+
+    [Fact]
+    public void Deserialize_InvalidTicker_ProducesNone()
+    {
+        // "BTC/USD" is rejected by TryOf (contains '/'), so converter returns Asset.None.
+        var asset = JsonSerializer.Deserialize<Asset>("\"BTC/USD\"", Options);
+        asset.IsNone.Should().BeTrue();
+    }
+
+    [Fact]
+    public void Deserialize_NumberToken_ThrowsJsonException()
+    {
+        var act = () => JsonSerializer.Deserialize<Asset>("123", Options);
+        act.Should().Throw<JsonException>();
+    }
+
+    [Fact]
+    public void Serialize_None_ProducesJsonNull()
+    {
+        var json = JsonSerializer.Serialize(Asset.None, Options);
+        json.Should().Be("null");
+    }
+
+    [Fact]
+    public void Deserialize_JsonNull_ProducesNone()
+    {
+        var asset = JsonSerializer.Deserialize<Asset>("null", Options);
+        asset.IsNone.Should().BeTrue();
+    }
+
+    [Fact]
+    public void RoundTrip_ValidAsset_PreservesValue()
+    {
+        var original = Asset.Of("ETH");
+        var json = JsonSerializer.Serialize(original, Options);
+        var restored = JsonSerializer.Deserialize<Asset>(json, Options);
+        restored.Should().Be(original);
+    }
+
+    [Fact]
+    public void RoundTrip_None_PreservesNone()
+    {
+        var json = JsonSerializer.Serialize(Asset.None, Options);
+        var restored = JsonSerializer.Deserialize<Asset>(json, Options);
+        restored.IsNone.Should().BeTrue();
     }
 }

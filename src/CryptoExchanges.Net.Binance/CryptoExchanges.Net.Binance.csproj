@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>CryptoExchanges.Net.Binance</RootNamespace>
+    <AssemblyName>CryptoExchanges.Net.Binance</AssemblyName>
+    <Description>Binance exchange implementation for CryptoExchanges.Net.</Description>
+    <PackageId>CryptoExchanges.Net.Binance</PackageId>
+    <!-- Suppress analysis noise for HTTP client / JSON deserialization library -->
+    <NoWarn>$(NoWarn);CA1812;CA1056;CA1031;CA2000;CA1305;CA1032;CS1591</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CryptoExchanges.Net.Core\CryptoExchanges.Net.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Http" Version="10.0.*" />
+    <PackageReference Include="Microsoft.Extensions.Options" Version="10.0.*" />
+  </ItemGroup>
+</Project>

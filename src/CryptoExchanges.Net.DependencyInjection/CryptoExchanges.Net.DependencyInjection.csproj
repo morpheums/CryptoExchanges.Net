@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>CryptoExchanges.Net.DependencyInjection</RootNamespace>
+    <AssemblyName>CryptoExchanges.Net.DependencyInjection</AssemblyName>
+    <Description>Dependency injection extensions for CryptoExchanges.Net.</Description>
+    <PackageId>CryptoExchanges.Net.DependencyInjection</PackageId>
+    <NoWarn>$(NoWarn);CA1812;CA1056;CA1031;CA2000;CA1305;CA1032</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CryptoExchanges.Net.Core\CryptoExchanges.Net.Core.csproj" />
+    <ProjectReference Include="..\CryptoExchanges.Net.Binance\CryptoExchanges.Net.Binance.csproj" />
+  </ItemGroup>
+</Project>

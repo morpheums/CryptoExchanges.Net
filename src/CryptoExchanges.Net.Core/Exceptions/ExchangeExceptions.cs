@@ -34,32 +34,32 @@ public sealed class RateLimitExceededException : ExchangeApiException
 
     /// <summary>Creates a rate-limit exception.</summary>
     public RateLimitExceededException(
-        string message, TimeSpan? retryAfter = null, int? code = null, string? rawBody = null)
-        : base(message, code, rawBody) => RetryAfter = retryAfter;
+        string message, TimeSpan? retryAfter = null, int? code = null, string? rawBody = null, Exception? innerException = null)
+        : base(message, code, rawBody, innerException) => RetryAfter = retryAfter;
 }
 
 /// <summary>Authentication, signature, permission, or IP-restriction failure.</summary>
 public sealed class AuthenticationException : ExchangeApiException
 {
     /// <summary>Creates an authentication exception.</summary>
-    public AuthenticationException(string message, int? code = null, string? rawBody = null)
-        : base(message, code, rawBody) { }
+    public AuthenticationException(string message, int? code = null, string? rawBody = null, Exception? innerException = null)
+        : base(message, code, rawBody, innerException) { }
 }
 
 /// <summary>The exchange rejected an order (parameters, filters, or unknown order).</summary>
 public sealed class InvalidOrderException : ExchangeApiException
 {
     /// <summary>Creates an invalid-order exception.</summary>
-    public InvalidOrderException(string message, int? code = null, string? rawBody = null)
-        : base(message, code, rawBody) { }
+    public InvalidOrderException(string message, int? code = null, string? rawBody = null, Exception? innerException = null)
+        : base(message, code, rawBody, innerException) { }
 }
 
 /// <summary>The account had insufficient balance for the requested operation.</summary>
 public sealed class InsufficientBalanceException : ExchangeApiException
 {
     /// <summary>Creates an insufficient-balance exception.</summary>
-    public InsufficientBalanceException(string message, int? code = null, string? rawBody = null)
-        : base(message, code, rawBody) { }
+    public InsufficientBalanceException(string message, int? code = null, string? rawBody = null, Exception? innerException = null)
+        : base(message, code, rawBody, innerException) { }
 }
 
 /// <summary>

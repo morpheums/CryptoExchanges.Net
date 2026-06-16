@@ -33,6 +33,13 @@ public class ExchangeExceptionTests
     }
 
     [Fact]
+    public void LeafApiException_RoundTripsInnerException()
+    {
+        var ex = new InvalidOrderException("x", innerException: new InvalidOperationException("y"));
+        ex.InnerException.Should().BeOfType<InvalidOperationException>();
+    }
+
+    [Fact]
     public void Connectivity_IsExchangeException_NotApiException_AndFlagsIndeterminate()
     {
         var ex = new ExchangeConnectivityException("timeout", operationOutcomeIndeterminate: true);

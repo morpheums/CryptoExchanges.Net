@@ -237,8 +237,8 @@ public sealed record PlaceOrderRequest
     public void Validate()
     {
         // Guard: symbol components
-        ArgumentException.ThrowIfNullOrWhiteSpace(Symbol.BaseAsset);
-        ArgumentException.ThrowIfNullOrWhiteSpace(Symbol.QuoteAsset);
+        if (Symbol.Base.IsNone || Symbol.Quote.IsNone)
+            throw new ArgumentException("A valid trading symbol is required.", nameof(Symbol));
 
         var errors = new List<string>();
 

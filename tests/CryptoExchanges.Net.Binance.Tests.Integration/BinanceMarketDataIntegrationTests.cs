@@ -55,7 +55,7 @@ public class BinanceMarketDataIntegrationTests : IAsyncLifetime
     public async Task GetPrice_BTCUSDT_ShouldReturnPositivePrice()
     {
         SkipIfUnreachable();
-        var btcusdt = new Symbol("BTC", "USDT");
+        var btcusdt = new Symbol(Asset.Btc, Asset.Usdt);
         var price = await _exchange.MarketData.GetPriceAsync(btcusdt, TestContext.Current.CancellationToken);
         price.Should().BeGreaterThan(0);
     }
@@ -64,7 +64,7 @@ public class BinanceMarketDataIntegrationTests : IAsyncLifetime
     public async Task GetTickers_WithSymbol_ShouldReturnSingleTicker()
     {
         SkipIfUnreachable();
-        var ethusdt = new Symbol("ETH", "USDT");
+        var ethusdt = new Symbol(Asset.Eth, Asset.Usdt);
         var tickers = await _exchange.MarketData.GetTickersAsync(ethusdt, TestContext.Current.CancellationToken);
         tickers.Should().HaveCount(1);
 
@@ -88,7 +88,7 @@ public class BinanceMarketDataIntegrationTests : IAsyncLifetime
     public async Task GetOrderBook_Top5_ShouldReturnBidsAndAsks()
     {
         SkipIfUnreachable();
-        var btcusdt = new Symbol("BTC", "USDT");
+        var btcusdt = new Symbol(Asset.Btc, Asset.Usdt);
         var orderBook = await _exchange.MarketData.GetOrderBookAsync(btcusdt, depth: 5, ct: TestContext.Current.CancellationToken);
         orderBook.Bids.Should().NotBeEmpty();
         orderBook.Asks.Should().NotBeEmpty();
@@ -100,7 +100,7 @@ public class BinanceMarketDataIntegrationTests : IAsyncLifetime
     public async Task GetOrderBook_Depth100_ShouldReturnMoreLevels()
     {
         SkipIfUnreachable();
-        var btcusdt = new Symbol("BTC", "USDT");
+        var btcusdt = new Symbol(Asset.Btc, Asset.Usdt);
         var ob100 = await _exchange.MarketData.GetOrderBookAsync(btcusdt, depth: 100, ct: TestContext.Current.CancellationToken);
         var ob5 = await _exchange.MarketData.GetOrderBookAsync(btcusdt, depth: 5, ct: TestContext.Current.CancellationToken);
         ob100.Bids.Count.Should().BeGreaterThan(ob5.Bids.Count);
@@ -110,7 +110,7 @@ public class BinanceMarketDataIntegrationTests : IAsyncLifetime
     public async Task GetCandlesticks_1h_ShouldReturnValidCandles()
     {
         SkipIfUnreachable();
-        var btcusdt = new Symbol("BTC", "USDT");
+        var btcusdt = new Symbol(Asset.Btc, Asset.Usdt);
         var candles = await _exchange.MarketData.GetCandlesticksAsync(
             btcusdt, KlineInterval.OneHour, limit: 3, ct: TestContext.Current.CancellationToken);
 
@@ -132,7 +132,7 @@ public class BinanceMarketDataIntegrationTests : IAsyncLifetime
     public async Task GetCandlesticks_1d_ShouldWork()
     {
         SkipIfUnreachable();
-        var btcusdt = new Symbol("BTC", "USDT");
+        var btcusdt = new Symbol(Asset.Btc, Asset.Usdt);
         var candles = await _exchange.MarketData.GetCandlesticksAsync(
             btcusdt, KlineInterval.OneDay, limit: 3, ct: TestContext.Current.CancellationToken);
 
@@ -153,7 +153,7 @@ public class BinanceMarketDataIntegrationTests : IAsyncLifetime
         var info = await _exchange.MarketData.GetExchangeInfoAsync(TestContext.Current.CancellationToken);
         info.Symbols.Should().HaveCountGreaterThan(100);
 
-        var btcusdt = info.Symbols.FirstOrDefault(s => s.Symbol.ToString() == "BTCUSDT");
+        var btcusdt = info.Symbols.FirstOrDefault(s => s.Symbol == new Symbol(Asset.Btc, Asset.Usdt));
         btcusdt.Should().NotBeNull();
         btcusdt!.AllowedOrderTypes.Should().NotBeEmpty();
     }
@@ -162,7 +162,7 @@ public class BinanceMarketDataIntegrationTests : IAsyncLifetime
     public async Task GetRecentTrades_ShouldReturnRecentTrades()
     {
         SkipIfUnreachable();
-        var btcusdt = new Symbol("BTC", "USDT");
+        var btcusdt = new Symbol(Asset.Btc, Asset.Usdt);
         var trades = await _exchange.MarketData.GetRecentTradesAsync(btcusdt, limit: 5, ct: TestContext.Current.CancellationToken);
 
         trades.Should().NotBeEmpty();

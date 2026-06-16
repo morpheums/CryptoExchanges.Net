@@ -59,7 +59,7 @@ internal sealed record BinanceTradeHistoryResponse
 /// <summary>
 /// Binance implementation of <see cref="IAccountService"/>.
 /// </summary>
-internal sealed class BinanceAccountService(BinanceHttpClient http) : IAccountService
+internal sealed class BinanceAccountService(BinanceHttpClient http, ISymbolMapper mapper) : IAccountService
 {
     /// <inheritdoc />
     public async Task<IReadOnlyList<AssetBalance>> GetBalancesAsync(CancellationToken ct = default)
@@ -107,7 +107,7 @@ internal sealed class BinanceAccountService(BinanceHttpClient http) : IAccountSe
 
         var parameters = new Dictionary<string, string>
         {
-            ["symbol"] = symbol.ToString(),
+            ["symbol"] = mapper.ToWire(symbol),
             ["limit"] = limit.ToString()
         };
 

@@ -80,7 +80,7 @@ internal sealed record BinanceOrderResponse
 /// <summary>
 /// Binance implementation of <see cref="ITradingService"/>.
 /// </summary>
-internal sealed class BinanceTradingService(BinanceHttpClient http) : ITradingService
+internal sealed class BinanceTradingService(BinanceHttpClient http, ISymbolMapper mapper) : ITradingService
 {
     /// <inheritdoc />
     public async Task<Order> PlaceOrderAsync(PlaceOrderRequest request, CancellationToken ct = default)
@@ -89,7 +89,7 @@ internal sealed class BinanceTradingService(BinanceHttpClient http) : ITradingSe
 
         var parameters = new Dictionary<string, string>
         {
-            ["symbol"] = request.Symbol.ToString(),
+            ["symbol"] = mapper.ToWire(request.Symbol),
             ["side"] = MapOrderSide(request.Side),
             ["type"] = MapOrderType(request.Type)
         };
@@ -124,7 +124,7 @@ internal sealed class BinanceTradingService(BinanceHttpClient http) : ITradingSe
     {
         var parameters = new Dictionary<string, string>
         {
-            ["symbol"] = symbol.ToString(),
+            ["symbol"] = mapper.ToWire(symbol),
             ["orderId"] = orderId
         };
 
@@ -137,7 +137,7 @@ internal sealed class BinanceTradingService(BinanceHttpClient http) : ITradingSe
     {
         var parameters = new Dictionary<string, string>
         {
-            ["symbol"] = symbol.ToString(),
+            ["symbol"] = mapper.ToWire(symbol),
             ["origClientOrderId"] = clientOrderId
         };
 
@@ -150,7 +150,7 @@ internal sealed class BinanceTradingService(BinanceHttpClient http) : ITradingSe
     {
         var parameters = new Dictionary<string, string>
         {
-            ["symbol"] = symbol.ToString()
+            ["symbol"] = mapper.ToWire(symbol)
         };
 
         // Binance returns a top-level JSON array whose items are either plain order
@@ -177,7 +177,7 @@ internal sealed class BinanceTradingService(BinanceHttpClient http) : ITradingSe
     {
         var parameters = new Dictionary<string, string>
         {
-            ["symbol"] = symbol.ToString(),
+            ["symbol"] = mapper.ToWire(symbol),
             ["orderId"] = orderId
         };
 
@@ -191,7 +191,7 @@ internal sealed class BinanceTradingService(BinanceHttpClient http) : ITradingSe
         var parameters = new Dictionary<string, string>();
 
         if (symbol.HasValue)
-            parameters["symbol"] = symbol.Value.ToString();
+            parameters["symbol"] = mapper.ToWire(symbol.Value);
 
         var results = await http.GetAsync<List<BinanceOrderResponse>>("/api/v3/openOrders", parameters, true, ct).ConfigureAwait(false);
         return results.Select(MapOrder).ToList();
@@ -209,7 +209,7 @@ internal sealed class BinanceTradingService(BinanceHttpClient http) : ITradingSe
 
         var parameters = new Dictionary<string, string>
         {
-            ["symbol"] = symbol.ToString(),
+            ["symbol"] = mapper.ToWire(symbol),
             ["limit"] = limit.ToString()
         };
 
@@ -224,8 +224,8 @@ internal sealed class BinanceTradingService(BinanceHttpClient http) : ITradingSe
 
     // ── Mapping helpers ──
 
-    private static Order MapOrder(BinanceOrderResponse r) => new Order(
-        Symbol.Parse(r.Symbol),
+    private Order MapOrder(BinanceOrderResponse r) => new Order(
+        mapper.FromWire(r.Symbol),
         r.OrderId.ToString(),
         string.IsNullOrEmpty(r.ClientOrderId) ? null : r.ClientOrderId,
         ParseDecimal(r.Price),

@@ -8,26 +8,25 @@ namespace CryptoExchanges.Net.Core.Tests.Unit;
 public class CoreTests
 {
     [Theory]
-    [InlineData("BTCUSDT", "BTC", "USDT")]
-    [InlineData("ETHBTC", "ETH", "BTC")]
-    [InlineData("SOLUSDC", "SOL", "USDC")]
-    [InlineData("DOGEUSDT", "DOGE", "USDT")]
-    [InlineData("BNBBUSD", "BNB", "BUSD")]
-    [InlineData("XRPUSD", "XRP", "USD")]
-    public void Symbol_Parse_ShouldParseCorrectly(string input, string expectedBase, string expectedQuote)
+    [InlineData("BTC", "USDT")]
+    [InlineData("ETH", "BTC")]
+    [InlineData("SOL", "USDC")]
+    [InlineData("DOGE", "USDT")]
+    [InlineData("BNB", "BUSD")]
+    [InlineData("XRP", "USD")]
+    public void Symbol_ShouldExposeTypedLegs(string expectedBase, string expectedQuote)
     {
-        var symbol = Symbol.Parse(input);
+        var symbol = new Symbol(Asset.Of(expectedBase), Asset.Of(expectedQuote));
 
-        symbol.BaseAsset.Should().Be(expectedBase);
-        symbol.QuoteAsset.Should().Be(expectedQuote);
-        symbol.ToString().Should().Be(input);
+        symbol.Base.Ticker.Should().Be(expectedBase);
+        symbol.Quote.Ticker.Should().Be(expectedQuote);
     }
 
     [Fact]
-    public void Symbol_ToString_ShouldCombineAssets()
+    public void Symbol_ToString_ShouldRenderHumanReadableForm()
     {
-        var symbol = new Symbol("BTC", "USDT");
-        symbol.ToString().Should().Be("BTCUSDT");
+        var symbol = new Symbol(Asset.Btc, Asset.Usdt);
+        symbol.ToString().Should().Be("BTC/USDT");
     }
 
     [Fact]
@@ -35,7 +34,7 @@ public class CoreTests
     {
         var request = new PlaceOrderRequest
         {
-            Symbol = Symbol.Parse("BTCUSDT"),
+            Symbol = new Symbol(Asset.Btc, Asset.Usdt),
             Side = Enums.OrderSide.Buy,
             Type = Enums.OrderType.Limit,
             Quantity = 0.1m,
@@ -51,7 +50,7 @@ public class CoreTests
     {
         var request = new PlaceOrderRequest
         {
-            Symbol = Symbol.Parse("ETHUSDT"),
+            Symbol = new Symbol(Asset.Eth, Asset.Usdt),
             Side = Enums.OrderSide.Sell,
             Type = Enums.OrderType.Market,
             Quantity = 1.5m
@@ -66,7 +65,7 @@ public class CoreTests
     {
         var request = new PlaceOrderRequest
         {
-            Symbol = Symbol.Parse("BTCUSDT"),
+            Symbol = new Symbol(Asset.Btc, Asset.Usdt),
             Side = Enums.OrderSide.Buy,
             Type = Enums.OrderType.Limit,
             Price = 50000m
@@ -83,7 +82,7 @@ public class CoreTests
     {
         var request = new PlaceOrderRequest
         {
-            Symbol = Symbol.Parse("BTCUSDT"),
+            Symbol = new Symbol(Asset.Btc, Asset.Usdt),
             Side = Enums.OrderSide.Buy,
             Type = Enums.OrderType.Limit,
             Quantity = 0.1m
@@ -100,7 +99,7 @@ public class CoreTests
     {
         var request = new PlaceOrderRequest
         {
-            Symbol = Symbol.Parse("BTCUSDT"),
+            Symbol = new Symbol(Asset.Btc, Asset.Usdt),
             Side = Enums.OrderSide.Sell,
             Type = Enums.OrderType.StopLoss,
             Quantity = 0.1m
@@ -117,7 +116,7 @@ public class CoreTests
     {
         var request = new PlaceOrderRequest
         {
-            Symbol = Symbol.Parse("BTCUSDT"),
+            Symbol = new Symbol(Asset.Btc, Asset.Usdt),
             Side = Enums.OrderSide.Buy,
             Type = Enums.OrderType.Market,
             QuoteOrderQuantity = 100m // Buy $100 worth of BTC
@@ -154,7 +153,7 @@ public class CoreTests
     [Fact]
     public void OrderBook_ShouldStoreBidsAndAsks()
     {
-        var symbol = Symbol.Parse("BTCUSDT");
+        var symbol = new Symbol(Asset.Btc, Asset.Usdt);
         var bids = new List<OrderBookEntry>
         {
             new(50000m, 1.0m),
@@ -180,7 +179,7 @@ public class CoreTests
     public void Order_CumulativeQuoteQuantity_ShouldBeSetViaInit()
     {
         var order = new Order(
-            Symbol.Parse("BTCUSDT"),
+            new Symbol(Asset.Btc, Asset.Usdt),
             "12345",
             Price: 50000m,
             OriginalQuantity: 1.0m,
@@ -196,7 +195,7 @@ public class CoreTests
     public void Ticker_Creation_ShouldStoreAllFields()
     {
         var ticker = new Ticker(
-            Symbol.Parse("BTCUSDT"),
+            new Symbol(Asset.Btc, Asset.Usdt),
             50000m,
             49000m,
             51000m,
@@ -207,7 +206,7 @@ public class CoreTests
             2.04m,
             DateTimeOffset.UtcNow);
 
-        ticker.Symbol.ToString().Should().Be("BTCUSDT");
+        ticker.Symbol.ToString().Should().Be("BTC/USDT");
         ticker.LastPrice.Should().Be(50000m);
         ticker.OpenPrice.Should().Be(49000m);
         ticker.HighPrice.Should().Be(51000m);
@@ -227,7 +226,7 @@ public class CoreTests
             50000m, 51000m, 49500m, 50500m,
             100m, 5050000m, 500,
             Enums.KlineInterval.OneHour,
-            Symbol.Parse("BTCUSDT"));
+            new Symbol(Asset.Btc, Asset.Usdt));
 
         candle.OpenTime.Should().Be(now);
         candle.Open.Should().Be(50000m);
@@ -243,8 +242,8 @@ public class CoreTests
     [Fact]
     public void Symbol_ToString_ShouldRecombine()
     {
-        var symbol = new Symbol("XRP", "USDT");
-        symbol.ToString().Should().Be("XRPUSDT");
+        var symbol = new Symbol(Asset.Xrp, Asset.Usdt);
+        symbol.ToString().Should().Be("XRP/USDT");
     }
 
     [Fact]
@@ -252,7 +251,7 @@ public class CoreTests
     {
         var request = new PlaceOrderRequest
         {
-            Symbol = Symbol.Parse("BTCUSDT"),
+            Symbol = new Symbol(Asset.Btc, Asset.Usdt),
             Side = Enums.OrderSide.Buy,
             Type = Enums.OrderType.Market
             // No Quantity, no QuoteOrderQuantity

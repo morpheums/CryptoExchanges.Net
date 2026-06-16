@@ -30,35 +30,53 @@ public sealed class BinanceOptions
 /// Full Binance exchange client implementing <see cref="IExchangeClient"/>.
 /// Composes market data, trading, and account services.
 /// </summary>
-/// <param name="httpClient">The HTTP client used for all requests.</param>
-/// <param name="apiKey">The Binance API key.</param>
-/// <param name="signatureService">The signature service used for signed requests, or <see langword="null"/>.</param>
-/// <param name="receiveWindow">The Binance <c>recvWindow</c> in milliseconds applied to signed requests.</param>
-/// <param name="ownsHttpClient">
-/// When <see langword="true"/>, <paramref name="httpClient"/> is disposed together with this client.
-/// Defaults to <see langword="false"/> so externally-owned clients are never disposed by this SDK.
-/// </param>
-public sealed class BinanceExchangeClient(
-    HttpClient httpClient,
-    string apiKey,
-    BinanceSignatureService? signatureService,
-    decimal receiveWindow = 5000m,
-    bool ownsHttpClient = false) : IExchangeClient, IAsyncDisposable
+public sealed class BinanceExchangeClient : IExchangeClient, IAsyncDisposable
 {
+    private readonly HttpClient _httpClient;
+    private readonly bool _ownsHttpClient;
+
+    /// <summary>
+    /// Initializes a new <see cref="BinanceExchangeClient"/>.
+    /// </summary>
+    /// <param name="httpClient">The HTTP client used for all requests.</param>
+    /// <param name="apiKey">The Binance API key.</param>
+    /// <param name="signatureService">The signature service used for signed requests, or <see langword="null"/>.</param>
+    /// <param name="receiveWindow">The Binance <c>recvWindow</c> in milliseconds applied to signed requests.</param>
+    /// <param name="ownsHttpClient">
+    /// When <see langword="true"/>, <paramref name="httpClient"/> is disposed together with this client.
+    /// Defaults to <see langword="false"/> so externally-owned clients are never disposed by this SDK.
+    /// </param>
+    public BinanceExchangeClient(
+        HttpClient httpClient,
+        string apiKey,
+        BinanceSignatureService? signatureService,
+        decimal receiveWindow = 5000m,
+        bool ownsHttpClient = false)
+    {
+        ArgumentNullException.ThrowIfNull(httpClient);
+
+        _httpClient = httpClient;
+        _ownsHttpClient = ownsHttpClient;
+
+        var http = new BinanceHttpClient(httpClient, apiKey, signatureService, receiveWindow);
+        var mapper = new BinanceSymbolMapper();
+
+        MarketData = new BinanceMarketDataService(http, mapper);
+        Trading = new BinanceTradingService(http, mapper);
+        Account = new BinanceAccountService(http, mapper);
+    }
+
     /// <inheritdoc />
     public ExchangeId ExchangeId => ExchangeId.Binance;
 
     /// <inheritdoc />
-    public IMarketDataService MarketData { get; } =
-        new BinanceMarketDataService(new(httpClient, apiKey, signatureService, receiveWindow));
+    public IMarketDataService MarketData { get; }
 
     /// <inheritdoc />
-    public ITradingService Trading { get; } =
-        new BinanceTradingService(new(httpClient, apiKey, signatureService, receiveWindow));
+    public ITradingService Trading { get; }
 
     /// <inheritdoc />
-    public IAccountService Account { get; } =
-        new BinanceAccountService(new(httpClient, apiKey, signatureService, receiveWindow));
+    public IAccountService Account { get; }
 
     /// <summary>
     /// Creates a new <see cref="BinanceExchangeClient"/> using the specified options.
@@ -109,7 +127,7 @@ public sealed class BinanceExchangeClient(
         try
         {
             var requestUri = new Uri("/api/v3/time", UriKind.Relative);
-            using var resp = await httpClient.GetAsync(requestUri, ct).ConfigureAwait(false);
+            using var resp = await _httpClient.GetAsync(requestUri, ct).ConfigureAwait(false);
             resp.EnsureSuccessStatusCode();
             var _ = await resp.Content.ReadFromJsonAsync<BinanceServerTimeResponse>(cancellationToken: ct).ConfigureAwait(false);
             return true;
@@ -127,8 +145,8 @@ public sealed class BinanceExchangeClient(
     /// <inheritdoc />
     public async ValueTask DisposeAsync()
     {
-        if (ownsHttpClient)
-            httpClient.Dispose();
+        if (_ownsHttpClient)
+            _httpClient.Dispose();
         await Task.CompletedTask.ConfigureAwait(false);
     }
 }

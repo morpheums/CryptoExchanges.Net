@@ -129,14 +129,14 @@ internal sealed record BinanceRateLimit
 /// <summary>
 /// Binance implementation of <see cref="IMarketDataService"/>.
 /// </summary>
-internal sealed class BinanceMarketDataService(BinanceHttpClient http) : IMarketDataService
+internal sealed class BinanceMarketDataService(BinanceHttpClient http, ISymbolMapper mapper) : IMarketDataService
 {
     /// <inheritdoc />
     public async Task<IReadOnlyList<Ticker>> GetTickersAsync(Symbol? symbol = null, CancellationToken ct = default)
     {
         var parameters = new Dictionary<string, string>();
         if (symbol.HasValue)
-            parameters["symbol"] = symbol.Value.ToString();
+            parameters["symbol"] = mapper.ToWire(symbol.Value);
         else
             parameters["type"] = "FULL";
 
@@ -144,16 +144,18 @@ internal sealed class BinanceMarketDataService(BinanceHttpClient http) : IMarket
 
         if (symbol.HasValue)
         {
-            // Single symbol returns an object, not an array
+            // Single symbol returns an object, not an array. The caller asked for a specific
+            // symbol, so an unresolvable wire string is a genuine error — let MapTicker throw.
             var single = await http.GetAsync<BinanceTickerResponse>("/api/v3/ticker/24hr", parameters, false, ct).ConfigureAwait(false);
             results = [single];
-        }
-        else
-        {
-            results = await http.GetAsync<List<BinanceTickerResponse>>("/api/v3/ticker/24hr", parameters, false, ct).ConfigureAwait(false);
+            return results.Select(MapTicker).ToList();
         }
 
-        return results.Select(MapTicker).ToList();
+        results = await http.GetAsync<List<BinanceTickerResponse>>("/api/v3/ticker/24hr", parameters, false, ct).ConfigureAwait(false);
+
+        // The full universe includes obscure/delisted pairs that may not resolve against a
+        // cold cache or any known quote suffix; skip those rather than failing the whole batch.
+        return results.SelectMany(TryMapTicker).ToList();
     }
 
     /// <inheritdoc />
@@ -161,7 +163,7 @@ internal sealed class BinanceMarketDataService(BinanceHttpClient http) : IMarket
     {
         var parameters = new Dictionary<string, string>
         {
-            ["symbol"] = symbol.ToString(),
+            ["symbol"] = mapper.ToWire(symbol),
             ["limit"] = depth.ToString()
         };
 
@@ -184,7 +186,7 @@ internal sealed class BinanceMarketDataService(BinanceHttpClient http) : IMarket
     {
         var parameters = new Dictionary<string, string>
         {
-            ["symbol"] = symbol.ToString(),
+            ["symbol"] = mapper.ToWire(symbol),
             ["interval"] = MapKlineInterval(interval),
             ["limit"] = limit.ToString(),
             ["timeZone"] = "0" // UTC
@@ -229,7 +231,7 @@ internal sealed class BinanceMarketDataService(BinanceHttpClient http) : IMarket
     {
         var parameters = new Dictionary<string, string>
         {
-            ["symbol"] = symbol.ToString()
+            ["symbol"] = mapper.ToWire(symbol)
         };
 
         var response = await http.GetAsync<BinancePriceResponse>("/api/v3/ticker/price", parameters, false, ct).ConfigureAwait(false);
@@ -241,7 +243,7 @@ internal sealed class BinanceMarketDataService(BinanceHttpClient http) : IMarket
     {
         var parameters = new Dictionary<string, string>
         {
-            ["symbol"] = symbol.ToString(),
+            ["symbol"] = mapper.ToWire(symbol),
             ["limit"] = limit.ToString()
         };
 
@@ -262,14 +264,22 @@ internal sealed class BinanceMarketDataService(BinanceHttpClient http) : IMarket
     {
         var response = await http.GetAsync<BinanceExchangeInfoResponse>("/api/v3/exchangeInfo", null, false, ct).ConfigureAwait(false);
 
-        var symbols = response.Symbols.Select(s =>
-        {
-            var types = s.OrderTypes.Select(ParseOrderType).ToArray();
-            return new SymbolInfo(
-                Symbol: new Symbol(s.BaseAsset, s.QuoteAsset),
-                AllowedOrderTypes: types
-            );
-        }).ToList();
+        // Binance exchangeInfo can include non-standard entries whose base/quote are not
+        // representable assets (e.g. non-ASCII test symbols); skip those rather than throw.
+        var symbols = response.Symbols
+            .Where(s => Asset.TryOf(s.BaseAsset, out _) && Asset.TryOf(s.QuoteAsset, out _))
+            .Select(s =>
+            {
+                var types = s.OrderTypes.Select(ParseOrderType).ToArray();
+                return new SymbolInfo(
+                    Symbol: mapper.FromComponents(s.BaseAsset, s.QuoteAsset),
+                    AllowedOrderTypes: types
+                );
+            }).ToList();
+
+        // Populate the mapper's wire->Symbol lookup table from the freshly fetched symbols.
+        if (mapper is BinanceSymbolMapper binanceMapper)
+            binanceMapper.Update(symbols);
 
         var rateLimits = response.RateLimits.Select(r =>
             new RateLimit(MapRateLimitType(r.RateLimitType), MapRateLimitInterval(r.Interval), r.Limit)
@@ -280,9 +290,28 @@ internal sealed class BinanceMarketDataService(BinanceHttpClient http) : IMarket
 
     // ── Mapping helpers ──
 
-    private static Ticker MapTicker(BinanceTickerResponse t)
+    /// <summary>
+    /// Maps a ticker, yielding nothing when its wire symbol cannot be resolved. Used for the
+    /// full-universe response where unknown/delisted pairs must not abort the whole batch.
+    /// </summary>
+    private IEnumerable<Ticker> TryMapTicker(BinanceTickerResponse t)
     {
-        var sym = Symbol.Parse(t.Symbol);
+        Ticker ticker;
+        try
+        {
+            ticker = MapTicker(t);
+        }
+        catch (FormatException)
+        {
+            yield break;
+        }
+
+        yield return ticker;
+    }
+
+    private Ticker MapTicker(BinanceTickerResponse t)
+    {
+        var sym = mapper.FromWire(t.Symbol);
         return new Ticker(
             sym,
             ParseDecimal(t.LastPrice),

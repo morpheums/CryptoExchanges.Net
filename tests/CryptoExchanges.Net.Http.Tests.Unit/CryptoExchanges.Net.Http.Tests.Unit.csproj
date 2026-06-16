@@ -3,7 +3,7 @@
     <OutputType>Exe</OutputType>
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
-    <NoWarn>$(NoWarn);CA1707;CS1591;CA1515;CA1725;CA1002;CA2234;CA2007;CA2000</NoWarn>
+    <NoWarn>$(NoWarn);CA1707;CS1591;CA1515;CA1725;CA1002;CA2234;CA2007;CA2000;CA2012;xUnit1051</NoWarn>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\CryptoExchanges.Net.Core\CryptoExchanges.Net.Core.csproj" />

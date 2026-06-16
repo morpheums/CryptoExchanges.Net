@@ -66,7 +66,7 @@ internal sealed class BinanceAccountService(BinanceHttpClient http) : IAccountSe
         var parameters = new Dictionary<string, string>
         {
             ["omitZeroBalances"] = "true",
-            ["recvWindow"] = "5000.000"
+            ["recvWindow"] = "5000"
         };
 
         var response = await http.GetAsync<BinanceAccountResponse>("/api/v3/account", parameters, true, ct).ConfigureAwait(false);
@@ -82,7 +82,7 @@ internal sealed class BinanceAccountService(BinanceHttpClient http) : IAccountSe
         var parameters = new Dictionary<string, string>
         {
             ["omitZeroBalances"] = "true",
-            ["recvWindow"] = "5000.000"
+            ["recvWindow"] = "5000"
         };
 
         var response = await http.GetAsync<BinanceAccountResponse>("/api/v3/account", parameters, true, ct).ConfigureAwait(false);
@@ -103,7 +103,7 @@ internal sealed class BinanceAccountService(BinanceHttpClient http) : IAccountSe
         {
             ["symbol"] = symbol.ToString(),
             ["limit"] = limit.ToString(),
-            ["recvWindow"] = "5000.000"
+            ["recvWindow"] = "5000"
         };
 
         var results = await http.GetAsync<List<BinanceTradeHistoryResponse>>("/api/v3/myTrades", parameters, true, ct).ConfigureAwait(false);
@@ -114,7 +114,7 @@ internal sealed class BinanceAccountService(BinanceHttpClient http) : IAccountSe
             ParseDecimal(t.Price),
             ParseDecimal(t.Qty),
             DateTimeOffset.FromUnixTimeMilliseconds(t.Time),
-            false, // isBuyerMaker not available in myTrades; use isBuyer instead
+            t.IsBuyer,
             t.OrderId.ToString()
         )).ToList();
     }

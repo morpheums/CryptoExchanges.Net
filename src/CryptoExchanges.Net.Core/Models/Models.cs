@@ -47,11 +47,8 @@ public readonly record struct Symbol : ISpanParsable<Symbol>
         if (s.Length < 2)
             return false;
 
-        // Find the boundary: quote assets are typically 3-5 chars (USDT, USD, USDC, BTC, etc.)
-        // We try to split at a reasonable point by looking for a transition from letter to a
-        // known stablecoin or fiat prefix (USDT, USDC, USD, BTC, ETH, BNB, etc.)
         int splitIndex = FindSplitPoint(s);
-        if (splitIndex <= 0 || splitIndex >= s.Length)
+        if (splitIndex < 0)
             return false;
 
         var baseSpan = s[..splitIndex];
@@ -69,24 +66,27 @@ public readonly record struct Symbol : ISpanParsable<Symbol>
     }
 
     /// <inheritdoc />
-    public static bool TryParse([NotNullWhen(true)] string? s, IFormatProvider? provider, [MaybeNullWhen(false)] out Symbol result)
+    public static bool TryParse(string? s, IFormatProvider? provider, [MaybeNullWhen(false)] out Symbol result)
         => TryParse(s.AsSpan(), provider, out result);
+
+    private static readonly string[] KnownQuoteAssets =
+    [
+        "USDT", "USDC", "BUSD", "TUSD", "USDP", "DAI",
+        "USD", "EUR", "GBP", "JPY", "TRY", "AUD", "BRL",
+        "RUB", "UAH", "BIDR", "BTC", "ETH", "BNB", "XRP",
+        "TRX", "DOGE", "SOL", "FDUSD", "PAXG", "PAX"
+    ];
 
     private static int FindSplitPoint(ReadOnlySpan<char> s)
     {
-        // Strategy: look for the first uppercase letter after position 1 that starts a known quote pattern
-        // Common quote assets: USDT, USD, USDC, BTC, ETH, BNB, BUSD, DAI, EUR, GBP, JPY, TRY
-        // We try several heuristics and pick the best one.
-
-        // Heuristic 1: If it ends with a token that starts with a common prefix after the base
-        var knownQuoteStarts = new[] { "USDT", "USDC", "BUSD", "TUSD", "USDP", "DAI", "USD", "EUR", "GBP", "JPY", "TRY", "AUD", "BRL", "RUB", "UAH", "BIDR", "BTC", "ETH", "BNB", "XRP", "TRX", "DOGE", "SOL", "FDUSD", "PAXG" };
-
+        // Look for known quote assets starting at each position after the first char.
         for (int i = 1; i < s.Length - 1; i++)
         {
-            var candidate = s[i..].Trim();
-            foreach (var qs in knownQuoteStarts)
+            var candidate = s[i..];
+            foreach (var qs in KnownQuoteAssets)
             {
-                if (candidate.StartsWith(qs, StringComparison.OrdinalIgnoreCase) &&
+                if (candidate.Length >= qs.Length &&
+                    candidate[..qs.Length].Equals(qs, StringComparison.OrdinalIgnoreCase) &&
                     candidate.Length == qs.Length)
                 {
                     return i;
@@ -94,18 +94,15 @@ public readonly record struct Symbol : ISpanParsable<Symbol>
             }
         }
 
-        // Heuristic 2: Walk backwards from end to find a reasonable quote length (3-5 chars)
-        // Assume quote is the last 3-5 characters
+        // Fallback: assume the quote is the last 3-5 characters.
         for (int quoteLen = 5; quoteLen >= 3; quoteLen--)
         {
             if (s.Length > quoteLen)
-            {
                 return s.Length - quoteLen;
-            }
         }
 
-        // Heuristic 3: Split at halfway if nothing else works
-        return s.Length / 2;
+        // Could not determine a split point.
+        return -1;
     }
 }
 
@@ -177,7 +174,7 @@ public sealed record Order(
     DateTimeOffset? UpdatedAt = null)
 {
     /// <summary>Cumulative quote asset quantity filled as of the last update.</summary>
-    public decimal CummulativeQuoteQuantity { get; init; }
+    public decimal CumulativeQuoteQuantity { get; init; }
 }
 
 /// <summary>Balance of a single asset in the account.</summary>

@@ -30,10 +30,9 @@ public class BinanceMarketDataIntegrationTests : IAsyncLifetime
         }
     }
 
-    public Task DisposeAsync()
+    public async Task DisposeAsync()
     {
-        _exchange.Dispose();
-        return Task.CompletedTask;
+        await _exchange.DisposeAsync().ConfigureAwait(false);
     }
 
     private void SkipIfUnreachable()

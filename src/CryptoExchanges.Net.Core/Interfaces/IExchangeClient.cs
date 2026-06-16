@@ -71,8 +71,8 @@ public interface ITradingService
     /// <summary>Cancels an order by client-assigned order ID.</summary>
     Task<Order> CancelOrderByClientIdAsync(Symbol symbol, string clientOrderId, CancellationToken ct = default);
 
-    /// <summary>Cancels all open orders, optionally filtered by symbol.</summary>
-    Task<IReadOnlyList<Order>> CancelAllOrdersAsync(Symbol? symbol = null, CancellationToken ct = default);
+    /// <summary>Cancels all open orders for the specified symbol.</summary>
+    Task<IReadOnlyList<Order>> CancelAllOrdersAsync(Symbol symbol, CancellationToken ct = default);
 
     /// <summary>Retrieves a specific order by exchange-assigned order ID.</summary>
     Task<Order> GetOrderAsync(Symbol symbol, string orderId, CancellationToken ct = default);
@@ -80,8 +80,8 @@ public interface ITradingService
     /// <summary>Retrieves all currently open orders, optionally filtered by symbol.</summary>
     Task<IReadOnlyList<Order>> GetOpenOrdersAsync(Symbol? symbol = null, CancellationToken ct = default);
 
-    /// <summary>Retrieves order history, optionally filtered by symbol.</summary>
-    Task<IReadOnlyList<Order>> GetOrderHistoryAsync(Symbol? symbol = null, int limit = 500, CancellationToken ct = default);
+    /// <summary>Retrieves order history for the specified symbol.</summary>
+    Task<IReadOnlyList<Order>> GetOrderHistoryAsync(Symbol symbol, int limit = 500, CancellationToken ct = default);
 }
 
 // ──────────────────────────────────────────────
@@ -109,7 +109,7 @@ public interface IAccountService
 /// Unified entry point for interacting with a cryptocurrency exchange.
 /// Provides access to market data, trading, and account services.
 /// </summary>
-public interface IExchangeClient
+public interface IExchangeClient : IAsyncDisposable
 {
     /// <summary>The exchange identifier.</summary>
     ExchangeId ExchangeId { get; }

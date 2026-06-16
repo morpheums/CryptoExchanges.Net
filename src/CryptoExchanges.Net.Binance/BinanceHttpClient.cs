@@ -12,7 +12,7 @@ namespace CryptoExchanges.Net.Binance;
 internal sealed class BinanceHttpClient(
     HttpClient httpClient,
     string apiKey,
-    BinanceSignatureService? signatureService) : IDisposable
+    BinanceSignatureService? signatureService)
 {
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -20,6 +20,13 @@ internal sealed class BinanceHttpClient(
         NumberHandling = JsonNumberHandling.AllowReadingFromString,
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
     };
+
+    /// <summary>
+    /// Clock-skew offset in milliseconds. Applied to every signed request timestamp.
+    /// Use a positive value when the local clock is ahead of Binance servers;
+    /// negative when it is behind.
+    /// </summary>
+    public long TimeOffset { get; set; }
 
     /// <summary>
     /// Sends a GET request to the specified endpoint and deserializes the JSON response.
@@ -30,6 +37,9 @@ internal sealed class BinanceHttpClient(
         bool signed = false,
         CancellationToken ct = default)
     {
+        if (signed && signatureService is null)
+            throw new InvalidOperationException("A signature service is required for signed requests.");
+
         var url = BuildUrl(endpoint, parameters, signed);
         using var request = new HttpRequestMessage(HttpMethod.Get, url);
         AddHeaders(request);
@@ -48,6 +58,9 @@ internal sealed class BinanceHttpClient(
         bool signed = false,
         CancellationToken ct = default)
     {
+        if (signed && signatureService is null)
+            throw new InvalidOperationException("A signature service is required for signed requests.");
+
         var url = BuildUrl(endpoint, parameters, signed);
         using var request = new HttpRequestMessage(HttpMethod.Get, url);
         AddHeaders(request);
@@ -66,6 +79,9 @@ internal sealed class BinanceHttpClient(
         bool signed = true,
         CancellationToken ct = default)
     {
+        if (signed && signatureService is null)
+            throw new InvalidOperationException("A signature service is required for signed requests.");
+
         var queryString = BuildQueryString(parameters);
         if (signed)
         {
@@ -91,6 +107,9 @@ internal sealed class BinanceHttpClient(
         bool signed = true,
         CancellationToken ct = default)
     {
+        if (signed && signatureService is null)
+            throw new InvalidOperationException("A signature service is required for signed requests.");
+
         var queryString = BuildQueryString(parameters);
         if (signed)
         {
@@ -136,9 +155,9 @@ internal sealed class BinanceHttpClient(
         return sb.ToString();
     }
 
-    private static string AppendTimestamp(string queryString)
+    private string AppendTimestamp(string queryString)
     {
-        var timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString();
+        var timestamp = (DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() + TimeOffset).ToString();
         var prefix = string.IsNullOrEmpty(queryString) ? string.Empty : "&";
         return $"{queryString}{prefix}timestamp={timestamp}";
     }
@@ -180,8 +199,6 @@ internal sealed class BinanceHttpClient(
 
         throw new BinanceApiException(message, (int)response.StatusCode);
     }
-
-    public void Dispose() => httpClient.Dispose();
 }
 
 /// <summary>

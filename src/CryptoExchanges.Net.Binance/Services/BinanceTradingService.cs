@@ -28,7 +28,7 @@ internal sealed record BinanceOrderResponse
 
     /// <summary>Binance 2026: cumulative quote quantity.</summary>
     [JsonPropertyName("cummulativeQuoteQty")]
-    public string CummulativeQuoteQty { get; init; } = "0";
+    public string CumulativeQuoteQty { get; init; } = "0";
 
     [JsonPropertyName("status")]
     public string Status { get; init; } = "NEW";
@@ -120,7 +120,7 @@ internal sealed class BinanceTradingService(BinanceHttpClient http) : ITradingSe
             parameters["icebergQty"] = request.IcebergQuantity.Value.ToString(System.Globalization.CultureInfo.InvariantCulture);
 
         // Binance 2026: recvWindow as decimal with up to 3 places
-        parameters["recvWindow"] = "5000.000";
+        parameters["recvWindow"] = "5000";
 
         var response = await http.PostAsync<BinanceOrderResponse>("/api/v3/order", parameters, true, ct).ConfigureAwait(false);
         return MapOrder(response);
@@ -133,7 +133,7 @@ internal sealed class BinanceTradingService(BinanceHttpClient http) : ITradingSe
         {
             ["symbol"] = symbol.ToString(),
             ["orderId"] = orderId,
-            ["recvWindow"] = "5000.000"
+            ["recvWindow"] = "5000"
         };
 
         var response = await http.DeleteAsync<BinanceOrderResponse>("/api/v3/order", parameters, true, ct).ConfigureAwait(false);
@@ -147,7 +147,7 @@ internal sealed class BinanceTradingService(BinanceHttpClient http) : ITradingSe
         {
             ["symbol"] = symbol.ToString(),
             ["origClientOrderId"] = clientOrderId,
-            ["recvWindow"] = "5000.000"
+            ["recvWindow"] = "5000"
         };
 
         var response = await http.DeleteAsync<BinanceOrderResponse>("/api/v3/order", parameters, true, ct).ConfigureAwait(false);
@@ -155,15 +155,13 @@ internal sealed class BinanceTradingService(BinanceHttpClient http) : ITradingSe
     }
 
     /// <inheritdoc />
-    public async Task<IReadOnlyList<Order>> CancelAllOrdersAsync(Symbol? symbol = null, CancellationToken ct = default)
+    public async Task<IReadOnlyList<Order>> CancelAllOrdersAsync(Symbol symbol, CancellationToken ct = default)
     {
         var parameters = new Dictionary<string, string>
         {
-            ["recvWindow"] = "5000.000"
+            ["symbol"] = symbol.ToString(),
+            ["recvWindow"] = "5000"
         };
-
-        if (symbol.HasValue)
-            parameters["symbol"] = symbol.Value.ToString();
 
         var response = await http.DeleteAsync<BinanceCancelAllResponse>("/api/v3/openOrders", parameters, true, ct).ConfigureAwait(false);
         return response.Orders.Select(MapOrder).ToList();
@@ -176,7 +174,7 @@ internal sealed class BinanceTradingService(BinanceHttpClient http) : ITradingSe
         {
             ["symbol"] = symbol.ToString(),
             ["orderId"] = orderId,
-            ["recvWindow"] = "5000.000"
+            ["recvWindow"] = "5000"
         };
 
         var response = await http.GetAsync<BinanceOrderResponse>("/api/v3/order", parameters, true, ct).ConfigureAwait(false);
@@ -188,7 +186,7 @@ internal sealed class BinanceTradingService(BinanceHttpClient http) : ITradingSe
     {
         var parameters = new Dictionary<string, string>
         {
-            ["recvWindow"] = "5000.000"
+            ["recvWindow"] = "5000"
         };
 
         if (symbol.HasValue)
@@ -199,16 +197,14 @@ internal sealed class BinanceTradingService(BinanceHttpClient http) : ITradingSe
     }
 
     /// <inheritdoc />
-    public async Task<IReadOnlyList<Order>> GetOrderHistoryAsync(Symbol? symbol = null, int limit = 500, CancellationToken ct = default)
+    public async Task<IReadOnlyList<Order>> GetOrderHistoryAsync(Symbol symbol, int limit = 500, CancellationToken ct = default)
     {
         var parameters = new Dictionary<string, string>
         {
+            ["symbol"] = symbol.ToString(),
             ["limit"] = limit.ToString(),
-            ["recvWindow"] = "5000.000"
+            ["recvWindow"] = "5000"
         };
-
-        if (symbol.HasValue)
-            parameters["symbol"] = symbol.Value.ToString();
 
         var results = await http.GetAsync<List<BinanceOrderResponse>>("/api/v3/allOrders", parameters, true, ct).ConfigureAwait(false);
         return results.Select(MapOrder).ToList();
@@ -233,14 +229,14 @@ internal sealed class BinanceTradingService(BinanceHttpClient http) : ITradingSe
         r.UpdateTime > 0 ? DateTimeOffset.FromUnixTimeMilliseconds(r.UpdateTime) : null
     )
     {
-        CummulativeQuoteQuantity = ParseDecimal(r.CummulativeQuoteQty)
+        CumulativeQuoteQuantity = ParseDecimal(r.CumulativeQuoteQty)
     };
 
     private static string MapOrderSide(OrderSide side) => side switch
     {
         OrderSide.Buy => "BUY",
         OrderSide.Sell => "SELL",
-        _ => "BUY"
+        _ => throw new ArgumentOutOfRangeException(nameof(side), side, $"Unsupported order side: {side}")
     };
 
     private static string MapOrderType(OrderType type) => type switch
@@ -252,7 +248,7 @@ internal sealed class BinanceTradingService(BinanceHttpClient http) : ITradingSe
         OrderType.TakeProfit => "TAKE_PROFIT",
         OrderType.TakeProfitLimit => "TAKE_PROFIT_LIMIT",
         OrderType.LimitMaker => "LIMIT_MAKER",
-        _ => "LIMIT"
+        _ => throw new ArgumentOutOfRangeException(nameof(type), type, $"Unsupported order type: {type}")
     };
 
     private static string MapTimeInForce(TimeInForce tif) => tif switch
@@ -260,14 +256,14 @@ internal sealed class BinanceTradingService(BinanceHttpClient http) : ITradingSe
         TimeInForce.Gtc => "GTC",
         TimeInForce.Ioc => "IOC",
         TimeInForce.Fok => "FOK",
-        _ => "GTC"
+        _ => throw new ArgumentOutOfRangeException(nameof(tif), tif, $"Unsupported TimeInForce: {tif}")
     };
 
     private static OrderSide ParseOrderSide(string s) => s switch
     {
         "BUY" => OrderSide.Buy,
         "SELL" => OrderSide.Sell,
-        _ => OrderSide.Buy
+        _ => throw new ArgumentOutOfRangeException(nameof(s), s, $"Unknown order side: {s}")
     };
 
     private static OrderType ParseOrderTypeEnum(string s) => s switch
@@ -279,7 +275,7 @@ internal sealed class BinanceTradingService(BinanceHttpClient http) : ITradingSe
         "TAKE_PROFIT" => OrderType.TakeProfit,
         "TAKE_PROFIT_LIMIT" => OrderType.TakeProfitLimit,
         "LIMIT_MAKER" => OrderType.LimitMaker,
-        _ => OrderType.Limit
+        _ => throw new ArgumentOutOfRangeException(nameof(s), s, $"Unknown order type: {s}")
     };
 
     private static OrderStatus ParseOrderStatus(string s) => s switch
@@ -299,7 +295,7 @@ internal sealed class BinanceTradingService(BinanceHttpClient http) : ITradingSe
         "GTC" => TimeInForce.Gtc,
         "IOC" => TimeInForce.Ioc,
         "FOK" => TimeInForce.Fok,
-        _ => TimeInForce.Gtc
+        _ => throw new ArgumentOutOfRangeException(nameof(s), s, $"Unknown TimeInForce: {s}")
     };
 
     private static decimal ParseDecimal(string value)

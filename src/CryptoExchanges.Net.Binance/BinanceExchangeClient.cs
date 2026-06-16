@@ -31,7 +31,7 @@ public sealed class BinanceOptions
 public sealed class BinanceExchangeClient(
     HttpClient httpClient,
     string apiKey,
-    BinanceSignatureService? signatureService) : IExchangeClient, IDisposable
+    BinanceSignatureService? signatureService) : IExchangeClient, IAsyncDisposable
 {
     /// <inheritdoc />
     public ExchangeId ExchangeId => ExchangeId.Binance;
@@ -101,6 +101,10 @@ public sealed class BinanceExchangeClient(
             resp.EnsureSuccessStatusCode();
             return true;
         }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
         catch
         {
             return false;
@@ -108,7 +112,11 @@ public sealed class BinanceExchangeClient(
     }
 
     /// <inheritdoc />
-    public void Dispose() => httpClient.Dispose();
+    public async ValueTask DisposeAsync()
+    {
+        httpClient.Dispose();
+        await Task.CompletedTask.ConfigureAwait(false);
+    }
 }
 
 /// <summary>

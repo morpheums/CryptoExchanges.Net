@@ -177,7 +177,7 @@ public class CoreTests
     }
 
     [Fact]
-    public void Order_CummulativeQuoteQuantity_ShouldBeSetViaInit()
+    public void Order_CumulativeQuoteQuantity_ShouldBeSetViaInit()
     {
         var order = new Order(
             Symbol.Parse("BTCUSDT"),
@@ -186,10 +186,10 @@ public class CoreTests
             OriginalQuantity: 1.0m,
             ExecutedQuantity: 0.5m)
         {
-            CummulativeQuoteQuantity = 25000m
+            CumulativeQuoteQuantity = 25000m
         };
 
-        order.CummulativeQuoteQuantity.Should().Be(25000m);
+        order.CumulativeQuoteQuantity.Should().Be(25000m);
     }
 
     [Fact]

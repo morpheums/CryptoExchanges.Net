@@ -37,19 +37,17 @@ public static class ServiceCollectionExtensions
         // Register the options instance
         services.AddSingleton(options);
 
-        // Register the exchange client as a keyed singleton for service resolution by exchange ID
+        // Register the exchange client as a single instance, exposed under both
+        // keyed (resolved by exchange ID) and unkeyed registrations.
         services.AddKeyedSingleton<IExchangeClient>(ExchangeId.Binance, (sp, _) =>
         {
             var opts = sp.GetRequiredService<BinanceOptions>();
             return BinanceExchangeClient.Create(opts);
         });
 
-        // Also register as concrete type for direct usage
-        services.AddSingleton(sp =>
-        {
-            var opts = sp.GetRequiredService<BinanceOptions>();
-            return BinanceExchangeClient.Create(opts);
-        });
+        // Forward unkeyed resolution to the same keyed instance.
+        services.AddSingleton<IExchangeClient>(sp =>
+            sp.GetRequiredKeyedService<IExchangeClient>(ExchangeId.Binance));
 
         return services;
     }

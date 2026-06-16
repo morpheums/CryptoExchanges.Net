@@ -332,7 +332,7 @@ internal sealed class BinanceMarketDataService(BinanceHttpClient http) : IMarket
         KlineInterval.ThreeDays => "3d",
         KlineInterval.OneWeek => "1w",
         KlineInterval.OneMonth => "1M",
-        _ => "1h"
+        _ => throw new ArgumentOutOfRangeException(nameof(interval), interval, $"Unsupported kline interval: {interval}")
     };
 
     private static OrderType ParseOrderType(string type) => type switch
@@ -344,7 +344,7 @@ internal sealed class BinanceMarketDataService(BinanceHttpClient http) : IMarket
         "TAKE_PROFIT" => OrderType.TakeProfit,
         "TAKE_PROFIT_LIMIT" => OrderType.TakeProfitLimit,
         "LIMIT_MAKER" => OrderType.LimitMaker,
-        _ => OrderType.Limit
+        _ => throw new ArgumentOutOfRangeException(nameof(type), type, $"Unknown order type: {type}")
     };
 
     private static decimal ParseDecimal(string value)

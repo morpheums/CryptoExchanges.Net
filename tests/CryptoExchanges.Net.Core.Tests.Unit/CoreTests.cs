@@ -129,7 +129,7 @@ public class CoreTests
     [Fact]
     public void AssetBalance_Total_ShouldBeFreePlusLocked()
     {
-        var balance = new AssetBalance("BTC", 1.5m, 0.3m);
+        var balance = new AssetBalance(Asset.Btc, 1.5m, 0.3m);
 
         balance.Total.Should().Be(1.8m);
     }
@@ -137,7 +137,7 @@ public class CoreTests
     [Fact]
     public void AssetBalance_Total_ZeroWhenEmpty()
     {
-        var balance = new AssetBalance("USDT", 0m, 0m);
+        var balance = new AssetBalance(Asset.Usdt, 0m, 0m);
 
         balance.Total.Should().Be(0m);
     }
@@ -145,7 +145,7 @@ public class CoreTests
     [Fact]
     public void AssetBalance_Total_LockedOnly()
     {
-        var balance = new AssetBalance("ETH", 0m, 2.0m);
+        var balance = new AssetBalance(Asset.Eth, 0m, 2.0m);
 
         balance.Total.Should().Be(2.0m);
     }

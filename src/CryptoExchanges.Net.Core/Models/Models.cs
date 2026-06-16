@@ -102,7 +102,7 @@ public sealed record Order(
 
 /// <summary>Balance of a single asset in the account.</summary>
 public readonly record struct AssetBalance(
-    string Asset,
+    Asset Asset,
     decimal Free,
     decimal Locked)
 {

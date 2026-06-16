@@ -30,6 +30,14 @@ internal static class BinanceValueParsers
     }
 
     /// <summary>
+    /// Parses an asset ticker into a typed <see cref="Asset"/>, returning <see cref="Asset.None"/>
+    /// for null/empty or otherwise unrepresentable tickers rather than throwing. Used for balance
+    /// mapping where long-tail assets appear and must never abort the projection.
+    /// </summary>
+    public static Asset ParseAssetOrNone(string? ticker)
+        => Asset.TryOf(ticker, out var asset) ? asset : Asset.None;
+
+    /// <summary>
     /// Parses the Binance wire string for an order side into <see cref="OrderSide"/>.
     /// </summary>
     /// <exception cref="ArgumentOutOfRangeException">Thrown for any unrecognized side string.</exception>

@@ -133,6 +133,34 @@ internal sealed record BinanceRateLimit
 /// </summary>
 internal sealed class BinanceMarketDataService(BinanceHttpClient http, BinanceSymbolMapper mapper, IMapper modelMapper) : IMarketDataService
 {
+    // Lazily-fetched, cached snapshot of the supported symbol set, used only by the opt-in
+    // IsSupportedAsync / ResolveSymbolAsync validation methods. Lazy<Task<>> guarantees the
+    // underlying GetExchangeInfoAsync call runs at most once even under concurrent first calls;
+    // the resulting Task is shared. Nothing else touches this, so other methods never force a
+    // fetch. Initialized lazily in EnsureSupportedSymbols() because a field initializer cannot
+    // reference instance methods.
+    private Lazy<Task<IReadOnlyDictionary<Symbol, Symbol>>>? _supportedSymbols;
+    private readonly object _supportedSymbolsGate = new();
+
+    private Lazy<Task<IReadOnlyDictionary<Symbol, Symbol>>> EnsureSupportedSymbols()
+    {
+        // Double-checked init of the Lazy itself; the Lazy then serializes the actual fetch.
+        if (_supportedSymbols is not null)
+            return _supportedSymbols;
+
+        lock (_supportedSymbolsGate)
+        {
+            _supportedSymbols ??= new Lazy<Task<IReadOnlyDictionary<Symbol, Symbol>>>(
+                async () =>
+                {
+                    var info = await GetExchangeInfoAsync().ConfigureAwait(false);
+                    return info.Symbols.ToDictionary(s => s.Symbol, s => s.Symbol);
+                },
+                LazyThreadSafetyMode.ExecutionAndPublication);
+            return _supportedSymbols;
+        }
+    }
+
     /// <inheritdoc />
     public async Task<IReadOnlyList<Ticker>> GetTickersAsync(Symbol? symbol = null, CancellationToken ct = default)
     {
@@ -281,6 +309,22 @@ internal sealed class BinanceMarketDataService(BinanceHttpClient http, BinanceSy
         ).ToList();
 
         return new ExchangeInfo("Binance", symbols, rateLimits);
+    }
+
+    /// <inheritdoc />
+    public async Task<bool> IsSupportedAsync(Symbol symbol, CancellationToken ct = default)
+    {
+        ct.ThrowIfCancellationRequested();
+        var supported = await EnsureSupportedSymbols().Value.ConfigureAwait(false);
+        return supported.ContainsKey(symbol);
+    }
+
+    /// <inheritdoc />
+    public async Task<Symbol?> ResolveSymbolAsync(Symbol symbol, CancellationToken ct = default)
+    {
+        ct.ThrowIfCancellationRequested();
+        var supported = await EnsureSupportedSymbols().Value.ConfigureAwait(false);
+        return supported.TryGetValue(symbol, out var canonical) ? canonical : null;
     }
 
     // ── Mapping helpers ──

@@ -76,7 +76,7 @@ internal sealed class BinanceAccountService(BinanceHttpClient http, BinanceSymbo
     }
 
     /// <inheritdoc />
-    public async Task<AssetBalance> GetBalanceAsync(string asset, CancellationToken ct = default)
+    public async Task<AssetBalance> GetBalanceAsync(Asset asset, CancellationToken ct = default)
     {
         var parameters = new Dictionary<string, string>
         {
@@ -85,13 +85,11 @@ internal sealed class BinanceAccountService(BinanceHttpClient http, BinanceSymbo
 
         var response = await http.GetAsync<BinanceAccountResponse>("/api/v3/account", parameters, true, ct).ConfigureAwait(false);
 
-        var match = response.Balances.FirstOrDefault(b =>
-            string.Equals(b.Asset, asset, StringComparison.OrdinalIgnoreCase));
+        var match = response.Balances
+            .Select(modelMapper.Map<BinanceBalance, AssetBalance>)
+            .FirstOrDefault(b => b.Asset == asset);
 
-        if (match is null)
-            return new AssetBalance(asset, 0, 0);
-
-        return modelMapper.Map<BinanceBalance, AssetBalance>(match);
+        return match.Asset == asset ? match : new AssetBalance(asset, 0, 0);
     }
 
     /// <inheritdoc />

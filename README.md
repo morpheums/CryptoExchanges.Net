@@ -21,10 +21,11 @@ IExchangeClient exchange = BinanceExchangeClient.Create(new BinanceOptions
     ApiKey = apiKey,
     SecretKey = secretKey
 });
-var price = await exchange.MarketData.GetPriceAsync("BTCUSDT");
+var btcusdt = new Symbol(Asset.Btc, Asset.Usdt);
+var price = await exchange.MarketData.GetPriceAsync(btcusdt);
 var order = await exchange.Trading.PlaceOrderAsync(new PlaceOrderRequest
 {
-    Symbol = "BTCUSDT", Side = OrderSide.Buy, Type = OrderType.Limit,
+    Symbol = btcusdt, Side = OrderSide.Buy, Type = OrderType.Limit,
     Quantity = 0.001m, Price = price * 0.99m
 });
 ```
@@ -69,7 +70,7 @@ await using var exchange = BinanceExchangeClient.Create(new BinanceOptions
     SecretKey = "your-secret-key"
 });
 
-var btcPrice = await exchange.MarketData.GetPriceAsync("BTCUSDT");
+var btcPrice = await exchange.MarketData.GetPriceAsync(new Symbol(Asset.Btc, Asset.Usdt));
 Console.WriteLine($"BTC: ${btcPrice}");
 ```
 
@@ -95,25 +96,42 @@ builder.Services.AddCryptoExchanges(cfg =>
 
 // Inject anywhere
 app.MapGet("/btc", async (IExchangeClient ex) =>
-    await ex.MarketData.GetPriceAsync("BTCUSDT"));
+    await ex.MarketData.GetPriceAsync(new Symbol(Asset.Btc, Asset.Usdt)));
 ```
 
 ## Supported Operations
 
+### Symbols and Assets
+
+Symbols are typed — `new Symbol(Asset.Btc, Asset.Usdt)` rather than the string `"BTCUSDT"`.
+Use the built-in constants for common assets, or `Asset.Of("...")` for long-tail tickers:
+
+```csharp
+var btcusdt = new Symbol(Asset.Btc, Asset.Usdt);
+var pepeusdt = new Symbol(Asset.Of("PEPE"), Asset.Usdt); // long-tail asset
+
+// Opt-in exchange validation (lazily fetches + caches exchangeInfo)
+bool ok = await exchange.MarketData.IsSupportedAsync(btcusdt);
+Symbol? canonical = await exchange.MarketData.ResolveSymbolAsync(btcusdt);
+```
+
 ### Market Data
 ```csharp
+var ethusdt = new Symbol(Asset.Eth, Asset.Usdt);
+var btcusdt = new Symbol(Asset.Btc, Asset.Usdt);
+
 // Tickers
-var tickers = await exchange.MarketData.GetTickersAsync("ETHUSDT");
+var tickers = await exchange.MarketData.GetTickersAsync(ethusdt);
 
 // Order book
-var ob = await exchange.MarketData.GetOrderBookAsync("BTCUSDT", depth: 50);
+var ob = await exchange.MarketData.GetOrderBookAsync(btcusdt, depth: 50);
 
 // Candles
 var candles = await exchange.MarketData.GetCandlesticksAsync(
-    "BTCUSDT", KlineInterval.OneHour, limit: 24);
+    btcusdt, KlineInterval.OneHour, limit: 24);
 
 // Latest price
-var price = await exchange.MarketData.GetPriceAsync("BTCUSDT");
+var price = await exchange.MarketData.GetPriceAsync(btcusdt);
 
 // Exchange info (trading rules, symbol details)
 var info = await exchange.MarketData.GetExchangeInfoAsync();
@@ -122,14 +140,15 @@ var info = await exchange.MarketData.GetExchangeInfoAsync();
 ### Trading
 ```csharp
 // Place order
+var btcusdt = new Symbol(Asset.Btc, Asset.Usdt);
 var order = await exchange.Trading.PlaceOrderAsync(new PlaceOrderRequest
 {
-    Symbol = "BTCUSDT", Side = OrderSide.Buy, Type = OrderType.Limit,
+    Symbol = btcusdt, Side = OrderSide.Buy, Type = OrderType.Limit,
     Quantity = 0.001m, Price = 50000m
 });
 
 // Cancel order
-await exchange.Trading.CancelOrderAsync("BTCUSDT", order.OrderId);
+await exchange.Trading.CancelOrderAsync(btcusdt, order.OrderId);
 
 // Get open orders
 var open = await exchange.Trading.GetOpenOrdersAsync();
@@ -137,11 +156,17 @@ var open = await exchange.Trading.GetOpenOrdersAsync();
 
 ### Account
 ```csharp
-// Balances
+// Balances — balance.Asset is a typed Asset (e.g. Asset.Btc)
 var balances = await exchange.Account.GetBalancesAsync();
+foreach (var balance in balances)
+    Console.WriteLine($"{balance.Asset}: {balance.Total}");
+
+// Balance for a single asset
+var btc = await exchange.Account.GetBalanceAsync(Asset.Btc);
 
 // Trade history
-var trades = await exchange.Account.GetTradeHistoryAsync("BTCUSDT", limit: 100);
+var trades = await exchange.Account.GetTradeHistoryAsync(
+    new Symbol(Asset.Btc, Asset.Usdt), limit: 100);
 ```
 
 ## Supported Exchanges

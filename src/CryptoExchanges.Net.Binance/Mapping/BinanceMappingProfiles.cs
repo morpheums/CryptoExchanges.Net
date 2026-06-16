@@ -71,8 +71,10 @@ internal sealed class BinanceResponseProfile : Profile
             .ForMember(d => d.MinNotional, o => o.Ignore());
 
         // BinanceBalance -> AssetBalance
+        // Balances are where long-tail assets appear, so an unrepresentable ticker maps to
+        // Asset.None rather than throwing.
         CreateMap<BinanceBalance, AssetBalance>()
-            .ForMember(d => d.Asset, o => o.MapFrom(s => s.Asset))
+            .ForMember(d => d.Asset, o => o.MapFrom(s => BinanceValueParsers.ParseAssetOrNone(s.Asset)))
             .ForMember(d => d.Free, o => o.MapFrom(s => BinanceValueParsers.ParseDecimal(s.Free)))
             .ForMember(d => d.Locked, o => o.MapFrom(s => BinanceValueParsers.ParseDecimal(s.Locked)));
     }

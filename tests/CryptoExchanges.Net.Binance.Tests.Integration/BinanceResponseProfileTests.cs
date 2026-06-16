@@ -148,4 +148,35 @@ public class BinanceResponseProfileTests
 
         ticker.Timestamp.Should().BeNull();
     }
+
+    [Fact]
+    public void BalanceMapping_KnownTicker_MapsToTypedAsset()
+    {
+        var mapper = BuildMapper(out _);
+
+        var dto = new BinanceBalance { Asset = "BTC", Free = "1.5", Locked = "0.25" };
+
+        var balance = mapper.Map<BinanceBalance, AssetBalance>(dto);
+
+        balance.Asset.Should().Be(Asset.Btc);
+        balance.Free.Should().Be(1.5m);
+        balance.Locked.Should().Be(0.25m);
+        balance.Total.Should().Be(1.75m);
+    }
+
+    [Fact]
+    public void BalanceMapping_UnrepresentableTicker_MapsToAssetNone()
+    {
+        var mapper = BuildMapper(out _);
+
+        // A ticker with characters outside A-Z/0-9 is not representable as an Asset; it must
+        // map to Asset.None rather than throwing (balances are where long-tail assets appear).
+        var dto = new BinanceBalance { Asset = "bad-ticker!", Free = "3", Locked = "0" };
+
+        var balance = mapper.Map<BinanceBalance, AssetBalance>(dto);
+
+        balance.Asset.Should().Be(Asset.None);
+        balance.Asset.IsNone.Should().BeTrue();
+        balance.Free.Should().Be(3m);
+    }
 }

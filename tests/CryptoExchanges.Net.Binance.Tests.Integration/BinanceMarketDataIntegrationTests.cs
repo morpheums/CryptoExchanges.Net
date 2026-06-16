@@ -159,6 +159,35 @@ public class BinanceMarketDataIntegrationTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task IsSupported_KnownPair_True_BogusPair_False()
+    {
+        SkipIfUnreachable();
+        var btcusdt = new Symbol(Asset.Btc, Asset.Usdt);
+        var bogus = new Symbol(Asset.Of("ZZZZ"), Asset.Of("ZZZY"));
+
+        var supported = await _exchange.MarketData.IsSupportedAsync(btcusdt, TestContext.Current.CancellationToken);
+        var notSupported = await _exchange.MarketData.IsSupportedAsync(bogus, TestContext.Current.CancellationToken);
+
+        supported.Should().BeTrue();
+        notSupported.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task ResolveSymbol_KnownPair_ReturnsCanonical_BogusPair_Null()
+    {
+        SkipIfUnreachable();
+        var btcusdt = new Symbol(Asset.Btc, Asset.Usdt);
+        var bogus = new Symbol(Asset.Of("ZZZZ"), Asset.Of("ZZZY"));
+
+        var resolved = await _exchange.MarketData.ResolveSymbolAsync(btcusdt, TestContext.Current.CancellationToken);
+        var unresolved = await _exchange.MarketData.ResolveSymbolAsync(bogus, TestContext.Current.CancellationToken);
+
+        resolved.Should().NotBeNull();
+        resolved.Should().Be(btcusdt);
+        unresolved.Should().BeNull();
+    }
+
+    [Fact]
     public async Task GetRecentTrades_ShouldReturnRecentTrades()
     {
         SkipIfUnreachable();

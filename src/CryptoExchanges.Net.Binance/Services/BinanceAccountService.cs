@@ -97,7 +97,12 @@ internal sealed class BinanceAccountService(BinanceHttpClient http) : IAccountSe
     }
 
     /// <inheritdoc />
-    public async Task<IReadOnlyList<Trade>> GetTradeHistoryAsync(Symbol symbol, int limit = 500, CancellationToken ct = default)
+    public async Task<IReadOnlyList<Trade>> GetTradeHistoryAsync(
+        Symbol symbol,
+        int limit = 500,
+        DateTimeOffset? startTime = null,
+        DateTimeOffset? endTime = null,
+        CancellationToken ct = default)
     {
         var parameters = new Dictionary<string, string>
         {
@@ -105,6 +110,11 @@ internal sealed class BinanceAccountService(BinanceHttpClient http) : IAccountSe
             ["limit"] = limit.ToString(),
             ["recvWindow"] = "5000"
         };
+
+        if (startTime.HasValue)
+            parameters["startTime"] = startTime.Value.ToUnixTimeMilliseconds().ToString();
+        if (endTime.HasValue)
+            parameters["endTime"] = endTime.Value.ToUnixTimeMilliseconds().ToString();
 
         var results = await http.GetAsync<List<BinanceTradeHistoryResponse>>("/api/v3/myTrades", parameters, true, ct).ConfigureAwait(false);
 

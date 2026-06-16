@@ -204,7 +204,7 @@ internal sealed class BinanceHttpClient(
 /// <summary>
 /// Exception thrown when Binance returns an API error.
 /// </summary>
-public class BinanceApiException : Exception
+public sealed class BinanceApiException : Exception
 {
     /// <summary>The HTTP status code returned by Binance.</summary>
     public int StatusCode { get; }

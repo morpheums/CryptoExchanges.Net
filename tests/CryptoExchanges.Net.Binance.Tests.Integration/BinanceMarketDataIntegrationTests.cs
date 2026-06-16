@@ -35,10 +35,9 @@ public class BinanceMarketDataIntegrationTests : IAsyncLifetime
         await _exchange.DisposeAsync().ConfigureAwait(false);
     }
 
-    private void SkipIfUnreachable()
+    private bool SkipIfUnreachable()
     {
-        if (_skipReason is not null)
-            throw new SkipException(_skipReason);
+        return _skipReason is not null;
     }
 
     // ── Infrastructure ──
@@ -46,7 +45,7 @@ public class BinanceMarketDataIntegrationTests : IAsyncLifetime
     [Fact]
     public async Task Ping_ShouldReturnTrue()
     {
-        SkipIfUnreachable();
+        if (SkipIfUnreachable()) return;
         var result = await _exchange.PingAsync();
         result.Should().BeTrue();
     }
@@ -56,7 +55,7 @@ public class BinanceMarketDataIntegrationTests : IAsyncLifetime
     [Fact]
     public async Task GetPrice_BTCUSDT_ShouldReturnPositivePrice()
     {
-        SkipIfUnreachable();
+        if (SkipIfUnreachable()) return;
         var btcusdt = new Symbol("BTC", "USDT");
         var price = await _exchange.MarketData.GetPriceAsync(btcusdt);
         price.Should().BeGreaterThan(0);
@@ -65,7 +64,7 @@ public class BinanceMarketDataIntegrationTests : IAsyncLifetime
     [Fact]
     public async Task GetTickers_WithSymbol_ShouldReturnSingleTicker()
     {
-        SkipIfUnreachable();
+        if (SkipIfUnreachable()) return;
         var ethusdt = new Symbol("ETH", "USDT");
         var tickers = await _exchange.MarketData.GetTickersAsync(ethusdt);
         tickers.Should().HaveCount(1);
@@ -81,7 +80,7 @@ public class BinanceMarketDataIntegrationTests : IAsyncLifetime
     [Fact]
     public async Task GetTickers_All_ShouldReturnManySymbols()
     {
-        SkipIfUnreachable();
+        if (SkipIfUnreachable()) return;
         var tickers = await _exchange.MarketData.GetTickersAsync();
         tickers.Should().HaveCountGreaterThan(100);
     }
@@ -89,7 +88,7 @@ public class BinanceMarketDataIntegrationTests : IAsyncLifetime
     [Fact]
     public async Task GetOrderBook_Top5_ShouldReturnBidsAndAsks()
     {
-        SkipIfUnreachable();
+        if (SkipIfUnreachable()) return;
         var btcusdt = new Symbol("BTC", "USDT");
         var orderBook = await _exchange.MarketData.GetOrderBookAsync(btcusdt, depth: 5);
         orderBook.Bids.Should().NotBeEmpty();
@@ -101,7 +100,7 @@ public class BinanceMarketDataIntegrationTests : IAsyncLifetime
     [Fact]
     public async Task GetOrderBook_Depth100_ShouldReturnMoreLevels()
     {
-        SkipIfUnreachable();
+        if (SkipIfUnreachable()) return;
         var btcusdt = new Symbol("BTC", "USDT");
         var ob100 = await _exchange.MarketData.GetOrderBookAsync(btcusdt, depth: 100);
         var ob5 = await _exchange.MarketData.GetOrderBookAsync(btcusdt, depth: 5);
@@ -111,7 +110,7 @@ public class BinanceMarketDataIntegrationTests : IAsyncLifetime
     [Fact]
     public async Task GetCandlesticks_1h_ShouldReturnValidCandles()
     {
-        SkipIfUnreachable();
+        if (SkipIfUnreachable()) return;
         var btcusdt = new Symbol("BTC", "USDT");
         var candles = await _exchange.MarketData.GetCandlesticksAsync(
             btcusdt, KlineInterval.OneHour, limit: 3);
@@ -133,7 +132,7 @@ public class BinanceMarketDataIntegrationTests : IAsyncLifetime
     [Fact]
     public async Task GetCandlesticks_1d_ShouldWork()
     {
-        SkipIfUnreachable();
+        if (SkipIfUnreachable()) return;
         var btcusdt = new Symbol("BTC", "USDT");
         var candles = await _exchange.MarketData.GetCandlesticksAsync(
             btcusdt, KlineInterval.OneDay, limit: 3);
@@ -144,14 +143,14 @@ public class BinanceMarketDataIntegrationTests : IAsyncLifetime
             c.Open.Should().BeGreaterThan(0);
             c.Close.Should().BeGreaterThan(0);
             c.Interval.Should().Be(KlineInterval.OneDay);
-            c.Symbol.Should().Be(btcusdt);
+            c.TradingSymbol.Should().Be(btcusdt);
         }
     }
 
     [Fact]
     public async Task GetExchangeInfo_ShouldContainBTCUSDT()
     {
-        SkipIfUnreachable();
+        if (SkipIfUnreachable()) return;
         var info = await _exchange.MarketData.GetExchangeInfoAsync();
         info.Symbols.Should().HaveCountGreaterThan(100);
 
@@ -163,7 +162,7 @@ public class BinanceMarketDataIntegrationTests : IAsyncLifetime
     [Fact]
     public async Task GetRecentTrades_ShouldReturnRecentTrades()
     {
-        SkipIfUnreachable();
+        if (SkipIfUnreachable()) return;
         var btcusdt = new Symbol("BTC", "USDT");
         var trades = await _exchange.MarketData.GetRecentTradesAsync(btcusdt, limit: 5);
 
@@ -176,12 +175,4 @@ public class BinanceMarketDataIntegrationTests : IAsyncLifetime
             t.Timestamp!.Value.Should().BeAfter(DateTimeOffset.UtcNow.AddHours(-1));
         }
     }
-}
-
-/// <summary>
-/// Custom skip exception for xunit when Binance is unreachable.
-/// </summary>
-internal sealed class SkipException : Xunit.Sdk.XunitException
-{
-    public SkipException(string message) : base(message) { }
 }

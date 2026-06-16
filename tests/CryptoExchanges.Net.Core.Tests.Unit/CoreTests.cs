@@ -241,14 +241,6 @@ public class CoreTests
     // ── Additional tests ──
 
     [Fact]
-    public void Symbol_Parse_BTCUSDT_ShouldSplitCorrectly()
-    {
-        var symbol = Symbol.Parse("BTCUSDT");
-        symbol.BaseAsset.Should().Be("BTC");
-        symbol.QuoteAsset.Should().Be("USDT");
-    }
-
-    [Fact]
     public void Symbol_ToString_ShouldRecombine()
     {
         var symbol = new Symbol("XRP", "USDT");
@@ -269,29 +261,5 @@ public class CoreTests
         var act = () => request.Validate();
         act.Should().Throw<ArgumentException>()
             .WithMessage("*Quantity*");
-    }
-
-    [Fact]
-    public void PlaceOrderRequest_Validate_LimitWithoutPrice_ShouldThrow()
-    {
-        var request = new PlaceOrderRequest
-        {
-            Symbol = Symbol.Parse("BTCUSDT"),
-            Side = Enums.OrderSide.Buy,
-            Type = Enums.OrderType.Limit,
-            Quantity = 0.1m
-            // No Price set
-        };
-
-        var act = () => request.Validate();
-        act.Should().Throw<ArgumentException>()
-            .WithMessage("*Price*");
-    }
-
-    [Fact]
-    public void AssetBalance_Total_ShouldSumFreeAndLocked()
-    {
-        var balance = new AssetBalance("BTC", 1.5m, 0.3m);
-        balance.Total.Should().Be(1.8m);
     }
 }

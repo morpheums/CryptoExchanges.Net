@@ -197,7 +197,12 @@ internal sealed class BinanceTradingService(BinanceHttpClient http) : ITradingSe
     }
 
     /// <inheritdoc />
-    public async Task<IReadOnlyList<Order>> GetOrderHistoryAsync(Symbol symbol, int limit = 500, CancellationToken ct = default)
+    public async Task<IReadOnlyList<Order>> GetOrderHistoryAsync(
+        Symbol symbol,
+        int limit = 500,
+        DateTimeOffset? startTime = null,
+        DateTimeOffset? endTime = null,
+        CancellationToken ct = default)
     {
         var parameters = new Dictionary<string, string>
         {
@@ -205,6 +210,11 @@ internal sealed class BinanceTradingService(BinanceHttpClient http) : ITradingSe
             ["limit"] = limit.ToString(),
             ["recvWindow"] = "5000"
         };
+
+        if (startTime.HasValue)
+            parameters["startTime"] = startTime.Value.ToUnixTimeMilliseconds().ToString();
+        if (endTime.HasValue)
+            parameters["endTime"] = endTime.Value.ToUnixTimeMilliseconds().ToString();
 
         var results = await http.GetAsync<List<BinanceOrderResponse>>("/api/v3/allOrders", parameters, true, ct).ConfigureAwait(false);
         return results.Select(MapOrder).ToList();

@@ -81,7 +81,17 @@ public interface ITradingService
     Task<IReadOnlyList<Order>> GetOpenOrdersAsync(Symbol? symbol = null, CancellationToken ct = default);
 
     /// <summary>Retrieves order history for the specified symbol.</summary>
-    Task<IReadOnlyList<Order>> GetOrderHistoryAsync(Symbol symbol, int limit = 500, CancellationToken ct = default);
+    /// <param name="symbol">The trading pair symbol.</param>
+    /// <param name="limit">Maximum number of orders to retrieve.</param>
+    /// <param name="startTime">Optional start time filter.</param>
+    /// <param name="endTime">Optional end time filter.</param>
+    /// <param name="ct">Cancellation token.</param>
+    Task<IReadOnlyList<Order>> GetOrderHistoryAsync(
+        Symbol symbol,
+        int limit = 500,
+        DateTimeOffset? startTime = null,
+        DateTimeOffset? endTime = null,
+        CancellationToken ct = default);
 }
 
 // ──────────────────────────────────────────────
@@ -98,7 +108,17 @@ public interface IAccountService
     Task<AssetBalance> GetBalanceAsync(string asset, CancellationToken ct = default);
 
     /// <summary>Retrieves trade history for a specific symbol.</summary>
-    Task<IReadOnlyList<Trade>> GetTradeHistoryAsync(Symbol symbol, int limit = 500, CancellationToken ct = default);
+    /// <param name="symbol">The trading pair symbol.</param>
+    /// <param name="limit">Maximum number of trades to retrieve.</param>
+    /// <param name="startTime">Optional start time filter.</param>
+    /// <param name="endTime">Optional end time filter.</param>
+    /// <param name="ct">Cancellation token.</param>
+    Task<IReadOnlyList<Trade>> GetTradeHistoryAsync(
+        Symbol symbol,
+        int limit = 500,
+        DateTimeOffset? startTime = null,
+        DateTimeOffset? endTime = null,
+        CancellationToken ct = default);
 }
 
 // ──────────────────────────────────────────────
@@ -167,6 +187,51 @@ public sealed record PlaceOrderRequest
     /// <summary>Visible quantity for iceberg orders.</summary>
     public decimal? IcebergQuantity { get; init; }
 
+    /// <summary>
+    /// Creates a new <see cref="PlaceOrderRequest"/> with the specified parameters,
+    /// validates it, and returns the request. This is the intended creation path.
+    /// </summary>
+    /// <param name="symbol">The trading pair symbol. Required.</param>
+    /// <param name="side">Buy or Sell. Required.</param>
+    /// <param name="type">Order execution type. Required.</param>
+    /// <param name="quantity">Base asset quantity.</param>
+    /// <param name="quoteOrderQuantity">Quote asset order quantity (for market orders).</param>
+    /// <param name="price">Limit price. Required for limit orders.</param>
+    /// <param name="stopPrice">Stop price. Required for stop-limit and stop-loss orders.</param>
+    /// <param name="timeInForce">How long the order remains active.</param>
+    /// <param name="clientOrderId">Client-supplied order ID for idempotency.</param>
+    /// <param name="icebergQuantity">Visible quantity for iceberg orders.</param>
+    /// <returns>A validated <see cref="PlaceOrderRequest"/>.</returns>
+    /// <exception cref="ArgumentException">Thrown when validation fails.</exception>
+    public static PlaceOrderRequest Create(
+        Symbol symbol,
+        OrderSide side,
+        OrderType type,
+        decimal? quantity = null,
+        decimal? quoteOrderQuantity = null,
+        decimal? price = null,
+        decimal? stopPrice = null,
+        TimeInForce? timeInForce = null,
+        string? clientOrderId = null,
+        decimal? icebergQuantity = null)
+    {
+        var request = new PlaceOrderRequest
+        {
+            Symbol = symbol,
+            Side = side,
+            Type = type,
+            Quantity = quantity,
+            QuoteOrderQuantity = quoteOrderQuantity,
+            Price = price,
+            StopPrice = stopPrice,
+            TimeInForce = timeInForce,
+            ClientOrderId = clientOrderId,
+            IcebergQuantity = icebergQuantity
+        };
+        request.Validate();
+        return request;
+    }
+
     /// <summary>Validates that the request is well-formed.</summary>
     /// <exception cref="ArgumentException">Thrown when required fields are missing or inconsistent.</exception>
     public void Validate()
@@ -176,9 +241,6 @@ public sealed record PlaceOrderRequest
         ArgumentException.ThrowIfNullOrWhiteSpace(Symbol.QuoteAsset);
 
         var errors = new List<string>();
-
-        if (Side != OrderSide.Buy && Side != OrderSide.Sell)
-            errors.Add("Side must be Buy or Sell.");
 
         // Quantity validation
         if (Type != OrderType.Market || QuoteOrderQuantity is null or 0)

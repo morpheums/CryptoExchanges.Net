@@ -51,27 +51,7 @@ internal sealed record BinanceOrderBookResponse
     public List<List<string>> Asks { get; init; } = [];
 }
 
-internal sealed record BinanceKlineResponse : IJsonOnDeserialized
-{
-    // Raw kline array: [openTime, open, high, low, close, volume, closeTime, quoteVolume, trades, takerBuyBase, takerBuyQuote, ignore]
-    public long OpenTime { get; set; }
-    public string Open { get; set; } = "0";
-    public string High { get; set; } = "0";
-    public string Low { get; set; } = "0";
-    public string Close { get; set; } = "0";
-    public string Volume { get; set; } = "0";
-    public long CloseTime { get; set; }
-    public string QuoteVolume { get; set; } = "0";
-    public int TradeCount { get; set; }
-
-    [JsonIgnore]
-    public List<JsonElement>? RawArray { get; set; }
-
-    public void OnDeserialized()
-    {
-        // Handled via custom converter if needed — Binance returns klines as arrays of arrays
-    }
-}
+// BinanceKlineResponse removed — kline parsing uses raw JsonDocument.
 
 internal sealed record BinancePriceResponse
 {
@@ -224,6 +204,8 @@ internal sealed class BinanceMarketDataService(BinanceHttpClient http) : IMarket
         foreach (var element in doc.RootElement.EnumerateArray())
         {
             var arr = element.EnumerateArray().Select(e => e).ToList();
+            if (arr.Count < 9)
+                continue;
             candles.Add(new Candlestick(
                 OpenTime: DateTimeOffset.FromUnixTimeMilliseconds(arr[0].GetInt64()),
                 CloseTime: DateTimeOffset.FromUnixTimeMilliseconds(arr[6].GetInt64()),
@@ -235,7 +217,7 @@ internal sealed class BinanceMarketDataService(BinanceHttpClient http) : IMarket
                 QuoteVolume: ParseDecimal(arr[7].GetString()!),
                 TradeCount: arr[8].GetInt32(),
                 Interval: interval,
-                Symbol: symbol
+                TradingSymbol: symbol
             ));
         }
 
@@ -290,7 +272,7 @@ internal sealed class BinanceMarketDataService(BinanceHttpClient http) : IMarket
         }).ToList();
 
         var rateLimits = response.RateLimits.Select(r =>
-            new RateLimit(r.RateLimitType, r.Interval, r.Limit)
+            new RateLimit(MapRateLimitType(r.RateLimitType), MapRateLimitInterval(r.Interval), r.Limit)
         ).ToList();
 
         return new ExchangeInfo("Binance", symbols, rateLimits);
@@ -345,6 +327,22 @@ internal sealed class BinanceMarketDataService(BinanceHttpClient http) : IMarket
         "TAKE_PROFIT_LIMIT" => OrderType.TakeProfitLimit,
         "LIMIT_MAKER" => OrderType.LimitMaker,
         _ => throw new ArgumentOutOfRangeException(nameof(type), type, $"Unknown order type: {type}")
+    };
+
+    private static RateLimitType MapRateLimitType(string type) => type switch
+    {
+        "REQUEST_WEIGHT" => RateLimitType.RequestWeight,
+        "ORDERS" => RateLimitType.Orders,
+        "RAW_REQUESTS" => RateLimitType.RawRequests,
+        _ => throw new ArgumentOutOfRangeException(nameof(type), type, $"Unknown rate limit type: {type}")
+    };
+
+    private static RateLimitInterval MapRateLimitInterval(string interval) => interval switch
+    {
+        "SECOND" => RateLimitInterval.Second,
+        "MINUTE" => RateLimitInterval.Minute,
+        "DAY" => RateLimitInterval.Day,
+        _ => throw new ArgumentOutOfRangeException(nameof(interval), interval, $"Unknown rate limit interval: {interval}")
     };
 
     private static decimal ParseDecimal(string value)

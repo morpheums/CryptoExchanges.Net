@@ -93,6 +93,28 @@ public enum KlineInterval
     OneMonth
 }
 
+/// <summary>Specifies the category of a rate limit rule.</summary>
+public enum RateLimitType
+{
+    /// <summary>Request weight-based limit.</summary>
+    RequestWeight,
+    /// <summary>Order placement rate limit.</summary>
+    Orders,
+    /// <summary>Raw request count limit.</summary>
+    RawRequests
+}
+
+/// <summary>Specifies the time window for a rate limit rule.</summary>
+public enum RateLimitInterval
+{
+    /// <summary>Per second.</summary>
+    Second,
+    /// <summary>Per minute.</summary>
+    Minute,
+    /// <summary>Per day.</summary>
+    Day
+}
+
 /// <summary>Identifies a supported cryptocurrency exchange.</summary>
 public enum ExchangeId
 {

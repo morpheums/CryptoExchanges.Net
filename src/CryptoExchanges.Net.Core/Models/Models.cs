@@ -144,7 +144,7 @@ public sealed record Candlestick(
     decimal? QuoteVolume = null,
     int? TradeCount = null,
     Enums.KlineInterval? Interval = null,
-    Symbol? Symbol = null);
+    Symbol? TradingSymbol = null);
 
 /// <summary>A public trade executed on the exchange.</summary>
 public sealed record Trade(
@@ -207,6 +207,6 @@ public sealed record SymbolInfo(
 
 /// <summary>Rate limit configuration for exchange API endpoints.</summary>
 public sealed record RateLimit(
-    string RateLimitType,
-    string Interval,
+    Enums.RateLimitType RateLimitType,
+    Enums.RateLimitInterval Interval,
     int Limit);

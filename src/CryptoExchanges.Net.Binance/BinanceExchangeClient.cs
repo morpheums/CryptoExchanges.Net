@@ -1,3 +1,5 @@
+using System.Net.Http.Json;
+using System.Text.Json.Serialization;
 using CryptoExchanges.Net.Core.Interfaces;
 using CryptoExchanges.Net.Core.Models;
 
@@ -99,6 +101,7 @@ public sealed class BinanceExchangeClient(
             var requestUri = new Uri("/api/v3/time", UriKind.Relative);
             using var resp = await httpClient.GetAsync(requestUri, ct).ConfigureAwait(false);
             resp.EnsureSuccessStatusCode();
+            var _ = await resp.Content.ReadFromJsonAsync<BinanceServerTimeResponse>(cancellationToken: ct).ConfigureAwait(false);
             return true;
         }
         catch (OperationCanceledException)

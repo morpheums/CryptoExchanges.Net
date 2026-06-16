@@ -1,4 +1,6 @@
 using System.Text.Json.Serialization;
+using CryptoExchanges.Net.Binance.Internal;
+using DeltaMapper;
 
 namespace CryptoExchanges.Net.Binance.Services;
 
@@ -129,14 +131,42 @@ internal sealed record BinanceRateLimit
 /// <summary>
 /// Binance implementation of <see cref="IMarketDataService"/>.
 /// </summary>
-internal sealed class BinanceMarketDataService(BinanceHttpClient http) : IMarketDataService
+internal sealed class BinanceMarketDataService(BinanceHttpClient http, BinanceSymbolMapper mapper, IMapper modelMapper) : IMarketDataService
 {
+    // Lazily-fetched, cached snapshot of the supported symbol set, used only by the opt-in
+    // IsSupportedAsync / ResolveSymbolAsync validation methods. Lazy<Task<>> guarantees the
+    // underlying GetExchangeInfoAsync call runs at most once even under concurrent first calls;
+    // the resulting Task is shared. Nothing else touches this, so other methods never force a
+    // fetch. Initialized lazily in EnsureSupportedSymbols() because a field initializer cannot
+    // reference instance methods.
+    private Lazy<Task<IReadOnlyDictionary<Symbol, Symbol>>>? _supportedSymbols;
+    private readonly object _supportedSymbolsGate = new();
+
+    private Lazy<Task<IReadOnlyDictionary<Symbol, Symbol>>> EnsureSupportedSymbols()
+    {
+        // Double-checked init of the Lazy itself; the Lazy then serializes the actual fetch.
+        if (_supportedSymbols is not null)
+            return _supportedSymbols;
+
+        lock (_supportedSymbolsGate)
+        {
+            _supportedSymbols ??= new Lazy<Task<IReadOnlyDictionary<Symbol, Symbol>>>(
+                async () =>
+                {
+                    var info = await GetExchangeInfoAsync().ConfigureAwait(false);
+                    return info.Symbols.ToDictionary(s => s.Symbol, s => s.Symbol);
+                },
+                LazyThreadSafetyMode.ExecutionAndPublication);
+            return _supportedSymbols;
+        }
+    }
+
     /// <inheritdoc />
     public async Task<IReadOnlyList<Ticker>> GetTickersAsync(Symbol? symbol = null, CancellationToken ct = default)
     {
         var parameters = new Dictionary<string, string>();
         if (symbol.HasValue)
-            parameters["symbol"] = symbol.Value.ToString();
+            parameters["symbol"] = mapper.ToWire(symbol.Value);
         else
             parameters["type"] = "FULL";
 
@@ -144,16 +174,19 @@ internal sealed class BinanceMarketDataService(BinanceHttpClient http) : IMarket
 
         if (symbol.HasValue)
         {
-            // Single symbol returns an object, not an array
+            // Single symbol returns an object, not an array. The caller asked for a specific
+            // symbol, so an unresolvable wire string is a genuine error — let MapTicker throw.
             var single = await http.GetAsync<BinanceTickerResponse>("/api/v3/ticker/24hr", parameters, false, ct).ConfigureAwait(false);
-            results = [single];
-        }
-        else
-        {
-            results = await http.GetAsync<List<BinanceTickerResponse>>("/api/v3/ticker/24hr", parameters, false, ct).ConfigureAwait(false);
+            return [modelMapper.Map<BinanceTickerResponse, Ticker>(single)];
         }
 
-        return results.Select(MapTicker).ToList();
+        results = await http.GetAsync<List<BinanceTickerResponse>>("/api/v3/ticker/24hr", parameters, false, ct).ConfigureAwait(false);
+
+        // The full universe includes obscure/delisted pairs that may not resolve against a
+        // cold cache or any known quote suffix; skip those rather than failing the whole batch.
+        // The skip is intentional for obscure/transitional symbols — callers needing a complete
+        // set should first warm the wire-lookup cache via GetExchangeInfoAsync.
+        return results.SelectMany(TryMapTicker).ToList();
     }
 
     /// <inheritdoc />
@@ -161,14 +194,14 @@ internal sealed class BinanceMarketDataService(BinanceHttpClient http) : IMarket
     {
         var parameters = new Dictionary<string, string>
         {
-            ["symbol"] = symbol.ToString(),
+            ["symbol"] = mapper.ToWire(symbol),
             ["limit"] = depth.ToString()
         };
 
         var response = await http.GetAsync<BinanceOrderBookResponse>("/api/v3/depth", parameters, false, ct).ConfigureAwait(false);
 
-        var bids = response.Bids.Select(b => new OrderBookEntry(ParseDecimal(b[0]), ParseDecimal(b[1]))).ToList();
-        var asks = response.Asks.Select(a => new OrderBookEntry(ParseDecimal(a[0]), ParseDecimal(a[1]))).ToList();
+        var bids = response.Bids.Select(b => new OrderBookEntry(BinanceValueParsers.ParseDecimal(b[0]), BinanceValueParsers.ParseDecimal(b[1]))).ToList();
+        var asks = response.Asks.Select(a => new OrderBookEntry(BinanceValueParsers.ParseDecimal(a[0]), BinanceValueParsers.ParseDecimal(a[1]))).ToList();
 
         return new OrderBook(symbol, bids, asks, null, response.LastUpdateId);
     }
@@ -184,7 +217,7 @@ internal sealed class BinanceMarketDataService(BinanceHttpClient http) : IMarket
     {
         var parameters = new Dictionary<string, string>
         {
-            ["symbol"] = symbol.ToString(),
+            ["symbol"] = mapper.ToWire(symbol),
             ["interval"] = MapKlineInterval(interval),
             ["limit"] = limit.ToString(),
             ["timeZone"] = "0" // UTC
@@ -209,12 +242,12 @@ internal sealed class BinanceMarketDataService(BinanceHttpClient http) : IMarket
             candles.Add(new Candlestick(
                 OpenTime: DateTimeOffset.FromUnixTimeMilliseconds(arr[0].GetInt64()),
                 CloseTime: DateTimeOffset.FromUnixTimeMilliseconds(arr[6].GetInt64()),
-                Open: ParseDecimal(arr[1].GetString()!),
-                High: ParseDecimal(arr[2].GetString()!),
-                Low: ParseDecimal(arr[3].GetString()!),
-                Close: ParseDecimal(arr[4].GetString()!),
-                Volume: ParseDecimal(arr[5].GetString()!),
-                QuoteVolume: ParseDecimal(arr[7].GetString()!),
+                Open: BinanceValueParsers.ParseDecimal(arr[1].GetString()!),
+                High: BinanceValueParsers.ParseDecimal(arr[2].GetString()!),
+                Low: BinanceValueParsers.ParseDecimal(arr[3].GetString()!),
+                Close: BinanceValueParsers.ParseDecimal(arr[4].GetString()!),
+                Volume: BinanceValueParsers.ParseDecimal(arr[5].GetString()!),
+                QuoteVolume: BinanceValueParsers.ParseDecimal(arr[7].GetString()!),
                 TradeCount: arr[8].GetInt32(),
                 Interval: interval,
                 TradingSymbol: symbol
@@ -229,11 +262,11 @@ internal sealed class BinanceMarketDataService(BinanceHttpClient http) : IMarket
     {
         var parameters = new Dictionary<string, string>
         {
-            ["symbol"] = symbol.ToString()
+            ["symbol"] = mapper.ToWire(symbol)
         };
 
         var response = await http.GetAsync<BinancePriceResponse>("/api/v3/ticker/price", parameters, false, ct).ConfigureAwait(false);
-        return ParseDecimal(response.Price);
+        return BinanceValueParsers.ParseDecimal(response.Price);
     }
 
     /// <inheritdoc />
@@ -241,7 +274,7 @@ internal sealed class BinanceMarketDataService(BinanceHttpClient http) : IMarket
     {
         var parameters = new Dictionary<string, string>
         {
-            ["symbol"] = symbol.ToString(),
+            ["symbol"] = mapper.ToWire(symbol),
             ["limit"] = limit.ToString()
         };
 
@@ -250,8 +283,8 @@ internal sealed class BinanceMarketDataService(BinanceHttpClient http) : IMarket
         return results.Select(t => new Trade(
             symbol,
             t.Id.ToString(),
-            ParseDecimal(t.Price),
-            ParseDecimal(t.Qty),
+            BinanceValueParsers.ParseDecimal(t.Price),
+            BinanceValueParsers.ParseDecimal(t.Qty),
             DateTimeOffset.FromUnixTimeMilliseconds(t.Time),
             t.IsBuyerMaker
         )).ToList();
@@ -262,14 +295,14 @@ internal sealed class BinanceMarketDataService(BinanceHttpClient http) : IMarket
     {
         var response = await http.GetAsync<BinanceExchangeInfoResponse>("/api/v3/exchangeInfo", null, false, ct).ConfigureAwait(false);
 
-        var symbols = response.Symbols.Select(s =>
-        {
-            var types = s.OrderTypes.Select(ParseOrderType).ToArray();
-            return new SymbolInfo(
-                Symbol: new Symbol(s.BaseAsset, s.QuoteAsset),
-                AllowedOrderTypes: types
-            );
-        }).ToList();
+        // Binance exchangeInfo can include non-standard entries whose base/quote are not
+        // representable assets (e.g. non-ASCII test symbols); skip those rather than throw.
+        var representable = response.Symbols
+            .Where(s => Asset.TryOf(s.BaseAsset, out _) && Asset.TryOf(s.QuoteAsset, out _));
+        var symbols = modelMapper.Map<BinanceSymbolInfo, SymbolInfo>(representable);
+
+        // Populate the mapper's wire->Symbol lookup table from the freshly fetched symbols.
+        mapper.Update(symbols);
 
         var rateLimits = response.RateLimits.Select(r =>
             new RateLimit(MapRateLimitType(r.RateLimitType), MapRateLimitInterval(r.Interval), r.Limit)
@@ -278,23 +311,41 @@ internal sealed class BinanceMarketDataService(BinanceHttpClient http) : IMarket
         return new ExchangeInfo("Binance", symbols, rateLimits);
     }
 
+    /// <inheritdoc />
+    public async Task<bool> IsSupportedAsync(Symbol symbol, CancellationToken ct = default)
+    {
+        ct.ThrowIfCancellationRequested();
+        var supported = await EnsureSupportedSymbols().Value.ConfigureAwait(false);
+        return supported.ContainsKey(symbol);
+    }
+
+    /// <inheritdoc />
+    public async Task<Symbol?> ResolveSymbolAsync(Symbol symbol, CancellationToken ct = default)
+    {
+        ct.ThrowIfCancellationRequested();
+        var supported = await EnsureSupportedSymbols().Value.ConfigureAwait(false);
+        return supported.TryGetValue(symbol, out var canonical) ? canonical : null;
+    }
+
     // ── Mapping helpers ──
 
-    private static Ticker MapTicker(BinanceTickerResponse t)
+    /// <summary>
+    /// Maps a ticker, yielding nothing when its wire symbol cannot be resolved. Used for the
+    /// full-universe response where unknown/delisted pairs must not abort the whole batch.
+    /// </summary>
+    private IEnumerable<Ticker> TryMapTicker(BinanceTickerResponse t)
     {
-        var sym = Symbol.Parse(t.Symbol);
-        return new Ticker(
-            sym,
-            ParseDecimal(t.LastPrice),
-            ParseDecimal(t.OpenPrice),
-            ParseDecimal(t.HighPrice),
-            ParseDecimal(t.LowPrice),
-            ParseDecimal(t.Volume),
-            ParseDecimal(t.QuoteVolume),
-            ParseDecimal(t.PriceChange),
-            ParseDecimal(t.PriceChangePercent),
-            t.CloseTime > 0 ? DateTimeOffset.FromUnixTimeMilliseconds(t.CloseTime) : null
-        );
+        Ticker ticker;
+        try
+        {
+            ticker = modelMapper.Map<BinanceTickerResponse, Ticker>(t);
+        }
+        catch (FormatException)
+        {
+            yield break;
+        }
+
+        yield return ticker;
     }
 
     private static string MapKlineInterval(KlineInterval interval) => interval switch
@@ -317,18 +368,6 @@ internal sealed class BinanceMarketDataService(BinanceHttpClient http) : IMarket
         _ => throw new ArgumentOutOfRangeException(nameof(interval), interval, $"Unsupported kline interval: {interval}")
     };
 
-    private static OrderType ParseOrderType(string type) => type switch
-    {
-        "LIMIT" => OrderType.Limit,
-        "MARKET" => OrderType.Market,
-        "STOP_LOSS" => OrderType.StopLoss,
-        "STOP_LOSS_LIMIT" => OrderType.StopLossLimit,
-        "TAKE_PROFIT" => OrderType.TakeProfit,
-        "TAKE_PROFIT_LIMIT" => OrderType.TakeProfitLimit,
-        "LIMIT_MAKER" => OrderType.LimitMaker,
-        _ => throw new ArgumentOutOfRangeException(nameof(type), type, $"Unknown order type: {type}")
-    };
-
     private static RateLimitType MapRateLimitType(string type) => type switch
     {
         "REQUEST_WEIGHT" => RateLimitType.RequestWeight,
@@ -345,10 +384,4 @@ internal sealed class BinanceMarketDataService(BinanceHttpClient http) : IMarket
         _ => throw new ArgumentOutOfRangeException(nameof(interval), interval, $"Unknown rate limit interval: {interval}")
     };
 
-    private static decimal ParseDecimal(string value)
-    {
-        if (string.IsNullOrEmpty(value))
-            return 0m;
-        return decimal.Parse(value, System.Globalization.CultureInfo.InvariantCulture);
-    }
 }

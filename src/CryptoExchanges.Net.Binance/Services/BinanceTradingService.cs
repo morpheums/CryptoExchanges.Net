@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using CryptoExchanges.Net.Binance.Internal;
+using DeltaMapper;
 
 namespace CryptoExchanges.Net.Binance.Services;
 
@@ -80,7 +81,7 @@ internal sealed record BinanceOrderResponse
 /// <summary>
 /// Binance implementation of <see cref="ITradingService"/>.
 /// </summary>
-internal sealed class BinanceTradingService(BinanceHttpClient http) : ITradingService
+internal sealed class BinanceTradingService(BinanceHttpClient http, BinanceSymbolMapper mapper, IMapper modelMapper) : ITradingService
 {
     /// <inheritdoc />
     public async Task<Order> PlaceOrderAsync(PlaceOrderRequest request, CancellationToken ct = default)
@@ -89,7 +90,7 @@ internal sealed class BinanceTradingService(BinanceHttpClient http) : ITradingSe
 
         var parameters = new Dictionary<string, string>
         {
-            ["symbol"] = request.Symbol.ToString(),
+            ["symbol"] = mapper.ToWire(request.Symbol),
             ["side"] = MapOrderSide(request.Side),
             ["type"] = MapOrderType(request.Type)
         };
@@ -116,7 +117,7 @@ internal sealed class BinanceTradingService(BinanceHttpClient http) : ITradingSe
             parameters["icebergQty"] = request.IcebergQuantity.Value.ToString(System.Globalization.CultureInfo.InvariantCulture);
 
         var response = await http.PostAsync<BinanceOrderResponse>("/api/v3/order", parameters, true, ct).ConfigureAwait(false);
-        return MapOrder(response);
+        return modelMapper.Map<BinanceOrderResponse, Order>(response);
     }
 
     /// <inheritdoc />
@@ -124,12 +125,12 @@ internal sealed class BinanceTradingService(BinanceHttpClient http) : ITradingSe
     {
         var parameters = new Dictionary<string, string>
         {
-            ["symbol"] = symbol.ToString(),
+            ["symbol"] = mapper.ToWire(symbol),
             ["orderId"] = orderId
         };
 
         var response = await http.DeleteAsync<BinanceOrderResponse>("/api/v3/order", parameters, true, ct).ConfigureAwait(false);
-        return MapOrder(response);
+        return modelMapper.Map<BinanceOrderResponse, Order>(response);
     }
 
     /// <inheritdoc />
@@ -137,12 +138,12 @@ internal sealed class BinanceTradingService(BinanceHttpClient http) : ITradingSe
     {
         var parameters = new Dictionary<string, string>
         {
-            ["symbol"] = symbol.ToString(),
+            ["symbol"] = mapper.ToWire(symbol),
             ["origClientOrderId"] = clientOrderId
         };
 
         var response = await http.DeleteAsync<BinanceOrderResponse>("/api/v3/order", parameters, true, ct).ConfigureAwait(false);
-        return MapOrder(response);
+        return modelMapper.Map<BinanceOrderResponse, Order>(response);
     }
 
     /// <inheritdoc />
@@ -150,13 +151,14 @@ internal sealed class BinanceTradingService(BinanceHttpClient http) : ITradingSe
     {
         var parameters = new Dictionary<string, string>
         {
-            ["symbol"] = symbol.ToString()
+            ["symbol"] = mapper.ToWire(symbol)
         };
 
         // Binance returns a top-level JSON array whose items are either plain order
         // objects or order-list wrappers (e.g. OCO) carrying nested orderReports.
         var payload = await http.DeleteAsync<JsonElement[]>("/api/v3/openOrders", parameters, true, ct).ConfigureAwait(false);
-        return payload.SelectMany(ExtractCanceledOrders).Select(MapOrder).ToList();
+        var orders = payload.SelectMany(ExtractCanceledOrders).ToList();
+        return modelMapper.Map<BinanceOrderResponse, Order>(orders);
     }
 
     /// <summary>
@@ -177,12 +179,12 @@ internal sealed class BinanceTradingService(BinanceHttpClient http) : ITradingSe
     {
         var parameters = new Dictionary<string, string>
         {
-            ["symbol"] = symbol.ToString(),
+            ["symbol"] = mapper.ToWire(symbol),
             ["orderId"] = orderId
         };
 
         var response = await http.GetAsync<BinanceOrderResponse>("/api/v3/order", parameters, true, ct).ConfigureAwait(false);
-        return MapOrder(response);
+        return modelMapper.Map<BinanceOrderResponse, Order>(response);
     }
 
     /// <inheritdoc />
@@ -191,10 +193,10 @@ internal sealed class BinanceTradingService(BinanceHttpClient http) : ITradingSe
         var parameters = new Dictionary<string, string>();
 
         if (symbol.HasValue)
-            parameters["symbol"] = symbol.Value.ToString();
+            parameters["symbol"] = mapper.ToWire(symbol.Value);
 
         var results = await http.GetAsync<List<BinanceOrderResponse>>("/api/v3/openOrders", parameters, true, ct).ConfigureAwait(false);
-        return results.Select(MapOrder).ToList();
+        return modelMapper.Map<BinanceOrderResponse, Order>(results);
     }
 
     /// <inheritdoc />
@@ -209,7 +211,7 @@ internal sealed class BinanceTradingService(BinanceHttpClient http) : ITradingSe
 
         var parameters = new Dictionary<string, string>
         {
-            ["symbol"] = symbol.ToString(),
+            ["symbol"] = mapper.ToWire(symbol),
             ["limit"] = limit.ToString()
         };
 
@@ -219,30 +221,10 @@ internal sealed class BinanceTradingService(BinanceHttpClient http) : ITradingSe
             parameters["endTime"] = endTime.Value.ToUnixTimeMilliseconds().ToString();
 
         var results = await http.GetAsync<List<BinanceOrderResponse>>("/api/v3/allOrders", parameters, true, ct).ConfigureAwait(false);
-        return results.Select(MapOrder).ToList();
+        return modelMapper.Map<BinanceOrderResponse, Order>(results);
     }
 
-    // ── Mapping helpers ──
-
-    private static Order MapOrder(BinanceOrderResponse r) => new Order(
-        Symbol.Parse(r.Symbol),
-        r.OrderId.ToString(),
-        string.IsNullOrEmpty(r.ClientOrderId) ? null : r.ClientOrderId,
-        ParseDecimal(r.Price),
-        ParseDecimal(r.OrigQty),
-        ParseDecimal(r.ExecutedQty),
-        ParseOrderSide(r.Side),
-        ParseOrderTypeEnum(r.Type),
-        ParseOrderStatus(r.Status),
-        ParseTimeInForce(r.TimeInForce),
-        ParseOptionalDecimal(r.StopPrice),
-        ParseOptionalDecimal(r.IcebergQty),
-        r.Time > 0 ? DateTimeOffset.FromUnixTimeMilliseconds(r.Time) : null,
-        r.UpdateTime > 0 ? DateTimeOffset.FromUnixTimeMilliseconds(r.UpdateTime) : null
-    )
-    {
-        CumulativeQuoteQuantity = ParseDecimal(r.CumulativeQuoteQty)
-    };
+    // ── Request-direction mapping helpers ──
 
     private static string MapOrderSide(OrderSide side) => side switch
     {
@@ -271,57 +253,4 @@ internal sealed class BinanceTradingService(BinanceHttpClient http) : ITradingSe
         _ => throw new ArgumentOutOfRangeException(nameof(tif), tif, $"Unsupported TimeInForce: {tif}")
     };
 
-    private static OrderSide ParseOrderSide(string s) => s switch
-    {
-        "BUY" => OrderSide.Buy,
-        "SELL" => OrderSide.Sell,
-        _ => throw new ArgumentOutOfRangeException(nameof(s), s, $"Unknown order side: {s}")
-    };
-
-    private static OrderType ParseOrderTypeEnum(string s) => s switch
-    {
-        "LIMIT" => OrderType.Limit,
-        "MARKET" => OrderType.Market,
-        "STOP_LOSS" => OrderType.StopLoss,
-        "STOP_LOSS_LIMIT" => OrderType.StopLossLimit,
-        "TAKE_PROFIT" => OrderType.TakeProfit,
-        "TAKE_PROFIT_LIMIT" => OrderType.TakeProfitLimit,
-        "LIMIT_MAKER" => OrderType.LimitMaker,
-        _ => throw new ArgumentOutOfRangeException(nameof(s), s, $"Unknown order type: {s}")
-    };
-
-    private static OrderStatus ParseOrderStatus(string s) => s switch
-    {
-        "NEW" => OrderStatus.New,
-        "PARTIALLY_FILLED" => OrderStatus.PartiallyFilled,
-        "FILLED" => OrderStatus.Filled,
-        "CANCELED" => OrderStatus.Canceled,
-        "PENDING_CANCEL" => OrderStatus.PendingCancel,
-        "REJECTED" => OrderStatus.Rejected,
-        "EXPIRED" or "EXPIRED_IN_MATCH" => OrderStatus.Expired,
-        "PENDING_NEW" => OrderStatus.PendingNew,
-        _ => OrderStatus.Unknown
-    };
-
-    private static TimeInForce ParseTimeInForce(string s) => s switch
-    {
-        "GTC" => TimeInForce.Gtc,
-        "IOC" => TimeInForce.Ioc,
-        "FOK" => TimeInForce.Fok,
-        _ => throw new ArgumentOutOfRangeException(nameof(s), s, $"Unknown TimeInForce: {s}")
-    };
-
-    private static decimal ParseDecimal(string value)
-    {
-        if (string.IsNullOrEmpty(value))
-            return 0m;
-        return decimal.Parse(value, System.Globalization.CultureInfo.InvariantCulture);
-    }
-
-    private static decimal? ParseOptionalDecimal(string value)
-    {
-        if (string.IsNullOrEmpty(value) || value == "0")
-            return null;
-        return decimal.Parse(value, System.Globalization.CultureInfo.InvariantCulture);
-    }
 }

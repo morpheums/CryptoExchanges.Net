@@ -13,6 +13,12 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- Allow the test assembly to unit-test internal DTOs and mapping profiles. -->
+    <InternalsVisibleTo Include="CryptoExchanges.Net.Binance.Tests.Integration" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="DeltaMapper" Version="1.2.0" />
     <PackageReference Include="Microsoft.Extensions.Http" Version="10.0.*" />
     <PackageReference Include="Microsoft.Extensions.Options" Version="10.0.*" />
   </ItemGroup>

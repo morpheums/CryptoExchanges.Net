@@ -34,7 +34,7 @@ Console.WriteLine();
 Console.WriteLine("─── Latest Price (BTCUSDT) ───");
 try
 {
-    var btcSymbol = Symbol.Parse("BTCUSDT");
+    var btcSymbol = new Symbol(Asset.Btc, Asset.Usdt);
     var price = await client.MarketData.GetPriceAsync(btcSymbol);
     Console.WriteLine($"  BTC/USDT = ${price:N2}");
 }
@@ -48,7 +48,7 @@ Console.WriteLine();
 Console.WriteLine("─── 24h Ticker (ETHUSDT) ───");
 try
 {
-    var ethSymbol = Symbol.Parse("ETHUSDT");
+    var ethSymbol = new Symbol(Asset.Eth, Asset.Usdt);
     var tickers = await client.MarketData.GetTickersAsync(ethSymbol);
     foreach (var ticker in tickers)
     {
@@ -67,7 +67,7 @@ Console.WriteLine();
 Console.WriteLine("─── Order Book (BTCUSDT, depth=5) ───");
 try
 {
-    var btcSymbol = Symbol.Parse("BTCUSDT");
+    var btcSymbol = new Symbol(Asset.Btc, Asset.Usdt);
     var book = await client.MarketData.GetOrderBookAsync(btcSymbol, 5);
     Console.WriteLine($"  Last Update ID: {book.LastUpdateId}");
     Console.WriteLine("  Asks (sell orders):");
@@ -87,7 +87,7 @@ Console.WriteLine();
 Console.WriteLine("─── Recent Candles (BTCUSDT, 1h, last 5) ───");
 try
 {
-    var btcSymbol = Symbol.Parse("BTCUSDT");
+    var btcSymbol = new Symbol(Asset.Btc, Asset.Usdt);
     var candles = await client.MarketData.GetCandlesticksAsync(
         btcSymbol, KlineInterval.OneHour, limit: 5);
 
@@ -107,7 +107,7 @@ Console.WriteLine();
 Console.WriteLine("─── Recent Trades (BTCUSDT, last 3) ───");
 try
 {
-    var btcSymbol = Symbol.Parse("BTCUSDT");
+    var btcSymbol = new Symbol(Asset.Btc, Asset.Usdt);
     var trades = await client.MarketData.GetRecentTradesAsync(btcSymbol, 3);
     foreach (var trade in trades)
     {

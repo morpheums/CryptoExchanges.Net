@@ -53,6 +53,26 @@ public interface IMarketDataService
 
     /// <summary>Retrieves exchange-wide trading rules and symbol information.</summary>
     Task<ExchangeInfo> GetExchangeInfoAsync(CancellationToken ct = default);
+
+    /// <summary>
+    /// Determines whether a symbol is supported by the exchange. Opt-in validation:
+    /// other methods do not call this implicitly. Backed by a lazily-fetched, cached
+    /// snapshot of the exchange's supported symbol set.
+    /// </summary>
+    /// <param name="symbol">The trading pair to check.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns><see langword="true"/> if the symbol is in the exchange's supported set.</returns>
+    Task<bool> IsSupportedAsync(Symbol symbol, CancellationToken ct = default);
+
+    /// <summary>
+    /// Resolves a symbol to its canonical supported form. Opt-in validation: other methods
+    /// do not call this implicitly. Backed by a lazily-fetched, cached snapshot of the
+    /// exchange's supported symbol set.
+    /// </summary>
+    /// <param name="symbol">The trading pair to resolve.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>The canonical supported <see cref="Symbol"/>, or <see langword="null"/> if unsupported.</returns>
+    Task<Symbol?> ResolveSymbolAsync(Symbol symbol, CancellationToken ct = default);
 }
 
 // ──────────────────────────────────────────────
@@ -105,7 +125,7 @@ public interface IAccountService
     Task<IReadOnlyList<AssetBalance>> GetBalancesAsync(CancellationToken ct = default);
 
     /// <summary>Retrieves the balance for a specific asset.</summary>
-    Task<AssetBalance> GetBalanceAsync(string asset, CancellationToken ct = default);
+    Task<AssetBalance> GetBalanceAsync(Asset asset, CancellationToken ct = default);
 
     /// <summary>Retrieves trade history for a specific symbol.</summary>
     /// <param name="symbol">The trading pair symbol.</param>
@@ -237,8 +257,8 @@ public sealed record PlaceOrderRequest
     public void Validate()
     {
         // Guard: symbol components
-        ArgumentException.ThrowIfNullOrWhiteSpace(Symbol.BaseAsset);
-        ArgumentException.ThrowIfNullOrWhiteSpace(Symbol.QuoteAsset);
+        if (Symbol.Base.IsNone || Symbol.Quote.IsNone)
+            throw new ArgumentException("A valid trading symbol is required.", nameof(Symbol));
 
         var errors = new List<string>();
 

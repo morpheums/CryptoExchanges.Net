@@ -1,5 +1,6 @@
 using System.Text.Json.Serialization;
 using CryptoExchanges.Net.Binance.Internal;
+using DeltaMapper;
 
 namespace CryptoExchanges.Net.Binance.Services;
 
@@ -59,7 +60,7 @@ internal sealed record BinanceTradeHistoryResponse
 /// <summary>
 /// Binance implementation of <see cref="IAccountService"/>.
 /// </summary>
-internal sealed class BinanceAccountService(BinanceHttpClient http) : IAccountService
+internal sealed class BinanceAccountService(BinanceHttpClient http, BinanceSymbolMapper mapper, IMapper modelMapper) : IAccountService
 {
     /// <inheritdoc />
     public async Task<IReadOnlyList<AssetBalance>> GetBalancesAsync(CancellationToken ct = default)
@@ -71,13 +72,11 @@ internal sealed class BinanceAccountService(BinanceHttpClient http) : IAccountSe
 
         var response = await http.GetAsync<BinanceAccountResponse>("/api/v3/account", parameters, true, ct).ConfigureAwait(false);
 
-        return response.Balances
-            .Select(b => new AssetBalance(b.Asset, ParseDecimal(b.Free), ParseDecimal(b.Locked)))
-            .ToList();
+        return modelMapper.Map<BinanceBalance, AssetBalance>(response.Balances);
     }
 
     /// <inheritdoc />
-    public async Task<AssetBalance> GetBalanceAsync(string asset, CancellationToken ct = default)
+    public async Task<AssetBalance> GetBalanceAsync(Asset asset, CancellationToken ct = default)
     {
         var parameters = new Dictionary<string, string>
         {
@@ -86,13 +85,11 @@ internal sealed class BinanceAccountService(BinanceHttpClient http) : IAccountSe
 
         var response = await http.GetAsync<BinanceAccountResponse>("/api/v3/account", parameters, true, ct).ConfigureAwait(false);
 
-        var match = response.Balances.FirstOrDefault(b =>
-            string.Equals(b.Asset, asset, StringComparison.OrdinalIgnoreCase));
+        var match = response.Balances
+            .Select(modelMapper.Map<BinanceBalance, AssetBalance>)
+            .FirstOrDefault(b => b.Asset == asset);
 
-        if (match is null)
-            return new AssetBalance(asset, 0, 0);
-
-        return new AssetBalance(match.Asset, ParseDecimal(match.Free), ParseDecimal(match.Locked));
+        return match.Asset == asset ? match : new AssetBalance(asset, 0, 0);
     }
 
     /// <inheritdoc />
@@ -107,7 +104,7 @@ internal sealed class BinanceAccountService(BinanceHttpClient http) : IAccountSe
 
         var parameters = new Dictionary<string, string>
         {
-            ["symbol"] = symbol.ToString(),
+            ["symbol"] = mapper.ToWire(symbol),
             ["limit"] = limit.ToString()
         };
 
@@ -118,21 +115,17 @@ internal sealed class BinanceAccountService(BinanceHttpClient http) : IAccountSe
 
         var results = await http.GetAsync<List<BinanceTradeHistoryResponse>>("/api/v3/myTrades", parameters, true, ct).ConfigureAwait(false);
 
+        // Trade.Symbol is taken from the caller's typed argument (the caller already holds it),
+        // not resolved from the wire string, so a cold mapper cache can never make this throw.
         return results.Select(t => new Trade(
             symbol,
             t.Id.ToString(),
-            ParseDecimal(t.Price),
-            ParseDecimal(t.Qty),
+            BinanceValueParsers.ParseDecimal(t.Price),
+            BinanceValueParsers.ParseDecimal(t.Qty),
             DateTimeOffset.FromUnixTimeMilliseconds(t.Time),
             t.IsBuyer,
             t.OrderId.ToString()
         )).ToList();
     }
 
-    private static decimal ParseDecimal(string value)
-    {
-        if (string.IsNullOrEmpty(value))
-            return 0m;
-        return decimal.Parse(value, System.Globalization.CultureInfo.InvariantCulture);
-    }
 }

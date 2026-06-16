@@ -1,109 +1,32 @@
-using System.Diagnostics.CodeAnalysis;
-
 namespace CryptoExchanges.Net.Core.Models;
 
 /// <summary>
-/// Represents a trading pair symbol, e.g. "BTCUSDT".
-/// Stored as a readonly record struct for zero-allocation usage in hot paths.
+/// A trading pair, e.g. BTC/USDT. Holds typed base and quote <see cref="Asset"/>s.
+/// Has no wire format — converting to/from an exchange string is the job of an
+/// <see cref="Interfaces.ISymbolMapper"/>.
 /// </summary>
-public readonly record struct Symbol : ISpanParsable<Symbol>
+public readonly record struct Symbol
 {
-    /// <summary>The base asset (e.g. "BTC").</summary>
-    public string BaseAsset { get; init; }
+    /// <summary>The base asset (what you are buying/selling), e.g. BTC.</summary>
+    public Asset Base { get; }
 
-    /// <summary>The quote asset (e.g. "USDT").</summary>
-    public string QuoteAsset { get; init; }
+    /// <summary>The quote asset (what it is priced in), e.g. USDT.</summary>
+    public Asset Quote { get; }
 
-    /// <summary>
-    /// Initializes a new <see cref="Symbol"/> with the specified asset pair.
-    /// </summary>
-    public Symbol(string baseAsset, string quoteAsset)
+    /// <summary>Creates a trading pair from two distinct, valid assets.</summary>
+    /// <exception cref="ArgumentException">Either leg is <see cref="Asset.None"/>, or both legs are equal.</exception>
+    public Symbol(Asset @base, Asset quote)
     {
-        BaseAsset = baseAsset;
-        QuoteAsset = quoteAsset;
+        if (@base.IsNone || quote.IsNone)
+            throw new ArgumentException("Symbol legs must be valid assets (not Asset.None).");
+        if (@base == quote)
+            throw new ArgumentException($"Base and quote must differ (both were '{@base}').");
+        Base = @base;
+        Quote = quote;
     }
 
-    /// <inheritdoc />
-    public override string ToString() => $"{BaseAsset}{QuoteAsset}";
-
-    /// <summary>
-    /// Parses a symbol from <see cref="ReadOnlySpan{Char}"/>, e.g. "BTCUSDT" → Base="BTC", Quote="USDT".
-    /// </summary>
-    public static Symbol Parse(ReadOnlySpan<char> s, IFormatProvider? provider = null)
-    {
-        if (!TryParse(s, provider, out var result))
-            throw new FormatException($"Cannot parse '{s}' as a Symbol.");
-        return result;
-    }
-
-    /// <inheritdoc />
-    public static Symbol Parse(string s, IFormatProvider? provider = null)
-        => Parse(s.AsSpan(), provider);
-
-    /// <inheritdoc />
-    public static bool TryParse(ReadOnlySpan<char> s, IFormatProvider? provider, [MaybeNullWhen(false)] out Symbol result)
-    {
-        result = default;
-        if (s.Length < 2)
-            return false;
-
-        int splitIndex = FindSplitPoint(s);
-        if (splitIndex < 0)
-            return false;
-
-        var baseSpan = s[..splitIndex];
-        var quoteSpan = s[splitIndex..];
-
-        // Trim surrounding whitespace if any
-        baseSpan = baseSpan.Trim();
-        quoteSpan = quoteSpan.Trim();
-
-        if (baseSpan.IsEmpty || quoteSpan.IsEmpty)
-            return false;
-
-        result = new Symbol(baseSpan.ToString(), quoteSpan.ToString());
-        return true;
-    }
-
-    /// <inheritdoc />
-    public static bool TryParse(string? s, IFormatProvider? provider, [MaybeNullWhen(false)] out Symbol result)
-        => TryParse(s.AsSpan(), provider, out result);
-
-    private static readonly string[] KnownQuoteAssets =
-    [
-        "USDT", "USDC", "BUSD", "TUSD", "USDP", "DAI",
-        "USD", "EUR", "GBP", "JPY", "TRY", "AUD", "BRL",
-        "RUB", "UAH", "BIDR", "BTC", "ETH", "BNB", "XRP",
-        "TRX", "DOGE", "SOL", "FDUSD", "PAXG", "PAX"
-    ];
-
-    private static int FindSplitPoint(ReadOnlySpan<char> s)
-    {
-        // Look for known quote assets starting at each position after the first char.
-        for (int i = 1; i < s.Length - 1; i++)
-        {
-            var candidate = s[i..];
-            foreach (var qs in KnownQuoteAssets)
-            {
-                if (candidate.Length >= qs.Length &&
-                    candidate[..qs.Length].Equals(qs, StringComparison.OrdinalIgnoreCase) &&
-                    candidate.Length == qs.Length)
-                {
-                    return i;
-                }
-            }
-        }
-
-        // Fallback: assume the quote is the last 3-5 characters.
-        for (int quoteLen = 5; quoteLen >= 3; quoteLen--)
-        {
-            if (s.Length > quoteLen)
-                return s.Length - quoteLen;
-        }
-
-        // Could not determine a split point.
-        return -1;
-    }
+    /// <summary>Human-readable form, e.g. "BTC/USDT". NOT a wire format — do not send to an exchange.</summary>
+    public override string ToString() => $"{Base}/{Quote}";
 }
 
 /// <summary>24-hour price change statistics for a trading pair.</summary>
@@ -179,7 +102,7 @@ public sealed record Order(
 
 /// <summary>Balance of a single asset in the account.</summary>
 public readonly record struct AssetBalance(
-    string Asset,
+    Asset Asset,
     decimal Free,
     decimal Locked)
 {

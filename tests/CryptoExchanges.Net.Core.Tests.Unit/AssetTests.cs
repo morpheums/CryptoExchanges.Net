@@ -140,3 +140,26 @@ public class AssetJsonTests
         restored.IsNone.Should().BeTrue();
     }
 }
+
+public class AssetConstantsTests
+{
+    [Fact]
+    public void Btc_HasExpectedTicker()
+        => Asset.Btc.Ticker.Should().Be("BTC");
+
+    [Fact]
+    public void Usdt_HasExpectedTicker()
+        => Asset.Usdt.Ticker.Should().Be("USDT");
+
+    [Fact]
+    public void Constant_EqualsOfEquivalent()
+        => Asset.Eth.Should().Be(Asset.Of("ETH"));
+
+    [Fact]
+    public void Constants_AreNotNone()
+    {
+        Asset.Btc.IsNone.Should().BeFalse();
+        Asset.Usdc.IsNone.Should().BeFalse();
+        Asset.Bnb.IsNone.Should().BeFalse();
+    }
+}

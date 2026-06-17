@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using CryptoExchanges.Net.Core.Enums;
 using CryptoExchanges.Net.Core.Exceptions;
 
@@ -22,5 +23,5 @@ public interface IExchangeClientFactory
     /// <param name="exchange">The exchange to resolve.</param>
     /// <param name="client">The resolved client, or <see langword="null"/> when not registered.</param>
     /// <returns><see langword="true"/> if a client is registered for <paramref name="exchange"/>.</returns>
-    bool TryGet(ExchangeId exchange, out IExchangeClient? client);
+    bool TryGet(ExchangeId exchange, [NotNullWhen(true)] out IExchangeClient? client);
 }

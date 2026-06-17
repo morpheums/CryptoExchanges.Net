@@ -1,4 +1,4 @@
-using System.Linq;
+using System.Diagnostics.CodeAnalysis;
 using CryptoExchanges.Net.Core.Enums;
 using CryptoExchanges.Net.Core.Exceptions;
 using CryptoExchanges.Net.Core.Interfaces;
@@ -12,11 +12,15 @@ namespace CryptoExchanges.Net.DependencyInjection;
 /// </summary>
 internal sealed class ExchangeClientFactory(IServiceProvider services) : IExchangeClientFactory
 {
-    /// <inheritdoc />
-    public IReadOnlyCollection<ExchangeId> Available
-        => services.GetKeyedServices<IExchangeClient>(KeyedService.AnyKey)
+    // The registered set is fixed once the provider is built, so compute it once (lazily, to avoid
+    // realizing every exchange client at factory-construction time) and reuse it.
+    private readonly Lazy<IReadOnlyCollection<ExchangeId>> _available = new(() =>
+        services.GetKeyedServices<IExchangeClient>(KeyedService.AnyKey)
             .Select(c => c.ExchangeId)
-            .ToArray();
+            .ToArray());
+
+    /// <inheritdoc />
+    public IReadOnlyCollection<ExchangeId> Available => _available.Value;
 
     /// <inheritdoc />
     public IExchangeClient GetClient(ExchangeId exchange)
@@ -24,7 +28,7 @@ internal sealed class ExchangeClientFactory(IServiceProvider services) : IExchan
             ?? throw new ExchangeNotRegisteredException(exchange);
 
     /// <inheritdoc />
-    public bool TryGet(ExchangeId exchange, out IExchangeClient? client)
+    public bool TryGet(ExchangeId exchange, [NotNullWhen(true)] out IExchangeClient? client)
     {
         client = services.GetKeyedService<IExchangeClient>(exchange);
         return client is not null;

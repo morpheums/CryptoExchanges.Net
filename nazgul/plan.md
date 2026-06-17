@@ -12,7 +12,7 @@ Add three new exchange integrations to CryptoExchanges.Net in strict priority or
 
 ## Status Summary
 - Total tasks: 22
-- DONE: 0 | READY: 1 | IN_PROGRESS: 0 | IN_REVIEW: 0 | CHANGES_REQUESTED: 0 | BLOCKED: 0 | PLANNED: 21
+- DONE: 0 | READY: 0 | IN_PROGRESS: 0 | IN_REVIEW: 0 | CHANGES_REQUESTED: 0 | BLOCKED: 0 | PLANNED: 21 | IMPLEMENTED: 1
 - Current iteration: 1/40
 - Active task: TASK-001 (Wave 1)
 
@@ -88,7 +88,7 @@ Tasks touching shared Core/Http/DI projects are higher blast radius and REQUIRE 
 (Equivalent to Wave Groups above; waves are the canonical parallel-execution grouping read by the orchestrator.)
 
 ### Group 1 (= Wave 1)
-- [ ] TASK-001: Bybit project scaffold + options + DI seam stub -> READY
+- [x] TASK-001: Bybit project scaffold + options + DI seam stub -> IMPLEMENTED
 
 ### Group 2 (= Wave 2)
 - [ ] TASK-002: BybitSignatureService + signing request marker -> PLANNED
@@ -141,7 +141,7 @@ Tasks touching shared Core/Http/DI projects are higher blast radius and REQUIRE 
 
 ## Tasks
 ### TASK-001: Bybit project scaffold + options + DI seam stub
-- **Status**: READY
+- **Status**: IMPLEMENTED
 - **Group**: 1
 - **Depends on**: none
 - **Manifest**: nazgul/tasks/TASK-001.md
@@ -279,8 +279,8 @@ Tasks touching shared Core/Http/DI projects are higher blast radius and REQUIRE 
 <!-- None. -->
 
 ## Recovery Pointer
-- **Current Task:** TASK-001 (READY → dispatching implementer)
-- **Last Action:** YOLO loop started; config set to afk/yolo, objective stored, TASK-001 promoted to READY (Wave 1)
-- **Next Action:** Implementer scaffolds CryptoExchanges.Net.Bybit project (csproj, GlobalUsings, BybitOptions) + sln entry; then Review Gate
+- **Current Task:** TASK-001 (IMPLEMENTED — awaiting review gate)
+- **Last Action:** Bybit scaffold created (csproj, GlobalUsings, BybitOptions) + sln updated; build 0 warnings/0 errors
+- **Next Action:** Review Gate for TASK-001; then Wave 2 (TASK-002, TASK-004)
 - **Last Checkpoint:** nazgul/checkpoints/iteration-001.json
-- **Last Commit:** 3d28a79 chore: initialize Nazgul framework (shared decision record)
+- **Last Commit:** (pending commit)

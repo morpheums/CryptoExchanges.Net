@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>CryptoExchanges.Net.Bybit</RootNamespace>
+    <AssemblyName>CryptoExchanges.Net.Bybit</AssemblyName>
+    <Description>Bybit exchange implementation for CryptoExchanges.Net.</Description>
+    <PackageId>CryptoExchanges.Net.Bybit</PackageId>
+    <!-- Suppress analysis noise for HTTP client / JSON deserialization library -->
+    <NoWarn>$(NoWarn);CA1812;CA1056;CA1031;CA2000;CA1305;CA1032;CS1591</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CryptoExchanges.Net.Core\CryptoExchanges.Net.Core.csproj" />
+    <ProjectReference Include="..\CryptoExchanges.Net.Http\CryptoExchanges.Net.Http.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Allow the test assembly to unit-test internal DTOs and mapping profiles. -->
+    <InternalsVisibleTo Include="CryptoExchanges.Net.Bybit.Tests.Integration" />
+    <!-- Allow the DI package to wire internal types (IBybitHttpClient, BybitHttpClient,
+         BybitClientComposer, handlers, signing/translator) into the container. -->
+    <InternalsVisibleTo Include="CryptoExchanges.Net.DependencyInjection" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="DeltaMapper" Version="1.2.0" />
+    <PackageReference Include="Microsoft.Extensions.Http" Version="10.0.*" />
+    <PackageReference Include="Microsoft.Extensions.Options" Version="10.0.*" />
+  </ItemGroup>
+</Project>

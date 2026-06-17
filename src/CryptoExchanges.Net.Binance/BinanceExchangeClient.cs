@@ -1,4 +1,3 @@
-using System.Net.Http.Json;
 using System.Text.Json.Serialization;
 using CryptoExchanges.Net.Binance.Mapping;
 using CryptoExchanges.Net.Core.Interfaces;

@@ -27,7 +27,11 @@ public sealed class ErrorTranslationHandler(IExchangeErrorTranslator translator)
         if (response.IsSuccessStatusCode || IsTransient(response.StatusCode))
             return response;
 
-        var body = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
-        throw translator.Translate(response, body);
+        var body = response.Content is null
+            ? string.Empty
+            : await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+        var exception = translator.Translate(response, body);
+        response.Dispose();
+        throw exception;
     }
 }

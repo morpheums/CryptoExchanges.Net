@@ -40,7 +40,9 @@ public sealed class BinanceSigningHandler(
             var unsigned = StripSigning(raw);
             var withTs = Append(unsigned, $"timestamp={timestamp}");
             var signed = signatureService.BuildSignedQuery(withTs);
+            var previous = request.Content;
             request.Content = new StringContent(signed, System.Text.Encoding.UTF8, "application/x-www-form-urlencoded");
+            previous.Dispose();
         }
         else
         {

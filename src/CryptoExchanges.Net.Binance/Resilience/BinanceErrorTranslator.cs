@@ -2,6 +2,7 @@ using System.Net;
 using System.Text.Json;
 using CryptoExchanges.Net.Core.Exceptions;
 using CryptoExchanges.Net.Core.Interfaces;
+using CryptoExchanges.Net.Http;
 
 namespace CryptoExchanges.Net.Binance.Resilience;
 
@@ -16,7 +17,7 @@ public sealed class BinanceErrorTranslator : IExchangeErrorTranslator
         var text = msg is null ? $"Binance HTTP {(int)response.StatusCode}" : $"Binance error {code}: {msg}";
 
         if (response.StatusCode == HttpStatusCode.TooManyRequests || (int)response.StatusCode == 418 || code == -1003)
-            return new RateLimitExceededException(text, response.Headers.RetryAfter?.Delta, code, body);
+            return new RateLimitExceededException(text, RetryAfterReader.GetDelay(response), code, body);
 
         if (response.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden
             || code is -1022 or -2014 or -2015 or -1021)

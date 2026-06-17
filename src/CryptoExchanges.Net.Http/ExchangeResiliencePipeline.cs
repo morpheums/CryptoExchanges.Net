@@ -90,8 +90,10 @@ public sealed class TransientExhaustionHandler : DelegatingHandler
         var status = response.StatusCode;
         if (status == HttpStatusCode.TooManyRequests || (int)status == 418)
         {
-            var retryAfter = response.Headers.RetryAfter?.Delta;
-            var body = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+            var retryAfter = RetryAfterReader.GetDelay(response);
+            var body = response.Content is null
+                ? string.Empty
+                : await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
             response.Dispose();
             throw new RateLimitExceededException("Rate limit exceeded.", retryAfter, rawBody: body);
         }

@@ -20,6 +20,7 @@ public static class ResilientHttpClientServiceCollectionExtensions
         Func<IServiceProvider, DelegatingHandler>? requestFinalizerFactory = null)
     {
         ArgumentNullException.ThrowIfNull(services);
+        ArgumentException.ThrowIfNullOrWhiteSpace(name);
         ArgumentNullException.ThrowIfNull(options);
         ArgumentNullException.ThrowIfNull(translatorFactory);
         ArgumentNullException.ThrowIfNull(gateFactory);

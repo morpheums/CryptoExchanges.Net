@@ -28,7 +28,7 @@ public sealed class ReactiveRateLimitGate : IRateLimitGate
     public void Observe(HttpResponseMessage response)
     {
         ArgumentNullException.ThrowIfNull(response);
-        var retryAfter = response.Headers.RetryAfter?.Delta;
+        var retryAfter = RetryAfterReader.GetDelay(response);
         if (retryAfter is null || retryAfter <= TimeSpan.Zero)
             return;
 

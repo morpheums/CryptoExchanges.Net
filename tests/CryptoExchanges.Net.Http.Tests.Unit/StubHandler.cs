@@ -12,8 +12,9 @@ public sealed class StubHandler(Func<HttpRequestMessage, int, HttpResponseMessag
     protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
     {
         Requests.Add(request);
-        var resp = responder(request, Calls);
+        var index = Calls;
         Calls++;
+        var resp = responder(request, index);
         resp.RequestMessage = request;
         return Task.FromResult(resp);
     }

@@ -1,6 +1,6 @@
 ---
 id: TASK-002
-status: PLANNED
+status: IMPLEMENTED
 ---
 
 # TASK-002: BybitSignatureService + signing request marker
@@ -40,3 +40,27 @@ Implement `BybitSignatureService` — HMAC-SHA256 over the Bybit sign-string, **
 
 ## Test Requirements
 - Unit tests authored in TASK-008 cover signature hex output against a fixed vector and sign-string assembly for GET/POST.
+
+## Implementation Notes
+
+### Files created
+- `src/CryptoExchanges.Net.Bybit/Auth/BybitSignatureService.cs`
+- `src/CryptoExchanges.Net.Bybit/Resilience/BybitSigningRequest.cs`
+
+### BybitSignatureService
+- Mirrors `BinanceSignatureService` exactly for the HMAC primitive: `HMACSHA256.HashData(_secretKeyBytes, signBytes)` + `Convert.ToHexStringLower(hash)` for lowercase-hex output.
+- Secret-key guard via `ArgumentException.ThrowIfNullOrWhiteSpace` in the same `InitializeSecretKey` helper pattern (key bytes cached in a `readonly` field via primary-constructor initializer).
+- `Sign(string signString)` returns the hex signature; it does NOT append it to any payload (the key behavioral difference from Binance, which has `BuildSignedQuery`). A `<remarks>` note documents that the caller places the signature in the `X-BAPI-SIGN` header.
+- Two static sign-string builders produce the canonical strings exactly:
+  - `BuildGetSignString` → `timestamp + apiKey + recvWindow + queryString`
+  - `BuildPostSignString` → `timestamp + apiKey + recvWindow + jsonBody`
+  These are `static` because they have no dependency on the secret key, keeping assembly testable independently of signing.
+
+### BybitSigningRequest
+- Mirrors `BinanceSigningRequest` exactly: static class, `HttpRequestOptionsKey<bool>` keyed `"bybit.signed"` (vs `"binance.signed"`), `MarkSigned`/`IsSigned` with `ArgumentNullException.ThrowIfNull` guards. `IsSigned` round-trips and is idempotent across retries.
+
+### Deviation from Binance pattern
+- `BinanceSigningRequest` has `<see cref="BinanceSigningHandler"/>` in its summary. The equivalent `BybitSigningHandler` does not exist yet (arrives in a later task), and an unresolvable cref fails the build under `TreatWarningsAsErrors` (CS1574). Replaced the cref with plain text "the Bybit signing handler" to keep the build green; can be upgraded to a `<see cref>` once the handler lands.
+
+### Verification
+- `dotnet build CryptoExchanges.Net.sln` → **Build succeeded. 0 Warning(s), 0 Error(s).**

@@ -70,4 +70,13 @@ public class SymbolMapperTests
         var act = () => new SymbolMapper(Binance).FromWire("ZZZZZZ");
         act.Should().Throw<FormatException>();
     }
+
+    [Fact]
+    public void RoundTrip_AliasedSymbol_ViaWarmTable()
+    {
+        var m = new SymbolMapper(Kraken);
+        var sym = new Symbol(Asset.Btc, Asset.Of("USD"));
+        m.UpdateSymbols(new[] { Info("BTC", "USD") });   // table keyed by ToWire => "XBTZUSD"
+        m.FromWire(m.ToWire(sym)).Should().Be(sym);       // "XBTZUSD" -> BTC/USD
+    }
 }

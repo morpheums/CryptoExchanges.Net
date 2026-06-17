@@ -22,6 +22,8 @@ public sealed record SymbolFormat
         ReadOnlyDictionary<string, string>.Empty;
 
     /// <summary>Known quote tickers used to split a delimiter-less wire symbol when the table misses
-    /// (cold-cache fallback). Ignored when <see cref="Delimiter"/> is non-empty.</summary>
+    /// (cold-cache fallback). Ignored when <see cref="Delimiter"/> is non-empty. For a delimiter-less
+    /// format with no fallback list, <see cref="CryptoExchanges.Net.Core.SymbolMapper.FromWire"/> relies
+    /// solely on the warm table populated by <see cref="CryptoExchanges.Net.Core.SymbolMapper.UpdateSymbols"/>.</summary>
     public IReadOnlyList<string> FallbackQuoteAssets { get; init; } = [];
 }

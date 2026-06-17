@@ -23,7 +23,12 @@ public sealed class SymbolMapper : ISymbolMapper
         _format = format;
         _wireToCanonical = new(StringComparer.OrdinalIgnoreCase);
         foreach (var kvp in format.AssetAliases)
-            _wireToCanonical[kvp.Value] = kvp.Key;
+        {
+            if (!_wireToCanonical.TryAdd(kvp.Value, kvp.Key))
+                throw new ArgumentException(
+                    $"Ambiguous alias: wire ticker '{kvp.Value}' is mapped from multiple canonical tickers.",
+                    nameof(format));
+        }
     }
 
     /// <inheritdoc />
@@ -51,7 +56,14 @@ public sealed class SymbolMapper : ISymbolMapper
         _wireToSymbol = map;
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    /// Resolves an exchange wire string back into a <see cref="Symbol"/>. The warm table populated by
+    /// <see cref="UpdateSymbols"/> is the authoritative path. The cold-cache fallback uses the FIRST
+    /// delimiter occurrence (for delimited formats) or a known-quote suffix match against
+    /// <see cref="SymbolFormat.FallbackQuoteAssets"/> (for delimiter-less formats); delimiter-less formats
+    /// with aliases (e.g. Kraken) require a warm table for <c>FromWire</c> to resolve correctly.
+    /// </summary>
+    /// <exception cref="FormatException">The wire string cannot be resolved.</exception>
     public Symbol FromWire(string wireSymbol)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(wireSymbol);

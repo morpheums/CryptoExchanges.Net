@@ -140,7 +140,7 @@
     }
   },
   "branch": {
-    "feature": "feat/m2-exchange-expansion",
+    "feature": "feat/m3-okx",
     "base": "main",
     "main_worktree_path": "/Users/josemejia/ai-platform/personal/workspace/repos/CryptoExchanges.Net",
     "worktree_dir": null,

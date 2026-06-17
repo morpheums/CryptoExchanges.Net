@@ -14,7 +14,7 @@ Add three new exchange integrations to CryptoExchanges.Net in strict priority or
 - Total tasks: 22
 - DONE: 8 | READY: 0 | IN_PROGRESS: 0 | IN_REVIEW: 0 | CHANGES_REQUESTED: 0 | BLOCKED: 0 | PLANNED: 14
 - Current iteration: 6/40
-- Active task: none — **MILESTONE M-BYBIT COMPLETE** (TASK-001–008 all DONE). Next: open Bybit PR → merge → rebranch for M-OKX (TASK-009).
+- Active task: starting **M-OKX** on branch `feat/m3-okx` (cut from main after PR #11 merged as e7c0268). First: TASK-009 (signing generalization) + TASK-009B (DI re-homing, ADR-001).
 
 ## Scoping Decisions (HITL — committed, not open questions)
 The objective is fully prescriptive on scope/sequence/signing; these are the choices made decisively:
@@ -291,9 +291,10 @@ Tasks touching shared Core/Http/DI projects are higher blast radius and REQUIRE 
 - M-BYBIT (TASK-001–008) on `feat/m2-exchange-expansion` → on TASK-008 DONE, open PR → main → **confirm with user before the merge click** → merge.
 - After merge: cut `feat/m3-okx` off updated main for M-OKX (TASK-009–015) → PR/merge → branch for M-BITGET (TASK-016–022).
 
-## Recovery Pointer — ⏸ PAUSED (awaiting user merge of PR #11)
-- **Current Task:** none — **MILESTONE M-BYBIT COMPLETE** (TASK-001–008 all DONE, gates passed). 8/22 tasks done.
-- **Status:** HOLDING. Bybit PR is open: https://github.com/morpheums/CryptoExchanges.Net/pull/11 (feat/m2-exchange-expansion → main). User elected to review + merge #11 themselves. Do NOT merge it, and do NOT start OKX, until `main` contains the Bybit code.
+## Recovery Pointer — ▶ ACTIVE (M-OKX)
+- **Current Task:** starting M-OKX. 8/22 done (M-BYBIT shipped). Branch `feat/m3-okx` off main (PR #11 merged as e7c0268; main protected: required check "Build & Test" + strict up-to-date — keep this branch current with main).
+- **Status:** RESUMED. M-BYBIT merged to main. Next: re-plan the OKX wave to incorporate TASK-009B (DI re-homing) + ADR-001, then implement TASK-009 (credential/signing generalization — Core/Http, HIGHEST blast radius, must stay non-breaking for Binance AND Bybit).
+- **Historical note:** prior HOLD (await user merge of PR #11) is resolved — merged 2026-06-18.
 - **PR-review fixes applied (pushed, not merged):** GitHub Copilot reviewer found a real bug in BybitErrorTranslator.Parse (retMsg GetString() w/o ValueKind guard → InvalidOperationException escapes catch). Fixed + 3 regression tests in commit 5643ff5; Copilot thread resolved. CodeRabbit was rate-limited (no review). Bybit unit tests now 80.
 - **DI DESIGN — DECIDED (ADR-001, 2026-06-18):** adopt per-exchange DI (option b). Move `AddBinanceExchange`/`AddBybitExchange` into their own assemblies; `AddCryptoExchanges` becomes a thin aggregator. Apply at **M-OKX start, folded with TASK-009** (cheaper at 2 exchanges than 4); implement OKX/Bitget DI in-assembly from day one. Pre-v1.0 → breaking namespace move acceptable (optional `[Obsolete]` forwarders). See `nazgul/docs/ADR-001-per-exchange-di-and-conventions.md`.
 - **Process hardening applied (PR #11 branch):** architect-reviewer gained invariant #10 (package coupling) + "question the reference pattern" mandate + milestone-boundary macro-architecture pass; code-reviewer gained JSON-ValueKind-guard + clamp-don't-throw rules; ADR-001 committed.

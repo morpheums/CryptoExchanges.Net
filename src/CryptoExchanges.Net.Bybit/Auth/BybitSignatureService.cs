@@ -36,6 +36,10 @@ public sealed class BybitSignatureService(string secretKey)
     /// <returns>The canonical GET sign-string, with no signature appended.</returns>
     public static string BuildGetSignString(string timestamp, string apiKey, string recvWindow, string queryString)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(timestamp);
+        ArgumentException.ThrowIfNullOrWhiteSpace(apiKey);
+        ArgumentException.ThrowIfNullOrWhiteSpace(recvWindow);
+        ArgumentNullException.ThrowIfNull(queryString);
         return $"{timestamp}{apiKey}{recvWindow}{queryString}";
     }
 
@@ -49,6 +53,10 @@ public sealed class BybitSignatureService(string secretKey)
     /// <returns>The canonical POST sign-string, with no signature appended.</returns>
     public static string BuildPostSignString(string timestamp, string apiKey, string recvWindow, string jsonBody)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(timestamp);
+        ArgumentException.ThrowIfNullOrWhiteSpace(apiKey);
+        ArgumentException.ThrowIfNullOrWhiteSpace(recvWindow);
+        ArgumentNullException.ThrowIfNull(jsonBody);
         return $"{timestamp}{apiKey}{recvWindow}{jsonBody}";
     }
 

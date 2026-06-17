@@ -64,3 +64,12 @@ Implement `BybitSignatureService` — HMAC-SHA256 over the Bybit sign-string, **
 
 ### Verification
 - `dotnet build CryptoExchanges.Net.sln` → **Build succeeded. 0 Warning(s), 0 Error(s).**
+
+## Rework (review round 1)
+- **Blocking item** (code-reviewer REJECT @85): static sign-string builders lacked input guards.
+- **Fix**: added `ArgumentException.ThrowIfNullOrWhiteSpace` for `timestamp`/`apiKey`/`recvWindow` and `ArgumentNullException.ThrowIfNull` for `queryString`/`jsonBody` (the latter may legitimately be empty for parameterless GETs / empty-body POSTs) in both `BuildGetSignString` and `BuildPostSignString`.
+- Non-blocking concerns (below threshold 80) left as-is to preserve Binance parity; `string`→`long` typing deferred to the OKX generalization phase.
+- Build after fix: `dotnet build CryptoExchanges.Net.sln` → 0 Warning(s), 0 Error(s).
+
+## Commits
+- **Commit**: 5654d93 feat(M2): TASK-002 BybitSignatureService + BybitSigningRequest marker

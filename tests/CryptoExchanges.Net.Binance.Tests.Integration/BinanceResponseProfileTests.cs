@@ -4,6 +4,7 @@ using DeltaMapper;
 using CryptoExchanges.Net.Binance;
 using CryptoExchanges.Net.Binance.Mapping;
 using CryptoExchanges.Net.Binance.Services;
+using CryptoExchanges.Net.Core;
 using CryptoExchanges.Net.Core.Models;
 using CryptoExchanges.Net.Core.Enums;
 
@@ -21,8 +22,8 @@ public class BinanceResponseProfileTests
 
         // Warm the symbol mapper so FromWire("BTCUSDT") resolves exactly (BTC/USDT happens to
         // be in the fallback list too, but warming keeps the test independent of that detail).
-        var symbolMapper = new BinanceSymbolMapper();
-        symbolMapper.Update([new SymbolInfo(btcusdt, [OrderType.Limit])]);
+        var symbolMapper = new SymbolMapper(BinanceSymbolFormat.Instance);
+        symbolMapper.UpdateSymbols([new SymbolInfo(btcusdt, [OrderType.Limit])]);
 
         var config = MapperConfiguration.Create(cfg => cfg.AddProfile(new BinanceResponseProfile(symbolMapper)));
         config.AssertConfigurationIsValid();

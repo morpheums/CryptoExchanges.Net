@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using CryptoExchanges.Net.Binance.Internal;
+using CryptoExchanges.Net.Core.Interfaces;
 using DeltaMapper;
 
 namespace CryptoExchanges.Net.Binance.Services;
@@ -81,7 +82,7 @@ internal sealed record BinanceOrderResponse
 /// <summary>
 /// Binance implementation of <see cref="ITradingService"/>.
 /// </summary>
-internal sealed class BinanceTradingService(BinanceHttpClient http, BinanceSymbolMapper mapper, IMapper modelMapper) : ITradingService
+internal sealed class BinanceTradingService(BinanceHttpClient http, ISymbolMapper mapper, IMapper modelMapper) : ITradingService
 {
     /// <inheritdoc />
     public async Task<Order> PlaceOrderAsync(PlaceOrderRequest request, CancellationToken ct = default)

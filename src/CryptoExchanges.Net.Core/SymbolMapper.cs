@@ -45,8 +45,7 @@ public sealed class SymbolMapper : ISymbolMapper
     public Symbol FromComponents(string baseAsset, string quoteAsset)
         => new(Asset.Of(Unalias(baseAsset)), Asset.Of(Unalias(quoteAsset)));
 
-    /// <summary>Warms the wire→<see cref="Symbol"/> resolution table from the exchange's symbol list.</summary>
-    /// <param name="symbols">The exchange's known symbols (e.g. from exchangeInfo).</param>
+    /// <inheritdoc />
     public void UpdateSymbols(IEnumerable<SymbolInfo> symbols)
     {
         ArgumentNullException.ThrowIfNull(symbols);

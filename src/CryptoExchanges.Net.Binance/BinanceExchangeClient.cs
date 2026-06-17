@@ -1,5 +1,6 @@
 using System.Text.Json.Serialization;
 using CryptoExchanges.Net.Binance.Mapping;
+using CryptoExchanges.Net.Core;
 using CryptoExchanges.Net.Core.Interfaces;
 using CryptoExchanges.Net.Core.Models;
 using DeltaMapper;
@@ -67,7 +68,7 @@ public sealed class BinanceExchangeClient : IExchangeClient, IAsyncDisposable
         _ownsHttpClient = ownsHttpClient;
 
         _http = new BinanceHttpClient(httpClient, receiveWindow);
-        var symbolMapper = new BinanceSymbolMapper();
+        ISymbolMapper symbolMapper = new SymbolMapper(BinanceSymbolFormat.Instance);
 
         var mapperConfig = MapperConfiguration.Create(cfg =>
             cfg.AddProfile(new BinanceResponseProfile(symbolMapper)));

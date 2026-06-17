@@ -95,8 +95,8 @@ Tasks touching shared Core/Http/DI projects are higher blast radius and REQUIRE 
 - [x] TASK-004: BybitSymbolFormat + value parsers + request validation -> DONE
 
 ### Group 3 (= Wave 3)
-- [~] TASK-003: BybitSigningHandler -> IN_REVIEW (commit 283bcf0)
-- [~] TASK-005: BybitHttpClient + interface -> IN_REVIEW (commit 2a598c8)
+- [~] TASK-003: BybitSigningHandler -> IN_REVIEW round 2 (rework 60b55e3 — types now internal)
+- [~] TASK-005: BybitHttpClient + interface -> IN_REVIEW round 2 (rework fdbf2c5 — endpoint guards)
 
 ### Group 4 (= Wave 4)
 - [ ] TASK-006: Bybit services + mapping + composer + ExchangeClient -> PLANNED
@@ -281,8 +281,8 @@ Tasks touching shared Core/Http/DI projects are higher blast radius and REQUIRE 
 <!-- None. -->
 
 ## Recovery Pointer
-- **Current Task:** TASK-003 + TASK-005 (Wave 3, IN_REVIEW — commits 283bcf0, 2a598c8; both build green, 135 tests pass)
-- **Last Action:** Wave 3 implemented (BybitSigningHandler header-based + BybitHttpClient JSON-body POST); review gates dispatched for both
-- **Next Action:** Collect Wave 3 verdicts → mark DONE (or fix blocking items); then Wave 4 (TASK-006 services/mapping/composer ← TASK-005; TASK-007 error translator + time sync ← TASK-005). NOTE for TASK-006: composer must format BybitOptions.ReceiveWindow (decimal) → invariant string for the BybitSigningHandler ctor; BybitHttpClient ctor takes only HttpClient.
+- **Current Task:** TASK-003 + TASK-005 (Wave 3, IN_REVIEW round 2 after rework — both build green, 135 tests pass)
+- **Last Action:** Wave 3 round-1 CHANGES_REQUESTED fixed — TASK-003 signing types → internal (60b55e3); TASK-005 endpoint guards added (fdbf2c5); targeted re-reviews dispatched (api-reviewer for 003, code-reviewer for 005)
+- **Next Action:** Collect Wave 3 round-2 verdicts → mark DONE; then Wave 4 (TASK-006 services/mapping/composer ← TASK-005; TASK-007 error translator + time sync ← TASK-005). NOTES for TASK-006: composer must format BybitOptions.ReceiveWindow (decimal) → invariant string for the BybitSigningHandler ctor; BybitHttpClient ctor takes only HttpClient; signing types are now internal (composer must live in the Bybit assembly). NOTE for TASK-008: signing unit tests need InternalsVisibleTo access. FOLLOW-UP for TASK-009: harmonize Binance signing types to internal + back-fill BinanceHttpClient endpoint guard.
 - **Last Checkpoint:** nazgul/checkpoints/iteration-001.json
-- **Last Commit:** 2a598c8 feat(M2): TASK-005 BybitHttpClient + IBybitHttpClient (JSON-body POST)
+- **Last Commit:** fdbf2c5 fix(M2): TASK-005 add endpoint guard to all three HTTP methods

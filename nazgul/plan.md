@@ -14,7 +14,7 @@ Add three new exchange integrations to CryptoExchanges.Net in strict priority or
 - Total tasks: 22
 - DONE: 7 | READY: 0 | IN_PROGRESS: 1 | IN_REVIEW: 0 | CHANGES_REQUESTED: 0 | BLOCKED: 0 | PLANNED: 14
 - Current iteration: 5/40
-- Active task: TASK-008 (Wave 5, implementing — tests + AddBybitExchange DI; closes M-BYBIT)
+- Active task: TASK-008 (Wave 5, in review — tests + AddBybitExchange DI; closes M-BYBIT)
 
 ## Scoping Decisions (HITL — committed, not open questions)
 The objective is fully prescriptive on scope/sequence/signing; these are the choices made decisively:
@@ -103,7 +103,7 @@ Tasks touching shared Core/Http/DI projects are higher blast radius and REQUIRE 
 - [x] TASK-007: BybitErrorTranslator + BybitTimeSync -> DONE
 
 ### Group 5 (= Wave 5)
-- [~] TASK-008: Bybit tests + AddBybitExchange DI (closes M-BYBIT) -> IN_PROGRESS
+- [~] TASK-008: Bybit tests + AddBybitExchange DI (closes M-BYBIT) -> IN_REVIEW (commit f60bd18)
 
 ### Group 6 (= Wave 6)
 - [ ] TASK-009: OKX-era credential/signing generalization (Core/Http) -> PLANNED
@@ -183,7 +183,7 @@ Tasks touching shared Core/Http/DI projects are higher blast radius and REQUIRE 
 - **Manifest**: nazgul/tasks/TASK-007.md
 
 ### TASK-008: Bybit tests + AddBybitExchange DI (closes M-BYBIT)
-- **Status**: IN_PROGRESS
+- **Status**: IN_REVIEW
 - **Group**: 5
 - **Depends on**: TASK-003, TASK-006, TASK-007
 - **Manifest**: nazgul/tasks/TASK-008.md

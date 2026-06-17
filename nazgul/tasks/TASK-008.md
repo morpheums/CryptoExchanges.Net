@@ -74,3 +74,6 @@ Wire `AddBybitExchange(this IServiceCollection, Action<BybitOptions>?)` into the
 - `dotnet test CryptoExchanges.Net.sln --filter 'Category!=Integration'` → **all pass, 0 failures**: Core 68, Http 12, Bybit.Unit 77, DI.Unit 10, Binance.Integration 45 = **212 total** (baseline 135 + 77 new Bybit unit).
 - `dotnet test CryptoExchanges.Net.sln --filter 'Category=Integration'` → **Bybit.Integration 5/5 pass**, all other assemblies report "No test matches".
 - No Binance regression: Binance integration (45) and DI unit (10) tests unchanged and passing.
+
+## Commits
+- **Commit**: f60bd18 feat(M2): TASK-008 Bybit tests + AddBybitExchange DI (closes M-BYBIT)

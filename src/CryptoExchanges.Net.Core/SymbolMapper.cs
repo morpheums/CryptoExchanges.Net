@@ -13,7 +13,12 @@ namespace CryptoExchanges.Net.Core;
 public sealed class SymbolMapper : ISymbolMapper
 {
     private readonly SymbolFormat _format;
+    // Defensive copies of the format's collections: SymbolFormat exposes them as IReadOnly* views that
+    // may be backed by a mutable instance the caller still holds. Copying at construction keeps the
+    // documented thread-safe contract — post-construction mutation of the source can't affect mapping.
+    private readonly Dictionary<string, string> _canonicalToWire;
     private readonly Dictionary<string, string> _wireToCanonical;
+    private readonly string[] _fallbackQuoteAssets;
     private volatile Dictionary<string, Symbol> _wireToSymbol = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>Creates a mapper for the given exchange wire format.</summary>
@@ -21,14 +26,17 @@ public sealed class SymbolMapper : ISymbolMapper
     {
         ArgumentNullException.ThrowIfNull(format);
         _format = format;
+        _canonicalToWire = new(StringComparer.OrdinalIgnoreCase);
         _wireToCanonical = new(StringComparer.OrdinalIgnoreCase);
         foreach (var kvp in format.AssetAliases)
         {
+            _canonicalToWire[kvp.Key] = kvp.Value;
             if (!_wireToCanonical.TryAdd(kvp.Value, kvp.Key))
                 throw new ArgumentException(
                     $"Ambiguous alias: wire ticker '{kvp.Value}' is mapped from multiple canonical tickers.",
                     nameof(format));
         }
+        _fallbackQuoteAssets = [.. format.FallbackQuoteAssets];
     }
 
     /// <inheritdoc />
@@ -87,7 +95,7 @@ public sealed class SymbolMapper : ISymbolMapper
         }
         else
         {
-            foreach (var quote in _format.FallbackQuoteAssets)
+            foreach (var quote in _fallbackQuoteAssets)
             {
                 if (body.Length <= quote.Length) continue;
                 if (!body.EndsWith(quote, StringComparison.OrdinalIgnoreCase)) continue;
@@ -102,7 +110,7 @@ public sealed class SymbolMapper : ISymbolMapper
     }
 
     private string Alias(string canonical)
-        => _format.AssetAliases.TryGetValue(canonical, out var wire) ? wire : canonical;
+        => _canonicalToWire.TryGetValue(canonical, out var wire) ? wire : canonical;
 
     private string Unalias(string wire)
         => _wireToCanonical.TryGetValue(wire, out var canonical) ? canonical : wire;

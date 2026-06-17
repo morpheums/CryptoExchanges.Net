@@ -82,7 +82,7 @@ internal sealed record BinanceOrderResponse
 /// <summary>
 /// Binance implementation of <see cref="ITradingService"/>.
 /// </summary>
-internal sealed class BinanceTradingService(BinanceHttpClient http, ISymbolMapper mapper, IMapper modelMapper) : ITradingService
+internal sealed class BinanceTradingService(IBinanceHttpClient http, ISymbolMapper mapper, IMapper modelMapper) : ITradingService
 {
     /// <inheritdoc />
     public async Task<Order> PlaceOrderAsync(PlaceOrderRequest request, CancellationToken ct = default)

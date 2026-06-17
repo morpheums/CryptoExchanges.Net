@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
 using CryptoExchanges.Net.Binance.Mapping;
 using CryptoExchanges.Net.Core;
@@ -36,7 +37,9 @@ public sealed class BinanceExchangeClient : IExchangeClient, IAsyncDisposable
 {
     private readonly HttpClient _httpClient;
     private readonly bool _ownsHttpClient;
-    private readonly BinanceHttpClient _http;
+    // CA1859 suppressed: interface type is intentional — enables typed-client DI and unit testing.
+    [SuppressMessage("Performance", "CA1859:Use concrete types when possible for improved performance", Justification = "IBinanceHttpClient is held intentionally for DI / testability.")]
+    private readonly IBinanceHttpClient _http;
 
     /// <summary>
     /// Clock-skew offset (in ms) shared with the signing handler. Single-element array so the
@@ -52,22 +55,23 @@ public sealed class BinanceExchangeClient : IExchangeClient, IAsyncDisposable
     /// API key or signature service of its own. Use <see cref="Create"/> to build a fully-wired client.
     /// </summary>
     /// <param name="httpClient">The (resilient) HTTP client used for all requests.</param>
-    /// <param name="receiveWindow">The Binance <c>recvWindow</c> in milliseconds applied to signed requests.</param>
+    /// <param name="options">The Binance options (e.g. <see cref="BinanceOptions.ReceiveWindow"/>) applied to all requests.</param>
     /// <param name="ownsHttpClient">
     /// When <see langword="true"/>, <paramref name="httpClient"/> is disposed together with this client.
     /// Defaults to <see langword="false"/> so externally-owned clients are never disposed by this SDK.
     /// </param>
     public BinanceExchangeClient(
         HttpClient httpClient,
-        decimal receiveWindow = 5000m,
+        BinanceOptions options,
         bool ownsHttpClient = false)
     {
         ArgumentNullException.ThrowIfNull(httpClient);
+        ArgumentNullException.ThrowIfNull(options);
 
         _httpClient = httpClient;
         _ownsHttpClient = ownsHttpClient;
 
-        _http = new BinanceHttpClient(httpClient, receiveWindow);
+        _http = new BinanceHttpClient(httpClient, options);
         ISymbolMapper symbolMapper = new SymbolMapper(BinanceSymbolFormat.Instance);
 
         var mapperConfig = MapperConfiguration.Create(cfg =>
@@ -124,7 +128,7 @@ public sealed class BinanceExchangeClient : IExchangeClient, IAsyncDisposable
         if (!string.IsNullOrEmpty(options.ApiKey))
             hc.DefaultRequestHeaders.Add("X-MBX-APIKEY", options.ApiKey);
 
-        var client = new BinanceExchangeClient(hc, options.ReceiveWindow, ownsHttpClient: true);
+        var client = new BinanceExchangeClient(hc, options, ownsHttpClient: true);
         // Share the SAME offset array instance the signing handler's closure reads, so
         // SyncServerTimeAsync writes are observed by the handler on the next signed request.
         client._offsetHolder = offsetHolder;

@@ -132,7 +132,7 @@ internal sealed record BinanceRateLimit
 /// <summary>
 /// Binance implementation of <see cref="IMarketDataService"/>.
 /// </summary>
-internal sealed class BinanceMarketDataService(BinanceHttpClient http, ISymbolMapper mapper, IMapper modelMapper) : IMarketDataService
+internal sealed class BinanceMarketDataService(IBinanceHttpClient http, ISymbolMapper mapper, IMapper modelMapper) : IMarketDataService
 {
     // Lazily-fetched, cached snapshot of the supported symbol set, used only by the opt-in
     // IsSupportedAsync / ResolveSymbolAsync validation methods. Lazy<Task<>> guarantees the

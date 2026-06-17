@@ -13,7 +13,7 @@ namespace CryptoExchanges.Net.Binance;
 /// and typed error translation are all provided by the resilience pipeline on the injected
 /// <see cref="HttpClient"/>, so any response that reaches this type is already a success.
 /// </summary>
-internal sealed class BinanceHttpClient(HttpClient httpClient, decimal receiveWindow = 5000m)
+internal sealed class BinanceHttpClient(HttpClient httpClient, BinanceOptions options) : IBinanceHttpClient
 {
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -22,7 +22,7 @@ internal sealed class BinanceHttpClient(HttpClient httpClient, decimal receiveWi
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
     };
 
-    /// <summary>Sends a GET and deserializes the JSON response.</summary>
+    /// <inheritdoc />
     public async Task<T> GetAsync<T>(
         string endpoint, Dictionary<string, string>? parameters = null,
         bool signed = false, CancellationToken ct = default)
@@ -33,7 +33,7 @@ internal sealed class BinanceHttpClient(HttpClient httpClient, decimal receiveWi
         return (await response.Content.ReadFromJsonAsync<T>(JsonOptions, ct).ConfigureAwait(false))!;
     }
 
-    /// <summary>Sends a GET and returns the raw string response.</summary>
+    /// <inheritdoc />
     public async Task<string> GetStringAsync(
         string endpoint, Dictionary<string, string>? parameters = null,
         bool signed = false, CancellationToken ct = default)
@@ -44,7 +44,7 @@ internal sealed class BinanceHttpClient(HttpClient httpClient, decimal receiveWi
         return await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
     }
 
-    /// <summary>Sends a POST with form-encoded parameters and deserializes the JSON response.</summary>
+    /// <inheritdoc />
     public async Task<T> PostAsync<T>(
         string endpoint, Dictionary<string, string>? parameters = null,
         bool signed = true, CancellationToken ct = default)
@@ -57,7 +57,7 @@ internal sealed class BinanceHttpClient(HttpClient httpClient, decimal receiveWi
         return (await response.Content.ReadFromJsonAsync<T>(JsonOptions, ct).ConfigureAwait(false))!;
     }
 
-    /// <summary>Sends a DELETE and deserializes the JSON response.</summary>
+    /// <inheritdoc />
     public async Task<T> DeleteAsync<T>(
         string endpoint, Dictionary<string, string>? parameters = null,
         bool signed = true, CancellationToken ct = default)
@@ -78,7 +78,7 @@ internal sealed class BinanceHttpClient(HttpClient httpClient, decimal receiveWi
     {
         var query = BuildQueryString(parameters);
         if (!signed) return query;
-        var rw = "recvWindow=" + receiveWindow.ToString(CultureInfo.InvariantCulture);
+        var rw = "recvWindow=" + options.ReceiveWindow.ToString(CultureInfo.InvariantCulture);
         return string.IsNullOrEmpty(query) ? rw : $"{query}&{rw}";
     }
 

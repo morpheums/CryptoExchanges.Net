@@ -41,21 +41,17 @@ public sealed class BinanceExchangeClient : IExchangeClient, IAsyncDisposable
     /// <summary>
     /// Clock-skew offset (in ms) shared with the signing handler. Single-element array so the
     /// handler's closure and <see cref="SyncServerTimeAsync"/> read/write the SAME instance.
+    /// This default applies to externally-constructed clients; <see cref="Create"/> replaces it
+    /// with the shared array instance the pipeline's signing handler closes over.
     /// </summary>
     private long[] _offsetHolder = [0L];
 
     /// <summary>
-    /// Initializes a new <see cref="BinanceExchangeClient"/>.
+    /// Initializes a new <see cref="BinanceExchangeClient"/>. Signing and the API-key header are
+    /// owned by the resilience pipeline on <paramref name="httpClient"/>, so this client needs no
+    /// API key or signature service of its own. Use <see cref="Create"/> to build a fully-wired client.
     /// </summary>
-    /// <param name="httpClient">The HTTP client used for all requests.</param>
-    /// <param name="apiKey">
-    /// The Binance API key. Retained for source compatibility; signing and the API-key header are
-    /// now owned by the resilience pipeline's signing handler, so this client no longer uses it.
-    /// </param>
-    /// <param name="signatureService">
-    /// The signature service. Retained for source compatibility; the signing handler in the
-    /// pipeline owns signing, so this client no longer uses it.
-    /// </param>
+    /// <param name="httpClient">The (resilient) HTTP client used for all requests.</param>
     /// <param name="receiveWindow">The Binance <c>recvWindow</c> in milliseconds applied to signed requests.</param>
     /// <param name="ownsHttpClient">
     /// When <see langword="true"/>, <paramref name="httpClient"/> is disposed together with this client.
@@ -63,14 +59,10 @@ public sealed class BinanceExchangeClient : IExchangeClient, IAsyncDisposable
     /// </param>
     public BinanceExchangeClient(
         HttpClient httpClient,
-        string apiKey,
-        BinanceSignatureService? signatureService,
         decimal receiveWindow = 5000m,
         bool ownsHttpClient = false)
     {
         ArgumentNullException.ThrowIfNull(httpClient);
-        _ = apiKey;
-        _ = signatureService;
 
         _httpClient = httpClient;
         _ownsHttpClient = ownsHttpClient;
@@ -127,8 +119,12 @@ public sealed class BinanceExchangeClient : IExchangeClient, IAsyncDisposable
         hc.BaseAddress = new Uri(options.BaseUrl.TrimEnd('/'));
         hc.Timeout = TimeSpan.FromSeconds(options.TimeoutSeconds);
         hc.DefaultRequestHeaders.Add("User-Agent", "CryptoExchanges.Net/0.1.0");
+        // Api-key-only clients (no secret -> no signing handler) still need the key header.
+        // When a secret IS present, the signing handler removes+re-adds this header, so no duplicate.
+        if (!string.IsNullOrEmpty(options.ApiKey))
+            hc.DefaultRequestHeaders.Add("X-MBX-APIKEY", options.ApiKey);
 
-        var client = new BinanceExchangeClient(hc, options.ApiKey, sig, options.ReceiveWindow, ownsHttpClient: true);
+        var client = new BinanceExchangeClient(hc, options.ReceiveWindow, ownsHttpClient: true);
         // Share the SAME offset array instance the signing handler's closure reads, so
         // SyncServerTimeAsync writes are observed by the handler on the next signed request.
         client._offsetHolder = offsetHolder;
@@ -168,15 +164,17 @@ public sealed class BinanceExchangeClient : IExchangeClient, IAsyncDisposable
     {
         try
         {
-            var requestUri = new Uri("/api/v3/time", UriKind.Relative);
-            using var resp = await _httpClient.GetAsync(requestUri, ct).ConfigureAwait(false);
-            resp.EnsureSuccessStatusCode();
-            var _ = await resp.Content.ReadFromJsonAsync<BinanceServerTimeResponse>(cancellationToken: ct).ConfigureAwait(false);
+            // The resilience pipeline throws typed exceptions on failure, so reaching here is success.
+            _ = await _http.GetAsync<BinanceServerTimeResponse>("/api/v3/time", signed: false, ct: ct).ConfigureAwait(false);
             return true;
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
             throw;
+        }
+        catch (CryptoExchanges.Net.Core.Exceptions.ExchangeException)
+        {
+            return false;
         }
         catch
         {

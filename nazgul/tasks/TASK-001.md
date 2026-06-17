@@ -91,3 +91,6 @@ Time Elapsed 00:00:02.67 — 0 warnings, 0 errors.
 - ExchangeId.Bybit confirmed pre-existing in Core/Enums/Enums.cs — no Core edit required.
 - Layer chain preserved: Bybit references Core + Http only.
 - dotnet build CryptoExchanges.Net.sln: 0 warnings, 0 errors.
+
+## Commits
+- **Commit**: c782aed feat(M2): TASK-001 scaffold CryptoExchanges.Net.Bybit project + BybitOptions

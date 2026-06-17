@@ -1,6 +1,6 @@
 ---
 id: TASK-001
-status: IMPLEMENTED
+status: DONE
 ---
 
 # TASK-001: Bybit project scaffold + options + DI seam stub
@@ -8,7 +8,7 @@ status: IMPLEMENTED
 **Milestone**: M-BYBIT
 **Wave**: 1
 **Group**: 1
-**Status**: IMPLEMENTED
+**Status**: DONE
 **Depends on**: none
 **Retry count**: 0/3
 **Delegates to**: none
@@ -94,3 +94,10 @@ Time Elapsed 00:00:02.67 — 0 warnings, 0 errors.
 
 ## Commits
 - **Commit**: c782aed feat(M2): TASK-001 scaffold CryptoExchanges.Net.Bybit project + BybitOptions
+
+## Review
+- **Review Gate**: PASSED
+- **Reviewers**: architect-reviewer (APPROVE/98), code-reviewer (APPROVE/72), security-reviewer (APPROVE/97), api-reviewer (APPROVE/97)
+- **Pre-checks**: build 0w/0e, tests 135 passed / 0 failed
+- **Test failures**: 0
+- **Notes**: code-reviewer raised 2 non-blocking CONCERNs (ReceiveWindow decimal type, XML doc noise) — both below confidence threshold (72 < 80) and both inherited from BinanceOptions pattern; auto-approved per auto_approve_concerns=true.

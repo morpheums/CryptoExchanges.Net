@@ -12,9 +12,9 @@ Add three new exchange integrations to CryptoExchanges.Net in strict priority or
 
 ## Status Summary
 - Total tasks: 22
-- DONE: 0 | READY: 0 | IN_PROGRESS: 0 | IN_REVIEW: 0 | CHANGES_REQUESTED: 0 | BLOCKED: 0 | PLANNED: 21 | IMPLEMENTED: 1
-- Current iteration: 1/40
-- Active task: TASK-001 (Wave 1)
+- DONE: 1 | READY: 0 | IN_PROGRESS: 0 | IN_REVIEW: 0 | CHANGES_REQUESTED: 0 | BLOCKED: 0 | PLANNED: 21
+- Current iteration: 2/40
+- Active task: none (Wave 1 complete; Wave 2 next: TASK-002, TASK-004)
 
 ## Scoping Decisions (HITL — committed, not open questions)
 The objective is fully prescriptive on scope/sequence/signing; these are the choices made decisively:
@@ -88,7 +88,7 @@ Tasks touching shared Core/Http/DI projects are higher blast radius and REQUIRE 
 (Equivalent to Wave Groups above; waves are the canonical parallel-execution grouping read by the orchestrator.)
 
 ### Group 1 (= Wave 1)
-- [x] TASK-001: Bybit project scaffold + options + DI seam stub -> IMPLEMENTED
+- [x] TASK-001: Bybit project scaffold + options + DI seam stub -> DONE
 
 ### Group 2 (= Wave 2)
 - [ ] TASK-002: BybitSignatureService + signing request marker -> PLANNED
@@ -141,7 +141,7 @@ Tasks touching shared Core/Http/DI projects are higher blast radius and REQUIRE 
 
 ## Tasks
 ### TASK-001: Bybit project scaffold + options + DI seam stub
-- **Status**: IMPLEMENTED
+- **Status**: DONE
 - **Group**: 1
 - **Depends on**: none
 - **Manifest**: nazgul/tasks/TASK-001.md
@@ -273,14 +273,14 @@ Tasks touching shared Core/Http/DI projects are higher blast radius and REQUIRE 
 - **Manifest**: nazgul/tasks/TASK-022.md
 
 ## Completed
-<!-- Tasks moved here after ALL reviewers approve and status is DONE. -->
+- TASK-001: Bybit project scaffold + options + DI seam stub (DONE) — review gate PASSED (architect 98, code 72, security 97, api 97); commit c782aed
 
 ## Blocked
 <!-- None. -->
 
 ## Recovery Pointer
-- **Current Task:** TASK-001 (IMPLEMENTED — awaiting review gate)
-- **Last Action:** Bybit scaffold created (csproj, GlobalUsings, BybitOptions) + sln updated; build 0 warnings/0 errors
-- **Next Action:** Review Gate for TASK-001; then Wave 2 (TASK-002, TASK-004)
+- **Current Task:** none (Wave 1 complete; starting Wave 2)
+- **Last Action:** TASK-001 review gate PASSED (all 4 reviewers APPROVE); state reconciled to DONE
+- **Next Action:** Begin Wave 2 — TASK-002 (BybitSignatureService + signing marker) and TASK-004 (BybitSymbolFormat + parsers), both depend only on TASK-001 (DONE)
 - **Last Checkpoint:** nazgul/checkpoints/iteration-001.json
-- **Last Commit:** c782aed feat(M2): TASK-001 scaffold CryptoExchanges.Net.Bybit project + BybitOptions
+- **Last Commit:** fed8927 chore(M2): TASK-001 update Recovery Pointer with commit SHA

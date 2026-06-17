@@ -1,6 +1,6 @@
 ---
 id: TASK-009
-status: PLANNED
+status: IN_PROGRESS
 ---
 
 # TASK-009: OKX-era credential/signing generalization (Core/Http)

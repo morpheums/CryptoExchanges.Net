@@ -11,8 +11,8 @@ Add three new exchange integrations to CryptoExchanges.Net in strict priority or
 - [x] Documents generated: none (PRD/TRD/ADR absent — research doc is the source of truth)
 
 ## Status Summary
-- Total tasks: 22
-- DONE: 8 | READY: 0 | IN_PROGRESS: 0 | IN_REVIEW: 0 | CHANGES_REQUESTED: 0 | BLOCKED: 0 | PLANNED: 14
+- Total tasks: 23 (added TASK-009B per ADR-001)
+- DONE: 8 | READY: 0 | IN_PROGRESS: 1 (TASK-009) | IN_REVIEW: 0 | CHANGES_REQUESTED: 0 | BLOCKED: 0 | PLANNED: 14
 - Current iteration: 6/40
 - Active task: starting **M-OKX** on branch `feat/m3-okx` (cut from main after PR #11 merged as e7c0268). First: TASK-009 (signing generalization) + TASK-009B (DI re-homing, ADR-001).
 

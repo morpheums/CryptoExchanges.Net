@@ -63,5 +63,15 @@ Implement `BybitSigningHandler : DelegatingHandler` mirroring `BinanceSigningHan
 ### Verification
 - `dotnet build CryptoExchanges.Net.sln` → **Build succeeded. 0 Warning(s), 0 Error(s)** (run twice: after creating the handler, and again after the `<see cref>` upgrade).
 
+## Rework (review round 1)
+- **Blocking** (api-reviewer REJECT@95): signing types were `public`. **Decision**: accepted — changed `BybitSigningHandler` and `BybitSignatureService` to `internal sealed`. Consumer-facing contract unchanged (InternalsVisibleTo already covers Tests.Integration + DependencyInjection). This gives the new module correct API hygiene from day one.
+- **Blocking** (api-reviewer REJECT@80, conditional): `recvWindow` string ctor param — auto-downgrades to non-blocking now the type is internal (per the reviewer's own condition). Left as invariant string (handler stays agnostic of BybitOptions).
+- **Non-blocking addressed**: added `<param>` XML docs to the 4 ctor params (api-reviewer @90).
+- **Non-blocking NOT applied** (deliberate): ctor `apiKey` guard (security @82) — would break market-data-only clients constructed without credentials that make only unsigned calls; current "throw only when actually signing" posture is correct.
+- **Cross-module follow-up (tracked, out of scope)**: Binance signing types (`BinanceSigningHandler`/`BinanceSignatureService`/`BinanceSigningRequest`) remain `public`. Harmonize to `internal` during the TASK-009 credential/signing generalization to restore Binance/Bybit symmetry.
+- **Note for TASK-008**: signature/handler unit tests must access internals via `InternalsVisibleTo` (use the Bybit.Tests.Integration project, already granted, or add the unit-test project to the csproj IVT list).
+- Build + tests after rework: 0w/0e; 135 tests pass.
+
 ## Commits
 - **Commit**: 283bcf0 feat(M2): TASK-003 BybitSigningHandler (header-based, re-sign per attempt)
+- **Commit (rework)**: pending

@@ -10,7 +10,7 @@ namespace CryptoExchanges.Net.Bybit.Auth;
 /// Unlike Binance, Bybit does not append the signature to the query string. The signature is
 /// returned to the caller so the request handler can place it in the <c>X-BAPI-SIGN</c> header.
 /// </remarks>
-public sealed class BybitSignatureService(string secretKey)
+internal sealed class BybitSignatureService(string secretKey)
 {
     private readonly byte[] _secretKeyBytes = InitializeSecretKey(secretKey);
 

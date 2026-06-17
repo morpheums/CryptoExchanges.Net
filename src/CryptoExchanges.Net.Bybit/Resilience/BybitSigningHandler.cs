@@ -10,7 +10,11 @@ namespace CryptoExchanges.Net.Bybit.Resilience;
 /// Unlike Binance, the signature is carried in headers (<c>X-BAPI-SIGN</c>) rather than the query.
 /// Supports query-signed (GET/DELETE) and body-signed (POST JSON) requests.
 /// </summary>
-public sealed class BybitSigningHandler(
+/// <param name="apiKey">The Bybit API key set on the <c>X-BAPI-API-KEY</c> header.</param>
+/// <param name="signatureService">Computes the HMAC-SHA256 signature over the canonical sign-string.</param>
+/// <param name="recvWindow">The receive-window value (pre-formatted, invariant) for the <c>X-BAPI-RECV-WINDOW</c> header.</param>
+/// <param name="timeOffset">Returns the current server-time offset in milliseconds, applied to each timestamp.</param>
+internal sealed class BybitSigningHandler(
     string apiKey, BybitSignatureService signatureService, string recvWindow, Func<long> timeOffset)
     : DelegatingHandler
 {

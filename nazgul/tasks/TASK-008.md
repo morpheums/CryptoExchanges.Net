@@ -1,6 +1,6 @@
 ---
 id: TASK-008
-status: PLANNED
+status: IN_PROGRESS
 ---
 
 # TASK-008: Bybit tests + AddBybitExchange DI (closes M-BYBIT)

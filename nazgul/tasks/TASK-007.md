@@ -99,3 +99,6 @@ offset. Null-guards the holder.
 
 ### Verification
 `dotnet build CryptoExchanges.Net.sln` → Build succeeded. 0 Warning(s), 0 Error(s).
+
+## Commits
+- **Commit**: c6bfbb3 feat(M2): TASK-007 BybitErrorTranslator + BybitTimeSync

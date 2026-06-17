@@ -12,9 +12,9 @@ Add three new exchange integrations to CryptoExchanges.Net in strict priority or
 
 ## Status Summary
 - Total tasks: 22
-- DONE: 5 | READY: 0 | IN_PROGRESS: 0 | IN_REVIEW: 0 | CHANGES_REQUESTED: 0 | BLOCKED: 0 | PLANNED: 17
+- DONE: 5 | READY: 0 | IN_PROGRESS: 1 | IN_REVIEW: 1 | CHANGES_REQUESTED: 0 | BLOCKED: 0 | PLANNED: 15
 - Current iteration: 4/40
-- Active task: none (Wave 3 complete; Wave 4 next: TASK-006, TASK-007)
+- Active task: Wave 4 — TASK-007 (in review, c6bfbb3) + TASK-006 (implementing, wires against TASK-007)
 
 ## Scoping Decisions (HITL — committed, not open questions)
 The objective is fully prescriptive on scope/sequence/signing; these are the choices made decisively:
@@ -99,8 +99,8 @@ Tasks touching shared Core/Http/DI projects are higher blast radius and REQUIRE 
 - [x] TASK-005: BybitHttpClient + interface -> DONE
 
 ### Group 4 (= Wave 4)
-- [ ] TASK-006: Bybit services + mapping + composer + ExchangeClient -> PLANNED
-- [ ] TASK-007: BybitErrorTranslator + BybitTimeSync -> PLANNED
+- [~] TASK-006: Bybit services + mapping + composer + ExchangeClient -> IN_PROGRESS
+- [~] TASK-007: BybitErrorTranslator + BybitTimeSync -> IN_REVIEW (commit c6bfbb3)
 
 ### Group 5 (= Wave 5)
 - [ ] TASK-008: Bybit tests + AddBybitExchange DI (closes M-BYBIT) -> PLANNED
@@ -171,13 +171,13 @@ Tasks touching shared Core/Http/DI projects are higher blast radius and REQUIRE 
 - **Manifest**: nazgul/tasks/TASK-005.md
 
 ### TASK-006: Bybit services + mapping + composer + ExchangeClient
-- **Status**: PLANNED
+- **Status**: IN_PROGRESS
 - **Group**: 4
 - **Depends on**: TASK-005
 - **Manifest**: nazgul/tasks/TASK-006.md
 
 ### TASK-007: BybitErrorTranslator + BybitTimeSync
-- **Status**: PLANNED
+- **Status**: IN_REVIEW
 - **Group**: 4
 - **Depends on**: TASK-005
 - **Manifest**: nazgul/tasks/TASK-007.md
@@ -283,8 +283,8 @@ Tasks touching shared Core/Http/DI projects are higher blast radius and REQUIRE 
 <!-- None. -->
 
 ## Recovery Pointer
-- **Current Task:** none (Wave 3 complete — TASK-003 + TASK-005 DONE; starting Wave 4)
-- **Last Action:** Wave 3 round-2 gates PASSED (TASK-003 internal-visibility, TASK-005 endpoint guards); both marked DONE
-- **Next Action:** Begin Wave 4 — TASK-006 (Bybit services + mapping profiles + composer + ExchangeClient ← TASK-005) and TASK-007 (BybitErrorTranslator + BybitTimeSync ← TASK-005). Both depend on TASK-005 (DONE); check file-scope disjointness before parallelizing. WIRING NOTES for TASK-006 composer: format BybitOptions.ReceiveWindow (decimal) → invariant string for the BybitSigningHandler ctor (ctor order: apiKey, signatureService, recvWindow, timeOffset); BybitHttpClient ctor takes only HttpClient; signing types are internal so the composer must live inside the Bybit assembly. FOLLOW-UP for TASK-009: harmonize Binance signing types to internal + back-fill BinanceHttpClient endpoint guard.
+- **Current Task:** Wave 4 — TASK-007 IN_REVIEW (c6bfbb3); TASK-006 IN_PROGRESS (sequenced after TASK-007 since the composer wires the error translator + time sync)
+- **Last Action:** TASK-007 implemented + committed (c6bfbb3, build green, 135 tests pass); dispatched TASK-006 implementer + TASK-007 review gate in parallel (disjoint: TASK-006 writes new files, reviewers read-only on TASK-007)
+- **Next Action:** Collect TASK-007 verdict → DONE; collect TASK-006 implementation → review gate. Then Wave 5 (TASK-008: Bybit unit + integration tests + AddBybitExchange DI wiring — closes milestone M-BYBIT). FOLLOW-UP for TASK-009: harmonize Binance signing types to internal + back-fill BinanceHttpClient endpoint guard.
 - **Last Checkpoint:** nazgul/checkpoints/iteration-001.json
-- **Last Commit:** fdbf2c5 fix(M2): TASK-005 add endpoint guard to all three HTTP methods
+- **Last Commit:** c6bfbb3 feat(M2): TASK-007 BybitErrorTranslator + BybitTimeSync

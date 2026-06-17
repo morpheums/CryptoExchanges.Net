@@ -5,12 +5,13 @@
     <OutputType>Exe</OutputType>
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
-    <NoWarn>$(NoWarn);CA1812;CA1056;CA1031;CA2000;CA1305;CA1032;CA1707;CS1591</NoWarn>
+    <NoWarn>$(NoWarn);CA1812;CA1056;CA1031;CA2000;CA1305;CA1032;CA1707;CS1591;CA2007;CA1515;xUnit1051</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\CryptoExchanges.Net.Core\CryptoExchanges.Net.Core.csproj" />
     <ProjectReference Include="..\..\src\CryptoExchanges.Net.Binance\CryptoExchanges.Net.Binance.csproj" />
+    <ProjectReference Include="..\..\src\CryptoExchanges.Net.Http\CryptoExchanges.Net.Http.csproj" />
   </ItemGroup>
 
   <ItemGroup>

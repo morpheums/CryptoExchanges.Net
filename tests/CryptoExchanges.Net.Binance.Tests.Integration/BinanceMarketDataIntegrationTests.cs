@@ -1,6 +1,7 @@
 using Xunit;
 using FluentAssertions;
 using CryptoExchanges.Net.Binance;
+using CryptoExchanges.Net.Core.Exceptions;
 using CryptoExchanges.Net.Core.Models;
 using CryptoExchanges.Net.Core.Enums;
 
@@ -185,6 +186,17 @@ public class BinanceMarketDataIntegrationTests : IAsyncLifetime
         resolved.Should().NotBeNull();
         resolved.Should().Be(btcusdt);
         unresolved.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task BadSymbol_SurfacesTypedExchangeException()
+    {
+        SkipIfUnreachable();
+        // Binance returns {"code":-1121,"msg":"Invalid symbol."} for an unknown symbol.
+        // The ErrorTranslationHandler maps -1121 → InvalidOrderException : ExchangeApiException.
+        var bogus = new Symbol(Asset.Of("ZZZZ"), Asset.Of("ZZZY"));
+        var act = async () => await _exchange.MarketData.GetPriceAsync(bogus, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ExchangeApiException>();
     }
 
     [Fact]

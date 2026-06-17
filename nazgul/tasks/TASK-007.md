@@ -100,5 +100,11 @@ offset. Null-guards the holder.
 ### Verification
 `dotnet build CryptoExchanges.Net.sln` → Build succeeded. 0 Warning(s), 0 Error(s).
 
+## Rework (review round 1)
+- **Blocking** (api-reviewer REJECT@95, corroborated by security): `BybitTimeSync.ApplyOffset` null-checked `offsetHolder` but not length → `new long[0]` would throw `IndexOutOfRangeException` instead of a clean `ArgumentException`. **Fix**: added `if (offsetHolder.Length < 1) throw new ArgumentException(...)` after the null check.
+- **Non-blocking deferred**: Finding 2 (scope `ApplyOffset` internal) — manifest already justifies public for TASK-008 testability; api-reviewer marked it deferred. Finding 3 (CS1591 suppression tech-debt). Both non-blocking.
+- Build after fix: 0w/0e.
+
 ## Commits
 - **Commit**: c6bfbb3 feat(M2): TASK-007 BybitErrorTranslator + BybitTimeSync
+- **Commit (rework)**: pending

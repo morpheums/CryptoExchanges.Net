@@ -1,6 +1,6 @@
 ---
 id: TASK-008
-status: IMPLEMENTED
+status: DONE
 ---
 
 # TASK-008: Bybit tests + AddBybitExchange DI (closes M-BYBIT)
@@ -77,3 +77,10 @@ Wire `AddBybitExchange(this IServiceCollection, Action<BybitOptions>?)` into the
 
 ## Commits
 - **Commit**: f60bd18 feat(M2): TASK-008 Bybit tests + AddBybitExchange DI (closes M-BYBIT)
+
+## Review
+- **Review Gate**: PASSED (round 1)
+- **Reviewers**: architect-reviewer (APPROVE — DI mirrors AddBinanceExchange, no layering/regression), security-reviewer (APPROVE), api-reviewer (APPROVE), code-reviewer (APPROVE/96 — verified both regression tests genuinely fail against the old broken code; no vacuous tests)
+- **Pre-checks**: build 0w/0e (Debug+Release); 212 non-integration tests pass; Bybit integration 5/5; no Binance regression
+- **Non-blocking**: re-sign test could also assert timestamp changed across attempts (code @60); ApplyEnvDefaults overload naming (architect, stylistic). Deferred.
+- **CLOSES MILESTONE M-BYBIT** (TASK-001–008 all DONE).

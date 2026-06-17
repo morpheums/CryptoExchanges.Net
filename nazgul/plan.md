@@ -12,9 +12,9 @@ Add three new exchange integrations to CryptoExchanges.Net in strict priority or
 
 ## Status Summary
 - Total tasks: 22
-- DONE: 7 | READY: 0 | IN_PROGRESS: 1 | IN_REVIEW: 0 | CHANGES_REQUESTED: 0 | BLOCKED: 0 | PLANNED: 14
-- Current iteration: 5/40
-- Active task: TASK-008 (Wave 5, in review — tests + AddBybitExchange DI; closes M-BYBIT)
+- DONE: 8 | READY: 0 | IN_PROGRESS: 0 | IN_REVIEW: 0 | CHANGES_REQUESTED: 0 | BLOCKED: 0 | PLANNED: 14
+- Current iteration: 6/40
+- Active task: none — **MILESTONE M-BYBIT COMPLETE** (TASK-001–008 all DONE). Next: open Bybit PR → merge → rebranch for M-OKX (TASK-009).
 
 ## Scoping Decisions (HITL — committed, not open questions)
 The objective is fully prescriptive on scope/sequence/signing; these are the choices made decisively:
@@ -103,7 +103,7 @@ Tasks touching shared Core/Http/DI projects are higher blast radius and REQUIRE 
 - [x] TASK-007: BybitErrorTranslator + BybitTimeSync -> DONE
 
 ### Group 5 (= Wave 5)
-- [~] TASK-008: Bybit tests + AddBybitExchange DI (closes M-BYBIT) -> IN_REVIEW (commit f60bd18)
+- [x] TASK-008: Bybit tests + AddBybitExchange DI (closes M-BYBIT) -> DONE
 
 ### Group 6 (= Wave 6)
 - [ ] TASK-009: OKX-era credential/signing generalization (Core/Http) -> PLANNED
@@ -183,7 +183,7 @@ Tasks touching shared Core/Http/DI projects are higher blast radius and REQUIRE 
 - **Manifest**: nazgul/tasks/TASK-007.md
 
 ### TASK-008: Bybit tests + AddBybitExchange DI (closes M-BYBIT)
-- **Status**: IN_REVIEW
+- **Status**: DONE
 - **Group**: 5
 - **Depends on**: TASK-003, TASK-006, TASK-007
 - **Manifest**: nazgul/tasks/TASK-008.md
@@ -280,6 +280,7 @@ Tasks touching shared Core/Http/DI projects are higher blast radius and REQUIRE 
 - TASK-005: BybitHttpClient + interface (DONE) — gate PASSED round 2 (code-reviewer REJECT@97 endpoint-guard → APPROVE@100; architect 97, security 95, api 93); commits 2a598c8, fdbf2c5
 - TASK-007: BybitErrorTranslator + BybitTimeSync (DONE) — gate PASSED round 2 (api-reviewer REJECT@95 offsetHolder length-guard → APPROVE@99; architect 93, code 88, security APPROVE); commits c6bfbb3, 456a208
 - TASK-006: Bybit services + mapping + composer + ExchangeClient (DONE) — gate PASSED round 2 (api REJECT@95 + code REJECT@95×2 → APPROVE@98/APPROVE after limit-clamp + cancel-by-clientId id fix; architect 88, security 95); commits 057d6d2, 48fb17b
+- TASK-008: Bybit tests + AddBybitExchange DI (DONE) — gate PASSED round 1 (all 4 APPROVE; code@96 confirmed regression tests valid); 77 unit + 5 integration tests; commit f60bd18. **CLOSES MILESTONE M-BYBIT.**
 
 ## Blocked
 <!-- None. -->
@@ -290,8 +291,9 @@ Tasks touching shared Core/Http/DI projects are higher blast radius and REQUIRE 
 - After merge: cut `feat/m3-okx` off updated main for M-OKX (TASK-009–015) → PR/merge → branch for M-BITGET (TASK-016–022).
 
 ## Recovery Pointer
-- **Current Task:** TASK-008 IN_REVIEW (Wave 5 — Bybit tests + AddBybitExchange DI; closes M-BYBIT). Commit f60bd18. Build green; 212 non-integration tests pass; Bybit integration 5/5; no Binance regression.
-- **Last Action:** TASK-008 implemented, committed, review gate dispatched. User chose per-exchange PR strategy (see Integration Strategy above).
-- **Next Action (when TASK-008 gate returns):** On PASS → mark TASK-008 DONE = MILESTONE M-BYBIT COMPLETE → **open the Bybit PR (feat/m2-exchange-expansion → main)**, surface it, confirm before merge. After merge → cut `feat/m3-okx` off main → Wave 6 = TASK-009 (OKX-era credential/signing generalization; HIGHEST blast radius — Core/Http). FOLLOW-UP folded into TASK-009: harmonize Binance signing types to internal + back-fill BinanceHttpClient endpoint guard. (If CHANGES_REQUESTED → fix blocking items, re-review.) (Bybit unit + integration tests + AddBybitExchange DI wiring) — CLOSES MILESTONE M-BYBIT. Depends on TASK-003/006/007 (all DONE). TASK-008 notes: (1) create the Bybit test project(s) and ensure the csproj InternalsVisibleTo grants the UNIT-test project name (internal signing types, internal services, ApplyOffset); (2) cover signature hex vector + GET/POST sign-string, symbol round-trip, parser invariants + validation rejects, signing-handler header presence/re-sign-on-retry (stub handler, mirror BinancePipelineEndToEndTests), service DTO→model mapping via mocked IBybitHttpClient, error-code→exception mapping, time-offset sign/magnitude, AND the two round-1 bug fixes (limit clamp to 50, cancel-by-linkId id fallback); (3) wire AddBybitExchange in the DI project mirroring AddBinanceExchange. FOLLOW-UP for TASK-009: harmonize Binance signing types to internal + back-fill BinanceHttpClient endpoint guard.
+- **Current Task:** none — **MILESTONE M-BYBIT COMPLETE** (TASK-001–008 all DONE, gates passed). 8/22 tasks done.
+- **Last Action:** TASK-008 gate PASSED (all 4 reviewers APPROVE); marked DONE. Bybit ships as a fully-tested, DI-wired exchange.
+- **Next Action:** Per the per-exchange PR strategy — **open the Bybit PR (feat/m2-exchange-expansion → main)** and surface it; PAUSE for user confirmation before the merge click (irreversible). After merge → cut `feat/m3-okx` off updated main → start Wave 6 = TASK-009 (OKX credential/signing generalization; HIGHEST blast radius — Core/Http; non-breaking for Binance + Bybit). Fold in the two tracked follow-ups: harmonize Binance signing types to internal + back-fill BinanceHttpClient endpoint guard.
+- **Last Commit:** (Bybit milestone) f60bd18 + state commits; PR pending. (Bybit unit + integration tests + AddBybitExchange DI wiring) — CLOSES MILESTONE M-BYBIT. Depends on TASK-003/006/007 (all DONE). TASK-008 notes: (1) create the Bybit test project(s) and ensure the csproj InternalsVisibleTo grants the UNIT-test project name (internal signing types, internal services, ApplyOffset); (2) cover signature hex vector + GET/POST sign-string, symbol round-trip, parser invariants + validation rejects, signing-handler header presence/re-sign-on-retry (stub handler, mirror BinancePipelineEndToEndTests), service DTO→model mapping via mocked IBybitHttpClient, error-code→exception mapping, time-offset sign/magnitude, AND the two round-1 bug fixes (limit clamp to 50, cancel-by-linkId id fallback); (3) wire AddBybitExchange in the DI project mirroring AddBinanceExchange. FOLLOW-UP for TASK-009: harmonize Binance signing types to internal + back-fill BinanceHttpClient endpoint guard.
 - **Last Checkpoint:** nazgul/checkpoints/iteration-001.json
 - **Last Commit:** c6bfbb3 feat(M2): TASK-007 BybitErrorTranslator + BybitTimeSync

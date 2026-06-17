@@ -29,6 +29,9 @@ public static class HttpClientPipelineBuilder
         ExchangeResiliencePipeline.Configure(pipelineBuilder, options);
         ResiliencePipeline<HttpResponseMessage> pipeline = pipelineBuilder.Build();
 
+        // CA2000: handler chain ownership transfers to HttpClient on construction — it disposes them
+        // (covers errorTranslation, the optional requestFinalizer, and the outer handlers below).
+#pragma warning disable CA2000
         var errorTranslation = new ErrorTranslationHandler(translator) { InnerHandler = innerHandler };
 
         DelegatingHandler belowPolly = errorTranslation;
@@ -38,8 +41,6 @@ public static class HttpClientPipelineBuilder
             belowPolly = requestFinalizer;
         }
 
-        // CA2000: handler chain ownership transfers to HttpClient on construction — it disposes them.
-#pragma warning disable CA2000
         var resilience = new ResilienceHandler(pipeline) { InnerHandler = belowPolly };
         var exhaustion = new TransientExhaustionHandler { InnerHandler = resilience };
         var throttle = new RateLimitThrottleHandler(gate) { InnerHandler = exhaustion };

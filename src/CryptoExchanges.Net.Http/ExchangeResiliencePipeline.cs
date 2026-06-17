@@ -32,7 +32,9 @@ public static class ExchangeResiliencePipeline
             MaxDelay = options.MaxDelay,
             ShouldHandle = args =>
             {
-                var req = args.Outcome.Result?.RequestMessage;
+                // On an exception outcome, Result is null; recover the in-flight request from the
+                // resilience context so the GET-only guard still works on the exception path.
+                var req = args.Outcome.Result?.RequestMessage ?? args.Context.GetRequestMessage();
                 if (req?.Method != HttpMethod.Get)
                     return ValueTask.FromResult(false);
                 if (args.Outcome.Exception is HttpRequestException or TimeoutRejectedException)

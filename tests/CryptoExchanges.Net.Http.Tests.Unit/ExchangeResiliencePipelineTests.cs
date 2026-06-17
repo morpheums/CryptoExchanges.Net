@@ -41,10 +41,20 @@ public class ExchangeResiliencePipelineTests
     [Fact]
     public async Task Get_5xx_ThenSuccess_Recovers()
     {
-        var (c, _) = Build((_, n) => new HttpResponseMessage(
+        var (c, stub) = Build((_, n) => new HttpResponseMessage(
             n == 0 ? HttpStatusCode.InternalServerError : HttpStatusCode.OK));
         var resp = await c.GetAsync("/p", TestContext.Current.CancellationToken);
         resp.StatusCode.Should().Be(HttpStatusCode.OK);
+        stub.Calls.Should().Be(2);
+    }
+
+    [Fact]
+    public async Task Get_NetworkException_Retried_ThenExhausted_Throws_Connectivity()
+    {
+        var (c, stub) = Build((_, _) => throw new HttpRequestException("boom"));
+        var act = async () => await c.GetAsync("/p", TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ExchangeConnectivityException>();
+        stub.Requests.Count.Should().Be(3);
     }
 
     [Fact]
@@ -59,10 +69,11 @@ public class ExchangeResiliencePipelineTests
     [Fact]
     public async Task Get_429_Exhausted_Throws_RateLimit()
     {
-        var (c, _) = Build((_, _) => new HttpResponseMessage(HttpStatusCode.TooManyRequests));
+        var (c, stub) = Build((_, _) => new HttpResponseMessage(HttpStatusCode.TooManyRequests));
         await ((Func<Task>)(async () =>
             await c.GetAsync("/p", TestContext.Current.CancellationToken)))
             .Should().ThrowAsync<RateLimitExceededException>();
+        stub.Calls.Should().Be(3);
     }
 
     [Fact]

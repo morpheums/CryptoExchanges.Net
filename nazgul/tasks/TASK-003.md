@@ -1,6 +1,6 @@
 ---
 id: TASK-003
-status: IMPLEMENTED
+status: DONE
 ---
 
 # TASK-003: BybitSigningHandler
@@ -74,4 +74,10 @@ Implement `BybitSigningHandler : DelegatingHandler` mirroring `BinanceSigningHan
 
 ## Commits
 - **Commit**: 283bcf0 feat(M2): TASK-003 BybitSigningHandler (header-based, re-sign per attempt)
-- **Commit (rework)**: pending
+- **Commit (rework)**: 60b55e3 fix(M2): TASK-003 make Bybit signing types internal + param docs
+
+## Review
+- **Review Gate**: PASSED (round 2)
+- **Reviewers**: architect-reviewer (APPROVE/97), code-reviewer (APPROVE), security-reviewer (APPROVE; 1 non-blocking CONCERN@82 deliberately not applied), api-reviewer (round 1 REJECT@95×2 → round 2 APPROVE after internal-visibility fix)
+- **Pre-checks**: build 0w/0e, tests 135 passed / 0 failed
+- **Follow-up (TASK-009)**: harmonize Binance signing types to internal for cross-module symmetry.

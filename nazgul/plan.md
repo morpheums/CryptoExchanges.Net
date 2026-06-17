@@ -12,9 +12,9 @@ Add three new exchange integrations to CryptoExchanges.Net in strict priority or
 
 ## Status Summary
 - Total tasks: 22
-- DONE: 3 | READY: 0 | IN_PROGRESS: 0 | IN_REVIEW: 2 | CHANGES_REQUESTED: 0 | BLOCKED: 0 | PLANNED: 17
-- Current iteration: 3/40
-- Active task: TASK-003 + TASK-005 (Wave 3, in review)
+- DONE: 5 | READY: 0 | IN_PROGRESS: 0 | IN_REVIEW: 0 | CHANGES_REQUESTED: 0 | BLOCKED: 0 | PLANNED: 17
+- Current iteration: 4/40
+- Active task: none (Wave 3 complete; Wave 4 next: TASK-006, TASK-007)
 
 ## Scoping Decisions (HITL — committed, not open questions)
 The objective is fully prescriptive on scope/sequence/signing; these are the choices made decisively:
@@ -95,8 +95,8 @@ Tasks touching shared Core/Http/DI projects are higher blast radius and REQUIRE 
 - [x] TASK-004: BybitSymbolFormat + value parsers + request validation -> DONE
 
 ### Group 3 (= Wave 3)
-- [~] TASK-003: BybitSigningHandler -> IN_REVIEW round 2 (rework 60b55e3 — types now internal)
-- [~] TASK-005: BybitHttpClient + interface -> IN_REVIEW round 2 (rework fdbf2c5 — endpoint guards)
+- [x] TASK-003: BybitSigningHandler -> DONE
+- [x] TASK-005: BybitHttpClient + interface -> DONE
 
 ### Group 4 (= Wave 4)
 - [ ] TASK-006: Bybit services + mapping + composer + ExchangeClient -> PLANNED
@@ -153,7 +153,7 @@ Tasks touching shared Core/Http/DI projects are higher blast radius and REQUIRE 
 - **Manifest**: nazgul/tasks/TASK-002.md
 
 ### TASK-003: BybitSigningHandler
-- **Status**: IN_REVIEW
+- **Status**: DONE
 - **Group**: 3
 - **Depends on**: TASK-002
 - **Manifest**: nazgul/tasks/TASK-003.md
@@ -165,7 +165,7 @@ Tasks touching shared Core/Http/DI projects are higher blast radius and REQUIRE 
 - **Manifest**: nazgul/tasks/TASK-004.md
 
 ### TASK-005: BybitHttpClient + interface
-- **Status**: IN_REVIEW
+- **Status**: DONE
 - **Group**: 3
 - **Depends on**: TASK-004
 - **Manifest**: nazgul/tasks/TASK-005.md
@@ -276,13 +276,15 @@ Tasks touching shared Core/Http/DI projects are higher blast radius and REQUIRE 
 - TASK-001: Bybit project scaffold + options + DI seam stub (DONE) — review gate PASSED (architect 98, code 72, security 97, api 97); commit c782aed
 - TASK-004: BybitSymbolFormat + value parsers + request validation (DONE) — review gate PASSED round 1 (architect APPROVE, code 82, security 91, api APPROVE); commit c1007cd
 - TASK-002: BybitSignatureService + signing request marker (DONE) — review gate PASSED round 2 (code-reviewer REJECT@85 → APPROVE@98 after guard fix; architect/security/api APPROVE); commits 5654d93, e9fabc5
+- TASK-003: BybitSigningHandler (DONE) — gate PASSED round 2 (api-reviewer REJECT@95 internal-visibility → APPROVE; architect 97, code, security APPROVE); commits 283bcf0, 60b55e3
+- TASK-005: BybitHttpClient + interface (DONE) — gate PASSED round 2 (code-reviewer REJECT@97 endpoint-guard → APPROVE@100; architect 97, security 95, api 93); commits 2a598c8, fdbf2c5
 
 ## Blocked
 <!-- None. -->
 
 ## Recovery Pointer
-- **Current Task:** TASK-003 + TASK-005 (Wave 3, IN_REVIEW round 2 after rework — both build green, 135 tests pass)
-- **Last Action:** Wave 3 round-1 CHANGES_REQUESTED fixed — TASK-003 signing types → internal (60b55e3); TASK-005 endpoint guards added (fdbf2c5); targeted re-reviews dispatched (api-reviewer for 003, code-reviewer for 005)
-- **Next Action:** Collect Wave 3 round-2 verdicts → mark DONE; then Wave 4 (TASK-006 services/mapping/composer ← TASK-005; TASK-007 error translator + time sync ← TASK-005). NOTES for TASK-006: composer must format BybitOptions.ReceiveWindow (decimal) → invariant string for the BybitSigningHandler ctor; BybitHttpClient ctor takes only HttpClient; signing types are now internal (composer must live in the Bybit assembly). NOTE for TASK-008: signing unit tests need InternalsVisibleTo access. FOLLOW-UP for TASK-009: harmonize Binance signing types to internal + back-fill BinanceHttpClient endpoint guard.
+- **Current Task:** none (Wave 3 complete — TASK-003 + TASK-005 DONE; starting Wave 4)
+- **Last Action:** Wave 3 round-2 gates PASSED (TASK-003 internal-visibility, TASK-005 endpoint guards); both marked DONE
+- **Next Action:** Begin Wave 4 — TASK-006 (Bybit services + mapping profiles + composer + ExchangeClient ← TASK-005) and TASK-007 (BybitErrorTranslator + BybitTimeSync ← TASK-005). Both depend on TASK-005 (DONE); check file-scope disjointness before parallelizing. WIRING NOTES for TASK-006 composer: format BybitOptions.ReceiveWindow (decimal) → invariant string for the BybitSigningHandler ctor (ctor order: apiKey, signatureService, recvWindow, timeOffset); BybitHttpClient ctor takes only HttpClient; signing types are internal so the composer must live inside the Bybit assembly. FOLLOW-UP for TASK-009: harmonize Binance signing types to internal + back-fill BinanceHttpClient endpoint guard.
 - **Last Checkpoint:** nazgul/checkpoints/iteration-001.json
 - **Last Commit:** fdbf2c5 fix(M2): TASK-005 add endpoint guard to all three HTTP methods

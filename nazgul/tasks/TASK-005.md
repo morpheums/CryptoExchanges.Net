@@ -1,6 +1,6 @@
 ---
 id: TASK-005
-status: IMPLEMENTED
+status: DONE
 ---
 
 # TASK-005: BybitHttpClient + interface
@@ -66,4 +66,11 @@ Implement `IBybitHttpClient` and `BybitHttpClient` (internal HTTP wrapper: `GetA
 
 ## Commits
 - **Commit**: 2a598c8 feat(M2): TASK-005 BybitHttpClient + IBybitHttpClient (JSON-body POST)
-- **Commit (rework)**: pending
+- **Commit (rework)**: fdbf2c5 fix(M2): TASK-005 add endpoint guard to all three HTTP methods
+
+## Review
+- **Review Gate**: PASSED (round 2)
+- **Reviewers**: architect-reviewer (APPROVE/97), security-reviewer (APPROVE/95), api-reviewer (APPROVE/93), code-reviewer (round 1 REJECT@97 → round 2 APPROVE@100 after endpoint guards)
+- **Pre-checks**: build 0w/0e, tests 135 passed / 0 failed
+- **POST body signing fidelity**: VERIFIED by code-reviewer@99 + security — serialized JSON stored verbatim, signed by handler unchanged.
+- **Follow-up (TASK-009)**: back-fill `endpoint` guard into BinanceHttpClient.

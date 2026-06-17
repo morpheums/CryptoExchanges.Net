@@ -62,3 +62,6 @@ Implement `BybitSigningHandler : DelegatingHandler` mirroring `BinanceSigningHan
 
 ### Verification
 - `dotnet build CryptoExchanges.Net.sln` → **Build succeeded. 0 Warning(s), 0 Error(s)** (run twice: after creating the handler, and again after the `<see cref>` upgrade).
+
+## Commits
+- **Commit**: 283bcf0 feat(M2): TASK-003 BybitSigningHandler (header-based, re-sign per attempt)

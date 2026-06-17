@@ -12,9 +12,9 @@ Add three new exchange integrations to CryptoExchanges.Net in strict priority or
 
 ## Status Summary
 - Total tasks: 22
-- DONE: 3 | READY: 0 | IN_PROGRESS: 0 | IN_REVIEW: 0 | CHANGES_REQUESTED: 0 | BLOCKED: 0 | PLANNED: 19
+- DONE: 3 | READY: 0 | IN_PROGRESS: 0 | IN_REVIEW: 2 | CHANGES_REQUESTED: 0 | BLOCKED: 0 | PLANNED: 17
 - Current iteration: 3/40
-- Active task: none (Wave 2 complete; Wave 3 next: TASK-003, TASK-005)
+- Active task: TASK-003 + TASK-005 (Wave 3, in review)
 
 ## Scoping Decisions (HITL — committed, not open questions)
 The objective is fully prescriptive on scope/sequence/signing; these are the choices made decisively:
@@ -95,8 +95,8 @@ Tasks touching shared Core/Http/DI projects are higher blast radius and REQUIRE 
 - [x] TASK-004: BybitSymbolFormat + value parsers + request validation -> DONE
 
 ### Group 3 (= Wave 3)
-- [ ] TASK-003: BybitSigningHandler -> PLANNED
-- [ ] TASK-005: BybitHttpClient + interface -> PLANNED
+- [~] TASK-003: BybitSigningHandler -> IN_REVIEW (commit 283bcf0)
+- [~] TASK-005: BybitHttpClient + interface -> IN_REVIEW (commit 2a598c8)
 
 ### Group 4 (= Wave 4)
 - [ ] TASK-006: Bybit services + mapping + composer + ExchangeClient -> PLANNED
@@ -153,7 +153,7 @@ Tasks touching shared Core/Http/DI projects are higher blast radius and REQUIRE 
 - **Manifest**: nazgul/tasks/TASK-002.md
 
 ### TASK-003: BybitSigningHandler
-- **Status**: PLANNED
+- **Status**: IN_REVIEW
 - **Group**: 3
 - **Depends on**: TASK-002
 - **Manifest**: nazgul/tasks/TASK-003.md
@@ -165,7 +165,7 @@ Tasks touching shared Core/Http/DI projects are higher blast radius and REQUIRE 
 - **Manifest**: nazgul/tasks/TASK-004.md
 
 ### TASK-005: BybitHttpClient + interface
-- **Status**: PLANNED
+- **Status**: IN_REVIEW
 - **Group**: 3
 - **Depends on**: TASK-004
 - **Manifest**: nazgul/tasks/TASK-005.md
@@ -281,8 +281,8 @@ Tasks touching shared Core/Http/DI projects are higher blast radius and REQUIRE 
 <!-- None. -->
 
 ## Recovery Pointer
-- **Current Task:** none (Wave 2 complete — TASK-002 + TASK-004 DONE; starting Wave 3)
-- **Last Action:** TASK-002 review gate PASSED round 2 (code-reviewer APPROVE@98 after guard fix); marked DONE
-- **Next Action:** Begin Wave 3 — TASK-003 (BybitSigningHandler ← TASK-002) and TASK-005 (BybitHttpClient + IBybitHttpClient ← TASK-004), independent files, run in parallel
+- **Current Task:** TASK-003 + TASK-005 (Wave 3, IN_REVIEW — commits 283bcf0, 2a598c8; both build green, 135 tests pass)
+- **Last Action:** Wave 3 implemented (BybitSigningHandler header-based + BybitHttpClient JSON-body POST); review gates dispatched for both
+- **Next Action:** Collect Wave 3 verdicts → mark DONE (or fix blocking items); then Wave 4 (TASK-006 services/mapping/composer ← TASK-005; TASK-007 error translator + time sync ← TASK-005). NOTE for TASK-006: composer must format BybitOptions.ReceiveWindow (decimal) → invariant string for the BybitSigningHandler ctor; BybitHttpClient ctor takes only HttpClient.
 - **Last Checkpoint:** nazgul/checkpoints/iteration-001.json
-- **Last Commit:** 6963b0c chore(M2): TASK-004 DONE (gate passed); record TASK-002 round-1 feedback
+- **Last Commit:** 2a598c8 feat(M2): TASK-005 BybitHttpClient + IBybitHttpClient (JSON-body POST)

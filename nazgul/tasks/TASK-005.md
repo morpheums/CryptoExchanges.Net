@@ -57,3 +57,6 @@ Implement `IBybitHttpClient` and `BybitHttpClient` (internal HTTP wrapper: `GetA
 ### Verification
 - `dotnet build CryptoExchanges.Net.sln` → `Build succeeded. 0 Warning(s) 0 Error(s)`.
 - No tests added (per scope; tests arrive in TASK-008). Did not commit.
+
+## Commits
+- **Commit**: 2a598c8 feat(M2): TASK-005 BybitHttpClient + IBybitHttpClient (JSON-body POST)

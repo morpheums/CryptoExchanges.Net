@@ -14,7 +14,7 @@ Add three new exchange integrations to CryptoExchanges.Net in strict priority or
 - Total tasks: 22
 - DONE: 6 | READY: 0 | IN_PROGRESS: 0 | IN_REVIEW: 1 | CHANGES_REQUESTED: 0 | BLOCKED: 0 | PLANNED: 15
 - Current iteration: 4/40
-- Active task: Wave 4 — TASK-006 (in review, 057d6d2); TASK-007 DONE
+- Active task: Wave 4 — TASK-006 (in review round 2, 48fb17b); TASK-007 DONE
 
 ## Scoping Decisions (HITL — committed, not open questions)
 The objective is fully prescriptive on scope/sequence/signing; these are the choices made decisively:
@@ -99,7 +99,7 @@ Tasks touching shared Core/Http/DI projects are higher blast radius and REQUIRE 
 - [x] TASK-005: BybitHttpClient + interface -> DONE
 
 ### Group 4 (= Wave 4)
-- [~] TASK-006: Bybit services + mapping + composer + ExchangeClient -> IN_REVIEW (commit 057d6d2)
+- [~] TASK-006: Bybit services + mapping + composer + ExchangeClient -> IN_REVIEW round 2 (rework 48fb17b — clamp limit + cancel-by-clientId id fix)
 - [x] TASK-007: BybitErrorTranslator + BybitTimeSync -> DONE
 
 ### Group 5 (= Wave 5)
@@ -284,8 +284,8 @@ Tasks touching shared Core/Http/DI projects are higher blast radius and REQUIRE 
 <!-- None. -->
 
 ## Recovery Pointer
-- **Current Task:** Wave 4 — TASK-007 IN_REVIEW (c6bfbb3); TASK-006 IN_PROGRESS (sequenced after TASK-007 since the composer wires the error translator + time sync)
-- **Last Action:** TASK-007 implemented + committed (c6bfbb3, build green, 135 tests pass); dispatched TASK-006 implementer + TASK-007 review gate in parallel (disjoint: TASK-006 writes new files, reviewers read-only on TASK-007)
-- **Next Action:** Collect TASK-007 verdict → DONE; collect TASK-006 implementation → review gate. Then Wave 5 (TASK-008: Bybit unit + integration tests + AddBybitExchange DI wiring — closes milestone M-BYBIT). FOLLOW-UP for TASK-009: harmonize Binance signing types to internal + back-fill BinanceHttpClient endpoint guard.
+- **Current Task:** TASK-006 IN_REVIEW round 2 (rework 48fb17b); TASK-007 DONE
+- **Last Action:** TASK-006 round-1 CHANGES_REQUESTED (api@95 + code@95) fixed — clamp history limit to 50 (was throwing on the 500 default); FetchOrderAsync re-fetches by orderLinkId when ACK omits orderId (cancel-by-clientId + create paths). Re-dispatched api-reviewer + code-reviewer round 2 (architect@88 + security@95 already approved).
+- **Next Action:** Collect TASK-006 round-2 verdicts → DONE (closes Wave 4). Then Wave 5 = TASK-008 (Bybit unit + integration tests + AddBybitExchange DI wiring) — CLOSES MILESTONE M-BYBIT. TASK-008 notes: needs InternalsVisibleTo for the unit-test project name (internal signing types + ApplyOffset); test the clamp + cancel-by-linkId fixes. FOLLOW-UP for TASK-009: harmonize Binance signing types to internal + back-fill BinanceHttpClient endpoint guard.
 - **Last Checkpoint:** nazgul/checkpoints/iteration-001.json
 - **Last Commit:** c6bfbb3 feat(M2): TASK-007 BybitErrorTranslator + BybitTimeSync

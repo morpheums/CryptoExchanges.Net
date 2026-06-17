@@ -107,4 +107,4 @@ Both api-reviewer (CHANGES_REQUESTED@95) and code-reviewer (CHANGES_REQUESTED@95
 
 ## Commits
 - **Commit**: 057d6d2 feat(M2): TASK-006 Bybit services + DeltaMapper profiles + composer + ExchangeClient
-- **Commit (rework)**: pending
+- **Commit (rework)**: 48fb17b fix(M2): TASK-006 clamp history limit + fix cancel-by-clientId order id

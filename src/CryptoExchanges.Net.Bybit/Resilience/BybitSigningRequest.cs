@@ -1,7 +1,7 @@
 namespace CryptoExchanges.Net.Bybit.Resilience;
 
 /// <summary>Marks an outgoing request as requiring Bybit signing (timestamp + HMAC), applied
-/// per attempt by the Bybit signing handler.</summary>
+/// per attempt by <see cref="BybitSigningHandler"/>.</summary>
 public static class BybitSigningRequest
 {
     private static readonly HttpRequestOptionsKey<bool> SignedKey = new("bybit.signed");

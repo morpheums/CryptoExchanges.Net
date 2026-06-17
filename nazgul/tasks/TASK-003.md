@@ -1,6 +1,6 @@
 ---
 id: TASK-003
-status: PLANNED
+status: IMPLEMENTED
 ---
 
 # TASK-003: BybitSigningHandler
@@ -38,3 +38,27 @@ Implement `BybitSigningHandler : DelegatingHandler` mirroring `BinanceSigningHan
 
 ## Test Requirements
 - Unit/e2e tests in TASK-008 assert header presence/values for GET+POST and re-sign-on-retry through a stub handler (mirroring `BinancePipelineEndToEndTests`).
+
+## Implementation Notes
+
+### Created
+- `src/CryptoExchanges.Net.Bybit/Resilience/BybitSigningHandler.cs` — `BybitSigningHandler : DelegatingHandler` mirroring `BinanceSigningHandler`, but carrying the signature in headers instead of the query.
+
+### Touched (allowed optional nicety)
+- `src/CryptoExchanges.Net.Bybit/Resilience/BybitSigningRequest.cs` — upgraded the plain-text "the Bybit signing handler" doc reference to `<see cref="BybitSigningHandler"/>` now that the type exists. Rebuilt clean (0 warnings).
+
+### Behavior
+- Sets `X-BAPI-API-KEY` on every request (mirrors Binance setting `X-MBX-APIKEY` on all requests, gated on a non-empty apiKey).
+- For signed requests, on EACH attempt (`ResignAsync`, below the retry strategy):
+  - Computes a fresh timestamp: `DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() + timeOffset()`, formatted with `CultureInfo.InvariantCulture` (identical posture to Binance).
+  - GET/DELETE: signs over `timestamp+apiKey+recvWindow+queryString` (query read from `RequestUri.Query`, leading `?` trimmed) via `BybitSignatureService.BuildGetSignString` + `Sign`.
+  - POST: reads body once via `ReadAsStringAsync` and signs over `timestamp+apiKey+recvWindow+jsonBody` via `BuildPostSignString` + `Sign`.
+  - Removes any prior `X-BAPI-TIMESTAMP` / `X-BAPI-RECV-WINDOW` / `X-BAPI-SIGN` before re-adding, so two consecutive `SendAsync` calls on the same retried request yield a fresh timestamp and a SINGLE (not doubled) set of headers.
+- Unsigned requests pass through unchanged except for the api-key header.
+
+### Deviation from Binance pattern (justified)
+- Binance reads its body for re-signing and replaces `request.Content` with a new `StringContent` (form-urlencoded, signature appended). Bybit does NOT mutate the body — the signature lives in a header — so the handler only reads the body (once) and adds headers. No `StringContent` swap / `Dispose` is needed, and the POST body is left intact for `BuildPostSignString` correctness.
+- Constructor signature adds a `string recvWindow` parameter (alongside `apiKey`, `signatureService`, `timeOffset`) because Bybit's recvWindow is a required header value; Binance has no equivalent. It is passed as a pre-formatted string to keep the handler agnostic of `BybitOptions` (mirrors how Binance passes `apiKey` as a plain string rather than the whole options object). The composer (TASK to wire) is responsible for formatting `BybitOptions.ReceiveWindow` (decimal) to invariant string.
+
+### Verification
+- `dotnet build CryptoExchanges.Net.sln` → **Build succeeded. 0 Warning(s), 0 Error(s)** (run twice: after creating the handler, and again after the `<see cref>` upgrade).

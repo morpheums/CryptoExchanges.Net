@@ -1,6 +1,6 @@
 ---
 id: TASK-004
-status: IMPLEMENTED
+status: DONE
 ---
 
 # TASK-004: BybitSymbolFormat + value parsers + request validation
@@ -80,3 +80,12 @@ Created three new files in the Bybit project, mirroring the Binance internals' s
 
 ### Verification
 `dotnet build CryptoExchanges.Net.sln` → **Build succeeded. 0 Warning(s), 0 Error(s).**
+
+## Commits
+- **Commit**: c1007cd feat(M2): TASK-004 BybitSymbolFormat + value parsers + request validation
+
+## Review
+- **Review Gate**: PASSED (round 1)
+- **Reviewers**: architect-reviewer (APPROVE), code-reviewer (APPROVE/82), security-reviewer (APPROVE/91), api-reviewer (APPROVE)
+- **Pre-checks**: build 0w/0e, tests 135 passed / 0 failed
+- **Non-blocking concerns (below threshold 80)**: Bybit `PostOnly` TIF mapped to `TimeInForce.Gtc` (lossy — Core enum has no `PostOnly`/`LimitMaker` member; deliberate, documented); wire string echoed in parse exception messages (LOW). Recorded for the OKX/abstraction phase; not blocking.

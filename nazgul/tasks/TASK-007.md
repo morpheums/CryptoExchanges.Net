@@ -1,6 +1,6 @@
 ---
 id: TASK-007
-status: IMPLEMENTED
+status: DONE
 ---
 
 # TASK-007: BybitErrorTranslator + BybitTimeSync
@@ -108,3 +108,9 @@ offset. Null-guards the holder.
 ## Commits
 - **Commit**: c6bfbb3 feat(M2): TASK-007 BybitErrorTranslator + BybitTimeSync
 - **Commit (rework)**: 456a208 fix(M2): TASK-007 add zero-length guard to BybitTimeSync.ApplyOffset
+
+## Review
+- **Review Gate**: PASSED (round 2)
+- **Reviewers**: architect-reviewer (APPROVE/93), code-reviewer (APPROVE/88), security-reviewer (APPROVE), api-reviewer (round 1 REJECT@95 → round 2 APPROVE@99 after offsetHolder length guard)
+- **Pre-checks**: build 0w/0e, tests 135 passed / 0 failed
+- **Deferred non-blocking**: scope ApplyOffset internal (manifest justifies public for TASK-008 testability); CS1591 suppression tech-debt.

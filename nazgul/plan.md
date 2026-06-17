@@ -12,9 +12,9 @@ Add three new exchange integrations to CryptoExchanges.Net in strict priority or
 
 ## Status Summary
 - Total tasks: 22
-- DONE: 5 | READY: 0 | IN_PROGRESS: 0 | IN_REVIEW: 2 | CHANGES_REQUESTED: 0 | BLOCKED: 0 | PLANNED: 15
+- DONE: 6 | READY: 0 | IN_PROGRESS: 0 | IN_REVIEW: 1 | CHANGES_REQUESTED: 0 | BLOCKED: 0 | PLANNED: 15
 - Current iteration: 4/40
-- Active task: Wave 4 — TASK-006 (in review, 057d6d2) + TASK-007 (in review round 2, 456a208)
+- Active task: Wave 4 — TASK-006 (in review, 057d6d2); TASK-007 DONE
 
 ## Scoping Decisions (HITL — committed, not open questions)
 The objective is fully prescriptive on scope/sequence/signing; these are the choices made decisively:
@@ -100,7 +100,7 @@ Tasks touching shared Core/Http/DI projects are higher blast radius and REQUIRE 
 
 ### Group 4 (= Wave 4)
 - [~] TASK-006: Bybit services + mapping + composer + ExchangeClient -> IN_REVIEW (commit 057d6d2)
-- [~] TASK-007: BybitErrorTranslator + BybitTimeSync -> IN_REVIEW round 2 (rework 456a208 — offsetHolder length guard)
+- [x] TASK-007: BybitErrorTranslator + BybitTimeSync -> DONE
 
 ### Group 5 (= Wave 5)
 - [ ] TASK-008: Bybit tests + AddBybitExchange DI (closes M-BYBIT) -> PLANNED
@@ -177,7 +177,7 @@ Tasks touching shared Core/Http/DI projects are higher blast radius and REQUIRE 
 - **Manifest**: nazgul/tasks/TASK-006.md
 
 ### TASK-007: BybitErrorTranslator + BybitTimeSync
-- **Status**: IN_REVIEW
+- **Status**: DONE
 - **Group**: 4
 - **Depends on**: TASK-005
 - **Manifest**: nazgul/tasks/TASK-007.md
@@ -278,6 +278,7 @@ Tasks touching shared Core/Http/DI projects are higher blast radius and REQUIRE 
 - TASK-002: BybitSignatureService + signing request marker (DONE) — review gate PASSED round 2 (code-reviewer REJECT@85 → APPROVE@98 after guard fix; architect/security/api APPROVE); commits 5654d93, e9fabc5
 - TASK-003: BybitSigningHandler (DONE) — gate PASSED round 2 (api-reviewer REJECT@95 internal-visibility → APPROVE; architect 97, code, security APPROVE); commits 283bcf0, 60b55e3
 - TASK-005: BybitHttpClient + interface (DONE) — gate PASSED round 2 (code-reviewer REJECT@97 endpoint-guard → APPROVE@100; architect 97, security 95, api 93); commits 2a598c8, fdbf2c5
+- TASK-007: BybitErrorTranslator + BybitTimeSync (DONE) — gate PASSED round 2 (api-reviewer REJECT@95 offsetHolder length-guard → APPROVE@99; architect 93, code 88, security APPROVE); commits c6bfbb3, 456a208
 
 ## Blocked
 <!-- None. -->

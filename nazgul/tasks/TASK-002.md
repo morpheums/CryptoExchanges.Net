@@ -1,6 +1,6 @@
 ---
 id: TASK-002
-status: IMPLEMENTED
+status: DONE
 ---
 
 # TASK-002: BybitSignatureService + signing request marker
@@ -73,3 +73,11 @@ Implement `BybitSignatureService` — HMAC-SHA256 over the Bybit sign-string, **
 
 ## Commits
 - **Commit**: 5654d93 feat(M2): TASK-002 BybitSignatureService + BybitSigningRequest marker
+- **Commit (rework)**: e9fabc5 fix(M2): TASK-002 add input guards to sign-string builders (review round 1)
+
+## Review
+- **Review Gate**: PASSED (round 2)
+- **Reviewers**: architect-reviewer (APPROVE), code-reviewer (round 1 REJECT@85 → round 2 APPROVE@98 after guard fix), security-reviewer (APPROVE), api-reviewer (APPROVE)
+- **Pre-checks**: build 0w/0e, tests 135 passed / 0 failed
+- **Blocking item fixed**: input guards added to `BuildGetSignString`/`BuildPostSignString`.
+- **Non-blocking concerns (below threshold 80, deferred)**: `string`→`long` typing of `timestamp`/`recvWindow`; public static builders leaking signing detail; absence of `ISignatureService` interface — all to be revisited in the OKX credential/signing generalization (TASK-009).

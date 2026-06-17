@@ -12,9 +12,9 @@ Add three new exchange integrations to CryptoExchanges.Net in strict priority or
 
 ## Status Summary
 - Total tasks: 22
-- DONE: 2 | READY: 0 | IN_PROGRESS: 0 | IN_REVIEW: 1 | CHANGES_REQUESTED: 0 | BLOCKED: 0 | PLANNED: 19
-- Current iteration: 2/40
-- Active task: TASK-002 (Wave 2, round-2 review after guard fix); TASK-004 DONE
+- DONE: 3 | READY: 0 | IN_PROGRESS: 0 | IN_REVIEW: 0 | CHANGES_REQUESTED: 0 | BLOCKED: 0 | PLANNED: 19
+- Current iteration: 3/40
+- Active task: none (Wave 2 complete; Wave 3 next: TASK-003, TASK-005)
 
 ## Scoping Decisions (HITL — committed, not open questions)
 The objective is fully prescriptive on scope/sequence/signing; these are the choices made decisively:
@@ -91,7 +91,7 @@ Tasks touching shared Core/Http/DI projects are higher blast radius and REQUIRE 
 - [x] TASK-001: Bybit project scaffold + options + DI seam stub -> DONE
 
 ### Group 2 (= Wave 2)
-- [~] TASK-002: BybitSignatureService + signing request marker -> IN_REVIEW (round 2 after guard fix)
+- [x] TASK-002: BybitSignatureService + signing request marker -> DONE
 - [x] TASK-004: BybitSymbolFormat + value parsers + request validation -> DONE
 
 ### Group 3 (= Wave 3)
@@ -147,7 +147,7 @@ Tasks touching shared Core/Http/DI projects are higher blast radius and REQUIRE 
 - **Manifest**: nazgul/tasks/TASK-001.md
 
 ### TASK-002: BybitSignatureService + signing request marker
-- **Status**: IN_REVIEW
+- **Status**: DONE
 - **Group**: 2
 - **Depends on**: TASK-001
 - **Manifest**: nazgul/tasks/TASK-002.md
@@ -275,13 +275,14 @@ Tasks touching shared Core/Http/DI projects are higher blast radius and REQUIRE 
 ## Completed
 - TASK-001: Bybit project scaffold + options + DI seam stub (DONE) — review gate PASSED (architect 98, code 72, security 97, api 97); commit c782aed
 - TASK-004: BybitSymbolFormat + value parsers + request validation (DONE) — review gate PASSED round 1 (architect APPROVE, code 82, security 91, api APPROVE); commit c1007cd
+- TASK-002: BybitSignatureService + signing request marker (DONE) — review gate PASSED round 2 (code-reviewer REJECT@85 → APPROVE@98 after guard fix; architect/security/api APPROVE); commits 5654d93, e9fabc5
 
 ## Blocked
 <!-- None. -->
 
 ## Recovery Pointer
-- **Current Task:** none (Wave 1 complete; starting Wave 2)
-- **Last Action:** TASK-001 review gate PASSED (all 4 reviewers APPROVE); state reconciled to DONE
-- **Next Action:** Begin Wave 2 — TASK-002 (BybitSignatureService + signing marker) and TASK-004 (BybitSymbolFormat + parsers), both depend only on TASK-001 (DONE)
+- **Current Task:** none (Wave 2 complete — TASK-002 + TASK-004 DONE; starting Wave 3)
+- **Last Action:** TASK-002 review gate PASSED round 2 (code-reviewer APPROVE@98 after guard fix); marked DONE
+- **Next Action:** Begin Wave 3 — TASK-003 (BybitSigningHandler ← TASK-002) and TASK-005 (BybitHttpClient + IBybitHttpClient ← TASK-004), independent files, run in parallel
 - **Last Checkpoint:** nazgul/checkpoints/iteration-001.json
-- **Last Commit:** fed8927 chore(M2): TASK-001 update Recovery Pointer with commit SHA
+- **Last Commit:** 6963b0c chore(M2): TASK-004 DONE (gate passed); record TASK-002 round-1 feedback

@@ -27,6 +27,7 @@ internal sealed class BybitHttpClient(HttpClient httpClient) : IBybitHttpClient
         string endpoint, Dictionary<string, string>? parameters = null,
         bool signed = false, CancellationToken ct = default)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(endpoint);
         using var request = new HttpRequestMessage(HttpMethod.Get, BuildUrl(endpoint, parameters));
         if (signed) BybitSigningRequest.MarkSigned(request);
         using var response = await httpClient.SendAsync(request, ct).ConfigureAwait(false);
@@ -38,6 +39,7 @@ internal sealed class BybitHttpClient(HttpClient httpClient) : IBybitHttpClient
         string endpoint, Dictionary<string, string>? parameters = null,
         bool signed = true, CancellationToken ct = default)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(endpoint);
         // Bybit V5 POST is JSON-bodied; the signing handler signs the exact raw body string it
         // reads back, so the serialized JSON must be the wire body verbatim.
         var json = JsonSerializer.Serialize(parameters ?? [], JsonOptions);
@@ -53,6 +55,7 @@ internal sealed class BybitHttpClient(HttpClient httpClient) : IBybitHttpClient
         string endpoint, Dictionary<string, string>? parameters = null,
         bool signed = true, CancellationToken ct = default)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(endpoint);
         using var request = new HttpRequestMessage(HttpMethod.Delete, BuildUrl(endpoint, parameters));
         if (signed) BybitSigningRequest.MarkSigned(request);
         using var response = await httpClient.SendAsync(request, ct).ConfigureAwait(false);

@@ -58,5 +58,12 @@ Implement `IBybitHttpClient` and `BybitHttpClient` (internal HTTP wrapper: `GetA
 - `dotnet build CryptoExchanges.Net.sln` → `Build succeeded. 0 Warning(s) 0 Error(s)`.
 - No tests added (per scope; tests arrive in TASK-008). Did not commit.
 
+## Rework (review round 1)
+- **Blocking** (code-reviewer REJECT@97): added `ArgumentException.ThrowIfNullOrWhiteSpace(endpoint)` as the first statement of `GetAsync`, `PostAsync`, and `DeleteAsync`. Strictly improves on the Binance reference (which lacks the guard).
+- **Non-blocking deferred**: N1 double-dispose (mirrors Binance, idempotent); N2 single JsonOptions for ser/deser (no effect on current Dictionary body — documented footgun for a future nullable POST type); N3 `GetStringAsync` omitted (revisit in TASK-006 if klines need raw-string reads). Recorded, not blocking.
+- **Cross-module follow-up (tracked)**: back-fill the `endpoint` guard into `BinanceHttpClient` for consistency (out of scope for TASK-005).
+- Build + tests after rework: 0w/0e; 135 tests pass.
+
 ## Commits
 - **Commit**: 2a598c8 feat(M2): TASK-005 BybitHttpClient + IBybitHttpClient (JSON-body POST)
+- **Commit (rework)**: pending

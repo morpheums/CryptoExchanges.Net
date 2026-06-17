@@ -10,6 +10,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\CryptoExchanges.Net.Core\CryptoExchanges.Net.Core.csproj" />
+    <ProjectReference Include="..\CryptoExchanges.Net.Http\CryptoExchanges.Net.Http.csproj" />
   </ItemGroup>
 
   <ItemGroup>

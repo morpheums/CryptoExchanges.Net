@@ -283,4 +283,4 @@ Tasks touching shared Core/Http/DI projects are higher blast radius and REQUIRE 
 - **Last Action:** Bybit scaffold created (csproj, GlobalUsings, BybitOptions) + sln updated; build 0 warnings/0 errors
 - **Next Action:** Review Gate for TASK-001; then Wave 2 (TASK-002, TASK-004)
 - **Last Checkpoint:** nazgul/checkpoints/iteration-001.json
-- **Last Commit:** (pending commit)
+- **Last Commit:** c782aed feat(M2): TASK-001 scaffold CryptoExchanges.Net.Bybit project + BybitOptions

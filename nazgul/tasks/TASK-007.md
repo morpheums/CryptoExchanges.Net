@@ -114,3 +114,8 @@ offset. Null-guards the holder.
 - **Reviewers**: architect-reviewer (APPROVE/93), code-reviewer (APPROVE/88), security-reviewer (APPROVE), api-reviewer (round 1 REJECT@95 → round 2 APPROVE@99 after offsetHolder length guard)
 - **Pre-checks**: build 0w/0e, tests 135 passed / 0 failed
 - **Deferred non-blocking**: scope ApplyOffset internal (manifest justifies public for TASK-008 testability); CS1591 suppression tech-debt.
+
+## Post-merge-review fix (PR #11, GitHub Copilot reviewer)
+- **Finding (verified real)**: `BybitErrorTranslator.Parse` called `m.GetString()` on `retMsg` without a ValueKind guard. `JsonElement.GetString()` throws `InvalidOperationException` (NOT `JsonException`) for a non-string retMsg (number/object/array/bool), which would escape the `catch (JsonException)` and crash the resilience pipeline on a malformed Bybit body. The sibling `retCode` parse was already ValueKind-guarded — asymmetry the 4-reviewer board missed.
+- **Fix**: guard `m.ValueKind == JsonValueKind.String` before `GetString()` (null/non-string → null msg, already handled downstream). Added 3 regression theory cases (retMsg as number/object/null → no throw, still classified by retCode). Bybit unit tests 77 → 80; full build 0w/0e, all pass.
+- **Commit**: (see fix commit below)

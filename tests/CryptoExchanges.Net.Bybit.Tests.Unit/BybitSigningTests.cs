@@ -321,4 +321,17 @@ public class BybitSigningTests
     public void ErrorTranslator_NonJsonBody_FallsBackToApiException()
         => Translate(HttpStatusCode.BadGateway, "<html>502</html>")
             .Should().BeOfType<ExchangeApiException>();
+
+    [Theory]
+    [InlineData("{\"retCode\":10003,\"retMsg\":12345}")]   // retMsg as a number
+    [InlineData("{\"retCode\":10003,\"retMsg\":{\"x\":1}}")] // retMsg as an object
+    [InlineData("{\"retCode\":10003,\"retMsg\":null}")]      // retMsg null
+    public void ErrorTranslator_NonStringRetMsg_DoesNotThrow(string body)
+    {
+        // JsonElement.GetString() throws InvalidOperationException (not JsonException) for a
+        // non-string retMsg; the translator must guard ValueKind and still classify by retCode.
+        var act = () => Translate(HttpStatusCode.OK, body);
+        act.Should().NotThrow();
+        Translate(HttpStatusCode.OK, body).Should().BeOfType<AuthenticationException>();
+    }
 }

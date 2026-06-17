@@ -58,7 +58,11 @@ public sealed class BybitErrorTranslator : IExchangeErrorTranslator
             var root = doc.RootElement;
             int? code = root.TryGetProperty("retCode", out var c) && c.ValueKind == JsonValueKind.Number
                 ? c.GetInt32() : null;
-            string? msg = root.TryGetProperty("retMsg", out var m) ? m.GetString() : null;
+            // Guard ValueKind before GetString(): JsonElement.GetString() throws
+            // InvalidOperationException (not JsonException) for a non-string retMsg, which would
+            // otherwise escape the catch below and crash the resilience pipeline on a malformed body.
+            string? msg = root.TryGetProperty("retMsg", out var m) && m.ValueKind == JsonValueKind.String
+                ? m.GetString() : null;
             return (code, msg);
         }
         catch (JsonException)

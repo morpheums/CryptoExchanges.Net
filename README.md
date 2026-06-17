@@ -94,9 +94,16 @@ builder.Services.AddCryptoExchanges(cfg =>
   }
 }
 
-// Inject anywhere
-app.MapGet("/btc", async (IExchangeClient ex) =>
-    await ex.MarketData.GetPriceAsync(new Symbol(Asset.Btc, Asset.Usdt)));
+// Inject the exchange-agnostic factory and resolve by ExchangeId
+app.MapGet("/btc", async (IExchangeClientFactory factory) =>
+{
+    var ex = factory.GetClient(ExchangeId.Binance);
+    return await ex.MarketData.GetPriceAsync(new Symbol(Asset.Btc, Asset.Usdt));
+});
+
+// ...or inject a specific exchange directly via its key
+app.MapGet("/eth", async ([FromKeyedServices(ExchangeId.Binance)] IExchangeClient ex) =>
+    await ex.MarketData.GetPriceAsync(new Symbol(Asset.Eth, Asset.Usdt)));
 ```
 
 ## Supported Operations

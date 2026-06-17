@@ -16,6 +16,9 @@
   <ItemGroup>
     <!-- Allow the test assembly to unit-test internal DTOs and mapping profiles. -->
     <InternalsVisibleTo Include="CryptoExchanges.Net.Binance.Tests.Integration" />
+    <!-- Allow the DI package to wire internal types (IBinanceHttpClient, BinanceHttpClient,
+         BinanceClientComposer, handlers, signing/translator) into the container. -->
+    <InternalsVisibleTo Include="CryptoExchanges.Net.DependencyInjection" />
   </ItemGroup>
 
   <ItemGroup>

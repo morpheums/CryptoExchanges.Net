@@ -1,5 +1,6 @@
 using System.Text.Json.Serialization;
 using CryptoExchanges.Net.Binance.Internal;
+using CryptoExchanges.Net.Core.Interfaces;
 using DeltaMapper;
 
 namespace CryptoExchanges.Net.Binance.Services;
@@ -60,7 +61,7 @@ internal sealed record BinanceTradeHistoryResponse
 /// <summary>
 /// Binance implementation of <see cref="IAccountService"/>.
 /// </summary>
-internal sealed class BinanceAccountService(BinanceHttpClient http, BinanceSymbolMapper mapper, IMapper modelMapper) : IAccountService
+internal sealed class BinanceAccountService(IBinanceHttpClient http, ISymbolMapper mapper, IMapper modelMapper) : IAccountService
 {
     /// <inheritdoc />
     public async Task<IReadOnlyList<AssetBalance>> GetBalancesAsync(CancellationToken ct = default)

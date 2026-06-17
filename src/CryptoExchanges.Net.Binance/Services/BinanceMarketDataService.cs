@@ -1,5 +1,6 @@
 using System.Text.Json.Serialization;
 using CryptoExchanges.Net.Binance.Internal;
+using CryptoExchanges.Net.Core.Interfaces;
 using DeltaMapper;
 
 namespace CryptoExchanges.Net.Binance.Services;
@@ -131,7 +132,7 @@ internal sealed record BinanceRateLimit
 /// <summary>
 /// Binance implementation of <see cref="IMarketDataService"/>.
 /// </summary>
-internal sealed class BinanceMarketDataService(BinanceHttpClient http, BinanceSymbolMapper mapper, IMapper modelMapper) : IMarketDataService
+internal sealed class BinanceMarketDataService(IBinanceHttpClient http, ISymbolMapper mapper, IMapper modelMapper) : IMarketDataService
 {
     // Lazily-fetched, cached snapshot of the supported symbol set, used only by the opt-in
     // IsSupportedAsync / ResolveSymbolAsync validation methods. Lazy<Task<>> guarantees the
@@ -302,7 +303,7 @@ internal sealed class BinanceMarketDataService(BinanceHttpClient http, BinanceSy
         var symbols = modelMapper.Map<BinanceSymbolInfo, SymbolInfo>(representable);
 
         // Populate the mapper's wire->Symbol lookup table from the freshly fetched symbols.
-        mapper.Update(symbols);
+        mapper.UpdateSymbols(symbols);
 
         var rateLimits = response.RateLimits.Select(r =>
             new RateLimit(MapRateLimitType(r.RateLimitType), MapRateLimitInterval(r.Interval), r.Limit)

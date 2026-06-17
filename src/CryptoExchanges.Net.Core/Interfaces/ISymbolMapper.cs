@@ -18,4 +18,8 @@ public interface ISymbolMapper
 
     /// <summary>Builds a <see cref="Symbol"/> from explicit base/quote ticker strings.</summary>
     Symbol FromComponents(string baseAsset, string quoteAsset);
+
+    /// <summary>Warms the wire→<see cref="Symbol"/> resolution table from the exchange's symbol list.</summary>
+    /// <param name="symbols">The exchange's known symbols (e.g. from exchangeInfo).</param>
+    void UpdateSymbols(IEnumerable<SymbolInfo> symbols);
 }

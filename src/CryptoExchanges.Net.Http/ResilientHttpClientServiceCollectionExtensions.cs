@@ -26,10 +26,41 @@ public static class ResilientHttpClientServiceCollectionExtensions
         ArgumentNullException.ThrowIfNull(gateFactory);
 
         var builder = services.AddHttpClient(name);
+        return builder.ApplyResiliencePipeline(
+            name, options, translatorFactory, gateFactory, requestFinalizerFactory);
+    }
+
+    /// <summary>
+    /// Applies the shared resilience handler chain to an already-created <see cref="IHttpClientBuilder"/>
+    /// (named OR typed). This is the single source of truth for the DI handler order, mirroring
+    /// <c>HttpClientPipelineBuilder.Build</c> exactly (outer→inner):
+    /// throttle → exhaustion-mapping → Polly(retry/timeout) → [optional request finalizer] →
+    /// error-translation → primary transport.
+    /// </summary>
+    /// <param name="builder">The HTTP client builder to augment.</param>
+    /// <param name="pipelineName">A unique name for the Polly resilience handler.</param>
+    /// <param name="options">The resilience configuration.</param>
+    /// <param name="translatorFactory">Factory for the per-exchange error translator.</param>
+    /// <param name="gateFactory">Factory for the per-exchange rate-limit gate.</param>
+    /// <param name="requestFinalizerFactory">Optional factory for a request finalizer (e.g. signing).</param>
+    /// <returns>The same <paramref name="builder"/> for chaining.</returns>
+    public static IHttpClientBuilder ApplyResiliencePipeline(
+        this IHttpClientBuilder builder,
+        string pipelineName,
+        ResilienceOptions options,
+        Func<IServiceProvider, IExchangeErrorTranslator> translatorFactory,
+        Func<IServiceProvider, IRateLimitGate> gateFactory,
+        Func<IServiceProvider, DelegatingHandler>? requestFinalizerFactory = null)
+    {
+        ArgumentNullException.ThrowIfNull(builder);
+        ArgumentException.ThrowIfNullOrWhiteSpace(pipelineName);
+        ArgumentNullException.ThrowIfNull(options);
+        ArgumentNullException.ThrowIfNull(translatorFactory);
+        ArgumentNullException.ThrowIfNull(gateFactory);
 
         builder.AddHttpMessageHandler(sp => new RateLimitThrottleHandler(gateFactory(sp)));
         builder.AddHttpMessageHandler(_ => new TransientExhaustionHandler());
-        builder.AddResilienceHandler(name + "-pipeline",
+        builder.AddResilienceHandler(pipelineName + "-pipeline",
             b => ExchangeResiliencePipeline.Configure(b, options));
         if (requestFinalizerFactory is not null)
             builder.AddHttpMessageHandler(requestFinalizerFactory);

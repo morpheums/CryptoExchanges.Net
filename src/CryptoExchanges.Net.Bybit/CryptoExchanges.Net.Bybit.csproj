@@ -14,8 +14,12 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!-- Allow the test assembly to unit-test internal DTOs and mapping profiles. -->
+    <!-- Allow the test assemblies to unit-test internal DTOs, mapping profiles, signing,
+         services, value parsers, request validation, symbol format, and the composer. -->
+    <InternalsVisibleTo Include="CryptoExchanges.Net.Bybit.Tests.Unit" />
     <InternalsVisibleTo Include="CryptoExchanges.Net.Bybit.Tests.Integration" />
+    <!-- Lets NSubstitute (Castle DynamicProxy) mock the internal IBybitHttpClient in tests. -->
+    <InternalsVisibleTo Include="DynamicProxyGenAssembly2" />
     <!-- Allow the DI package to wire internal types (IBybitHttpClient, BybitHttpClient,
          BybitClientComposer, handlers, signing/translator) into the container. -->
     <InternalsVisibleTo Include="CryptoExchanges.Net.DependencyInjection" />

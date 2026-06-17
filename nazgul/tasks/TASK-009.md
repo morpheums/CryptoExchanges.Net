@@ -1,6 +1,6 @@
 ---
 id: TASK-009
-status: IN_PROGRESS
+status: IMPLEMENTED
 ---
 
 # TASK-009: OKX-era credential/signing generalization (Core/Http)
@@ -46,3 +46,31 @@ This task is deliberately small and Binance-safe: existing `BinanceSignatureServ
 
 ## Test Requirements
 - Core unit tests: hex output equals Binance's for shared vectors; base64 output matches an independent reference; `ExchangeCredentials` carries/omits passphrase correctly. Add to `CryptoExchanges.Net.Core.Tests.Unit`.
+
+## Implementation Notes
+
+### Created
+- `src/CryptoExchanges.Net.Core/Auth/ExchangeCredentials.cs` — public `sealed record ExchangeCredentials`.
+- `src/CryptoExchanges.Net.Core/Auth/SignatureEncoding.cs` — public `enum SignatureEncoding { Hex, Base64 }` + public `static class HmacSignature`.
+- `tests/CryptoExchanges.Net.Core.Tests.Unit/AuthTests.cs` — 24 new Core unit tests (`HmacSignatureTests`, `ExchangeCredentialsTests`).
+
+### API shape
+- `ExchangeCredentials(string apiKey, string secretKey, string? passphrase = null)` with `ApiKey`, `SecretKey`, `Passphrase` (nullable) and convenience `bool HasPassphrase`. Guards: `ArgumentException.ThrowIfNullOrWhiteSpace` on apiKey/secretKey; passphrase, when non-null, must also be non-whitespace (null is the valid "absent" state for Binance/Bybit).
+- `HmacSignature.Compute(string secret, string payload, SignatureEncoding encoding) -> string`. Single HMAC-SHA256 primitive; switches on encoding to `Convert.ToHexStringLower` or `Convert.ToBase64String`. Guards secret/payload via `ThrowIfNullOrWhiteSpace`; undefined enum -> `ArgumentOutOfRangeException`.
+
+### SignatureEncoding design choice (and why)
+Chose an **enum + static `HmacSignature.Compute`** over per-method `SignHex`/`SignBase64` so there is exactly ONE HMAC primitive and the output form is a first-class, named parameter that per-exchange signature services pass through (Binance/Bybit -> `Hex`, OKX/Bitget -> `Base64`). This keeps the hash uncopied and makes the hex/base64 difference the only axis of variation, matching the research note ("base64-vs-hex output" as a pluggable knob). Kept it a static helper (no instance state, no global mutable state) mirroring how the existing services hold only the immutable secret.
+
+### ToString redaction approach
+`ExchangeCredentials.ToString()` is overridden to fully replace the record's synthesized printer (so the auto-generated `PrintMembers` — which would emit every property including the secret — is never reached). Output: `ExchangeCredentials { ApiKey = ****<last4>, SecretKey = [REDACTED], Passphrase = [REDACTED]|(none) }`. SecretKey and Passphrase values are never rendered; ApiKey is masked to its last four chars (fully `****` when <= 4 chars). Documented in XML remarks referencing ADR-001.
+
+### Http seam confirmation (no change needed)
+Read `src/CryptoExchanges.Net.Http/ResilientHttpClientServiceCollectionExtensions.cs`. The `requestFinalizerFactory: Func<IServiceProvider, DelegatingHandler>?` is exchange-agnostic and already inserts an arbitrary signing handler into the pipeline (Bybit's header-based `X-BAPI-SIGN` signer uses exactly this seam today). A base64 + passphrase + header signer for OKX needs no new Http code — it is just another `DelegatingHandler` supplied through the same factory. No Http file was modified.
+
+### hex == Binance verification
+`HmacSignature.Compute("secret", "hello", Hex)` returns `88aab3ede8d3adf94d26ab90d3bafd4a2083070c3bcce9c014ee04a443847c0b` — the exact pinned vector asserted by the existing Binance and Bybit signing tests (`HMAC-SHA256("hello", key="secret")`), and independently re-derived in-test via `HMACSHA256.HashData(...) + Convert.ToHexStringLower` (the identical primitive `BinanceSignatureService.Sign` uses). Base64 of the same hash is pinned to `iKqz7ejTrflNJquQ07r9SiCDBww7zOnAFO4EpEOEfAs=` (independently computed) and asserted to share the same underlying bytes as the hex output. (Core tests cannot reference `BinanceSignatureService` — Core.Tests.Unit references Core only — so equality is proven against the shared pinned vector + the raw primitive rather than by constructing the Binance type.)
+
+### Verification output
+- `dotnet build CryptoExchanges.Net.sln` -> Build succeeded, 0 Warning(s), 0 Error(s).
+- `dotnet test --filter 'Category!=Integration'` -> all pass: Core 92 (was 68; +24), Http 12, DI.Unit 10, Bybit.Unit 80, Binance.Integration 45 (untagged, ran and passed -> Binance non-breaking confirmed).
+- `git status` (excluding bin/obj) shows ONLY `src/CryptoExchanges.Net.Core/Auth/` + `tests/CryptoExchanges.Net.Core.Tests.Unit/AuthTests.cs` — no Binance/Bybit/Http/DI source touched.

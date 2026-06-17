@@ -122,7 +122,7 @@ internal sealed class BybitTradingService(IBybitHttpClient http, ISymbolMapper m
 
         var response = await http.PostAsync<BybitResponse<BybitOrderAck>>("/v5/order/create", parameters, true, ct).ConfigureAwait(false);
         var orderId = response.Result?.OrderId ?? string.Empty;
-        return await FetchOrderAsync(wireSymbol, orderId, ct).ConfigureAwait(false);
+        return await FetchOrderAsync(wireSymbol, orderId, ct, orderLinkId: request.ClientOrderId).ConfigureAwait(false);
     }
 
     /// <inheritdoc />
@@ -154,7 +154,7 @@ internal sealed class BybitTradingService(IBybitHttpClient http, ISymbolMapper m
 
         var response = await http.PostAsync<BybitResponse<BybitOrderAck>>("/v5/order/cancel", parameters, true, ct).ConfigureAwait(false);
         var canceledId = response.Result?.OrderId ?? string.Empty;
-        return await FetchOrderAsync(wireSymbol, canceledId, ct).ConfigureAwait(false);
+        return await FetchOrderAsync(wireSymbol, canceledId, ct, orderLinkId: clientOrderId).ConfigureAwait(false);
     }
 
     /// <inheritdoc />
@@ -202,13 +202,16 @@ internal sealed class BybitTradingService(IBybitHttpClient http, ISymbolMapper m
         DateTimeOffset? endTime = null,
         CancellationToken ct = default)
     {
-        BybitRequestValidation.ValidateHistoryWindow(limit, startTime, endTime);
+        // The IExchangeClient default (500) exceeds Bybit V5's per-call max (50); clamp rather than
+        // throw so the common default-parameter call path succeeds. A value < 1 still fails validation.
+        var effectiveLimit = Math.Min(limit, BybitRequestValidation.MaxHistoryLimit);
+        BybitRequestValidation.ValidateHistoryWindow(effectiveLimit, startTime, endTime);
 
         var parameters = new Dictionary<string, string>
         {
             ["category"] = SpotCategory,
             ["symbol"] = mapper.ToWire(symbol),
-            ["limit"] = limit.ToString()
+            ["limit"] = effectiveLimit.ToString()
         };
 
         if (startTime.HasValue)
@@ -228,14 +231,20 @@ internal sealed class BybitTradingService(IBybitHttpClient http, ISymbolMapper m
     /// carry only the id, so we query <c>/v5/order/realtime</c> (open/recently-closed orders) first
     /// and fall back to <c>/v5/order/history</c> for orders that have already left the realtime set.
     /// </summary>
-    private async Task<Order> FetchOrderAsync(string wireSymbol, string orderId, CancellationToken ct)
+    private async Task<Order> FetchOrderAsync(
+        string wireSymbol, string orderId, CancellationToken ct, string? orderLinkId = null)
     {
+        // Some V5 ACKs (notably cancel-by-linkId) omit orderId; fall back to querying by orderLinkId
+        // so the re-fetch resolves the same order instead of sending an empty orderId to Bybit.
         var parameters = new Dictionary<string, string>
         {
             ["category"] = SpotCategory,
-            ["symbol"] = wireSymbol,
-            ["orderId"] = orderId
+            ["symbol"] = wireSymbol
         };
+        if (!string.IsNullOrEmpty(orderId))
+            parameters["orderId"] = orderId;
+        else if (!string.IsNullOrEmpty(orderLinkId))
+            parameters["orderLinkId"] = orderLinkId;
 
         var realtime = await http.GetAsync<BybitResponse<BybitListResult<BybitOrder>>>("/v5/order/realtime", parameters, true, ct).ConfigureAwait(false);
         var match = realtime.Result?.List.FirstOrDefault();
@@ -247,9 +256,10 @@ internal sealed class BybitTradingService(IBybitHttpClient http, ISymbolMapper m
         if (match is not null)
             return modelMapper.Map<BybitOrder, Order>(match);
 
-        // Neither endpoint surfaced the order; return a minimal record so callers still get the id
-        // they need (e.g. to poll later) rather than a null/throw on an otherwise-successful action.
-        return new Order(mapper.FromWire(wireSymbol), orderId);
+        // Neither endpoint surfaced the order; return a minimal record carrying whichever identifier
+        // we have (never empty) so callers still get an id to poll later rather than a null/throw.
+        var fallbackId = !string.IsNullOrEmpty(orderId) ? orderId : (orderLinkId ?? string.Empty);
+        return new Order(mapper.FromWire(wireSymbol), fallbackId);
     }
 
     // ── Request-direction mapping helpers ──

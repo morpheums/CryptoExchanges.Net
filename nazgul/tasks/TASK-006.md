@@ -97,5 +97,14 @@ Implement the three services (`BybitMarketDataService`, `BybitTradingService`, `
 - API surface confirmed: only `BybitExchangeClient` + `BybitOptions` are public among the created files (the 3 public resilience helpers `BybitErrorTranslator`/`BybitSigningRequest`/`BybitTimeSync` predate this task and mirror Binance's public posture).
 - `MapperConfiguration.AssertConfigurationIsValid()` invoked in `CreateMapper` (fails fast on a misconfigured profile).
 
+## Rework (review round 1)
+Both api-reviewer (CHANGES_REQUESTED@95) and code-reviewer (CHANGES_REQUESTED@95) blocked; architect (APPROVE@88) and security (APPROVE@95) passed.
+
+- **Blocking #1** (api @95 + code @98): `GetOrderHistoryAsync` / `GetTradeHistoryAsync` declared `limit=500` (IExchangeClient default) but `ValidateHistoryWindow` throws for >50 — every default-param caller crashed (LSP violation). **Fix**: clamp `effectiveLimit = Math.Min(limit, MaxHistoryLimit)` before validation + in the query, in both services. A value <1 still fails validation (genuine caller error).
+- **Blocking #2** (code @88): `CancelOrderByClientIdAsync` fell back to `orderId = string.Empty` when the cancel-by-linkId ACK omits orderId → `FetchOrderAsync` queried `orderId=""` and the last-resort built `Order(symbol, "")`. **Fix**: overloaded `FetchOrderAsync(..., string? orderLinkId = null)` — when orderId is empty it queries by `orderLinkId` and the last-resort `Order` carries that id (never empty). Wired `CancelOrderByClientIdAsync` to pass `orderLinkId: clientOrderId`. Also hardened the create path symmetrically (`orderLinkId: request.ClientOrderId`) against the same latent twin bug.
+- **Non-blocking deferred**: manual construction of OrderBook/Trade/Candlestick in services (not via DeltaMapper profile) — consistent with the Binance precedent (Binance intentionally excludes Trade from its profile); the mandate wording is stricter than practice. Recorded; reconcile in docs. `DisposeAsync` could be `ValueTask.CompletedTask` (matches Binance). `BybitOptions` ToString redaction + api-key-on-unsigned (security @65/@72, mirror Binance). InternalsVisibleTo for TASK-008 unit test project name — already tracked.
+- Build + tests after rework: 0w/0e; 135 tests pass.
+
 ## Commits
 - **Commit**: 057d6d2 feat(M2): TASK-006 Bybit services + DeltaMapper profiles + composer + ExchangeClient
+- **Commit (rework)**: pending

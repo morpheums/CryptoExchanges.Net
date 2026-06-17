@@ -111,13 +111,16 @@ internal sealed class BybitAccountService(IBybitHttpClient http, ISymbolMapper m
         DateTimeOffset? endTime = null,
         CancellationToken ct = default)
     {
-        BybitRequestValidation.ValidateHistoryWindow(limit, startTime, endTime);
+        // The IExchangeClient default (500) exceeds Bybit V5's per-call max (50); clamp rather than
+        // throw so the common default-parameter call path succeeds. A value < 1 still fails validation.
+        var effectiveLimit = Math.Min(limit, BybitRequestValidation.MaxHistoryLimit);
+        BybitRequestValidation.ValidateHistoryWindow(effectiveLimit, startTime, endTime);
 
         var parameters = new Dictionary<string, string>
         {
             ["category"] = SpotCategory,
             ["symbol"] = mapper.ToWire(symbol),
-            ["limit"] = limit.ToString()
+            ["limit"] = effectiveLimit.ToString()
         };
 
         if (startTime.HasValue)

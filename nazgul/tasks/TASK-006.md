@@ -1,6 +1,6 @@
 ---
 id: TASK-006
-status: IMPLEMENTED
+status: DONE
 ---
 
 # TASK-006: Bybit services + mapping + composer + ExchangeClient
@@ -108,3 +108,9 @@ Both api-reviewer (CHANGES_REQUESTED@95) and code-reviewer (CHANGES_REQUESTED@95
 ## Commits
 - **Commit**: 057d6d2 feat(M2): TASK-006 Bybit services + DeltaMapper profiles + composer + ExchangeClient
 - **Commit (rework)**: 48fb17b fix(M2): TASK-006 clamp history limit + fix cancel-by-clientId order id
+
+## Review
+- **Review Gate**: PASSED (round 2)
+- **Reviewers**: architect-reviewer (APPROVE/88), security-reviewer (APPROVE/95 — signed/unsigned classification + secret handling confirmed clean), api-reviewer (round 1 REJECT@95 limit → round 2 APPROVE@98), code-reviewer (round 1 REJECT@95 ×2 → round 2 APPROVE)
+- **Pre-checks**: build 0w/0e, tests 135 passed / 0 failed
+- **Deferred non-blocking**: manual OrderBook/Trade/Candlestick construction (Binance-consistent); DisposeAsync ValueTask; BybitOptions ToString redaction; api-key on unsigned (mirrors Binance). TASK-008: verify unit-test project name is in InternalsVisibleTo.

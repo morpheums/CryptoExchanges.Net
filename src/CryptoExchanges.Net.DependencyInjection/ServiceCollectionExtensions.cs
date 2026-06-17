@@ -38,6 +38,8 @@ public static class ServiceCollectionExtensions
     {
         ArgumentNullException.ThrowIfNull(services);
 
+        services.TryAddSingleton<IExchangeClientFactory, ExchangeClientFactory>();
+
         services.AddOptions<BinanceOptions>()
             .Configure(ApplyEnvDefaults)
             .Configure(o => configure?.Invoke(o))

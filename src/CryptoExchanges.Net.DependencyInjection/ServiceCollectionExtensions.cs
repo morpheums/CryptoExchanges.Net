@@ -1,7 +1,16 @@
 using CryptoExchanges.Net.Binance;
+using CryptoExchanges.Net.Binance.Auth;
+using CryptoExchanges.Net.Binance.Internal;
+using CryptoExchanges.Net.Binance.Resilience;
+using CryptoExchanges.Net.Core;
 using CryptoExchanges.Net.Core.Enums;
 using CryptoExchanges.Net.Core.Interfaces;
+using CryptoExchanges.Net.Core.Resilience;
+using CryptoExchanges.Net.Http;
+using DeltaMapper;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Options;
 
 namespace CryptoExchanges.Net.DependencyInjection;
 
@@ -12,7 +21,9 @@ namespace CryptoExchanges.Net.DependencyInjection;
 public static class ServiceCollectionExtensions
 {
     /// <summary>
-    /// Registers the Binance exchange client and all its dependencies.
+    /// Registers the Binance exchange client and all its dependencies as per-exchange keyed singletons,
+    /// backed by a typed <see cref="System.Net.Http.HttpClient"/> with the full resilience handler chain.
+    /// Options are validated with fail-fast (<c>ValidateOnStart</c>).
     /// </summary>
     /// <param name="services">The <see cref="IServiceCollection"/> to add services to.</param>
     /// <param name="configure">An action to configure <see cref="BinanceOptions"/>.</param>
@@ -23,35 +34,78 @@ public static class ServiceCollectionExtensions
     {
         ArgumentNullException.ThrowIfNull(services);
 
-        var options = new BinanceOptions();
+        services.AddOptions<BinanceOptions>()
+            .Configure(ApplyEnvDefaults)
+            .Configure(o => configure?.Invoke(o))
+            .Validate(o => o.TimeoutSeconds > 0, "BinanceOptions.TimeoutSeconds must be > 0.")
+            .Validate(o => !string.IsNullOrWhiteSpace(o.BaseUrl), "BinanceOptions.BaseUrl is required.")
+            .ValidateOnStart();
 
-        // Apply environment variables as defaults
-        var envApiKey = Environment.GetEnvironmentVariable("BINANCE_API_KEY");
-        var envSecretKey = Environment.GetEnvironmentVariable("BINANCE_SECRET_KEY");
+        services.TryAddSingleton(sp => sp.GetRequiredService<IOptions<BinanceOptions>>().Value);
 
-        if (!string.IsNullOrEmpty(envApiKey))
-            options.ApiKey = envApiKey;
-        if (!string.IsNullOrEmpty(envSecretKey))
-            options.SecretKey = envSecretKey;
+        // Shared clock-skew offset holder (single-element array so the signing handler's closure and
+        // SyncServerTimeAsync read/write the SAME instance). One per exchange registration.
+        // CA1861: this must be a FRESH mutable instance per registration (not a shared static field),
+        // and the factory runs once for the singleton — so the "constant array" rule doesn't apply.
+#pragma warning disable CA1861
+        services.TryAddKeyedSingleton(ExchangeId.Binance, (_, _) => new long[] { 0L });
+#pragma warning restore CA1861
+        services.TryAddKeyedSingleton<ISymbolMapper>(ExchangeId.Binance,
+            (_, _) => new SymbolMapper(BinanceSymbolFormat.Instance));
+        services.TryAddKeyedSingleton<IMapper>(ExchangeId.Binance, (sp, _) =>
+            BinanceClientComposer.CreateMapper(sp.GetRequiredKeyedService<ISymbolMapper>(ExchangeId.Binance)));
 
-        configure?.Invoke(options);
+        var http = services.AddHttpClient<IBinanceHttpClient, BinanceHttpClient>((sp, c) =>
+            {
+                var o = sp.GetRequiredService<BinanceOptions>();
+                c.BaseAddress = new Uri(o.BaseUrl.TrimEnd('/'));
+                c.Timeout = TimeSpan.FromSeconds(o.TimeoutSeconds);
+                c.DefaultRequestHeaders.Add("User-Agent", "CryptoExchanges.Net/0.1.0");
+                if (!string.IsNullOrEmpty(o.ApiKey))
+                    c.DefaultRequestHeaders.Add("X-MBX-APIKEY", o.ApiKey);
+            })
+            .ConfigurePrimaryHttpMessageHandler(() =>
+                new SocketsHttpHandler { PooledConnectionLifetime = TimeSpan.FromMinutes(2) });
 
-        // Register the options instance
-        services.AddSingleton(options);
+        // Handler chain — applied via the Http project's shared seam so the DI path and the
+        // container-free Create() path (HttpClientPipelineBuilder.Build) compose the SAME effective
+        // pipeline. Order (outer→inner): throttle → exhaustion-mapping → Polly(retry/timeout) →
+        // request-finalizer(signing) → error-translation → primary transport.
+        //
+        // The finalizer is ALWAYS registered: options are only final at resolution time, so the
+        // no-secret gate is decided then — a secretless client gets a no-op PassThroughHandler instead
+        // of a BinanceSigningHandler (mirrors Create(), where signing is null when SecretKey is empty).
+        http.ApplyResiliencePipeline(
+            "binance",
+            new ResilienceOptions { UsageHeaderName = "X-MBX-USED-WEIGHT-1m" },
+            translatorFactory: _ => new BinanceErrorTranslator(),
+            gateFactory: _ => new ReactiveRateLimitGate(),
+            requestFinalizerFactory: sp =>
+            {
+                var o = sp.GetRequiredService<BinanceOptions>();
+                if (string.IsNullOrEmpty(o.SecretKey))
+                    return new PassThroughHandler();
+                var holder = sp.GetRequiredKeyedService<long[]>(ExchangeId.Binance);
+                return new BinanceSigningHandler(o.ApiKey, new BinanceSignatureService(o.SecretKey),
+                    () => Interlocked.Read(ref holder[0]));
+            });
 
-        // Register the exchange client as a single instance, exposed under both
-        // keyed (resolved by exchange ID) and unkeyed registrations.
         services.AddKeyedSingleton<IExchangeClient>(ExchangeId.Binance, (sp, _) =>
         {
-            var opts = sp.GetRequiredService<BinanceOptions>();
-            return BinanceExchangeClient.Create(opts);
+            var httpClient = sp.GetRequiredService<IBinanceHttpClient>();
+            var holder = sp.GetRequiredKeyedService<long[]>(ExchangeId.Binance);
+            return BinanceClientComposer.ComposeForDi(sp, httpClient, holder);
         });
 
-        // Forward unkeyed resolution to the same keyed instance.
-        services.AddSingleton<IExchangeClient>(sp =>
-            sp.GetRequiredKeyedService<IExchangeClient>(ExchangeId.Binance));
-
         return services;
+    }
+
+    private static void ApplyEnvDefaults(BinanceOptions o)
+    {
+        var k = Environment.GetEnvironmentVariable("BINANCE_API_KEY");
+        var s = Environment.GetEnvironmentVariable("BINANCE_SECRET_KEY");
+        if (!string.IsNullOrEmpty(k)) o.ApiKey = k;
+        if (!string.IsNullOrEmpty(s)) o.SecretKey = s;
     }
 
     /// <summary>

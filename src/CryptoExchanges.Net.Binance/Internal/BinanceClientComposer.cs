@@ -1,8 +1,10 @@
 using CryptoExchanges.Net.Binance.Mapping;
 using CryptoExchanges.Net.Binance.Resilience;
 using CryptoExchanges.Net.Core;
+using CryptoExchanges.Net.Core.Enums;
 using CryptoExchanges.Net.Core.Interfaces;
 using DeltaMapper;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace CryptoExchanges.Net.Binance.Internal;
 
@@ -45,6 +47,17 @@ internal static class BinanceClientComposer
         var trading = new BinanceTradingService(http, symbolMapper, mapper);
         var account = new BinanceAccountService(http, symbolMapper, mapper);
         return new BinanceExchangeClient(http, market, trading, account, ownsHttpClient, httpClient, offsetHolder);
+    }
+
+    /// <summary>DI composition: resolves the keyed symbol mapper + IMapper from the container and wires
+    /// the services + client over the factory-owned http client (ownsHttpClient: false — the typed-client
+    /// factory owns the underlying HttpClient lifetime).</summary>
+    public static BinanceExchangeClient ComposeForDi(IServiceProvider sp, IBinanceHttpClient http, long[] offsetHolder)
+    {
+        ArgumentNullException.ThrowIfNull(sp);
+        var symbolMapper = sp.GetRequiredKeyedService<ISymbolMapper>(ExchangeId.Binance);
+        var mapper = sp.GetRequiredKeyedService<IMapper>(ExchangeId.Binance);
+        return ComposeWith(http, symbolMapper, mapper, httpClient: null, ownsHttpClient: false, offsetHolder);
     }
 
     /// <summary>Builds the resilient HttpClient (factory-less path) with a secret-gated signing finalizer

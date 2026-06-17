@@ -50,13 +50,15 @@ internal static class BinanceClientComposer
     }
 
     /// <summary>DI composition: resolves the keyed symbol mapper + IMapper from the container and wires
-    /// the services + client over the factory-owned http client (ownsHttpClient: false — the typed-client
-    /// factory owns the underlying HttpClient lifetime).</summary>
+    /// the services + client over the factory-owned http client (ownsHttpClient: false — IHttpClientFactory
+    /// owns the underlying HttpClient lifetime).</summary>
     public static BinanceExchangeClient ComposeForDi(IServiceProvider sp, IBinanceHttpClient http, long[] offsetHolder)
     {
         ArgumentNullException.ThrowIfNull(sp);
         var symbolMapper = sp.GetRequiredKeyedService<ISymbolMapper>(ExchangeId.Binance);
         var mapper = sp.GetRequiredKeyedService<IMapper>(ExchangeId.Binance);
+        // INVARIANT: ownsHttpClient MUST stay false — IHttpClientFactory owns the HttpClient and its handler
+        // chain; this client must NOT dispose it. Flipping this would double-dispose factory-owned state.
         return ComposeWith(http, symbolMapper, mapper, httpClient: null, ownsHttpClient: false, offsetHolder);
     }
 

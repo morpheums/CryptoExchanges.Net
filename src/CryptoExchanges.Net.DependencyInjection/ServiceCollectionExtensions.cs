@@ -20,6 +20,10 @@ namespace CryptoExchanges.Net.DependencyInjection;
 /// </summary>
 public static class ServiceCollectionExtensions
 {
+    /// <summary>Named-client / resilience-pipeline name for the Binance HTTP client — shared by the
+    /// registration and the <c>CreateClient</c> call so they can't drift.</summary>
+    private const string ClientName = "binance";
+
     /// <summary>
     /// Registers the Binance exchange client and all its dependencies as per-exchange keyed singletons,
     /// backed by a typed <see cref="System.Net.Http.HttpClient"/> with the full resilience handler chain.
@@ -55,7 +59,12 @@ public static class ServiceCollectionExtensions
         services.TryAddKeyedSingleton<IMapper>(ExchangeId.Binance, (sp, _) =>
             BinanceClientComposer.CreateMapper(sp.GetRequiredKeyedService<ISymbolMapper>(ExchangeId.Binance)));
 
-        var http = services.AddHttpClient<IBinanceHttpClient, BinanceHttpClient>((sp, c) =>
+        // NAMED client (not typed): a typed client registers IBinanceHttpClient as TRANSIENT, and
+        // capturing it inside the keyed IExchangeClient SINGLETON below would be a captive dependency
+        // (the HttpClient + handler chain would never rotate). Instead we resolve ONE long-lived
+        // HttpClient via IHttpClientFactory.CreateClient(ClientName) in the singleton factory; DNS
+        // rotation is handled by PooledConnectionLifetime on the primary handler.
+        var http = services.AddHttpClient(ClientName, (sp, c) =>
             {
                 var o = sp.GetRequiredService<BinanceOptions>();
                 c.BaseAddress = new Uri(o.BaseUrl.TrimEnd('/'));
@@ -76,7 +85,7 @@ public static class ServiceCollectionExtensions
         // no-secret gate is decided then — a secretless client gets a no-op PassThroughHandler instead
         // of a BinanceSigningHandler (mirrors Create(), where signing is null when SecretKey is empty).
         http.ApplyResiliencePipeline(
-            "binance",
+            ClientName,
             new ResilienceOptions { UsageHeaderName = "X-MBX-USED-WEIGHT-1m" },
             translatorFactory: _ => new BinanceErrorTranslator(),
             gateFactory: _ => new ReactiveRateLimitGate(),
@@ -92,9 +101,11 @@ public static class ServiceCollectionExtensions
 
         services.AddKeyedSingleton<IExchangeClient>(ExchangeId.Binance, (sp, _) =>
         {
-            var httpClient = sp.GetRequiredService<IBinanceHttpClient>();
+            var options = sp.GetRequiredService<BinanceOptions>();
+            var httpClient = sp.GetRequiredService<IHttpClientFactory>().CreateClient(ClientName);
+            var http = new BinanceHttpClient(httpClient, options);
             var holder = sp.GetRequiredKeyedService<long[]>(ExchangeId.Binance);
-            return BinanceClientComposer.ComposeForDi(sp, httpClient, holder);
+            return BinanceClientComposer.ComposeForDi(sp, http, holder);
         });
 
         return services;

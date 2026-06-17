@@ -41,4 +41,16 @@ public class DiRegistrationTests
         var act = () => services.BuildServiceProvider().GetRequiredKeyedService<IExchangeClient>(ExchangeId.Binance);
         act.Should().Throw<Microsoft.Extensions.Options.OptionsValidationException>();
     }
+
+    [Fact]
+    public async Task Registration_IsScopeClean()
+    {
+        var services = new ServiceCollection();
+        services.AddBinanceExchange(o => { o.ApiKey = "k"; o.SecretKey = "s"; });
+        // ValidateScopes + ValidateOnBuild assert the graph has no captive/scope-violating dependencies.
+        // await using: the resolved IExchangeClient is IAsyncDisposable-only, so the container graph
+        // must be disposed asynchronously (a synchronous Dispose would throw on that async-only disposable).
+        await using var sp = services.BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true, ValidateOnBuild = true });
+        sp.GetRequiredKeyedService<IExchangeClient>(ExchangeId.Binance).Should().NotBeNull();
+    }
 }

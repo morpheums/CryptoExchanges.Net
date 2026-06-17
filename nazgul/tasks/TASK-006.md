@@ -96,3 +96,6 @@ Implement the three services (`BybitMarketDataService`, `BybitTradingService`, `
 - `dotnet build CryptoExchanges.Net.sln` → **Build succeeded. 0 Warning(s) 0 Error(s)** under `TreatWarningsAsErrors=true`.
 - API surface confirmed: only `BybitExchangeClient` + `BybitOptions` are public among the created files (the 3 public resilience helpers `BybitErrorTranslator`/`BybitSigningRequest`/`BybitTimeSync` predate this task and mirror Binance's public posture).
 - `MapperConfiguration.AssertConfigurationIsValid()` invoked in `CreateMapper` (fails fast on a misconfigured profile).
+
+## Commits
+- **Commit**: 057d6d2 feat(M2): TASK-006 Bybit services + DeltaMapper profiles + composer + ExchangeClient

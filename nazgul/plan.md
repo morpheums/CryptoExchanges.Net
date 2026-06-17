@@ -12,9 +12,9 @@ Add three new exchange integrations to CryptoExchanges.Net in strict priority or
 
 ## Status Summary
 - Total tasks: 22
-- DONE: 5 | READY: 0 | IN_PROGRESS: 1 | IN_REVIEW: 1 | CHANGES_REQUESTED: 0 | BLOCKED: 0 | PLANNED: 15
+- DONE: 5 | READY: 0 | IN_PROGRESS: 0 | IN_REVIEW: 2 | CHANGES_REQUESTED: 0 | BLOCKED: 0 | PLANNED: 15
 - Current iteration: 4/40
-- Active task: Wave 4 — TASK-007 (in review, c6bfbb3) + TASK-006 (implementing, wires against TASK-007)
+- Active task: Wave 4 — TASK-006 (in review, 057d6d2) + TASK-007 (in review round 2, 456a208)
 
 ## Scoping Decisions (HITL — committed, not open questions)
 The objective is fully prescriptive on scope/sequence/signing; these are the choices made decisively:
@@ -99,8 +99,8 @@ Tasks touching shared Core/Http/DI projects are higher blast radius and REQUIRE 
 - [x] TASK-005: BybitHttpClient + interface -> DONE
 
 ### Group 4 (= Wave 4)
-- [~] TASK-006: Bybit services + mapping + composer + ExchangeClient -> IN_PROGRESS
-- [~] TASK-007: BybitErrorTranslator + BybitTimeSync -> IN_REVIEW (commit c6bfbb3)
+- [~] TASK-006: Bybit services + mapping + composer + ExchangeClient -> IN_REVIEW (commit 057d6d2)
+- [~] TASK-007: BybitErrorTranslator + BybitTimeSync -> IN_REVIEW round 2 (rework 456a208 — offsetHolder length guard)
 
 ### Group 5 (= Wave 5)
 - [ ] TASK-008: Bybit tests + AddBybitExchange DI (closes M-BYBIT) -> PLANNED
@@ -171,7 +171,7 @@ Tasks touching shared Core/Http/DI projects are higher blast radius and REQUIRE 
 - **Manifest**: nazgul/tasks/TASK-005.md
 
 ### TASK-006: Bybit services + mapping + composer + ExchangeClient
-- **Status**: IN_PROGRESS
+- **Status**: IN_REVIEW
 - **Group**: 4
 - **Depends on**: TASK-005
 - **Manifest**: nazgul/tasks/TASK-006.md

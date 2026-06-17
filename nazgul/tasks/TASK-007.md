@@ -107,4 +107,4 @@ offset. Null-guards the holder.
 
 ## Commits
 - **Commit**: c6bfbb3 feat(M2): TASK-007 BybitErrorTranslator + BybitTimeSync
-- **Commit (rework)**: pending
+- **Commit (rework)**: 456a208 fix(M2): TASK-007 add zero-length guard to BybitTimeSync.ApplyOffset

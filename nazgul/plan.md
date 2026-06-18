@@ -12,9 +12,9 @@ Add three new exchange integrations to CryptoExchanges.Net in strict priority or
 
 ## Status Summary
 - Total tasks: 25 (22 plan + TASK-009B + TASK-REF-001 + TASK-REF-002)
-- DONE: 24 | IN_PROGRESS: 0 | IN_REVIEW: 0 | CHANGES_REQUESTED: 0 | BLOCKED: 0 | PLANNED: 1 (M-BITGET closer: 022)
+- DONE: 24 | IN_PROGRESS: 0 | IN_REVIEW: 0 | IMPLEMENTED: 1 (022) | CHANGES_REQUESTED: 0 | BLOCKED: 0 | PLANNED: 0
 - Current iteration: 9/40
-- Active task: none — M-BITGET; 016/017/018/020/019/021 DONE; next Wave 15 = TASK-022 (CLOSER: services+mapping+composer+client+error+time+tests+AddBitgetExchange). Carry: composer enforces host-root BaseAddress (TASK-021 CONCERN#1).
+- Active task: TASK-022 IMPLEMENTED (M-BITGET closer) — awaiting review gate. Commit a9caa69. Bitget unit 92 + integration 6 pass; OKX 6 / Bybit 5 no regression; full sln 0 warn/0 err. NO Core change; Http change = single per-exchange InternalsVisibleTo only (generalization held). Deviation: BitgetTimeSync NOT created — reuses Core IExchangeTimeSync per REF-001. Recovery: next action = review gate for TASK-022.
 
 ## Scoping Decisions (HITL — committed, not open questions)
 The objective is fully prescriptive on scope/sequence/signing; these are the choices made decisively:

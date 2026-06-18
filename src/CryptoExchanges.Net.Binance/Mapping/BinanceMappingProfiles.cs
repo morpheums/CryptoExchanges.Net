@@ -21,7 +21,7 @@ internal sealed class BinanceResponseProfile : Profile
     {
         ArgumentNullException.ThrowIfNull(symbolMapper);
 
-        CreateMap<BinanceOrderResponse, Order>()
+        CreateMap<OrderResponseDto, Order>()
             .ForMember(d => d.Symbol, o => o.MapFrom(s => symbolMapper.FromWire(s.Symbol)))
             .ForMember(d => d.OrderId, o => o.MapFrom(s => s.OrderId.ToString()))
             .ForMember(d => d.ClientOrderId, o => o.MapFrom(s => string.IsNullOrEmpty(s.ClientOrderId) ? null : s.ClientOrderId))
@@ -38,7 +38,7 @@ internal sealed class BinanceResponseProfile : Profile
             .ForMember(d => d.UpdatedAt, o => o.MapFrom(s => s.UpdateTime > 0 ? DateTimeOffset.FromUnixTimeMilliseconds(s.UpdateTime) : (DateTimeOffset?)null))
             .ForMember(d => d.CumulativeQuoteQuantity, o => o.MapFrom(s => BinanceValueParsers.ParseDecimal(s.CumulativeQuoteQty)));
 
-        CreateMap<BinanceTickerResponse, Ticker>()
+        CreateMap<TickerResponseDto, Ticker>()
             .ForMember(d => d.Symbol, o => o.MapFrom(s => symbolMapper.FromWire(s.Symbol)))
             .ForMember(d => d.LastPrice, o => o.MapFrom(s => BinanceValueParsers.ParseDecimal(s.LastPrice)))
             .ForMember(d => d.OpenPrice, o => o.MapFrom(s => BinanceValueParsers.ParseDecimal(s.OpenPrice)))
@@ -50,14 +50,14 @@ internal sealed class BinanceResponseProfile : Profile
             .ForMember(d => d.PriceChangePercent, o => o.MapFrom(s => BinanceValueParsers.ParseDecimal(s.PriceChangePercent)))
             .ForMember(d => d.Timestamp, o => o.MapFrom(s => s.CloseTime > 0 ? DateTimeOffset.FromUnixTimeMilliseconds(s.CloseTime) : (DateTimeOffset?)null));
 
-        // NOTE: BinanceTradeHistoryResponse -> Trade is intentionally NOT mapped here.
+        // NOTE: TradeHistoryResponseDto -> Trade is intentionally NOT mapped here.
         // Trade.Symbol for account trade history comes from the caller's typed Symbol argument
         // (which the caller already holds), not from resolving the wire string — resolving via
         // FromWire could throw on a cold mapper cache for pairs outside the fallback-quote list.
         // That projection stays hand-written in BinanceAccountService.GetTradeHistoryAsync.
 
-        // BinanceSymbolInfo -> SymbolInfo (exchangeInfo symbol projection; explicit base/quote legs).
-        CreateMap<BinanceSymbolInfo, SymbolInfo>()
+        // SymbolInfoDto -> SymbolInfo (exchangeInfo symbol projection; explicit base/quote legs).
+        CreateMap<SymbolInfoDto, SymbolInfo>()
             .ForMember(d => d.Symbol, o => o.MapFrom(s => symbolMapper.FromComponents(s.BaseAsset, s.QuoteAsset)))
             .ForMember(d => d.AllowedOrderTypes, o => o.MapFrom(s => s.OrderTypes.Select(BinanceValueParsers.ParseOrderType).ToArray()))
             .ForMember(d => d.MinPrice, o => o.Ignore())
@@ -70,7 +70,7 @@ internal sealed class BinanceResponseProfile : Profile
 
         // Balances are where long-tail assets appear, so an unrepresentable ticker maps to
         // Asset.None rather than throwing.
-        CreateMap<BinanceBalance, AssetBalance>()
+        CreateMap<BalanceDto, AssetBalance>()
             .ForMember(d => d.Asset, o => o.MapFrom(s => BinanceValueParsers.ParseAssetOrNone(s.Asset)))
             .ForMember(d => d.Free, o => o.MapFrom(s => BinanceValueParsers.ParseDecimal(s.Free)))
             .ForMember(d => d.Locked, o => o.MapFrom(s => BinanceValueParsers.ParseDecimal(s.Locked)));

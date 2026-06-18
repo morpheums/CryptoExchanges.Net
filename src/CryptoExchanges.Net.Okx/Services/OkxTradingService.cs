@@ -55,7 +55,7 @@ internal sealed class OkxTradingService(IOkxHttpClient http, ISymbolMapper mappe
         if (request.ClientOrderId is not null)
             parameters["clOrdId"] = request.ClientOrderId;
 
-        var response = await http.PostAsync<OkxResponse<OkxOrderAck>>("/api/v5/trade/order", parameters, true, ct).ConfigureAwait(false);
+        var response = await http.PostAsync<ResponseDto<OrderAckDto>>("/api/v5/trade/order", parameters, true, ct).ConfigureAwait(false);
         var ack = response.Data.FirstOrDefault();
         return await FetchOrderAsync(wireSymbol, ack?.OrdId ?? string.Empty, ct, clientOrderId: request.ClientOrderId).ConfigureAwait(false);
     }
@@ -70,7 +70,7 @@ internal sealed class OkxTradingService(IOkxHttpClient http, ISymbolMapper mappe
             ["ordId"] = orderId
         };
 
-        var response = await http.PostAsync<OkxResponse<OkxOrderAck>>("/api/v5/trade/cancel-order", parameters, true, ct).ConfigureAwait(false);
+        var response = await http.PostAsync<ResponseDto<OrderAckDto>>("/api/v5/trade/cancel-order", parameters, true, ct).ConfigureAwait(false);
         var canceledId = response.Data.FirstOrDefault()?.OrdId ?? orderId;
         return await FetchOrderAsync(wireSymbol, canceledId, ct).ConfigureAwait(false);
     }
@@ -85,7 +85,7 @@ internal sealed class OkxTradingService(IOkxHttpClient http, ISymbolMapper mappe
             ["clOrdId"] = clientOrderId
         };
 
-        var response = await http.PostAsync<OkxResponse<OkxOrderAck>>("/api/v5/trade/cancel-order", parameters, true, ct).ConfigureAwait(false);
+        var response = await http.PostAsync<ResponseDto<OrderAckDto>>("/api/v5/trade/cancel-order", parameters, true, ct).ConfigureAwait(false);
         var canceledId = response.Data.FirstOrDefault()?.OrdId ?? string.Empty;
         return await FetchOrderAsync(wireSymbol, canceledId, ct, clientOrderId: clientOrderId).ConfigureAwait(false);
     }
@@ -109,7 +109,7 @@ internal sealed class OkxTradingService(IOkxHttpClient http, ISymbolMapper mappe
         if (cancels.Count == 0)
             return [];
 
-        var response = await http.PostAsync<OkxResponse<OkxOrderAck>>("/api/v5/trade/cancel-batch-orders", cancels, true, ct).ConfigureAwait(false);
+        var response = await http.PostAsync<ResponseDto<OrderAckDto>>("/api/v5/trade/cancel-batch-orders", cancels, true, ct).ConfigureAwait(false);
         var canceledIds = response.Data.Select(a => a.OrdId).Where(id => !string.IsNullOrEmpty(id)).ToHashSet(StringComparer.Ordinal);
         if (canceledIds.Count == 0)
             return [];
@@ -129,8 +129,8 @@ internal sealed class OkxTradingService(IOkxHttpClient http, ISymbolMapper mappe
         if (symbol.HasValue)
             parameters["instId"] = mapper.ToWire(symbol.Value);
 
-        var response = await http.GetAsync<OkxResponse<OkxOrder>>("/api/v5/trade/orders-pending", parameters, true, ct).ConfigureAwait(false);
-        return modelMapper.Map<OkxOrder, Order>(response.Data);
+        var response = await http.GetAsync<ResponseDto<OrderDto>>("/api/v5/trade/orders-pending", parameters, true, ct).ConfigureAwait(false);
+        return modelMapper.Map<OrderDto, Order>(response.Data);
     }
 
     /// <inheritdoc />
@@ -159,8 +159,8 @@ internal sealed class OkxTradingService(IOkxHttpClient http, ISymbolMapper mappe
         if (endTime.HasValue)
             parameters["before"] = endTime.Value.ToUnixTimeMilliseconds().ToString(System.Globalization.CultureInfo.InvariantCulture);
 
-        var response = await http.GetAsync<OkxResponse<OkxOrder>>("/api/v5/trade/orders-history", parameters, true, ct).ConfigureAwait(false);
-        return modelMapper.Map<OkxOrder, Order>(response.Data);
+        var response = await http.GetAsync<ResponseDto<OrderDto>>("/api/v5/trade/orders-history", parameters, true, ct).ConfigureAwait(false);
+        return modelMapper.Map<OrderDto, Order>(response.Data);
     }
 
     /// <summary>
@@ -178,10 +178,10 @@ internal sealed class OkxTradingService(IOkxHttpClient http, ISymbolMapper mappe
         else if (!string.IsNullOrEmpty(clientOrderId))
             parameters["clOrdId"] = clientOrderId;
 
-        var response = await http.GetAsync<OkxResponse<OkxOrder>>("/api/v5/trade/order", parameters, true, ct).ConfigureAwait(false);
+        var response = await http.GetAsync<ResponseDto<OrderDto>>("/api/v5/trade/order", parameters, true, ct).ConfigureAwait(false);
         var match = response.Data.FirstOrDefault();
         if (match is not null)
-            return modelMapper.Map<OkxOrder, Order>(match);
+            return modelMapper.Map<OrderDto, Order>(match);
 
         // The order did not surface; return a minimal record carrying whichever identifier we have
         // (never empty) so callers still get an id to poll later rather than a null/throw.

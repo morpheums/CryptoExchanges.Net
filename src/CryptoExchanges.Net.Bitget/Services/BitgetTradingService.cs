@@ -37,7 +37,7 @@ internal sealed class BitgetTradingService(IBitgetHttpClient http, ISymbolMapper
         if (request.ClientOrderId is not null)
             parameters["clientOid"] = request.ClientOrderId;
 
-        var response = await http.PostAsync<BitgetResponse<BitgetOrderAck>>("/api/v2/spot/trade/place-order", parameters, true, ct).ConfigureAwait(false);
+        var response = await http.PostAsync<ResponseDto<OrderAckDto>>("/api/v2/spot/trade/place-order", parameters, true, ct).ConfigureAwait(false);
         var ack = response.Data.FirstOrDefault();
         return await FetchOrderAsync(wireSymbol, ack?.OrderId ?? string.Empty, ct, clientOrderId: request.ClientOrderId).ConfigureAwait(false);
     }
@@ -52,7 +52,7 @@ internal sealed class BitgetTradingService(IBitgetHttpClient http, ISymbolMapper
             ["orderId"] = orderId
         };
 
-        var response = await http.PostAsync<BitgetResponse<BitgetOrderAck>>("/api/v2/spot/trade/cancel-order", parameters, true, ct).ConfigureAwait(false);
+        var response = await http.PostAsync<ResponseDto<OrderAckDto>>("/api/v2/spot/trade/cancel-order", parameters, true, ct).ConfigureAwait(false);
         var canceledId = response.Data.FirstOrDefault()?.OrderId ?? orderId;
         return await FetchOrderAsync(wireSymbol, canceledId, ct).ConfigureAwait(false);
     }
@@ -67,7 +67,7 @@ internal sealed class BitgetTradingService(IBitgetHttpClient http, ISymbolMapper
             ["clientOid"] = clientOrderId
         };
 
-        var response = await http.PostAsync<BitgetResponse<BitgetOrderAck>>("/api/v2/spot/trade/cancel-order", parameters, true, ct).ConfigureAwait(false);
+        var response = await http.PostAsync<ResponseDto<OrderAckDto>>("/api/v2/spot/trade/cancel-order", parameters, true, ct).ConfigureAwait(false);
         var canceledId = response.Data.FirstOrDefault()?.OrderId ?? string.Empty;
         return await FetchOrderAsync(wireSymbol, canceledId, ct, clientOrderId: clientOrderId).ConfigureAwait(false);
     }
@@ -90,7 +90,7 @@ internal sealed class BitgetTradingService(IBitgetHttpClient http, ISymbolMapper
         if (cancels.Count == 0)
             return [];
 
-        var response = await http.PostAsync<BitgetResponse<BitgetOrderAck>>("/api/v2/spot/trade/batch-cancel-order", cancels, true, ct).ConfigureAwait(false);
+        var response = await http.PostAsync<ResponseDto<OrderAckDto>>("/api/v2/spot/trade/batch-cancel-order", cancels, true, ct).ConfigureAwait(false);
         var canceledIds = response.Data.Select(a => a.OrderId).Where(id => !string.IsNullOrEmpty(id)).ToHashSet(StringComparer.Ordinal);
         if (canceledIds.Count == 0)
             return [];
@@ -110,8 +110,8 @@ internal sealed class BitgetTradingService(IBitgetHttpClient http, ISymbolMapper
         if (symbol.HasValue)
             parameters["symbol"] = mapper.ToWire(symbol.Value);
 
-        var response = await http.GetAsync<BitgetResponse<BitgetOrder>>("/api/v2/spot/trade/unfilled-orders", parameters, true, ct).ConfigureAwait(false);
-        return modelMapper.Map<BitgetOrder, Order>(response.Data);
+        var response = await http.GetAsync<ResponseDto<OrderDto>>("/api/v2/spot/trade/unfilled-orders", parameters, true, ct).ConfigureAwait(false);
+        return modelMapper.Map<OrderDto, Order>(response.Data);
     }
 
     /// <inheritdoc />
@@ -138,8 +138,8 @@ internal sealed class BitgetTradingService(IBitgetHttpClient http, ISymbolMapper
         if (endTime.HasValue)
             parameters["endTime"] = endTime.Value.ToUnixTimeMilliseconds().ToString(System.Globalization.CultureInfo.InvariantCulture);
 
-        var response = await http.GetAsync<BitgetResponse<BitgetOrder>>("/api/v2/spot/trade/history-orders", parameters, true, ct).ConfigureAwait(false);
-        return modelMapper.Map<BitgetOrder, Order>(response.Data);
+        var response = await http.GetAsync<ResponseDto<OrderDto>>("/api/v2/spot/trade/history-orders", parameters, true, ct).ConfigureAwait(false);
+        return modelMapper.Map<OrderDto, Order>(response.Data);
     }
 
     /// <summary>
@@ -158,10 +158,10 @@ internal sealed class BitgetTradingService(IBitgetHttpClient http, ISymbolMapper
         else if (!string.IsNullOrEmpty(clientOrderId))
             parameters["clientOid"] = clientOrderId;
 
-        var response = await http.GetAsync<BitgetResponse<BitgetOrder>>("/api/v2/spot/trade/orderInfo", parameters, true, ct).ConfigureAwait(false);
+        var response = await http.GetAsync<ResponseDto<OrderDto>>("/api/v2/spot/trade/orderInfo", parameters, true, ct).ConfigureAwait(false);
         var match = response.Data.FirstOrDefault();
         if (match is not null)
-            return modelMapper.Map<BitgetOrder, Order>(match);
+            return modelMapper.Map<OrderDto, Order>(match);
 
         // The order did not surface; return a minimal record carrying whichever identifier we have
         // (never empty) so callers still get an id to poll later rather than a null/throw.

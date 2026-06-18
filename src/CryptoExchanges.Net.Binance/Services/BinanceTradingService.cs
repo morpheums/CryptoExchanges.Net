@@ -44,8 +44,8 @@ internal sealed class BinanceTradingService(IBinanceHttpClient http, ISymbolMapp
         if (request.IcebergQuantity.HasValue)
             parameters["icebergQty"] = request.IcebergQuantity.Value.ToString(System.Globalization.CultureInfo.InvariantCulture);
 
-        var response = await http.PostAsync<BinanceOrderResponse>("/api/v3/order", parameters, true, ct).ConfigureAwait(false);
-        return modelMapper.Map<BinanceOrderResponse, Order>(response);
+        var response = await http.PostAsync<OrderResponseDto>("/api/v3/order", parameters, true, ct).ConfigureAwait(false);
+        return modelMapper.Map<OrderResponseDto, Order>(response);
     }
 
     /// <inheritdoc />
@@ -57,8 +57,8 @@ internal sealed class BinanceTradingService(IBinanceHttpClient http, ISymbolMapp
             ["orderId"] = orderId
         };
 
-        var response = await http.DeleteAsync<BinanceOrderResponse>("/api/v3/order", parameters, true, ct).ConfigureAwait(false);
-        return modelMapper.Map<BinanceOrderResponse, Order>(response);
+        var response = await http.DeleteAsync<OrderResponseDto>("/api/v3/order", parameters, true, ct).ConfigureAwait(false);
+        return modelMapper.Map<OrderResponseDto, Order>(response);
     }
 
     /// <inheritdoc />
@@ -70,8 +70,8 @@ internal sealed class BinanceTradingService(IBinanceHttpClient http, ISymbolMapp
             ["origClientOrderId"] = clientOrderId
         };
 
-        var response = await http.DeleteAsync<BinanceOrderResponse>("/api/v3/order", parameters, true, ct).ConfigureAwait(false);
-        return modelMapper.Map<BinanceOrderResponse, Order>(response);
+        var response = await http.DeleteAsync<OrderResponseDto>("/api/v3/order", parameters, true, ct).ConfigureAwait(false);
+        return modelMapper.Map<OrderResponseDto, Order>(response);
     }
 
     /// <inheritdoc />
@@ -86,19 +86,19 @@ internal sealed class BinanceTradingService(IBinanceHttpClient http, ISymbolMapp
         // objects or order-list wrappers (e.g. OCO) carrying nested orderReports.
         var payload = await http.DeleteAsync<JsonElement[]>("/api/v3/openOrders", parameters, true, ct).ConfigureAwait(false);
         var orders = payload.SelectMany(ExtractCanceledOrders).ToList();
-        return modelMapper.Map<BinanceOrderResponse, Order>(orders);
+        return modelMapper.Map<OrderResponseDto, Order>(orders);
     }
 
     /// <summary>
     /// Yields the canceled order(s) from a single cancel-all response item, unwrapping
     /// order-list entries (e.g. OCO) that carry their orders under <c>orderReports</c>.
     /// </summary>
-    private static IEnumerable<BinanceOrderResponse> ExtractCanceledOrders(JsonElement item)
+    private static IEnumerable<OrderResponseDto> ExtractCanceledOrders(JsonElement item)
     {
         if (item.TryGetProperty("orderReports", out var reports) && reports.ValueKind == JsonValueKind.Array)
-            return reports.Deserialize<List<BinanceOrderResponse>>() ?? [];
+            return reports.Deserialize<List<OrderResponseDto>>() ?? [];
 
-        var order = item.Deserialize<BinanceOrderResponse>();
+        var order = item.Deserialize<OrderResponseDto>();
         return order is null ? [] : [order];
     }
 
@@ -111,8 +111,8 @@ internal sealed class BinanceTradingService(IBinanceHttpClient http, ISymbolMapp
             ["orderId"] = orderId
         };
 
-        var response = await http.GetAsync<BinanceOrderResponse>("/api/v3/order", parameters, true, ct).ConfigureAwait(false);
-        return modelMapper.Map<BinanceOrderResponse, Order>(response);
+        var response = await http.GetAsync<OrderResponseDto>("/api/v3/order", parameters, true, ct).ConfigureAwait(false);
+        return modelMapper.Map<OrderResponseDto, Order>(response);
     }
 
     /// <inheritdoc />
@@ -123,8 +123,8 @@ internal sealed class BinanceTradingService(IBinanceHttpClient http, ISymbolMapp
         if (symbol.HasValue)
             parameters["symbol"] = mapper.ToWire(symbol.Value);
 
-        var results = await http.GetAsync<List<BinanceOrderResponse>>("/api/v3/openOrders", parameters, true, ct).ConfigureAwait(false);
-        return modelMapper.Map<BinanceOrderResponse, Order>(results);
+        var results = await http.GetAsync<List<OrderResponseDto>>("/api/v3/openOrders", parameters, true, ct).ConfigureAwait(false);
+        return modelMapper.Map<OrderResponseDto, Order>(results);
     }
 
     /// <inheritdoc />
@@ -148,8 +148,8 @@ internal sealed class BinanceTradingService(IBinanceHttpClient http, ISymbolMapp
         if (endTime.HasValue)
             parameters["endTime"] = endTime.Value.ToUnixTimeMilliseconds().ToString();
 
-        var results = await http.GetAsync<List<BinanceOrderResponse>>("/api/v3/allOrders", parameters, true, ct).ConfigureAwait(false);
-        return modelMapper.Map<BinanceOrderResponse, Order>(results);
+        var results = await http.GetAsync<List<OrderResponseDto>>("/api/v3/allOrders", parameters, true, ct).ConfigureAwait(false);
+        return modelMapper.Map<OrderResponseDto, Order>(results);
     }
 
     private static string MapOrderSide(OrderSide side) => side switch

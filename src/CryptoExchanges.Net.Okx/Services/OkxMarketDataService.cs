@@ -41,12 +41,12 @@ internal sealed class OkxMarketDataService(IOkxHttpClient http, ISymbolMapper ma
             // Single-symbol path: /api/v5/market/ticker?instId=... . The caller asked for a specific
             // symbol, so an unresolvable wire string is a genuine error — let the mapper throw.
             var single = new Dictionary<string, string> { ["instId"] = mapper.ToWire(symbol.Value) };
-            var oneResp = await http.GetAsync<OkxResponse<OkxTicker>>("/api/v5/market/ticker", single, false, ct).ConfigureAwait(false);
-            return oneResp.Data.Select(modelMapper.Map<OkxTicker, Ticker>).ToList();
+            var oneResp = await http.GetAsync<ResponseDto<TickerDto>>("/api/v5/market/ticker", single, false, ct).ConfigureAwait(false);
+            return oneResp.Data.Select(modelMapper.Map<TickerDto, Ticker>).ToList();
         }
 
         var parameters = new Dictionary<string, string> { ["instType"] = OkxRequestValidation.SpotInstType };
-        var response = await http.GetAsync<OkxResponse<OkxTicker>>("/api/v5/market/tickers", parameters, false, ct).ConfigureAwait(false);
+        var response = await http.GetAsync<ResponseDto<TickerDto>>("/api/v5/market/tickers", parameters, false, ct).ConfigureAwait(false);
 
         // The full universe includes obscure/transitional pairs that may not resolve against a cold
         // cache or any known quote suffix; skip those rather than failing the whole batch. Callers
@@ -64,8 +64,8 @@ internal sealed class OkxMarketDataService(IOkxHttpClient http, ISymbolMapper ma
             ["sz"] = Math.Clamp(depth, 1, 400).ToString(System.Globalization.CultureInfo.InvariantCulture)
         };
 
-        var response = await http.GetAsync<OkxResponse<OkxOrderBook>>("/api/v5/market/books", parameters, false, ct).ConfigureAwait(false);
-        var book = response.Data.FirstOrDefault() ?? new OkxOrderBook();
+        var response = await http.GetAsync<ResponseDto<OrderBookDto>>("/api/v5/market/books", parameters, false, ct).ConfigureAwait(false);
+        var book = response.Data.FirstOrDefault() ?? new OrderBookDto();
 
         // OKX book levels are [price, size, deprecatedField, numOrders]; only price+size are used.
         var bids = book.Bids.Select(b => new OrderBookEntry(OkxValueParsers.ParseDecimal(b[0]), OkxValueParsers.ParseDecimal(b[1]))).ToList();
@@ -101,7 +101,7 @@ internal sealed class OkxMarketDataService(IOkxHttpClient http, ISymbolMapper ma
 
         // OKX returns candles as a data array of string arrays:
         // [ts, open, high, low, close, vol, volCcy, volCcyQuote, confirm], newest-first.
-        var response = await http.GetAsync<OkxResponse<List<string>>>("/api/v5/market/candles", parameters, false, ct).ConfigureAwait(false);
+        var response = await http.GetAsync<ResponseDto<List<string>>>("/api/v5/market/candles", parameters, false, ct).ConfigureAwait(false);
 
         var candles = new List<Candlestick>();
         foreach (var arr in response.Data)
@@ -130,7 +130,7 @@ internal sealed class OkxMarketDataService(IOkxHttpClient http, ISymbolMapper ma
     public async Task<decimal> GetPriceAsync(Symbol symbol, CancellationToken ct = default)
     {
         var parameters = new Dictionary<string, string> { ["instId"] = mapper.ToWire(symbol) };
-        var response = await http.GetAsync<OkxResponse<OkxTicker>>("/api/v5/market/ticker", parameters, false, ct).ConfigureAwait(false);
+        var response = await http.GetAsync<ResponseDto<TickerDto>>("/api/v5/market/ticker", parameters, false, ct).ConfigureAwait(false);
         var ticker = response.Data.FirstOrDefault();
         return ticker is null ? 0m : OkxValueParsers.ParseDecimal(ticker.Last);
     }
@@ -145,7 +145,7 @@ internal sealed class OkxMarketDataService(IOkxHttpClient http, ISymbolMapper ma
             ["limit"] = Math.Clamp(limit, 1, 500).ToString(System.Globalization.CultureInfo.InvariantCulture)
         };
 
-        var response = await http.GetAsync<OkxResponse<OkxTrade>>("/api/v5/market/trades", parameters, false, ct).ConfigureAwait(false);
+        var response = await http.GetAsync<ResponseDto<TradeDto>>("/api/v5/market/trades", parameters, false, ct).ConfigureAwait(false);
 
         // Trade.Symbol is the caller's typed argument (already held), not resolved from the wire
         // string, so a cold mapper cache can never make this throw. IsBuyerMaker = taker sold.
@@ -163,13 +163,13 @@ internal sealed class OkxMarketDataService(IOkxHttpClient http, ISymbolMapper ma
     public async Task<ExchangeInfo> GetExchangeInfoAsync(CancellationToken ct = default)
     {
         var parameters = new Dictionary<string, string> { ["instType"] = OkxRequestValidation.SpotInstType };
-        var response = await http.GetAsync<OkxResponse<OkxInstrument>>("/api/v5/public/instruments", parameters, false, ct).ConfigureAwait(false);
+        var response = await http.GetAsync<ResponseDto<InstrumentDto>>("/api/v5/public/instruments", parameters, false, ct).ConfigureAwait(false);
 
         // OKX instruments can include entries whose base/quote are not representable assets; skip
         // those rather than throw.
         var representable = response.Data
             .Where(s => Asset.TryOf(s.BaseCcy, out _) && Asset.TryOf(s.QuoteCcy, out _));
-        var symbols = modelMapper.Map<OkxInstrument, SymbolInfo>(representable);
+        var symbols = modelMapper.Map<InstrumentDto, SymbolInfo>(representable);
 
         // Populate the mapper's wire->Symbol lookup table from the freshly fetched symbols.
         mapper.UpdateSymbols(symbols);
@@ -199,12 +199,12 @@ internal sealed class OkxMarketDataService(IOkxHttpClient http, ISymbolMapper ma
     /// Maps a ticker, yielding nothing when its wire symbol cannot be resolved. Used for the
     /// full-universe response where unknown/delisted pairs must not abort the whole batch.
     /// </summary>
-    private IEnumerable<Ticker> TryMapTicker(OkxTicker t)
+    private IEnumerable<Ticker> TryMapTicker(TickerDto t)
     {
         Ticker ticker;
         try
         {
-            ticker = modelMapper.Map<OkxTicker, Ticker>(t);
+            ticker = modelMapper.Map<TickerDto, Ticker>(t);
         }
         catch (FormatException)
         {

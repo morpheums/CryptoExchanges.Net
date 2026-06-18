@@ -21,7 +21,7 @@ internal sealed class BybitResponseProfile : Profile
     {
         ArgumentNullException.ThrowIfNull(symbolMapper);
 
-        CreateMap<BybitOrder, Order>()
+        CreateMap<OrderDto, Order>()
             .ForMember(d => d.Symbol, o => o.MapFrom(s => symbolMapper.FromWire(s.Symbol)))
             .ForMember(d => d.OrderId, o => o.MapFrom(s => s.OrderId))
             .ForMember(d => d.ClientOrderId, o => o.MapFrom(s => string.IsNullOrEmpty(s.OrderLinkId) ? null : s.OrderLinkId))
@@ -38,8 +38,8 @@ internal sealed class BybitResponseProfile : Profile
             .ForMember(d => d.UpdatedAt, o => o.MapFrom(s => ParseTimestamp(s.UpdatedTime)))
             .ForMember(d => d.CumulativeQuoteQuantity, o => o.MapFrom(s => BybitValueParsers.ParseDecimal(s.CumExecValue)));
 
-        // BybitTicker -> Ticker. price24hPcnt is a fraction (0.01 = +1%); scale to a percent.
-        CreateMap<BybitTicker, Ticker>()
+        // TickerDto -> Ticker. price24hPcnt is a fraction (0.01 = +1%); scale to a percent.
+        CreateMap<TickerDto, Ticker>()
             .ForMember(d => d.Symbol, o => o.MapFrom(s => symbolMapper.FromWire(s.Symbol)))
             .ForMember(d => d.LastPrice, o => o.MapFrom(s => BybitValueParsers.ParseDecimal(s.LastPrice)))
             .ForMember(d => d.OpenPrice, o => o.MapFrom(s => BybitValueParsers.ParseDecimal(s.PrevPrice24h)))
@@ -51,10 +51,10 @@ internal sealed class BybitResponseProfile : Profile
             .ForMember(d => d.PriceChangePercent, o => o.MapFrom(s => BybitValueParsers.ParseDecimal(s.Price24hPcnt) * 100m))
             .ForMember(d => d.Timestamp, o => o.Ignore());
 
-        // BybitInstrument -> SymbolInfo (instruments-info symbol projection; explicit base/quote legs).
+        // InstrumentDto -> SymbolInfo (instruments-info symbol projection; explicit base/quote legs).
         // Bybit V5 instruments-info exposes lot/price filters under nested objects that this SDK does
         // not yet surface; the numeric filter fields stay null pending a dedicated filters task.
-        CreateMap<BybitInstrument, SymbolInfo>()
+        CreateMap<InstrumentDto, SymbolInfo>()
             .ForMember(d => d.Symbol, o => o.MapFrom(s => symbolMapper.FromComponents(s.BaseCoin, s.QuoteCoin)))
             .ForMember(d => d.AllowedOrderTypes, o => o.MapFrom(s => DefaultSpotOrderTypes))
             .ForMember(d => d.MinPrice, o => o.Ignore())
@@ -65,9 +65,9 @@ internal sealed class BybitResponseProfile : Profile
             .ForMember(d => d.StepSize, o => o.Ignore())
             .ForMember(d => d.MinNotional, o => o.Ignore());
 
-        // BybitCoinBalance -> AssetBalance. Bybit reports total walletBalance + locked; the free
+        // CoinBalanceDto -> AssetBalance. Bybit reports total walletBalance + locked; the free
         // portion is the difference. Long-tail coins map to Asset.None rather than throwing.
-        CreateMap<BybitCoinBalance, AssetBalance>()
+        CreateMap<CoinBalanceDto, AssetBalance>()
             .ForMember(d => d.Asset, o => o.MapFrom(s => BybitValueParsers.ParseAssetOrNone(s.Coin)))
             .ForMember(d => d.Free, o => o.MapFrom(s => BybitValueParsers.ParseDecimal(s.WalletBalance) - BybitValueParsers.ParseDecimal(s.Locked)))
             .ForMember(d => d.Locked, o => o.MapFrom(s => BybitValueParsers.ParseDecimal(s.Locked)));

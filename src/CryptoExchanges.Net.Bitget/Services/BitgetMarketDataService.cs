@@ -41,11 +41,11 @@ internal sealed class BitgetMarketDataService(IBitgetHttpClient http, ISymbolMap
             // Single-symbol path: /api/v2/spot/market/tickers?symbol=... . The caller asked for a
             // specific symbol, so an unresolvable wire string is a genuine error — let the mapper throw.
             var single = new Dictionary<string, string> { ["symbol"] = mapper.ToWire(symbol.Value) };
-            var oneResp = await http.GetAsync<BitgetResponse<BitgetTicker>>("/api/v2/spot/market/tickers", single, false, ct).ConfigureAwait(false);
-            return oneResp.Data.Select(modelMapper.Map<BitgetTicker, Ticker>).ToList();
+            var oneResp = await http.GetAsync<ResponseDto<TickerDto>>("/api/v2/spot/market/tickers", single, false, ct).ConfigureAwait(false);
+            return oneResp.Data.Select(modelMapper.Map<TickerDto, Ticker>).ToList();
         }
 
-        var response = await http.GetAsync<BitgetResponse<BitgetTicker>>("/api/v2/spot/market/tickers", null, false, ct).ConfigureAwait(false);
+        var response = await http.GetAsync<ResponseDto<TickerDto>>("/api/v2/spot/market/tickers", null, false, ct).ConfigureAwait(false);
 
         // The full universe includes obscure/transitional pairs that may not resolve against a cold
         // cache or any known quote suffix; skip those rather than failing the whole batch. Callers
@@ -63,8 +63,8 @@ internal sealed class BitgetMarketDataService(IBitgetHttpClient http, ISymbolMap
             ["limit"] = Math.Clamp(depth, 1, 150).ToString(System.Globalization.CultureInfo.InvariantCulture)
         };
 
-        var response = await http.GetAsync<BitgetResponse<BitgetOrderBook>>("/api/v2/spot/market/orderbook", parameters, false, ct).ConfigureAwait(false);
-        var book = response.Data.FirstOrDefault() ?? new BitgetOrderBook();
+        var response = await http.GetAsync<ResponseDto<OrderBookDto>>("/api/v2/spot/market/orderbook", parameters, false, ct).ConfigureAwait(false);
+        var book = response.Data.FirstOrDefault() ?? new OrderBookDto();
 
         // Bitget book levels are [price, size]; only price+size are used. Skip short/malformed rows
         // (fewer than 2 fields) rather than index out of range — mirrors the candle parser's guard.
@@ -101,7 +101,7 @@ internal sealed class BitgetMarketDataService(IBitgetHttpClient http, ISymbolMap
 
         // Bitget returns candles as a data array of string arrays:
         // [ts, open, high, low, close, baseVolume, quoteVolume, usdtVolume].
-        var response = await http.GetAsync<BitgetResponse<List<string>>>("/api/v2/spot/market/candles", parameters, false, ct).ConfigureAwait(false);
+        var response = await http.GetAsync<ResponseDto<List<string>>>("/api/v2/spot/market/candles", parameters, false, ct).ConfigureAwait(false);
 
         var candles = new List<Candlestick>();
         foreach (var arr in response.Data)
@@ -130,7 +130,7 @@ internal sealed class BitgetMarketDataService(IBitgetHttpClient http, ISymbolMap
     public async Task<decimal> GetPriceAsync(Symbol symbol, CancellationToken ct = default)
     {
         var parameters = new Dictionary<string, string> { ["symbol"] = mapper.ToWire(symbol) };
-        var response = await http.GetAsync<BitgetResponse<BitgetTicker>>("/api/v2/spot/market/tickers", parameters, false, ct).ConfigureAwait(false);
+        var response = await http.GetAsync<ResponseDto<TickerDto>>("/api/v2/spot/market/tickers", parameters, false, ct).ConfigureAwait(false);
         var ticker = response.Data.FirstOrDefault();
         return ticker is null ? 0m : BitgetValueParsers.ParseDecimal(ticker.LastPr);
     }
@@ -145,7 +145,7 @@ internal sealed class BitgetMarketDataService(IBitgetHttpClient http, ISymbolMap
             ["limit"] = Math.Clamp(limit, 1, 500).ToString(System.Globalization.CultureInfo.InvariantCulture)
         };
 
-        var response = await http.GetAsync<BitgetResponse<BitgetTrade>>("/api/v2/spot/market/fills", parameters, false, ct).ConfigureAwait(false);
+        var response = await http.GetAsync<ResponseDto<TradeDto>>("/api/v2/spot/market/fills", parameters, false, ct).ConfigureAwait(false);
 
         // Trade.Symbol is the caller's typed argument (already held), not resolved from the wire
         // string, so a cold mapper cache can never make this throw. IsBuyerMaker = taker sold.
@@ -162,13 +162,13 @@ internal sealed class BitgetMarketDataService(IBitgetHttpClient http, ISymbolMap
     /// <inheritdoc />
     public async Task<ExchangeInfo> GetExchangeInfoAsync(CancellationToken ct = default)
     {
-        var response = await http.GetAsync<BitgetResponse<BitgetSymbol>>("/api/v2/spot/public/symbols", null, false, ct).ConfigureAwait(false);
+        var response = await http.GetAsync<ResponseDto<SymbolDto>>("/api/v2/spot/public/symbols", null, false, ct).ConfigureAwait(false);
 
         // Bitget symbols can include entries whose base/quote are not representable assets; skip
         // those rather than throw.
         var representable = response.Data
             .Where(s => Asset.TryOf(s.BaseCoin, out _) && Asset.TryOf(s.QuoteCoin, out _));
-        var symbols = modelMapper.Map<BitgetSymbol, SymbolInfo>(representable);
+        var symbols = modelMapper.Map<SymbolDto, SymbolInfo>(representable);
 
         // Populate the mapper's wire->Symbol lookup table from the freshly fetched symbols.
         mapper.UpdateSymbols(symbols);
@@ -198,12 +198,12 @@ internal sealed class BitgetMarketDataService(IBitgetHttpClient http, ISymbolMap
     /// Maps a ticker, yielding nothing when its wire symbol cannot be resolved. Used for the
     /// full-universe response where unknown/delisted pairs must not abort the whole batch.
     /// </summary>
-    private IEnumerable<Ticker> TryMapTicker(BitgetTicker t)
+    private IEnumerable<Ticker> TryMapTicker(TickerDto t)
     {
         Ticker ticker;
         try
         {
-            ticker = modelMapper.Map<BitgetTicker, Ticker>(t);
+            ticker = modelMapper.Map<TickerDto, Ticker>(t);
         }
         catch (FormatException)
         {

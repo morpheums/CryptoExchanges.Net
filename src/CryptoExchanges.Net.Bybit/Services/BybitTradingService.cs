@@ -52,7 +52,7 @@ internal sealed class BybitTradingService(IBybitHttpClient http, ISymbolMapper m
         if (request.ClientOrderId is not null)
             parameters["orderLinkId"] = request.ClientOrderId;
 
-        var response = await http.PostAsync<BybitResponse<BybitOrderAck>>("/v5/order/create", parameters, true, ct).ConfigureAwait(false);
+        var response = await http.PostAsync<ResponseDto<OrderAckDto>>("/v5/order/create", parameters, true, ct).ConfigureAwait(false);
         var orderId = response.Result?.OrderId ?? string.Empty;
         return await FetchOrderAsync(wireSymbol, orderId, ct, orderLinkId: request.ClientOrderId).ConfigureAwait(false);
     }
@@ -68,7 +68,7 @@ internal sealed class BybitTradingService(IBybitHttpClient http, ISymbolMapper m
             ["orderId"] = orderId
         };
 
-        var response = await http.PostAsync<BybitResponse<BybitOrderAck>>("/v5/order/cancel", parameters, true, ct).ConfigureAwait(false);
+        var response = await http.PostAsync<ResponseDto<OrderAckDto>>("/v5/order/cancel", parameters, true, ct).ConfigureAwait(false);
         var canceledId = response.Result?.OrderId ?? orderId;
         return await FetchOrderAsync(wireSymbol, canceledId, ct).ConfigureAwait(false);
     }
@@ -84,7 +84,7 @@ internal sealed class BybitTradingService(IBybitHttpClient http, ISymbolMapper m
             ["orderLinkId"] = clientOrderId
         };
 
-        var response = await http.PostAsync<BybitResponse<BybitOrderAck>>("/v5/order/cancel", parameters, true, ct).ConfigureAwait(false);
+        var response = await http.PostAsync<ResponseDto<OrderAckDto>>("/v5/order/cancel", parameters, true, ct).ConfigureAwait(false);
         var canceledId = response.Result?.OrderId ?? string.Empty;
         return await FetchOrderAsync(wireSymbol, canceledId, ct, orderLinkId: clientOrderId).ConfigureAwait(false);
     }
@@ -100,7 +100,7 @@ internal sealed class BybitTradingService(IBybitHttpClient http, ISymbolMapper m
 
         // cancel-all returns only ids; re-fetch the full picture via order history so the canceled
         // orders are returned with their full state.
-        var response = await http.PostAsync<BybitResponse<BybitListResult<BybitOrderAck>>>("/v5/order/cancel-all", parameters, true, ct).ConfigureAwait(false);
+        var response = await http.PostAsync<ResponseDto<ListResultDto<OrderAckDto>>>("/v5/order/cancel-all", parameters, true, ct).ConfigureAwait(false);
         var acks = response.Result?.List ?? [];
         if (acks.Count == 0)
             return [];
@@ -121,9 +121,9 @@ internal sealed class BybitTradingService(IBybitHttpClient http, ISymbolMapper m
         if (symbol.HasValue)
             parameters["symbol"] = mapper.ToWire(symbol.Value);
 
-        var response = await http.GetAsync<BybitResponse<BybitListResult<BybitOrder>>>("/v5/order/realtime", parameters, true, ct).ConfigureAwait(false);
+        var response = await http.GetAsync<ResponseDto<ListResultDto<OrderDto>>>("/v5/order/realtime", parameters, true, ct).ConfigureAwait(false);
         var orders = response.Result?.List ?? [];
-        return modelMapper.Map<BybitOrder, Order>(orders);
+        return modelMapper.Map<OrderDto, Order>(orders);
     }
 
     /// <inheritdoc />
@@ -151,9 +151,9 @@ internal sealed class BybitTradingService(IBybitHttpClient http, ISymbolMapper m
         if (endTime.HasValue)
             parameters["endTime"] = endTime.Value.ToUnixTimeMilliseconds().ToString();
 
-        var response = await http.GetAsync<BybitResponse<BybitListResult<BybitOrder>>>("/v5/order/history", parameters, true, ct).ConfigureAwait(false);
+        var response = await http.GetAsync<ResponseDto<ListResultDto<OrderDto>>>("/v5/order/history", parameters, true, ct).ConfigureAwait(false);
         var orders = response.Result?.List ?? [];
-        return modelMapper.Map<BybitOrder, Order>(orders);
+        return modelMapper.Map<OrderDto, Order>(orders);
     }
 
     /// <summary>
@@ -176,15 +176,15 @@ internal sealed class BybitTradingService(IBybitHttpClient http, ISymbolMapper m
         else if (!string.IsNullOrEmpty(orderLinkId))
             parameters["orderLinkId"] = orderLinkId;
 
-        var realtime = await http.GetAsync<BybitResponse<BybitListResult<BybitOrder>>>("/v5/order/realtime", parameters, true, ct).ConfigureAwait(false);
+        var realtime = await http.GetAsync<ResponseDto<ListResultDto<OrderDto>>>("/v5/order/realtime", parameters, true, ct).ConfigureAwait(false);
         var match = realtime.Result?.List.FirstOrDefault();
         if (match is not null)
-            return modelMapper.Map<BybitOrder, Order>(match);
+            return modelMapper.Map<OrderDto, Order>(match);
 
-        var history = await http.GetAsync<BybitResponse<BybitListResult<BybitOrder>>>("/v5/order/history", parameters, true, ct).ConfigureAwait(false);
+        var history = await http.GetAsync<ResponseDto<ListResultDto<OrderDto>>>("/v5/order/history", parameters, true, ct).ConfigureAwait(false);
         match = history.Result?.List.FirstOrDefault();
         if (match is not null)
-            return modelMapper.Map<BybitOrder, Order>(match);
+            return modelMapper.Map<OrderDto, Order>(match);
 
         // Neither endpoint surfaced the order; return a minimal record carrying whichever identifier
         // we have (never empty) so callers still get an id to poll later rather than a null/throw.

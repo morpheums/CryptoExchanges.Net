@@ -22,12 +22,8 @@ internal sealed class OkxSignatureService(string secretKey)
     /// </summary>
     /// <param name="prehash">The canonical OKX prehash string (see <see cref="BuildPrehash"/>).</param>
     /// <returns>The base64-encoded HMAC-SHA256 signature for the <c>OK-ACCESS-SIGN</c> header.</returns>
-    /// <exception cref="ArgumentException"><paramref name="prehash"/> is null, empty, or whitespace.</exception>
-    public string Sign(string prehash)
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(prehash);
-        return HmacSignature.Compute(_secretKey, prehash, SignatureEncoding.Base64);
-    }
+    public string Sign(string prehash) =>
+        HmacSignature.Compute(_secretKey, prehash, SignatureEncoding.Base64);
 
     /// <summary>
     /// Builds the canonical OKX prehash string: <c>timestamp + METHOD + requestPath + body</c>.

@@ -59,4 +59,4 @@ Create the `CryptoExchanges.Net.Bitget` class library (Core + Http refs, GlobalU
 - `dotnet list src/CryptoExchanges.Net.Bitget reference` → Core + Http only (confirmed).
 
 ## Commits
-- (see git log; `feat(M4): TASK-017 Bitget project scaffold + passphrase options`)
+- 9029eab feat(M4): TASK-017 Bitget project scaffold + passphrase options

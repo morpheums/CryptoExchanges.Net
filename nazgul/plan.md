@@ -128,7 +128,7 @@ Tasks touching shared Core/Http/DI projects are higher blast radius and REQUIRE 
 - [x] TASK-016: Core ExchangeId.Bitget enum member -> DONE
 
 ### Group 12 (= Wave 12)
-- [ ] TASK-017: Bitget project scaffold + passphrase options + DI seam stub -> PLANNED
+- [ ] TASK-017: Bitget project scaffold + passphrase options + DI seam stub -> IMPLEMENTED
 
 ### Group 13 (= Wave 13)
 - [ ] TASK-018: BitgetSignatureService (base64 prehash incl. query) + signing marker -> PLANNED
@@ -244,9 +244,11 @@ Tasks touching shared Core/Http/DI projects are higher blast radius and REQUIRE 
 - **Manifest**: nazgul/tasks/TASK-016.md
 
 ### TASK-017: Bitget project scaffold + passphrase options + DI seam stub
-- **Status**: PLANNED
+- **Status**: IMPLEMENTED
 - **Group**: 12
 - **Depends on**: TASK-016
+- **Base SHA**: 3ca50b84cbb3d4ec018b524cb3a1dc4d00a6db7d
+- **Commit**: 9029eab (build 0W/0E; Core+Http only)
 - **Manifest**: nazgul/tasks/TASK-017.md
 
 ### TASK-018: BitgetSignatureService (base64 prehash incl. query) + signing marker
@@ -305,8 +307,8 @@ Tasks touching shared Core/Http/DI projects are higher blast radius and REQUIRE 
 - After merge: cut `feat/m3-okx` off updated main for M-OKX (TASK-009–015) → PR/merge → branch for M-BITGET (TASK-016–022).
 
 ## Recovery Pointer — ▶ M-BITGET ACTIVE (final milestone) on `feat/m4-bitget`
-- **Current Task:** none active. #13 + #15 MERGED (REF-001 + interface seams in main). M-BITGET started on `feat/m4-bitget` (off main @ 4ae6703). **TASK-016 DONE** (ExchangeId.Bitget added to Core, gate PASSED 4/4 @99, commit 03eb0d3). 19/25 done.
-- **Next Action:** Wave 12 = **TASK-017** (Bitget project scaffold + passphrase options + DI seam stub — mirror the post-refactor OKX project). Then 018/020 (BitgetSignatureService base64 prehash INCL. query via Core HmacSignature + BitgetSymbolFormat delimiter-less `BTCUSDT`) → 019/021 (signing handler `ACCESS-KEY/SIGN/TIMESTAMP/PASSPHRASE` + http client) → 022 closer (services+mapping+composer+client+error+time+tests+AddBitgetExchange).
+- **Current Task:** **TASK-017 IMPLEMENTED** (Bitget src project scaffold + BitgetOptions w/ passphrase + sln entry; mirrors post-refactor OKX) — awaiting review gate. Build 0W/0E; Bitget refs = Core+Http only; commit 9029eab; diff at nazgul/reviews/TASK-017/diff.patch. #13 + #15 MERGED (REF-001 + interface seams in main). M-BITGET on `feat/m4-bitget` (off main @ 4ae6703). TASK-016 DONE (ExchangeId.Bitget in Core, commit 03eb0d3). 19/25 done; TASK-017 implemented.
+- **Next Action:** Review gate for TASK-017. After APPROVE → Wave 13 = **TASK-018/020** (BitgetSignatureService base64 prehash INCL. query via Core HmacSignature + BitgetSymbolFormat delimiter-less `BTCUSDT`) → 019/021 (signing handler `ACCESS-KEY/SIGN/TIMESTAMP/PASSPHRASE` + http client) → 022 closer (services+mapping+composer+client+error+time+tests+AddBitgetExchange).
 - **Bitget reuses (all new seams):** Core `ExchangeCredentials` + `HmacSignature(base64)`, `IExchangeTimeSync`, `ISignatureService`, the shared `ExchangeServiceRegistration.AddExchange` helper. Build error-translator + time-sync consumer INTERNAL from the start; lean comments (ADR-001 conv 7) + interface-over-static (conv 8). Signing delta vs OKX: prehash `timestamp + UPPER(method) + requestPath + '?' + queryString + body`; headers `ACCESS-KEY/SIGN/TIMESTAMP/PASSPHRASE`.
 - **On M-BITGET close:** open `feat/m4-bitget` → main PR (user merges) → NAZGUL_COMPLETE (all 22 plan tasks + 009B + REF-001 + REF-002 done).
 

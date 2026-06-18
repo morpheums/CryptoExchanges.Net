@@ -57,6 +57,8 @@ CryptoExchanges.Net.DependencyInjection  (Core + Http + Exchange(s))
 
 10. **Package-level coupling / consumer cost** — As a NuGet SDK, an integration or aggregation package must NOT force consumers to take dependencies they don't use. The per-exchange DI registration (`AddXxxExchange`) lives in that exchange's OWN assembly so a consumer who wants one exchange does not transitively pull in every other exchange assembly. The aggregation package (`CryptoExchanges.Net.DependencyInjection`) is a thin opt-in convenience (`AddCryptoExchanges`) that depends on the exchanges — never the reverse forced on every consumer. Decided in ADR-001 (`nazgul/docs/ADR-001-per-exchange-di-and-conventions.md`). Flag any new code that makes a shared/aggregation package compile-time-reference a sibling integration that consumers would not all want.
 
+11. **Interfaces over static classes for behavior (DIP — maintainer mandate, 2026-06-18)** — Any type representing *behavior the maintainer might swap* (time-sync, signing, mapping, translation, transport) must be an interface resolved via DI, not a `static class` that bakes the implementation in. This library is interface-heavy by design (`ISymbolMapper`, `IExchangeErrorTranslator`, the services); a static utility for swappable behavior breaks DIP and is a reviewable defect. `static` is acceptable ONLY for genuinely fixed pure helpers and DI extension-method glue (e.g. `ServiceCollectionExtensions`, `ExchangeServiceRegistration`). When unsure, prefer the interface. FLAG new `static class`es that hold swappable behavior; require an interface + injectable impl.
+
 ## What You Review
 
 - [ ] Does the diff introduce any `using` or `ProjectReference` in Core pointing to Http, Binance, or DI?

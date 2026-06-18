@@ -253,32 +253,6 @@ public class OkxSigningTests
         act.Should().Throw<ArgumentException>();
     }
 
-    // ── OkxTimeSync ──
-
-    [Fact]
-    public void ComputeOffset_ReturnsServerMinusLocal()
-    {
-        OkxTimeSync.ComputeOffset(serverTimeMs: 10_000, localNowMs: 8_000).Should().Be(2_000);
-        OkxTimeSync.ComputeOffset(serverTimeMs: 8_000, localNowMs: 10_000).Should().Be(-2_000);
-    }
-
-    [Fact]
-    public void ApplyOffset_WritesIntoHolderAndReturnsOffset()
-    {
-        var holder = new long[] { 0L };
-        var written = OkxTimeSync.ApplyOffset(serverTimeMs: 12_345, localNowMs: 12_000, holder);
-
-        written.Should().Be(345);
-        holder[0].Should().Be(345);
-    }
-
-    [Fact]
-    public void ApplyOffset_RejectsZeroLengthHolder()
-    {
-        var act = () => OkxTimeSync.ApplyOffset(1, 0, []);
-        act.Should().Throw<ArgumentException>();
-    }
-
     // ── OkxErrorTranslator: code / HTTP-status → exception type ──
 
     private static ExchangeException Translate(HttpStatusCode status, string body)

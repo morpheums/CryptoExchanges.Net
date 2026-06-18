@@ -85,7 +85,7 @@ public sealed class OkxExchangeClient : IExchangeClient, IAsyncDisposable
     {
         var resp = await _http.GetAsync<OkxResponse<OkxServerTime>>("/api/v5/public/time", signed: false, ct: ct).ConfigureAwait(false);
         var serverTimeMs = ServerTimeMs(resp.Data.FirstOrDefault());
-        Resilience.OkxTimeSync.ApplyOffset(serverTimeMs, DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(), _offsetHolder);
+        Core.Resilience.ExchangeTimeSync.ApplyOffset(serverTimeMs, DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(), _offsetHolder);
     }
 
     /// <inheritdoc />

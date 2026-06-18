@@ -4,13 +4,10 @@ using CryptoExchanges.Net.Bybit.Internal;
 using CryptoExchanges.Net.Bybit.Resilience;
 using CryptoExchanges.Net.Core;
 using CryptoExchanges.Net.Core.Enums;
-using CryptoExchanges.Net.Core.Interfaces;
 using CryptoExchanges.Net.Core.Resilience;
 using CryptoExchanges.Net.Http;
 using DeltaMapper;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
-using Microsoft.Extensions.Options;
 
 namespace CryptoExchanges.Net.Bybit;
 
@@ -35,61 +32,25 @@ public static class ServiceCollectionExtensions
     /// <returns>The <see cref="IServiceCollection"/> for chaining.</returns>
     public static IServiceCollection AddBybitExchange(
         this IServiceCollection services,
-        Action<BybitOptions>? configure = null)
-    {
-        ArgumentNullException.ThrowIfNull(services);
-
-        services.TryAddSingleton<IExchangeClientFactory, ExchangeClientFactory>();
-
-        services.AddOptions<BybitOptions>()
-            .Configure(ApplyEnvDefaults)
-            .Configure(o => configure?.Invoke(o))
-            .Validate(o => o.TimeoutSeconds > 0, "BybitOptions.TimeoutSeconds must be > 0.")
-            .Validate(o => !string.IsNullOrWhiteSpace(o.BaseUrl), "BybitOptions.BaseUrl is required.")
-            .ValidateOnStart();
-
-        services.TryAddSingleton(sp => sp.GetRequiredService<IOptions<BybitOptions>>().Value);
-
-        // Shared clock-skew offset holder (single-element array so the signing handler's closure and
-        // SyncServerTimeAsync read/write the SAME instance). One per exchange registration.
-        // CA1861: this must be a FRESH mutable instance per registration (not a shared static field),
-        // and the factory runs once for the singleton — so the "constant array" rule doesn't apply.
-#pragma warning disable CA1861
-        services.TryAddKeyedSingleton(ExchangeId.Bybit, (_, _) => new long[] { 0L });
-#pragma warning restore CA1861
-        services.TryAddKeyedSingleton<ISymbolMapper>(ExchangeId.Bybit,
-            (_, _) => new SymbolMapper(BybitSymbolFormat.Instance));
-        services.TryAddKeyedSingleton<IMapper>(ExchangeId.Bybit, (sp, _) =>
-            BybitClientComposer.CreateMapper(sp.GetRequiredKeyedService<ISymbolMapper>(ExchangeId.Bybit)));
-
-        // NAMED client (not typed): a typed client registers IBybitHttpClient as TRANSIENT, and
-        // capturing it inside the keyed IExchangeClient SINGLETON below would be a captive dependency
-        // (the HttpClient + handler chain would never rotate). Instead we resolve ONE long-lived
-        // HttpClient via IHttpClientFactory.CreateClient(BybitClientName) in the singleton factory; DNS
-        // rotation is handled by PooledConnectionLifetime on the primary handler.
-        var http = services.AddHttpClient(BybitClientName, (sp, c) =>
-            {
-                var o = sp.GetRequiredService<BybitOptions>();
-                c.BaseAddress = new Uri(o.BaseUrl.TrimEnd('/'));
-                c.Timeout = TimeSpan.FromSeconds(o.TimeoutSeconds);
-                c.DefaultRequestHeaders.Add("User-Agent", "CryptoExchanges.Net/0.1.0");
-            })
-            .ConfigurePrimaryHttpMessageHandler(() =>
-                new SocketsHttpHandler { PooledConnectionLifetime = TimeSpan.FromMinutes(2) });
-
-        // Handler chain — applied via the Http project's shared seam so the DI path and the
-        // container-free Create() path (HttpClientPipelineBuilder.Build) compose the SAME effective
-        // pipeline. Order (outer→inner): throttle → exhaustion-mapping → Polly(retry/timeout) →
-        // request-finalizer(signing) → error-translation → primary transport.
-        //
-        // The finalizer is ALWAYS registered: options are only final at resolution time, so the
-        // no-secret gate is decided then — a secretless client gets a no-op PassThroughHandler instead
-        // of a BybitSigningHandler (mirrors Create(), where signing is a PassThrough when SecretKey is empty).
-        http.ApplyResiliencePipeline(
+        Action<BybitOptions>? configure = null) =>
+        // Delegates to the shared Http registration helper; only the Bybit variation points differ.
+        // Bybit sets NO default api-key header (it signs per-request), so configureHttpClient is null,
+        // and BybitHttpClient's ctor takes (httpClient) only. The finalizer is ALWAYS registered: a
+        // secretless client resolves to a no-op PassThroughHandler (mirrors Create()).
+        ExchangeServiceRegistration.AddExchange<BybitOptions, IMapper>(
+            services,
+            ExchangeId.Bybit,
             BybitClientName,
-            new ResilienceOptions { UsageHeaderName = "X-Bapi-Limit-Status" },
+            optionsName: "BybitOptions",
+            applyEnvDefaults: ApplyEnvDefaults,
+            configure: configure,
+            timeoutSecondsSelector: o => o.TimeoutSeconds,
+            baseUrlSelector: o => o.BaseUrl,
+            symbolMapperFactory: () => new SymbolMapper(BybitSymbolFormat.Instance),
+            mapperFactory: BybitClientComposer.CreateMapper,
+            configureHttpClient: null,
+            resilienceOptions: new ResilienceOptions { UsageHeaderName = "X-Bapi-Limit-Status" },
             translatorFactory: _ => new BybitErrorTranslator(),
-            gateFactory: _ => new ReactiveRateLimitGate(),
             requestFinalizerFactory: sp =>
             {
                 var o = sp.GetRequiredService<BybitOptions>();
@@ -101,18 +62,9 @@ public static class ServiceCollectionExtensions
                     new BybitSignatureService(o.SecretKey),
                     o.ReceiveWindow.ToString(CultureInfo.InvariantCulture),
                     () => Interlocked.Read(ref holder[0]));
-            });
-
-        services.AddKeyedSingleton<IExchangeClient>(ExchangeId.Bybit, (sp, _) =>
-        {
-            var httpClient = sp.GetRequiredService<IHttpClientFactory>().CreateClient(BybitClientName);
-            var http = new BybitHttpClient(httpClient);
-            var holder = sp.GetRequiredKeyedService<long[]>(ExchangeId.Bybit);
-            return BybitClientComposer.ComposeForDi(sp, http, holder);
-        });
-
-        return services;
-    }
+            },
+            exchangeClientFactory: (sp, httpClient, holder) =>
+                BybitClientComposer.ComposeForDi(sp, new BybitHttpClient(httpClient), holder));
 
     private static void ApplyEnvDefaults(BybitOptions o)
     {

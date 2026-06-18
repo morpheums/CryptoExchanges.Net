@@ -84,8 +84,7 @@ public sealed class BybitExchangeClient : IExchangeClient, IAsyncDisposable
     {
         var resp = await _http.GetAsync<BybitResponse<BybitServerTimeResult>>("/v5/market/time", signed: false, ct: ct).ConfigureAwait(false);
         var serverTimeMs = ServerTimeMs(resp.Result);
-        var offset = Resilience.BybitTimeSync.ComputeOffset(serverTimeMs, DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
-        Interlocked.Exchange(ref _offsetHolder[0], offset);
+        Core.Resilience.ExchangeTimeSync.ApplyOffset(serverTimeMs, DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(), _offsetHolder);
     }
 
     /// <inheritdoc />

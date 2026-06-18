@@ -1,6 +1,6 @@
 ---
 id: TASK-014
-status: IMPLEMENTED
+status: DONE
 ---
 
 # TASK-014: OkxHttpClient + interface
@@ -66,3 +66,8 @@ Created two files, mirroring the Bybit V5 wrapper (the most recent JSON-body exc
 
 ## Commits
 - f82eeec2367a08d3c4283febf72c79726b0ad1e3 — feat(M3): TASK-014 OkxHttpClient + IOkxHttpClient
+
+## Review
+- **Review Gate**: PASSED (round 1) — all 4 APPROVE (architect 95, code 98, security 95, api 97). No blocking items. Sign-consistency invariant confirmed byte-for-byte (handler signs RequestUri.PathAndQuery; host-only BaseAddress; POST body verbatim).
+- **CARRY to TASK-015 (architect @60, non-blocking but important)**: POST params are `Dictionary<string,string>` — cannot represent OKX V5 nested/array JSON bodies (e.g. place-order). If OKX order placement needs a richer body, add a typed-body overload to OkxHttpClient.PostAsync. Worth fixing before Bitget copies the pattern.
+- **Other non-blocking (deferred)**: ReadFromJsonAsync without JsonException guard (ErrorTranslationHandler intercepts non-2xx; matches Binance); PackageTags missing 'okx' (pre-existing).

@@ -1,6 +1,6 @@
 ---
 id: TASK-012
-status: IMPLEMENTED
+status: DONE
 ---
 
 # TASK-012: OkxSigningHandler (header-based)
@@ -75,3 +75,7 @@ Implement `OkxSigningHandler : DelegatingHandler` that, on each attempt (below r
 
 ## Commits
 - f556191def86be9eaa094d6dc4f6b44c76286707 — feat(M3): TASK-012 OkxSigningHandler (header-based, re-sign per attempt)
+
+## Review
+- **Review Gate**: PASSED (round 1) — all 4 APPROVE, no blocking items. Verified: re-sign per attempt (one header set, fresh ts), signs RequestUri.PathAndQuery (no drift), base64 via OkxSignatureService (no inline crypto), passphrase+apiKey fail-fast, unsigned pass-through (no creds leaked), ConfigureAwait(false).
+- **Non-blocking (deferred)**: DELETE-with-body not handled (none in OKX V5 today); RequestUri null-forgiving (matches Bybit); ctor lacks null-guards (DI enforces). Owed: signing unit tests in TASK-015.

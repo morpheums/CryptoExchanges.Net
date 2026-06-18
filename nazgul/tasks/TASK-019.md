@@ -1,6 +1,6 @@
 ---
 id: TASK-019
-status: PLANNED
+status: IMPLEMENTED
 ---
 
 # TASK-019: BitgetSigningHandler (header-based)
@@ -38,3 +38,19 @@ Implement `BitgetSigningHandler : DelegatingHandler` that, on each attempt (belo
 
 ## Test Requirements
 - Unit/e2e tests in TASK-022 assert header set for GET+POST and re-sign-on-retry via stub handler.
+
+## Implementation Notes
+- `internal sealed class BitgetSigningHandler : DelegatingHandler` mirroring `OkxSigningHandler` (primary ctor, ConfigureAwait(false), per-attempt re-sign below the retry strategy, unsigned pass-through).
+- **ISignatureService ctor**: ctor depends on the Core `ISignatureService` interface (not the concrete `BitgetSignatureService`), matching the REF-002 OKX ctor — keeps signing swappable and the handler decoupled from the concrete service.
+- **Path/query SPLIT for BuildPrehash**: Bitget's `BuildPrehash(timestamp, method, requestPath, queryString, body)` takes path and query SEPARATELY (it re-inserts the literal `?` only when query is non-empty), unlike OKX which takes a combined `PathAndQuery`. So I split the outgoing URI: `requestPath = RequestUri.AbsolutePath`, `queryString = RequestUri.Query.TrimStart('?')`. Reading the actual outgoing URI (rather than reconstructing) keeps the prehash byte-for-byte consistent with what `BitgetHttpClient` sends — sign-consistency.
+- Fresh epoch-ms timestamp per attempt via `BitgetSignatureService.FormatTimestamp(UtcNow.AddMilliseconds(timeOffset()))`. Body read once for POST/PUT-with-content, else `""`.
+- Strips any prior `ACCESS-KEY/SIGN/TIMESTAMP/PASSPHRASE` then adds all four (ACCESS-SIGN = base64 signature) → exactly one set on retry with a refreshed timestamp/signature.
+- `Content-Type: application/json` set on the StringContent for POST/PUT (only when content present); no content-type request header added without content.
+- **Passphrase fail-fast**: signed request with null/empty apiKey or passphrase throws `InvalidOperationException` (signing needs all 3 Bitget creds), mirroring OKX.
+
+## Verification
+- `dotnet build CryptoExchanges.Net.sln` → Build succeeded, 0 Warning(s), 0 Error(s).
+- Tests arrive in TASK-022.
+
+## Commits
+- (see git log: feat(M4): TASK-019)

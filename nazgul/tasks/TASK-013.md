@@ -1,6 +1,6 @@
 ---
 id: TASK-013
-status: PLANNED
+status: IMPLEMENTED
 ---
 
 # TASK-013: OkxSymbolFormat + value parsers + request validation
@@ -43,3 +43,59 @@ Create `OkxSymbolFormat.Instance` configured for OKX's hyphen-delimited upper-ca
 
 ## Test Requirements
 - Unit tests in TASK-015 cover hyphen-delimited symbol round-trip, parser invariants, validation rejections.
+
+## Implementation Notes
+
+**Base SHA**: c9243437133b98700aa5ffd1cd0f55615fd3549b
+
+### OkxSymbolFormat
+- `internal static`, mirroring `BybitSymbolFormat`. Supplies only the Core `SymbolFormat` instance
+  (no new `ISymbolMapper` — bespoke mapper retained per mandate).
+- `Delimiter = "-"`, `Casing = SymbolCasing.Upper`, producing OKX instrument IDs like `BTC-USDT`.
+- `FallbackQuoteAssets` matches Bybit's list (USDT, USDC, USDE, DAI, USD, EUR, BTC, ETH). With a
+  non-empty delimiter, `SymbolMapper.FromWire` splits on the delimiter and the fallback list is only a
+  cold-cache aid, but it is supplied for parity/consistency with the other exchanges.
+- Acceptance: `new SymbolMapper(OkxSymbolFormat.Instance).ToWire(new Symbol(Asset.Btc, Asset.Usdt))`
+  → `"BTC-USDT"`; `FromWire("BTC-USDT")` round-trips. (Test coverage lands in TASK-015.)
+
+### OkxValueParsers (OKX V5 wire-token mappings)
+Mirrors `BybitValueParsers` structure (ParseDecimal / ParseOptionalDecimal empty+zero handling,
+ParseAssetOrNone, enum parsers). All numeric parsing uses `CultureInfo.InvariantCulture`.
+
+- **Order side** (`side`): `buy` → `Buy`, `sell` → `Sell`. OKX uses lower-case tokens. Anything else
+  → `ArgumentOutOfRangeException` (deterministic reject).
+- **Order type** (`ordType`): OKX folds TIF into `ordType`.
+  - `market` → `OrderType.Market`
+  - `limit` / `post_only` / `fok` / `ioc` → `OrderType.Limit` (all are limit-priced resting/IOC orders;
+    the fill nuance is carried by the TIF parser). The domain `OrderType` has no maker-only or
+    explicit-IOC member, so this is the conservative mapping.
+  - OKX V5 spot does not expose stop/take-profit as `ordType` values (algo orders use a separate API),
+    so those domain members are intentionally not mapped here.
+  - Unknown → `ArgumentOutOfRangeException`.
+- **Order status** (`state`, American spelling):
+  - `live` → `New`, `partially_filled` → `PartiallyFilled`, `filled` → `Filled`,
+    `canceled` / `mmp_canceled` → `Canceled`.
+  - Unknown → `OrderStatus.Unknown` (mirrors Bybit's non-throwing posture for unrecognized status).
+- **Time-in-force** (derived from `ordType`): `limit` / `post_only` → `Gtc` (`post_only` is a maker-only
+  GTC order), `ioc` → `Ioc`, `fok` → `Fok`. Unknown → `ArgumentOutOfRangeException`.
+
+### OkxRequestValidation
+- `MaxHistoryLimit = 100`. **Source**: OKX V5 documented cap for market/trade list endpoints
+  (`/api/v5/trade/orders-history`, `/api/v5/market/trades`, `/api/v5/market/candles`) — `limit` max 100.
+  (Bybit's equivalent is 50; OKX's documented value is higher.)
+- `ValidateHistoryWindow(limit, startTime, endTime)`: enforces `limit ∈ 1..100` and start ≤ end.
+  **Deviation from Bybit**: no fixed max-window-span guard. Bybit caps the window at 7 days; OKX does not
+  enforce a fixed maximum span on these endpoints (it paginates via `before`/`after` cursors), so only the
+  ordering invariant is checked. Documented inline.
+- Per-order field checks remain in Core `PlaceOrderRequest.Validate()` as with Bybit.
+
+### Verification
+```
+dotnet build CryptoExchanges.Net.sln
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+```
+
+## Commits
+- 5bd9589a74ebde59b9dae15d074eaf9f67c9345d — feat(M3): TASK-013 OkxSymbolFormat + value parsers + request validation

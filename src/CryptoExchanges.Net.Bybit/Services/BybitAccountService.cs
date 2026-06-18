@@ -1,67 +1,8 @@
-using System.Text.Json.Serialization;
 using CryptoExchanges.Net.Bybit.Internal;
 using CryptoExchanges.Net.Core.Interfaces;
 using DeltaMapper;
 
 namespace CryptoExchanges.Net.Bybit.Services;
-
-// ---------------------------------------------------------------------------
-//  Bybit V5 account DTOs
-// ---------------------------------------------------------------------------
-
-/// <summary>A single wallet account (e.g. UNIFIED) carrying its per-coin balances.</summary>
-internal sealed record BybitWalletAccount
-{
-    [JsonPropertyName("coin")]
-    public List<BybitCoinBalance> Coin { get; init; } = [];
-}
-
-internal sealed record BybitCoinBalance
-{
-    [JsonPropertyName("coin")]
-    public string Coin { get; init; } = string.Empty;
-
-    /// <summary>Total wallet balance for the coin (free + locked).</summary>
-    [JsonPropertyName("walletBalance")]
-    public string WalletBalance { get; init; } = "0";
-
-    /// <summary>Amount locked in open orders / pending settlement.</summary>
-    [JsonPropertyName("locked")]
-    public string Locked { get; init; } = "0";
-}
-
-internal sealed record BybitExecution
-{
-    [JsonPropertyName("symbol")]
-    public string Symbol { get; init; } = string.Empty;
-
-    [JsonPropertyName("execId")]
-    public string ExecId { get; init; } = string.Empty;
-
-    [JsonPropertyName("orderId")]
-    public string OrderId { get; init; } = string.Empty;
-
-    [JsonPropertyName("execPrice")]
-    public string ExecPrice { get; init; } = "0";
-
-    [JsonPropertyName("execQty")]
-    public string ExecQty { get; init; } = "0";
-
-    [JsonPropertyName("side")]
-    public string Side { get; init; } = "Buy";
-
-    /// <summary>Execution time in unix milliseconds (string-encoded).</summary>
-    [JsonPropertyName("execTime")]
-    public string ExecTime { get; init; } = "0";
-
-    /// <summary>Whether this fill was the maker side of the trade.</summary>
-    [JsonPropertyName("isMaker")]
-    public bool IsMaker { get; init; }
-}
-
-// ---------------------------------------------------------------------------
-//  BybitAccountService
-// ---------------------------------------------------------------------------
 
 /// <summary>
 /// Bybit implementation of <see cref="IAccountService"/> against the V5 unified-account REST API.

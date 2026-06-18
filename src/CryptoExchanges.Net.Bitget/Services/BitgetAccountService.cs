@@ -4,57 +4,6 @@ using DeltaMapper;
 namespace CryptoExchanges.Net.Bitget.Services;
 
 // ---------------------------------------------------------------------------
-//  Bitget V2 account DTOs
-// ---------------------------------------------------------------------------
-
-internal sealed record BitgetBalance
-{
-    [JsonPropertyName("coin")]
-    public string Coin { get; init; } = string.Empty;
-
-    /// <summary>Available (free) balance for the coin.</summary>
-    [JsonPropertyName("available")]
-    public string Available { get; init; } = "0";
-
-    /// <summary>Balance frozen in open orders (locked).</summary>
-    [JsonPropertyName("frozen")]
-    public string Frozen { get; init; } = "0";
-
-    /// <summary>Balance locked for other reasons (e.g. pending settlement); also counts as locked.</summary>
-    [JsonPropertyName("locked")]
-    public string Locked { get; init; } = "0";
-}
-
-internal sealed record BitgetFill
-{
-    [JsonPropertyName("symbol")]
-    public string Symbol { get; init; } = string.Empty;
-
-    [JsonPropertyName("tradeId")]
-    public string TradeId { get; init; } = string.Empty;
-
-    [JsonPropertyName("orderId")]
-    public string OrderId { get; init; } = string.Empty;
-
-    [JsonPropertyName("priceAvg")]
-    public string PriceAvg { get; init; } = "0";
-
-    [JsonPropertyName("size")]
-    public string Size { get; init; } = "0";
-
-    [JsonPropertyName("side")]
-    public string Side { get; init; } = "buy";
-
-    /// <summary>Liquidity role: <c>maker</c> or <c>taker</c>.</summary>
-    [JsonPropertyName("tradeScope")]
-    public string TradeScope { get; init; } = "taker";
-
-    /// <summary>Fill time in unix milliseconds (string-encoded).</summary>
-    [JsonPropertyName("cTime")]
-    public string CTime { get; init; } = "0";
-}
-
-// ---------------------------------------------------------------------------
 //  BitgetAccountService
 // ---------------------------------------------------------------------------
 

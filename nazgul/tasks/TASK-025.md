@@ -1,7 +1,7 @@
 ---
 id: TASK-025
 status: IMPLEMENTED
-commit: 027d8f4
+commit: 3af2201
 claimed_at: 2026-06-19
 ---
 
@@ -9,7 +9,7 @@ claimed_at: 2026-06-19
 
 **Status**: IMPLEMENTED
 
-> **Implementation note (2026-06-19):** Build 0W/0E (Release). Full suite green: 455 tests (438 non-integration + 17 integration), 0 failed. 47 internal wire DTOs renamed across Binance (12), Bybit (13), OKX (11), Bitget (11) via `git mv` + type/reference updates; mapping-profile and symbol-format CLASS names left untouched. Commit 027d8f4.
+> **Implementation note (2026-06-19):** Build 0W/0E (Release). Full suite green: 455 tests (438 non-integration + 17 integration), 0 failed. 47 internal wire DTOs renamed across Binance (12), Bybit (13), OKX (11), Bitget (11) via `git mv` + type/reference updates; mapping-profile and symbol-format CLASS names left untouched. Commit 3af2201.
 
 **Blast radius**: LOW — pure rename of `internal` wire DTO types within each exchange
 assembly. No public API change (DTOs are internal), no behavior change. The 455-test
@@ -30,4 +30,4 @@ files (`git mv`), mapping profiles, and any test references.
 - No collisions with `Core.Models.*`; no public API surface change.
 
 ## Commits
-- 027d8f4 — refactor(cleanup): rename per-exchange wire DTOs to <Name>Dto (TASK-025)
+- 3af2201 — refactor(cleanup): rename per-exchange wire DTOs to <Name>Dto (TASK-025)

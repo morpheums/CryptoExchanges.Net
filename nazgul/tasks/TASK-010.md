@@ -1,6 +1,6 @@
 ---
 id: TASK-010
-status: IMPLEMENTED
+status: DONE
 ---
 
 # TASK-010: OKX project scaffold + passphrase options + DI seam stub
@@ -116,3 +116,8 @@ is clean (no signing logic, just forwards the passphrase to the validated Core c
 
 ## Commits
 - af642795acfca20118a0f73c8a87c0de7c615b73 — feat(M2): TASK-010 OKX project scaffold + passphrase options + DI seam stub
+
+## Review
+- **Review Gate**: PASSED (round 1) — all 4 APPROVE: architect 96, code (high), security 92, api 96. No blocking items.
+- **Verified**: Core+Http-only refs; csproj mirrors post-ADR-001 Bybit (no IVT to DI package); reuses ExchangeId.Okx; OkxOptions surface correct (no ReceiveWindow); CS1591 clean.
+- **CARRIED to TASK-011 (non-blocking CONCERN, 3 reviewers @75/82/72)**: `ToCredentials()` throws on empty/whitespace Passphrase (ExchangeCredentials treats null as the no-passphrase sentinel, rejects empty). DECISION DEFERRED to TASK-011 signing wire-up: the OKX secret-gated finalizer must gate on secret AND passphrase (→ PassThrough when either absent) so `ToCredentials()` is only called when both present; OR map empty→null in ToCredentials. Pick during finalizer design + tighten the `<exception>` doc then. Also: OkxOptions has no ToString redaction (security @45, matches BybitOptions — convention lives in ExchangeCredentials); PackageTags missing 'okx' (api @70, pre-existing, fold into cleanup).

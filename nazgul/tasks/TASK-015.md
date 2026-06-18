@@ -1,6 +1,6 @@
 ---
 id: TASK-015
-status: IMPLEMENTED
+status: DONE
 ---
 
 # TASK-015: OKX services + mapping + error + time + tests + AddOkxExchange DI (closes M-OKX)
@@ -8,9 +8,9 @@ status: IMPLEMENTED
 **Milestone**: M-OKX
 **Wave**: 10
 **Group**: 10
-**Status**: PLANNED
+**Status**: DONE
 **Depends on**: TASK-012, TASK-014
-**Retry count**: 0/3
+**Retry count**: 1/3
 **Delegates to**: none
 **Traces to**: research#okx (spot REST parity; DeltaMapper mandate); research#architectural-implication (OKX validates the generalized abstraction)
 **Blast radius**: HIGH — modifies shared DI `ServiceCollectionExtensions`/`CryptoExchangesOptions` (architect + api review); defines public `OkxExchangeClient`; closes the OKX milestone.
@@ -98,13 +98,31 @@ Confirmed via reflection on the compiled assembly: ONLY `OkxExchangeClient`, `Ok
 
 ## Verification
 - `dotnet build CryptoExchanges.Net.sln` → **0 warnings, 0 errors** (Debug, TreatWarningsAsErrors).
-- `dotnet test --filter 'Category!=Integration'` → **ALL pass**. OKX unit = **91** (new). Others unchanged: Core 93, Http 12, Bybit 80, DI 11, Binance(unit) 45. No Binance/Bybit regression.
+- `dotnet test --filter 'Category!=Integration'` → **ALL pass**. OKX unit = **95** (91 original + 4 GetCandlesticks regression tests from gate B2). Others unchanged: Core 93, Http 12, Bybit 80, DI 11, Binance(unit) 45. No Binance/Bybit regression.
 - `dotnet test --filter 'Category=Integration'` → **ALL pass**. OKX integration = **6** (new), Bybit 5/5 unchanged.
 - Public surface confirmed (reflection): only `OkxExchangeClient` + `OkxOptions` (+ the AddOkxExchange `ServiceCollectionExtensions`) among new OKX types.
 
 ### Test counts
-- OKX Unit (OkxSigningTests + OkxMappingAndServiceTests): 91 tests — base64 sig vector + Core-HMAC agreement, GET/POST prehash assembly, ISO-8601 timestamp (incl. tz→UTC), BTC-USDT round-trip, parsers + validation, error-code→exception (incl. code=="0" not-an-error + per-order sCode), time-sync + zero-length guard, per-service DeltaMapper mapping over mocked IOkxHttpClient, MARKET-ORDER round-trip regression, DI resolution (keyed client; secretless OR passphraseless → PassThrough/still-resolves; AddCryptoExchanges resolves OKX+Bybit+Binance).
+- OKX Unit (OkxSigningTests + OkxMappingAndServiceTests): 95 tests — base64 sig vector + Core-HMAC agreement, GET/POST prehash assembly, ISO-8601 timestamp (incl. tz→UTC), BTC-USDT round-trip, parsers + validation, error-code→exception (incl. code=="0" not-an-error + per-order sCode), time-sync + zero-length guard, per-service DeltaMapper mapping over mocked IOkxHttpClient, MARKET-ORDER round-trip regression, candlestick OHLCV+OpenTime/empty-ts/8h-throws/limit-clamp (gate B2), DI resolution (keyed client; secretless OR passphraseless → PassThrough/still-resolves; AddCryptoExchanges resolves OKX+Bybit+Binance).
 - OKX Integration (OkxPipelineEndToEndTests, [Trait Category=Integration]): 6 tests — four OK-ACCESS-* headers on signed GET+POST with base64 sign, re-sign-on-retry (SeqStub 500→200) single fresh header set, passphrase-missing fast-fail, secretless/passphraseless → PassThrough emits no OK-ACCESS-SIGN, unsigned adds no auth headers.
 
 ## Commits
 - 5fb566140c18f60833cd7bcb41a5ea8cd2c481c0 — feat(M3): TASK-015 OKX services + mapping + error + time + tests + AddOkxExchange DI (closes M-OKX)
+- b78be03aea9df65114026fdc37e47fce7f1f98b7 — feat(M2): simplify TASK-015 (consolidate ParseMs into OkxValueParsers; SpotInstType into OkxRequestValidation)
+- fb92660e019ead0fc1ff3ad677e75f128b5ee14d — feat(M2): TASK-015 review-gate fixes — guard candlestick ts parse + GetCandlesticks tests
+
+## Review Gate (redo after prior session limit) — PASSED round 1 (via fix-first auto-remediation)
+- **Simplify pass**: 2 safe consolidations applied (`ParseMs`→OkxValueParsers, `SpotInstType`→OkxRequestValidation), committed b78be03; 332 tests pass.
+- **Pre-checks**: build 0W/0E (TreatWarningsAsErrors); non-integration 336 pass; integration 11 pass; no Binance/Bybit regression.
+- **architect-reviewer**: APPROVED (92) — CONCERNs <80 only (public-members-in-internal-class cosmetics, stale comment). + milestone macro note (see below).
+- **security-reviewer**: APPROVED (95) — secret+passphrase PassThrough gate correct (`||`); no secret/passphrase leakage; signed-vs-unsigned classification correct (market/public unsigned, trade/account signed); signed POST body is verbatim wire body via single `PostJsonAsync`; fresh signature+timestamp per retry (handler inner to Polly, strips 4 OK-ACCESS-* headers before re-add).
+- **api-reviewer**: APPROVED — public surface = OkxExchangeClient + OkxOptions + AddOkxExchange host only; mirrors BybitExchangeClient; `OkxOptions.ToCredentials()` empty-passphrase throw flagged MEDIUM/90 but non-blocking (never called in signing path).
+- **code-reviewer**: CHANGES_REQUESTED (95) → 2 blocking AUTO-FIX items:
+  - **B1 [HIGH/95]** `OkxMarketDataService.cs:214` unguarded `long.Parse(arr[0])` on candlestick ts → FormatException on empty/malformed ts. FIXED → `OkxValueParsers.ParseMs(arr[0])`.
+  - **B2 [MEDIUM/95]** `GetCandlesticksAsync` had zero test coverage. FIXED → 4 tests (happy-path OHLCV+OpenTime, empty-ts→epoch-0 B1 regression, 8h-throws, limit-clamp-to-100). OKX unit 91→95.
+  - Both mechanical/non-security → applied via fix-first auto-remediation (commit fb92660), pre-checks re-run green, no second full review round per Step 3.75.
+- **Aggregate verdict**: PASSED. **CLOSES MILESTONE M-OKX.**
+- **Reviews**: nazgul/reviews/TASK-015/{architect-reviewer,code-reviewer,security-reviewer,api-reviewer}.md + feedback.md
+
+### Architect milestone-boundary macro note (M-OKX closer — recorded, NON-blocking)
+Three exchanges (Binance, Bybit, OKX) now DONE; ADR-001 correctly applied; no blocking structural debt. Four latent duplications that COMPOUND with Bitget: (1) `ServiceCollectionExtensions` ×3 (~375 lines, ~90% identical; Bybit↔OKX differ ~8 lines); (2) `XxxClientComposer` ×3 (five-method skeleton near-identical, only `BuildResilientHttpClient` diverges); (3) `CryptoExchangesOptions` (+3-4 nullable strings/exchange, ~16+ at Bitget); (4) `XxxTimeSync` ×3 (identical `ComputeOffset`/`ApplyOffset`, zero exchange-specific logic). Recommended BEFORE Bitget (priority order): (a) extract `TimeSync` into Core; (b) shared DI helper for the keyed-singleton registration block; (c) accept Composer duplication for now. Suggest a dedicated `TASK-REF-001: Extract per-exchange DI helper` before M-BITGET starts.

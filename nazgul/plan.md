@@ -12,9 +12,9 @@ Add three new exchange integrations to CryptoExchanges.Net in strict priority or
 
 ## Status Summary
 - Total tasks: 23 (added TASK-009B per ADR-001)
-- DONE: 15 | READY: 0 | IN_PROGRESS: 0 | IMPLEMENTED: 1 | IN_REVIEW: 0 | CHANGES_REQUESTED: 0 | BLOCKED: 0 | PLANNED: 7
+- DONE: 16 | READY: 0 | IN_PROGRESS: 0 | IMPLEMENTED: 0 | IN_REVIEW: 0 | CHANGES_REQUESTED: 0 | BLOCKED: 0 | PLANNED: 7
 - Current iteration: 9/40
-- Active task: TASK-015 IMPLEMENTED (awaiting review gate) — closes M-OKX. 15/23 DONE + 1 implemented.
+- Active task: none active — TASK-015 DONE, M-OKX CLOSED. 16/23 DONE. NEXT: open M-OKX PR (feat/m3-okx -> main; confirm with user before merge), then rebranch for M-BITGET (TASK-016+).
 
 ## Scoping Decisions (HITL — committed, not open questions)
 The objective is fully prescriptive on scope/sequence/signing; these are the choices made decisively:
@@ -122,7 +122,7 @@ Tasks touching shared Core/Http/DI projects are higher blast radius and REQUIRE 
 - [x] TASK-014: OkxHttpClient + interface -> DONE
 
 ### Group 10 (= Wave 10)
-- [ ] TASK-015: OKX services + mapping + error + time + tests + AddOkxExchange DI (closes M-OKX) -> IMPLEMENTED (awaiting review gate)
+- [x] TASK-015: OKX services + mapping + error + time + tests + AddOkxExchange DI (closes M-OKX) -> DONE (gate PASSED; CLOSES M-OKX)
 
 ### Group 11 (= Wave 11)
 - [ ] TASK-016: Core ExchangeId.Bitget enum member -> PLANNED
@@ -229,12 +229,12 @@ Tasks touching shared Core/Http/DI projects are higher blast radius and REQUIRE 
 - **Manifest**: nazgul/tasks/TASK-014.md
 
 ### TASK-015: OKX services + mapping + error + time + tests + AddOkxExchange DI (closes M-OKX)
-- **Status**: IMPLEMENTED
+- **Status**: DONE
 - **Group**: 10
 - **Depends on**: TASK-012, TASK-014
 - **Base SHA**: f03c2092318332a0dc16215fdae7e7b9ac25cc43
 - **claimed_at**: 2026-06-18
-- **Commit**: 5fb566140c18f60833cd7bcb41a5ea8cd2c481c0
+- **Commit**: 5fb5661 (+ b78be03 simplify, fb92660 gate-fix); gate PASSED, CLOSES M-OKX
 - **Manifest**: nazgul/tasks/TASK-015.md
 
 ### TASK-016: Core ExchangeId.Bitget enum member
@@ -290,6 +290,7 @@ Tasks touching shared Core/Http/DI projects are higher blast radius and REQUIRE 
 - TASK-008: Bybit tests + AddBybitExchange DI (DONE) — gate PASSED round 1 (all 4 APPROVE; code@96 confirmed regression tests valid); 77 unit + 5 integration tests; commit f60bd18. **CLOSES MILESTONE M-BYBIT.** (Merged to main via PR #11 → e7c0268.)
 - TASK-009: OKX-era Core auth generalization (DONE) — gate PASSED round 1 (architect 97, security 99, api 96, code PASS); additive ExchangeCredentials + HmacSignature (hex|base64), non-breaking; +25 Core tests; commit 63b0006 (+polish).
 - TASK-009B: per-exchange DI re-homing, ADR-001 (DONE) — gate PASSED round 1 (architect 92, security 100, api 95, code 97); AddXxxExchange moved into exchange assemblies, thin AddCryptoExchanges aggregator, ExchangeClientFactory→Http, Binance signing→internal + endpoint guards; 241+5 tests; commit 1a56835. BREAKING (pre-v1.0) namespace move.
+- TASK-015: OKX services + mapping + composer + ExchangeClient + error translator + time sync + tests + AddOkxExchange DI (DONE) — gate PASSED round 1 via fix-first auto-remediation (architect 92, security 95, api APPROVE, code REJECT@95 -> fixed). Simplify pass consolidated ParseMs/SpotInstType (b78be03). code-reviewer B1 (HIGH/95 unguarded long.Parse on candlestick ts @ OkxMarketDataService.cs:214) + B2 (no GetCandlesticks test) auto-fixed in fb92660 (ParseMs + 4 regression tests; OKX unit 91->95). Build 0W/0E; non-integration 336 pass; integration 11 pass; no Binance/Bybit regression. Public surface = OkxExchangeClient + OkxOptions + AddOkxExchange host only. Commits 5fb5661, b78be03, fb92660. **CLOSES MILESTONE M-OKX.**
 
 ## Tracked follow-ups (non-blocking, from gates)
 - **Translator/TimeSync visibility**: now that per-exchange DI constructs them in-assembly, `BinanceErrorTranslator`/`BinanceTimeSync` + `BybitErrorTranslator`/`BybitTimeSync` can be `internal` (ADR-001 conv #2). → build OKX/Bitget translators+timesync INTERNAL from the start; small cleanup task for Binance/Bybit later.
@@ -303,22 +304,21 @@ Tasks touching shared Core/Http/DI projects are higher blast radius and REQUIRE 
 - M-BYBIT (TASK-001–008) on `feat/m2-exchange-expansion` → on TASK-008 DONE, open PR → main → **confirm with user before the merge click** → merge.
 - After merge: cut `feat/m3-okx` off updated main for M-OKX (TASK-009–015) → PR/merge → branch for M-BITGET (TASK-016–022).
 
-## Recovery Pointer — ▶ ACTIVE (M-OKX)
-- **Current Task:** TASK-015 IMPLEMENTED (commit 5fb5661) — awaiting review gate. Branch `feat/m3-okx`. Diff captured at nazgul/reviews/TASK-015/diff.patch.
+## Recovery Pointer — ▶ MILESTONE BOUNDARY (M-OKX CLOSED — awaiting user PR confirmation)
+- **Current Task:** none active. TASK-015 is DONE; **MILESTONE M-OKX is CLOSED** (TASK-009..015 all DONE). Branch `feat/m3-okx`, tip fb92660.
 
-- **Status:** TASK-015 (M-OKX milestone-closer) is IMPLEMENTED. NEXT ACTION = review gate (architect + code + security + api). All carry-ins addressed: (1) secret+passphrase-gated finalizer returns PassThrough when either missing — strings passed directly, ToCredentials never hit in signing path; (2) OkxErrorTranslator + OkxTimeSync built INTERNAL; (3) market-order round-trip regression test present (ParseOrderType/ParseTimeInForce both accept "market"); (4) place-order single-order body uses the flat string dict (all spot fields scalar), and a NEW typed object-body PostAsync overload was added for cancel-batch-orders' JSON array. VERIFICATION: build 0W/0E (TWAE); unit ALL pass (OKX 91 new; no Binance/Bybit regression); integration ALL pass (OKX 6 new + Bybit 5/5). Public surface (reflection-confirmed): only OkxExchangeClient + OkxOptions (+ AddOkxExchange host). On gate PASS → mark TASK-015 DONE + close M-OKX → run milestone-close checklist (macro-architecture pass) → PR feat/m3-okx → main (per-exchange PR strategy; confirm with user before merge). OKX PR changelog: AddXxxExchange in exchange assemblies; Binance signing internal; OKX translator/timesync internal; new typed object-body OkxHttpClient.PostAsync overload.
+- **What just happened:** Review gate for TASK-015 was redone (prior run hit a session limit before writing verdicts). Simplify pass ran (2 safe consolidations, b78be03). Pre-checks green. Board: architect APPROVED(92), security APPROVED(95), api APPROVED; code-reviewer CHANGES_REQUESTED(95) with 2 mechanical AUTO-FIX items — B1 (HIGH/95 unguarded `long.Parse(arr[0])` candlestick ts @ OkxMarketDataService.cs:214) and B2 (no GetCandlesticks test). Both fixed via fix-first auto-remediation (commit fb92660: `OkxValueParsers.ParseMs` + 4 GetCandlesticks regression tests, OKX unit 91->95). Build 0W/0E; non-integration 336 pass; integration 11 pass; no Binance/Bybit regression. Aggregate verdict PASSED.
 
-- **Historical note:** prior HOLD (await user merge of PR #11) is resolved — merged 2026-06-18.
-- **PR-review fixes applied (pushed, not merged):** GitHub Copilot reviewer found a real bug in BybitErrorTranslator.Parse (retMsg GetString() w/o ValueKind guard → InvalidOperationException escapes catch). Fixed + 3 regression tests in commit 5643ff5; Copilot thread resolved. CodeRabbit was rate-limited (no review). Bybit unit tests now 80.
-- **DI DESIGN — DECIDED (ADR-001, 2026-06-18):** adopt per-exchange DI (option b). Move `AddBinanceExchange`/`AddBybitExchange` into their own assemblies; `AddCryptoExchanges` becomes a thin aggregator. Apply at **M-OKX start, folded with TASK-009** (cheaper at 2 exchanges than 4); implement OKX/Bitget DI in-assembly from day one. Pre-v1.0 → breaking namespace move acceptable (optional `[Obsolete]` forwarders). See `nazgul/docs/ADR-001-per-exchange-di-and-conventions.md`.
-- **Process hardening applied (PR #11 branch):** architect-reviewer gained invariant #10 (package coupling) + "question the reference pattern" mandate + milestone-boundary macro-architecture pass; code-reviewer gained JSON-ValueKind-guard + clamp-don't-throw rules; ADR-001 committed.
+- **NEXT ACTION (per per-exchange-milestone strategy — REQUIRES USER CONFIRMATION before the merge):**
+  1. Run remaining milestone-close checklist items: post-loop agents are NOT run per-milestone here; the macro-architecture pass is already done (see architect note below + recorded as a tracked follow-up).
+  2. Push `feat/m3-okx` and open the M-OKX PR -> `main`. Title: "OKX exchange integration (M-OKX)". Body changelog: AddOkxExchange in OKX assembly (ADR-001); OkxErrorTranslator + OkxTimeSync internal; new typed object-body OkxHttpClient.PostAsync overload (cancel-batch-orders); CryptoExchangesOptions OKX additions incl. passphrase; simplify consolidations.
+  3. **Confirm with the user before clicking merge.** After merge: `git checkout main && git pull`, cut a new branch off updated main for M-BITGET, then start Wave 11 = TASK-016 (Core ExchangeId.Bitget enum).
 
-## Milestone-close checklist (run at every milestone boundary)
-1. All milestone tasks DONE (gates passed).
-2. **Macro-architecture pass** (architect-reviewer, ADR-001): review the milestone's AGGREGATE change for duplication/coupling/public-surface growth that will compound when the next milestone repeats the pattern — not just the last diff.
-3. Open the milestone PR; confirm with user before merge.
-4. After merge: rebranch off main for the next milestone.
-- **Resume trigger:** user says the Bybit PR is merged (or asks to continue). THEN: `git checkout main && git pull`, cut `feat/m3-okx` off updated main, start Wave 6 = TASK-009 (OKX credential/signing generalization; HIGHEST blast radius — Core/Http; non-breaking for Binance + Bybit). Fold in the two tracked follow-ups: harmonize Binance signing types to internal + back-fill BinanceHttpClient endpoint guard.
-- **Last Commit:** df3f411 (M-BYBIT complete); PR #11 open, unmerged. (Bybit unit + integration tests + AddBybitExchange DI wiring) — CLOSES MILESTONE M-BYBIT. Depends on TASK-003/006/007 (all DONE). TASK-008 notes: (1) create the Bybit test project(s) and ensure the csproj InternalsVisibleTo grants the UNIT-test project name (internal signing types, internal services, ApplyOffset); (2) cover signature hex vector + GET/POST sign-string, symbol round-trip, parser invariants + validation rejects, signing-handler header presence/re-sign-on-retry (stub handler, mirror BinancePipelineEndToEndTests), service DTO→model mapping via mocked IBybitHttpClient, error-code→exception mapping, time-offset sign/magnitude, AND the two round-1 bug fixes (limit clamp to 50, cancel-by-linkId id fallback); (3) wire AddBybitExchange in the DI project mirroring AddBinanceExchange. FOLLOW-UP for TASK-009: harmonize Binance signing types to internal + back-fill BinanceHttpClient endpoint guard.
+- **NEW tracked follow-up before M-BITGET (architect macro note, MEDIUM/75, non-blocking):** Three exchanges now share ~90%-identical DI/Composer/TimeSync structure. Before Bitget repeats the pattern a 4th time, create **TASK-REF-001: Extract per-exchange DI helper** — priority order: (a) extract `TimeSync` (`ComputeOffset`/`ApplyOffset`) into Core (zero exchange-specific logic); (b) shared keyed-singleton DI registration helper; (c) accept ClientComposer duplication (only `BuildResilientHttpClient` diverges). Cheaper now than after a 4th exchange.
+
+- **Non-blocking review CONCERNs (carry, do NOT gate Bitget on these):** api MEDIUM/90 `OkxOptions.ToCredentials()` throws on default-empty Passphrase (never called in signing path — guard empty->null or make internal); code MEDIUM/60 `TryMapTicker` narrow `FormatException` catch (document or widen); cosmetic public-in-internal modifiers in OkxRequestValidation; stale comment in OkxHttpClient.PostJsonAsync.
+
+- **Historical note:** PR #11 (M-BYBIT) merged 2026-06-18. ADR-001 (per-exchange DI) adopted and applied across Binance/Bybit/OKX.
+- **Last Commit:** fb92660 feat(M2): TASK-015 review-gate fixes — guard candlestick ts parse + GetCandlesticks tests
 - **Last Checkpoint:** nazgul/checkpoints/iteration-001.json
 - **Last Commit:** c6bfbb3 feat(M2): TASK-007 BybitErrorTranslator + BybitTimeSync

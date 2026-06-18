@@ -14,7 +14,7 @@ Add three new exchange integrations to CryptoExchanges.Net in strict priority or
 - Total tasks: 23 (added TASK-009B per ADR-001)
 - DONE: 13 | READY: 0 | IN_PROGRESS: 0 | IMPLEMENTED: 0 | IN_REVIEW: 0 | CHANGES_REQUESTED: 0 | BLOCKED: 0 | PLANNED: 10
 - Current iteration: 8/40
-- Active task: none — TASK-012 IMPLEMENTED (awaiting review). Wave 9: TASK-012 done; TASK-014 (OkxHttpClient) remaining, parallel-safe.
+- Active task: none — Wave 9 IMPLEMENTED (TASK-012 + TASK-014), both awaiting review gate. Next: review TASK-012 + TASK-014, then Wave 10 = TASK-015 (closes M-OKX).
 
 ## Scoping Decisions (HITL — committed, not open questions)
 The objective is fully prescriptive on scope/sequence/signing; these are the choices made decisively:
@@ -119,7 +119,7 @@ Tasks touching shared Core/Http/DI projects are higher blast radius and REQUIRE 
 
 ### Group 9 (= Wave 9)
 - [x] TASK-012: OkxSigningHandler (header-based) -> IMPLEMENTED
-- [ ] TASK-014: OkxHttpClient + interface -> PLANNED
+- [x] TASK-014: OkxHttpClient + interface -> IMPLEMENTED
 
 ### Group 10 (= Wave 10)
 - [ ] TASK-015: OKX services + mapping + error + time + tests + AddOkxExchange DI (closes M-OKX) -> PLANNED
@@ -222,7 +222,7 @@ Tasks touching shared Core/Http/DI projects are higher blast radius and REQUIRE 
 - **Manifest**: nazgul/tasks/TASK-013.md
 
 ### TASK-014: OkxHttpClient + interface
-- **Status**: IN_PROGRESS
+- **Status**: IMPLEMENTED
 - **Group**: 9
 - **Depends on**: TASK-013
 - **Base SHA**: 6522afa2dd0db87d19240cfdb952a9c331fd3970
@@ -301,7 +301,8 @@ Tasks touching shared Core/Http/DI projects are higher blast radius and REQUIRE 
 - After merge: cut `feat/m3-okx` off updated main for M-OKX (TASK-009–015) → PR/merge → branch for M-BITGET (TASK-016–022).
 
 ## Recovery Pointer — ▶ ACTIVE (M-OKX)
-- **Current Task:** TASK-012 IMPLEMENTED (awaiting review gate). Wave 9 in progress. Branch `feat/m3-okx` off main; keep current with main (protected: "Build & Test" check + strict up-to-date). TASK-012 commit f556191 (manifest SHA recorded in bb33a09); diff at nazgul/reviews/TASK-012/diff.patch. NEXT: review gate on TASK-012, and run TASK-014 (OkxHttpClient, depends TASK-013) — disjoint files from TASK-012, can run in parallel.
+- **Current Task:** TASK-012 + TASK-014 both IMPLEMENTED (awaiting review gate). Wave 9 complete. Branch `feat/m3-okx` off main; keep current with main (protected: "Build & Test" check + strict up-to-date). TASK-012 commit f556191 (manifest SHA recorded in bb33a09); diff at nazgul/reviews/TASK-012/diff.patch. TASK-014 commit f82eeec; diff at nazgul/reviews/TASK-014/diff.patch. NEXT: review gate on TASK-012 + TASK-014, then Wave 10 = TASK-015 (OKX services + mapping + composer + ExchangeClient + error translator + time sync + tests + AddOkxExchange DI; depends TASK-012 + TASK-014; closes M-OKX).
+- **TASK-014 done:** created `src/CryptoExchanges.Net.Okx/IOkxHttpClient.cs` (internal interface, Get/Post/Delete<T> mirroring Bybit signatures+defaults) and `src/CryptoExchanges.Net.Okx/OkxHttpClient.cs` (internal sealed, ctor only HttpClient). GET/DELETE append `Uri.EscapeDataString` query to a full `/api/v5/...` path; POST sends verbatim UTF-8 application/json body. Signed → `OkxSigningRequest.MarkSigned` (handler signs per attempt, no inline signing). SIGN-CONSISTENCY: BaseAddress is host-only (`https://www.okx.com`, no path) so `RequestUri.PathAndQuery` equals exactly the OKX requestPath that `OkxSigningHandler` hashes (it signs `request.RequestUri!.PathAndQuery`); POST body read back via `ReadAsStringAsync` → serialized JSON must be wire-verbatim. Case-insensitive JsonOptions (AllowReadingFromString + WhenWritingNull). InternalsVisibleTo (Okx.Tests.Integration + DynamicProxyGenAssembly2) already present — no csproj edit. Build 0W/0E.
 - **Status:** TASK-011 IMPLEMENTED — commit e4dc88c. Created `src/CryptoExchanges.Net.Okx/Auth/OkxSignatureService.cs` (internal; HMAC-SHA256 base64 via Core `HmacSignature.Compute(..., SignatureEncoding.Base64)` — no re-impl; static `BuildPrehash(ts,method,path,body)` upper-cases method, ISO-8601 UTC `FormatTimestamp` helper `yyyy-MM-ddTHH:mm:ss.fffZ`; `Sign` returns base64 for `OK-ACCESS-SIGN`, not appended) and `src/CryptoExchanges.Net.Okx/Resilience/OkxSigningRequest.cs` (internal, `okx.signed` marker, idempotent). Build 0W/0E. Diff at nazgul/reviews/TASK-011/diff.patch. NEXT for orchestrator: run review gate on TASK-011, and run TASK-013 (OkxSymbolFormat `BTC-USDT` dash-delimiter upper + OkxValueParsers + OkxRequestValidation; depends TASK-010 — disjoint files from TASK-011, can run in parallel). OKX headers: `OK-ACCESS-KEY/SIGN/TIMESTAMP/PASSPHRASE`. OKX ships AddOkxExchange in-assembly (ADR-001) with INTERNAL error-translator + time-sync from the start. CARRY: secret+passphrase gate for ToCredentials() (see TASK-010 review). OKX PR changelog: AddXxxExchange namespace moved to exchange assemblies; Binance signing types now internal.
 - **Historical note:** prior HOLD (await user merge of PR #11) is resolved — merged 2026-06-18.
 - **PR-review fixes applied (pushed, not merged):** GitHub Copilot reviewer found a real bug in BybitErrorTranslator.Parse (retMsg GetString() w/o ValueKind guard → InvalidOperationException escapes catch). Fixed + 3 regression tests in commit 5643ff5; Copilot thread resolved. CodeRabbit was rate-limited (no review). Bybit unit tests now 80.

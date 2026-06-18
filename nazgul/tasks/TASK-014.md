@@ -65,4 +65,4 @@ Created two files, mirroring the Bybit V5 wrapper (the most recent JSON-body exc
 - No new tests this task (TASK-015 covers them).
 
 ## Commits
-- (recorded below)
+- f82eeec2367a08d3c4283febf72c79726b0ad1e3 — feat(M3): TASK-014 OkxHttpClient + IOkxHttpClient

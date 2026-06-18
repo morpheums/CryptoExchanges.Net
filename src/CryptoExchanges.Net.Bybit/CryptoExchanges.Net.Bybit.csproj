@@ -20,13 +20,11 @@
     <InternalsVisibleTo Include="CryptoExchanges.Net.Bybit.Tests.Integration" />
     <!-- Lets NSubstitute (Castle DynamicProxy) mock the internal IBybitHttpClient in tests. -->
     <InternalsVisibleTo Include="DynamicProxyGenAssembly2" />
-    <!-- Allow the DI package to wire internal types (IBybitHttpClient, BybitHttpClient,
-         BybitClientComposer, handlers, signing/translator) into the container. -->
-    <InternalsVisibleTo Include="CryptoExchanges.Net.DependencyInjection" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="DeltaMapper" Version="1.2.0" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.*" />
     <PackageReference Include="Microsoft.Extensions.Http" Version="10.0.*" />
     <PackageReference Include="Microsoft.Extensions.Options" Version="10.0.*" />
   </ItemGroup>

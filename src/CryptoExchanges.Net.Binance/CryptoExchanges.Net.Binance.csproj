@@ -14,15 +14,13 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!-- Allow the test assembly to unit-test internal DTOs and mapping profiles. -->
+    <!-- Allow the test assembly to unit-test internal DTOs, mapping profiles, and signing types. -->
     <InternalsVisibleTo Include="CryptoExchanges.Net.Binance.Tests.Integration" />
-    <!-- Allow the DI package to wire internal types (IBinanceHttpClient, BinanceHttpClient,
-         BinanceClientComposer, handlers, signing/translator) into the container. -->
-    <InternalsVisibleTo Include="CryptoExchanges.Net.DependencyInjection" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="DeltaMapper" Version="1.2.0" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.*" />
     <PackageReference Include="Microsoft.Extensions.Http" Version="10.0.*" />
     <PackageReference Include="Microsoft.Extensions.Options" Version="10.0.*" />
   </ItemGroup>

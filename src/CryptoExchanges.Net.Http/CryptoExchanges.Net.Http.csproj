@@ -3,6 +3,12 @@
     <ProjectReference Include="..\CryptoExchanges.Net.Core\CryptoExchanges.Net.Core.csproj" />
   </ItemGroup>
   <ItemGroup>
+    <!-- Each exchange's AddXxxExchange (now in its own assembly, see ADR-001) registers the
+         internal ExchangeClientFactory living here. -->
+    <InternalsVisibleTo Include="CryptoExchanges.Net.Binance" />
+    <InternalsVisibleTo Include="CryptoExchanges.Net.Bybit" />
+  </ItemGroup>
+  <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Http.Resilience" Version="10.7.0" />
   </ItemGroup>
 </Project>

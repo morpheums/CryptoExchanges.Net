@@ -6,7 +6,7 @@ namespace CryptoExchanges.Net.Binance.Auth;
 /// <summary>
 /// Creates HMAC-SHA256 signatures for Binance API requests.
 /// </summary>
-public sealed class BinanceSignatureService(string secretKey)
+internal sealed class BinanceSignatureService(string secretKey)
 {
     private readonly byte[] _secretKeyBytes = InitializeSecretKey(secretKey);
 

@@ -9,7 +9,7 @@ namespace CryptoExchanges.Net.Binance.Resilience;
 /// delayed request is re-signed with a fresh timestamp (avoids -1021 recvWindow errors).
 /// Supports query-signed (GET/DELETE) and body-signed (POST form) requests.
 /// </summary>
-public sealed class BinanceSigningHandler(
+internal sealed class BinanceSigningHandler(
     string apiKey, BinanceSignatureService signatureService, Func<long> timeOffset) : DelegatingHandler
 {
     /// <inheritdoc />

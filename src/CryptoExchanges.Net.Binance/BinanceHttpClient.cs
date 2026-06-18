@@ -27,6 +27,7 @@ internal sealed class BinanceHttpClient(HttpClient httpClient, BinanceOptions op
         string endpoint, Dictionary<string, string>? parameters = null,
         bool signed = false, CancellationToken ct = default)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(endpoint);
         using var request = new HttpRequestMessage(HttpMethod.Get, BuildUrl(endpoint, parameters, signed));
         if (signed) BinanceSigningRequest.MarkSigned(request);
         using var response = await httpClient.SendAsync(request, ct).ConfigureAwait(false);
@@ -38,6 +39,7 @@ internal sealed class BinanceHttpClient(HttpClient httpClient, BinanceOptions op
         string endpoint, Dictionary<string, string>? parameters = null,
         bool signed = false, CancellationToken ct = default)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(endpoint);
         using var request = new HttpRequestMessage(HttpMethod.Get, BuildUrl(endpoint, parameters, signed));
         if (signed) BinanceSigningRequest.MarkSigned(request);
         using var response = await httpClient.SendAsync(request, ct).ConfigureAwait(false);
@@ -49,6 +51,7 @@ internal sealed class BinanceHttpClient(HttpClient httpClient, BinanceOptions op
         string endpoint, Dictionary<string, string>? parameters = null,
         bool signed = true, CancellationToken ct = default)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(endpoint);
         var query = BuildBaseQuery(parameters, signed);
         using var content = new StringContent(query, Encoding.UTF8, "application/x-www-form-urlencoded");
         using var request = new HttpRequestMessage(HttpMethod.Post, endpoint) { Content = content };
@@ -62,6 +65,7 @@ internal sealed class BinanceHttpClient(HttpClient httpClient, BinanceOptions op
         string endpoint, Dictionary<string, string>? parameters = null,
         bool signed = true, CancellationToken ct = default)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(endpoint);
         using var request = new HttpRequestMessage(HttpMethod.Delete, BuildUrl(endpoint, parameters, signed));
         if (signed) BinanceSigningRequest.MarkSigned(request);
         using var response = await httpClient.SendAsync(request, ct).ConfigureAwait(false);

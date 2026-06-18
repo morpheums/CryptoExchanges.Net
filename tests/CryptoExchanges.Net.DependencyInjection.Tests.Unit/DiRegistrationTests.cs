@@ -1,6 +1,8 @@
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 using FluentAssertions;
+using CryptoExchanges.Net.Binance;
+using CryptoExchanges.Net.Bybit;
 using CryptoExchanges.Net.Core.Enums;
 using CryptoExchanges.Net.Core.Interfaces;
 using CryptoExchanges.Net.DependencyInjection;
@@ -40,6 +42,22 @@ public class DiRegistrationTests
         services.AddBinanceExchange(o => { o.TimeoutSeconds = 0; });
         var act = () => services.BuildServiceProvider().GetRequiredKeyedService<IExchangeClient>(ExchangeId.Binance);
         act.Should().Throw<Microsoft.Extensions.Options.OptionsValidationException>();
+    }
+
+    [Fact]
+    public async Task BybitOnly_Registration_ResolvesBybitClient()
+    {
+        // Demonstrates the ADR-001 dependency direction: AddBybitExchange ships from the Bybit
+        // assembly and registers a working Bybit client WITHOUT going through AddCryptoExchanges
+        // (i.e. a Bybit-only consumer needs only the Bybit assembly, not the aggregator or Binance).
+        var services = new ServiceCollection();
+        services.AddBybitExchange(o => { o.ApiKey = "k"; o.SecretKey = "s"; });
+        // await using: the resolved IExchangeClient is IAsyncDisposable-only.
+        await using var sp = services.BuildServiceProvider();
+
+        sp.GetRequiredKeyedService<IExchangeClient>(ExchangeId.Bybit).ExchangeId
+            .Should().Be(ExchangeId.Bybit);
+        sp.GetService<IExchangeClient>().Should().BeNull();
     }
 
     [Fact]

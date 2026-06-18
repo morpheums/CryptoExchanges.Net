@@ -1,6 +1,8 @@
 ---
 id: TASK-REF-002
-status: PLANNED
+status: IMPLEMENTED
+claimed_at: 2026-06-18
+base_sha: 3eeb698fd117286b2a10c14e2150933655dc3534
 ---
 
 # TASK-REF-002: Interface seams for time-sync + signing (DIP, before Bitget)
@@ -25,3 +27,40 @@ status: PLANNED
 ## Notes
 - Gated on #13 merge → branch off main → TASK-REF-002 → PR/merge → then M-BITGET.
 - Retro comment sweep of existing code tracked separately as GitHub issue #14 (going-forward enforcement is already live via the reviewer agents + ADR-001).
+
+## Implementation Notes (2026-06-18)
+Branch `refactor/interface-seams`, base SHA 3eeb698. Behavior-preserving (DIP) refactor.
+
+### Two interface shapes
+- `IExchangeTimeSync` (Core.Resilience): `long ComputeOffset(long serverTimeMs, long localNowMs)` + `long ApplyOffset(long serverTimeMs, long localNowMs, long[] offsetHolder)`.
+- `ISignatureService` (Core.Auth): `string Sign(string payload)`.
+
+### Seam 1 — IExchangeTimeSync
+- `ExchangeTimeSync` converted from `static class` → `public sealed class ExchangeTimeSync : IExchangeTimeSync`; methods are now instance methods with `/// <inheritdoc />`. Logic byte-identical (same ComputeOffset subtraction + Interlocked.Exchange + null/length guards).
+- Registered ONCE, non-keyed, inside `ExchangeServiceRegistration.AddExchange`: `services.TryAddSingleton<IExchangeTimeSync, ExchangeTimeSync>();` (exchange-agnostic; TryAdd → a consumer's prior registration wins → swappable).
+- Threaded into all 3 clients: each `XxxExchangeClient` ctor gains an `IExchangeTimeSync timeSync` param (+ null guard + `_timeSync` field); `SyncServerTimeAsync` now calls `_timeSync.ApplyOffset(...)` instead of the static `ExchangeTimeSync.ApplyOffset(...)`.
+- Threaded through all 3 composers, mirroring the existing offsetHolder threading: `ComposeOver`/`ComposeWith` take `IExchangeTimeSync`; factory-free `Create(options)` supplies `new ExchangeTimeSync()`; `ComposeForDi(sp, …)` resolves `sp.GetRequiredService<IExchangeTimeSync>()`. The per-exchange `ServiceCollectionExtensions.exchangeClientFactory` lambdas were UNCHANGED (they already delegate to `ComposeForDi(sp, …)`, which now resolves the seam).
+
+### Seam 2 — ISignatureService
+- `BinanceSignatureService` / `BybitSignatureService` / `OkxSignatureService` now `: ISignatureService`; their core `Sign(string)` got `/// <inheritdoc />` and the redundant doc blocks were removed. Extra members left as-is per scope: Binance `BuildSignedQuery` (kept), Bybit static `BuildGet/PostSignString`, OKX static `BuildPrehash`/`FormatTimestamp`.
+- Each `XxxSigningHandler` ctor param changed from the concrete `XxxSignatureService` → `ISignatureService` (same concrete instance passed by the composer/finalizer, just typed as the interface at the handler boundary — no DI registration added).
+- Binance handler used `signatureService.BuildSignedQuery(...)` (not on the interface); inlined as a private `BuildSignedQuery` helper that calls the interface `Sign` — wire output byte-identical (`q + "&signature=" + Sign(q)`).
+
+### Kept static (architect ruling — NOT touched)
+`HmacSignature` + `SignatureEncoding` (pure crypto primitive), all 3 `XxxClientComposer` (still `static`), `ExchangeServiceRegistration` (static, only added the one TryAddSingleton line), per-exchange `ServiceCollectionExtensions`, `HttpClientPipelineBuilder`, `ExchangeResiliencePipeline`.
+
+### Behavior equivalence
+Same instances, same call graph, same wire bytes. The only registration change is the added non-keyed `IExchangeTimeSync` singleton + handler ctor param TYPE change (concrete→interface, identical instance passed). No public surface regression: the two new interfaces + `ExchangeTimeSync` are public in Core; signature services remain `internal` (they just also implement the public interface).
+
+### Tests
+- `ExchangeTimeSyncTests` updated to use `new ExchangeTimeSync()` (concrete `_sut` field — CA1859), all original assertions kept.
+- `DiRegistrationTests` +2: `Registers_ExchangeTimeSync_AsDefault` (resolves `ExchangeTimeSync`) and `Consumer_Can_Override_ExchangeTimeSync` (TryAdd override wins).
+
+### Verification
+- `dotnet build CryptoExchanges.Net.sln` → 0 warnings, 0 errors (TreatWarningsAsErrors).
+- `dotnet test --filter 'Category!=Integration'` → 335 pass, 0 fail (baseline 333 + 2 new DI tests).
+- `dotnet test --filter 'Category=Integration'` → 11 pass (Bybit 5 + OKX 6), 0 fail.
+- Override confirmed via `Consumer_Can_Override_ExchangeTimeSync` (TryAdd semantics).
+
+## Commits
+- 83da9ed — feat(REF-002): interface seams IExchangeTimeSync + ISignatureService (DIP)

@@ -12,9 +12,9 @@ Add three new exchange integrations to CryptoExchanges.Net in strict priority or
 
 ## Status Summary
 - Total tasks: 23 (added TASK-009B per ADR-001)
-- DONE: 11 | READY: 0 | IN_PROGRESS: 0 | IMPLEMENTED: 2 | IN_REVIEW: 0 | CHANGES_REQUESTED: 0 | BLOCKED: 0 | PLANNED: 10
+- DONE: 12 | READY: 0 | IN_PROGRESS: 0 | IMPLEMENTED: 0 | IN_REVIEW: 1 (TASK-013 round 2) | CHANGES_REQUESTED: 0 | BLOCKED: 0 | PLANNED: 10
 - Current iteration: 8/40
-- Active task: Wave 8 both IMPLEMENTED (awaiting review gate): TASK-011 (OkxSignatureService) + TASK-013 (OkxSymbolFormat + parsers + validation).
+- Active task: TASK-011 DONE (gate passed). TASK-013 IN_REVIEW round 2 (market-TIF fix a73e1bb; code-reviewer re-check).
 
 ## Scoping Decisions (HITL — committed, not open questions)
 The objective is fully prescriptive on scope/sequence/signing; these are the choices made decisively:
@@ -114,8 +114,8 @@ Tasks touching shared Core/Http/DI projects are higher blast radius and REQUIRE 
 - [x] TASK-010: OKX project scaffold + passphrase options + DI seam stub -> DONE
 
 ### Group 8 (= Wave 8)
-- [ ] TASK-011: OkxSignatureService (base64 prehash) + signing marker -> IMPLEMENTED
-- [ ] TASK-013: OkxSymbolFormat + value parsers + request validation -> IMPLEMENTED
+- [x] TASK-011: OkxSignatureService (base64 prehash) + signing marker -> DONE
+- [~] TASK-013: OkxSymbolFormat + value parsers + request validation -> IN_REVIEW round 2 (market-TIF fix)
 
 ### Group 9 (= Wave 9)
 - [ ] TASK-012: OkxSigningHandler (header-based) -> PLANNED

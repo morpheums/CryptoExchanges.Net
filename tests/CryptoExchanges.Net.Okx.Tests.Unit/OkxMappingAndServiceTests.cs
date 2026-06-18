@@ -189,6 +189,85 @@ public class OkxMappingAndServiceTests
     }
 
     [Fact]
+    public async Task MarketData_GetCandlesticks_HappyPath_MapsOhlcvAndOpenTime()
+    {
+        // Exercises the B1 fix: OpenTime is parsed via OkxValueParsers.ParseMs (safe TryParse).
+        // Column order from OkxMarketDataService mapping: arr[0]=ts, arr[1]=open, arr[2]=high,
+        // arr[3]=low, arr[4]=close, arr[5]=vol, arr[6]=volCcy.
+        var (symbolMapper, mapper) = BuildMappers();
+        var http = Substitute.For<IOkxHttpClient>();
+        http.GetAsync<OkxResponse<List<string>>>(
+                "/api/v5/market/candles", Arg.Any<Dictionary<string, string>>(), false, Arg.Any<CancellationToken>())
+            .Returns(new OkxResponse<List<string>>
+            {
+                Data = [["1700000000000", "42000", "43000", "41000", "42500", "10", "420000"]]
+            });
+
+        var service = new OkxMarketDataService(http, symbolMapper, mapper);
+        var candles = await service.GetCandlesticksAsync(BtcUsdt, KlineInterval.OneHour, ct: TestContext.Current.CancellationToken);
+
+        candles.Should().HaveCount(1);
+        candles[0].OpenTime.Should().Be(DateTimeOffset.FromUnixTimeMilliseconds(1700000000000));
+        candles[0].Open.Should().Be(42000m);
+        candles[0].Volume.Should().Be(10m);
+    }
+
+    [Fact]
+    public async Task MarketData_GetCandlesticks_EmptyTimestamp_MapsToEpochZero()
+    {
+        // Directly regression-guards the B1 fix: OKX returns "" for unconfirmed candles.
+        // The safe OkxValueParsers.ParseMs("") returns 0L; long.Parse would have thrown.
+        var (symbolMapper, mapper) = BuildMappers();
+        var http = Substitute.For<IOkxHttpClient>();
+        http.GetAsync<OkxResponse<List<string>>>(
+                "/api/v5/market/candles", Arg.Any<Dictionary<string, string>>(), false, Arg.Any<CancellationToken>())
+            .Returns(new OkxResponse<List<string>>
+            {
+                Data = [["", "42000", "43000", "41000", "42500", "10", "420000"]]
+            });
+
+        var service = new OkxMarketDataService(http, symbolMapper, mapper);
+        var act = async () => await service.GetCandlesticksAsync(BtcUsdt, KlineInterval.OneMinute, ct: TestContext.Current.CancellationToken);
+        await act.Should().NotThrowAsync();
+
+        var candles = await service.GetCandlesticksAsync(BtcUsdt, KlineInterval.OneMinute, ct: TestContext.Current.CancellationToken);
+        candles.Should().HaveCount(1);
+        candles[0].OpenTime.Should().Be(DateTimeOffset.FromUnixTimeMilliseconds(0L));
+    }
+
+    [Fact]
+    public async Task MarketData_GetCandlesticks_EightHoursInterval_ThrowsArgumentOutOfRange()
+    {
+        // MapKlineInterval has no 8h arm; it throws ArgumentOutOfRangeException.
+        var (symbolMapper, mapper) = BuildMappers();
+        var http = Substitute.For<IOkxHttpClient>();
+
+        var service = new OkxMarketDataService(http, symbolMapper, mapper);
+        var act = async () => await service.GetCandlesticksAsync(BtcUsdt, KlineInterval.EightHours, ct: TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ArgumentOutOfRangeException>();
+    }
+
+    [Fact]
+    public async Task MarketData_GetCandlesticks_LargeLimit_ClampsToHundred()
+    {
+        // Mirrors Account_GetTradeHistory_DefaultLimit_ClampsToHundred: capture the outbound params
+        // and assert the "limit" field is clamped to "100" (OkxRequestValidation.MaxHistoryLimit).
+        var (symbolMapper, mapper) = BuildMappers();
+        var http = Substitute.For<IOkxHttpClient>();
+        Dictionary<string, string>? captured = null;
+        http.GetAsync<OkxResponse<List<string>>>(
+                "/api/v5/market/candles", Arg.Do<Dictionary<string, string>>(p => captured = p), false, Arg.Any<CancellationToken>())
+            .Returns(new OkxResponse<List<string>>());
+
+        var service = new OkxMarketDataService(http, symbolMapper, mapper);
+        var act = async () => await service.GetCandlesticksAsync(BtcUsdt, KlineInterval.OneHour, limit: 500, ct: TestContext.Current.CancellationToken);
+        await act.Should().NotThrowAsync();
+
+        captured.Should().NotBeNull();
+        captured!["limit"].Should().Be("100");
+    }
+
+    [Fact]
     public async Task MarketData_GetOrderBook_ParsesLevels()
     {
         var (symbolMapper, mapper) = BuildMappers();

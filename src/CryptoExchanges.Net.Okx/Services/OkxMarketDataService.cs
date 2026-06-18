@@ -211,7 +211,7 @@ internal sealed class OkxMarketDataService(IOkxHttpClient http, ISymbolMapper ma
             if (arr.Count < 7)
                 continue;
             candles.Add(new Candlestick(
-                OpenTime: DateTimeOffset.FromUnixTimeMilliseconds(long.Parse(arr[0], System.Globalization.CultureInfo.InvariantCulture)),
+                OpenTime: DateTimeOffset.FromUnixTimeMilliseconds(OkxValueParsers.ParseMs(arr[0])),
                 CloseTime: null,
                 Open: OkxValueParsers.ParseDecimal(arr[1]),
                 High: OkxValueParsers.ParseDecimal(arr[2]),

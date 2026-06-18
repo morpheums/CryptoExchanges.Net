@@ -1,6 +1,6 @@
 ---
 id: TASK-016
-status: PLANNED
+status: IN_PROGRESS
 ---
 
 # TASK-016: Core ExchangeId.Bitget enum member

@@ -261,4 +261,8 @@ public class CoreTests
         act.Should().Throw<ArgumentException>()
             .WithMessage("*Quantity*");
     }
+
+    [Fact]
+    public void ExchangeId_Bitget_IsDefined()
+        => Enum.IsDefined(Enums.ExchangeId.Bitget).Should().BeTrue();
 }

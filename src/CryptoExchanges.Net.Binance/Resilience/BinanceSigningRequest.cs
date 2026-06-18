@@ -2,7 +2,7 @@ namespace CryptoExchanges.Net.Binance.Resilience;
 
 /// <summary>Marks an outgoing request as requiring Binance signing (timestamp + HMAC), applied
 /// per attempt by <see cref="BinanceSigningHandler"/>.</summary>
-public static class BinanceSigningRequest
+internal static class BinanceSigningRequest
 {
     private static readonly HttpRequestOptionsKey<bool> SignedKey = new("binance.signed");
 

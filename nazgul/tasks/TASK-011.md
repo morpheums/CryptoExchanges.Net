@@ -1,6 +1,6 @@
 ---
 id: TASK-011
-status: PLANNED
+status: DONE
 ---
 
 # TASK-011: OkxSignatureService (base64 prehash) + signing marker
@@ -41,3 +41,50 @@ Implement `OkxSignatureService` computing HMAC-SHA256 with **base64** output (vi
 
 ## Test Requirements
 - Unit tests in TASK-015 assert the base64 vector, prehash assembly (GET path+query vs POST body), and ISO timestamp format.
+
+## Base SHA
+- c9243437133b98700aa5ffd1cd0f55615fd3549b
+
+## Implementation Notes
+- **Files created** (both `internal`, per ADR-001 conv #2 + post-009B precedent — in-assembly `AddOkxExchange` constructs them):
+  - `src/CryptoExchanges.Net.Okx/Auth/OkxSignatureService.cs` (namespace `CryptoExchanges.Net.Okx.Auth`)
+  - `src/CryptoExchanges.Net.Okx/Resilience/OkxSigningRequest.cs` (namespace `CryptoExchanges.Net.Okx.Resilience`)
+- **HMAC via Core, no re-implementation**: `Sign(prehash)` delegates to
+  `HmacSignature.Compute(_secretKey, prehash, SignatureEncoding.Base64)` from
+  `CryptoExchanges.Net.Core.Auth`. No `HMACSHA256`/`Convert.ToBase64String` lives in the OKX service
+  (unlike Bybit which still hand-rolls hex — OKX uses the Core primitive from TASK-009). The Core
+  `Compute` already UTF-8 encodes the secret and renders base64, so the service stores the secret as a
+  plain `string`.
+- **Prehash builder** `static string BuildPrehash(timestamp, method, requestPath, body)`:
+  returns `$"{timestamp}{method.ToUpperInvariant()}{requestPath}{body}"`. Identity inputs
+  (timestamp/method/requestPath) guarded with `ArgumentException.ThrowIfNullOrWhiteSpace`; `body`
+  guarded with `ArgumentNullException.ThrowIfNull` only (empty body is valid for GET/DELETE). Static so
+  TASK-015 can unit-test assembly independently of the secret. `requestPath` is passed in already
+  including the leading `/` and the GET query string; `method` is upper-cased inside the builder.
+- **ISO-8601 timestamp helper** `static string FormatTimestamp(DateTimeOffset)`:
+  `timestamp.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ", CultureInfo.InvariantCulture)` →
+  millisecond precision with trailing literal `Z` (e.g. `2026-06-17T12:00:00.000Z`). NOT epoch-ms. The
+  later signing handler (TASK-012) supplies the timestamp string; both the builder and the helper take
+  a string/`DateTimeOffset` so they are testable without the handler.
+- **Signature returned, not appended**: `Sign(...)` RETURNS the base64 string; the handler will place
+  it in the `OK-ACCESS-SIGN` header (documented in `<remarks>`, plain text — no `<see cref>` to the
+  not-yet-existing OkxSigningHandler to avoid CS1574 under TreatWarningsAsErrors).
+- **Secret-key guard**: mirrors Bybit's `InitializeSecretKey` shape — `ArgumentException.ThrowIfNullOrWhiteSpace`
+  in a private initializer invoked from the primary-constructor field initializer.
+- **OkxSigningRequest**: mirrors `BybitSigningRequest` exactly — `internal static` class,
+  `HttpRequestOptionsKey<bool>` keyed `"okx.signed"`, `MarkSigned`/`IsSigned` with `ArgumentNullException`
+  guards, idempotent across retries (`Set` overwrites; `TryGetValue` read).
+- Full XML docs on all members (CS1591 is in NoWarn but documented anyway, matching Bybit).
+
+## Verification
+- `dotnet build CryptoExchanges.Net.sln` → **Build succeeded. 0 Warning(s), 0 Error(s).**
+- No new tests this task (they arrive in TASK-015); solution builds clean.
+
+## Commits
+- e4dc88c5671bab8ca78721b5d4cebc0efb783ac8 — feat(M3): TASK-011 OkxSignatureService (base64 prehash) + OkxSigningRequest marker
+- 2e73de9 — simplify: remove redundant prehash guard in Sign() (HmacSignature.Compute already validates) — applied during the gate's Step-0 simplifier pass.
+
+## Review
+- **Review Gate**: PASSED (round 1) — all 4 APPROVE: architect 95, code PASS, security PASS, api 97. No blocking items.
+- **Verified**: no re-implemented crypto (delegates to Core HmacSignature.Compute base64); secret-key guard at construction; prehash `timestamp+METHOD(upper)+requestPath(incl. GET query)+body`; ISO-8601 UTC ms timestamp w/ literal Z (not epoch); signature returned for OK-ACCESS-SIGN (not appended); OkxSigningRequest idempotent; both types internal.
+- **Non-blocking**: BybitSigningRequest still public (pre-existing, tracked visibility cleanup).

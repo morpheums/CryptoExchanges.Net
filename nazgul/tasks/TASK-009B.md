@@ -1,6 +1,6 @@
 ---
 id: TASK-009B
-status: IMPLEMENTED
+status: DONE
 ---
 
 # TASK-009B: Per-exchange DI re-homing (ADR-001)
@@ -87,3 +87,10 @@ Adopt per-exchange DI registration (ADR-001 option b). Move `AddBinanceExchange`
 
 ## Commits
 - **Commit**: 1a56835 refactor(M3): TASK-009B per-exchange DI re-homing (ADR-001)
+
+## Review
+- **Review Gate**: PASSED (round 1) — all 4 APPROVE: architect 92, security 100, api 95, code 97. No blocking items.
+- **Verified**: invariant #10 resolved (Bybit closure = Core+Http only, no Binance); ExchangeClientFactory→Http relocation sound (internal, exchange-agnostic, IExchangeClientFactory stays public in Core); registration behavior unchanged (verbatim); IVT(DI) removal justified; Binance signing internal + endpoint guards correct.
+- **Tracked follow-ups (non-blocking)**:
+  - (architect @72) `BinanceErrorTranslator`/`BinanceTimeSync` (and Bybit's equivalents) remain `public` — but per-exchange DI now constructs them in-assembly, so they CAN be `internal` per ADR-001 convention #2. → make OKX/Bitget translators+timesync internal from the start; cleanup task for Binance/Bybit.
+  - (architect @65) add explicit `Microsoft.Extensions.DependencyInjection.Abstractions` PackageReference to Http.csproj (currently transitive via ME.Http.Resilience).

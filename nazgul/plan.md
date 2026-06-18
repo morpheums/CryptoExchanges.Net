@@ -12,7 +12,7 @@ Add three new exchange integrations to CryptoExchanges.Net in strict priority or
 
 ## Status Summary
 - Total tasks: 23 (added TASK-009B per ADR-001)
-- DONE: 9 | READY: 0 | IN_PROGRESS: 0 | IN_REVIEW: 0 | CHANGES_REQUESTED: 0 | BLOCKED: 0 | PLANNED: 14
+- DONE: 10 | READY: 0 | IN_PROGRESS: 0 | IN_REVIEW: 0 | CHANGES_REQUESTED: 0 | BLOCKED: 0 | PLANNED: 13
 - Current iteration: 6/40
 - Active task: starting **M-OKX** on branch `feat/m3-okx` (cut from main after PR #11 merged as e7c0268). First: TASK-009 (signing generalization) + TASK-009B (DI re-homing, ADR-001).
 
@@ -283,6 +283,11 @@ Tasks touching shared Core/Http/DI projects are higher blast radius and REQUIRE 
 - TASK-006: Bybit services + mapping + composer + ExchangeClient (DONE) — gate PASSED round 2 (api REJECT@95 + code REJECT@95×2 → APPROVE@98/APPROVE after limit-clamp + cancel-by-clientId id fix; architect 88, security 95); commits 057d6d2, 48fb17b
 - TASK-008: Bybit tests + AddBybitExchange DI (DONE) — gate PASSED round 1 (all 4 APPROVE; code@96 confirmed regression tests valid); 77 unit + 5 integration tests; commit f60bd18. **CLOSES MILESTONE M-BYBIT.** (Merged to main via PR #11 → e7c0268.)
 - TASK-009: OKX-era Core auth generalization (DONE) — gate PASSED round 1 (architect 97, security 99, api 96, code PASS); additive ExchangeCredentials + HmacSignature (hex|base64), non-breaking; +25 Core tests; commit 63b0006 (+polish).
+- TASK-009B: per-exchange DI re-homing, ADR-001 (DONE) — gate PASSED round 1 (architect 92, security 100, api 95, code 97); AddXxxExchange moved into exchange assemblies, thin AddCryptoExchanges aggregator, ExchangeClientFactory→Http, Binance signing→internal + endpoint guards; 241+5 tests; commit 1a56835. BREAKING (pre-v1.0) namespace move.
+
+## Tracked follow-ups (non-blocking, from gates)
+- **Translator/TimeSync visibility**: now that per-exchange DI constructs them in-assembly, `BinanceErrorTranslator`/`BinanceTimeSync` + `BybitErrorTranslator`/`BybitTimeSync` can be `internal` (ADR-001 conv #2). → build OKX/Bitget translators+timesync INTERNAL from the start; small cleanup task for Binance/Bybit later.
+- **Http.csproj**: add explicit `Microsoft.Extensions.DependencyInjection.Abstractions` PackageReference (currently transitive). Fold into a later cleanup.
 
 ## Blocked
 <!-- None. -->
@@ -294,7 +299,7 @@ Tasks touching shared Core/Http/DI projects are higher blast radius and REQUIRE 
 
 ## Recovery Pointer — ▶ ACTIVE (M-OKX)
 - **Current Task:** starting M-OKX. 8/22 done (M-BYBIT shipped). Branch `feat/m3-okx` off main (PR #11 merged as e7c0268; main protected: required check "Build & Test" + strict up-to-date — keep this branch current with main).
-- **Status:** TASK-009 DONE. TASK-009B IMPLEMENTED + committed (1a56835) and IN_REVIEW (per-exchange DI re-homing; relocated ExchangeClientFactory→Http; Binance signing→internal + endpoint guards; BREAKING namespace move pre-v1.0; 241+5 tests pass). On PASS → DONE, then Wave 7 = TASK-010 (OKX scaffold w/ passphrase options, consumes Core ExchangeCredentials + base64 HmacSignature). Keep feat/m3-okx current with main. Changelog note for OKX PR: AddXxxExchange namespace moved to exchange assemblies; Binance signing types now internal.
+- **Status:** TASK-009 + TASK-009B DONE (both gates passed). 10/23 done. Foundations for OKX are in (Core auth generalization + per-exchange DI). NEXT: Wave 7 = TASK-010 (OKX project scaffold + passphrase-capable options + DI seam stub). OKX consumes Core `ExchangeCredentials` + base64 `HmacSignature`; ships `AddOkxExchange` in-assembly (per ADR-001) with an INTERNAL error-translator + time-sync (per the tracked follow-up). Keep feat/m3-okx current with main. OKX PR changelog notes: AddXxxExchange namespace moved to exchange assemblies; Binance signing types now internal.
 - **Historical note:** prior HOLD (await user merge of PR #11) is resolved — merged 2026-06-18.
 - **PR-review fixes applied (pushed, not merged):** GitHub Copilot reviewer found a real bug in BybitErrorTranslator.Parse (retMsg GetString() w/o ValueKind guard → InvalidOperationException escapes catch). Fixed + 3 regression tests in commit 5643ff5; Copilot thread resolved. CodeRabbit was rate-limited (no review). Bybit unit tests now 80.
 - **DI DESIGN — DECIDED (ADR-001, 2026-06-18):** adopt per-exchange DI (option b). Move `AddBinanceExchange`/`AddBybitExchange` into their own assemblies; `AddCryptoExchanges` becomes a thin aggregator. Apply at **M-OKX start, folded with TASK-009** (cheaper at 2 exchanges than 4); implement OKX/Bitget DI in-assembly from day one. Pre-v1.0 → breaking namespace move acceptable (optional `[Obsolete]` forwarders). See `nazgul/docs/ADR-001-per-exchange-di-and-conventions.md`.

@@ -1,6 +1,6 @@
 ---
 id: TASK-011
-status: IMPLEMENTED
+status: DONE
 ---
 
 # TASK-011: OkxSignatureService (base64 prehash) + signing marker
@@ -82,3 +82,9 @@ Implement `OkxSignatureService` computing HMAC-SHA256 with **base64** output (vi
 
 ## Commits
 - e4dc88c5671bab8ca78721b5d4cebc0efb783ac8 — feat(M3): TASK-011 OkxSignatureService (base64 prehash) + OkxSigningRequest marker
+- 2e73de9 — simplify: remove redundant prehash guard in Sign() (HmacSignature.Compute already validates) — applied during the gate's Step-0 simplifier pass.
+
+## Review
+- **Review Gate**: PASSED (round 1) — all 4 APPROVE: architect 95, code PASS, security PASS, api 97. No blocking items.
+- **Verified**: no re-implemented crypto (delegates to Core HmacSignature.Compute base64); secret-key guard at construction; prehash `timestamp+METHOD(upper)+requestPath(incl. GET query)+body`; ISO-8601 UTC ms timestamp w/ literal Z (not epoch); signature returned for OK-ACCESS-SIGN (not appended); OkxSigningRequest idempotent; both types internal.
+- **Non-blocking**: BybitSigningRequest still public (pre-existing, tracked visibility cleanup).

@@ -99,3 +99,9 @@ Build succeeded.
 
 ## Commits
 - 5bd9589a74ebde59b9dae15d074eaf9f67c9345d — feat(M3): TASK-013 OkxSymbolFormat + value parsers + request validation
+
+## Rework (review round 1)
+- **Blocking B1** (code-reviewer REJECT@92, corroborated by all 4): `ParseTimeInForce` had no `"market"` arm but `ParseOrderType` accepts `"market"` — both key off OKX `ordType`, so a market-order response would throw when TASK-015's mapping calls both. **Fix**: added `"market" => TimeInForce.Ioc`. Decision (reviewers split Gtc vs Ioc): chose **Ioc** — a market order is non-resting (fills immediately, never rests on the book), and the domain enum is {Gtc,Ioc,Fok}; Gtc ("rest until canceled") is semantically wrong for a market order. Matches what Bybit's separate timeInForce field returns for market orders (IOC). Documented in the parser XML.
+- TASK-015 must add a market-order round-trip test so this can't regress (noted for TASK-015).
+- Build after fix: 0w/0e.
+- **Commit (rework)**: pending

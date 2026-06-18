@@ -86,6 +86,9 @@ internal static class OkxValueParsers
     /// OKX expresses time-in-force through <c>ordType</c>: <c>fok</c> and <c>ioc</c> map directly,
     /// while <c>limit</c> and <c>post_only</c> are resting orders that map to
     /// <see cref="TimeInForce.Gtc"/> (the closest domain equivalent; <c>post_only</c> is a maker-only GTC order).
+    /// A <c>market</c> order is non-resting (fills immediately against available liquidity, never rests on
+    /// the book), so it maps to <see cref="TimeInForce.Ioc"/> — the closest domain semantics. This keys off
+    /// the same <c>ordType</c> field as <see cref="ParseOrderType"/>, so both must accept every value the other does.
     /// </summary>
     /// <exception cref="ArgumentOutOfRangeException">Thrown for any unrecognized TIF string.</exception>
     public static TimeInForce ParseTimeInForce(string s) => s switch
@@ -93,6 +96,7 @@ internal static class OkxValueParsers
         "limit" or "post_only" => TimeInForce.Gtc,
         "ioc" => TimeInForce.Ioc,
         "fok" => TimeInForce.Fok,
+        "market" => TimeInForce.Ioc,
         _ => throw new ArgumentOutOfRangeException(nameof(s), s, $"Unknown TimeInForce: {s}")
     };
 }

@@ -1,6 +1,6 @@
 ---
 id: TASK-013
-status: IMPLEMENTED
+status: DONE
 ---
 
 # TASK-013: OkxSymbolFormat + value parsers + request validation
@@ -105,3 +105,8 @@ Build succeeded.
 - TASK-015 must add a market-order round-trip test so this can't regress (noted for TASK-015).
 - Build after fix: 0w/0e.
 - **Commit (rework)**: a73e1bb fix(M3): TASK-013 add market arm to OkxValueParsers.ParseTimeInForce
+
+## Review
+- **Review Gate**: PASSED (round 2) — architect 88, security 97, api 97 (round 1) + code-reviewer round 1 REJECT@92 → round 2 APPROVE after the market-TIF fix. No blocking items remain.
+- **Verified**: BTC-USDT round-trips; InvariantCulture parsing; deterministic rejects; ParseOrderType/ParseTimeInForce now accept the identical ordType token set (asymmetry closed).
+- **Owed in TASK-015**: market-order round-trip regression test.

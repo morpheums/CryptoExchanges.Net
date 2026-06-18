@@ -107,7 +107,8 @@ Tasks touching shared Core/Http/DI projects are higher blast radius and REQUIRE 
 - [x] TASK-008: Bybit tests + AddBybitExchange DI (closes M-BYBIT) -> DONE
 
 ### Group 6 (= Wave 6)
-- [ ] TASK-009: OKX-era credential/signing generalization (Core/Http) -> PLANNED
+- [x] TASK-009: OKX-era credential/signing generalization (Core/Http) -> DONE
+- [x] TASK-009B: per-exchange DI re-homing (ADR-001) -> DONE
 
 ### Group 7 (= Wave 7)
 - [ ] TASK-010: OKX project scaffold + passphrase options + DI seam stub -> IMPLEMENTED (awaiting review; commit af64279)

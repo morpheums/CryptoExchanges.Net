@@ -140,7 +140,7 @@
     }
   },
   "branch": {
-    "feature": "feat/m3-okx",
+    "feature": "feat/m4-bitget",
     "base": "main",
     "main_worktree_path": "/Users/josemejia/ai-platform/personal/workspace/repos/CryptoExchanges.Net",
     "worktree_dir": null,

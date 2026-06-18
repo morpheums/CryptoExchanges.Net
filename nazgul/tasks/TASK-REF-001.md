@@ -1,9 +1,11 @@
 ---
 id: TASK-REF-001
-status: IN_PROGRESS
+status: DONE
 claimed_at: 2026-06-18
 base_sha: 3960d4a2271d519e72c81dee147977510233d531
 ---
+
+> **Post-gate follow-on (2026-06-18):** maintainer flagged excessive comments + static-over-interface. Trimmed `ExchangeTimeSync` (44→18 lines) + the DI helper's class-doc essay on this branch; established the lean-comment + interface-over-static conventions in code-reviewer/architect agents + ADR-001 (commit 3991cef). The interface conversions themselves (IExchangeTimeSync + ISignatureService) are split out as **TASK-REF-002** (architect-scoped) to run before Bitget. Retro comment sweep → GitHub issue #14.
 
 > **Review Gate: PASSED (round 1)** — all 4 APPROVE (architect, code, security, api); zero blocking. Behavior verified byte-identical (registration order, both wrinkles, finalizer gating, SyncServerTime equivalence; TimeSync test consolidation is a strict superset). Commits 93ea257 (Phase 1) + 80a5d5a (Phase 2). Non-blocking carry-forwards: CHANGELOG note for the public BinanceTimeSync/BybitTimeSync deletion (done in PR body); null-guards on helper delegates + gateFactory-hardcoded + 13-param signature → re-evaluate at the Bitget boundary.
 

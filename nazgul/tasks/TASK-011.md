@@ -81,4 +81,4 @@ Implement `OkxSignatureService` computing HMAC-SHA256 with **base64** output (vi
 - No new tests this task (they arrive in TASK-015); solution builds clean.
 
 ## Commits
-- (recorded below after commit)
+- e4dc88c5671bab8ca78721b5d4cebc0efb783ac8 — feat(M3): TASK-011 OkxSignatureService (base64 prehash) + OkxSigningRequest marker

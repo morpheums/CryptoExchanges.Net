@@ -115,4 +115,4 @@ optional `ToCredentials()` convenience — was explicitly permitted by the task 
 is clean (no signing logic, just forwards the passphrase to the validated Core credential).
 
 ## Commits
-- (pending commit SHA recorded below after AFK commit)
+- af642795acfca20118a0f73c8a87c0de7c615b73 — feat(M2): TASK-010 OKX project scaffold + passphrase options + DI seam stub

@@ -1,6 +1,6 @@
 ---
 id: TASK-017
-status: PLANNED
+status: IMPLEMENTED
 ---
 
 # TASK-017: Bitget project scaffold + passphrase options + DI seam stub
@@ -43,3 +43,20 @@ Create the `CryptoExchanges.Net.Bitget` class library (Core + Http refs, GlobalU
 
 ## Test Requirements
 - No tests this task (scaffolding); build green. Tests arrive in TASK-022.
+
+## Implementation Notes
+- **Base SHA**: 3ca50b84cbb3d4ec018b524cb3a1dc4d00a6db7d
+- Mirrored the post-refactor OKX src project (most recent template).
+- Created `src/CryptoExchanges.Net.Bitget/`:
+  - `CryptoExchanges.Net.Bitget.csproj` — Core + Http ProjectReferences ONLY; DeltaMapper 1.2.0 + Microsoft.Extensions.Http/Options/DependencyInjection.Abstractions (10.0.*); same `NoWarn` set as OKX; IVT for `CryptoExchanges.Net.Bitget.Tests.Unit`, `.Tests.Integration`, and `DynamicProxyGenAssembly2` (NSubstitute). No IVT for the DI package (ADR-001). No other exchange/DI refs.
+  - `GlobalUsings.cs` — same global usings as OKX.
+  - `BitgetOptions.cs` — `public sealed`, namespace `CryptoExchanges.Net.Bitget`: `BaseUrl` (default `https://api.bitget.com`), `ApiKey`, `SecretKey`, `Passphrase` (required for signed endpoints), `TimeoutSeconds` (30), plus `ToCredentials()` → Core `ExchangeCredentials(ApiKey, SecretKey, Passphrase)`. No ReceiveWindow. LEAN comments (ADR-001 conv 7) — one concise `<summary>` per public member, no `<remarks>`.
+- Added `CryptoExchanges.Net.Bitget` to `CryptoExchanges.Net.sln` (GUID `975387A7-B48B-4FD2-96F0-238BA8580CBC`): full Debug/Release × Any CPU/x64/x86 config rows + nested under the `src` solution folder (`827E0CD3...`), mirroring the OKX registration.
+- No Core edit; `ExchangeId.Bitget` (from TASK-016) available for later tasks.
+
+## Verification
+- `dotnet build CryptoExchanges.Net.sln` → **Build succeeded. 0 Warning(s), 0 Error(s).**
+- `dotnet list src/CryptoExchanges.Net.Bitget reference` → Core + Http only (confirmed).
+
+## Commits
+- (see git log; `feat(M4): TASK-017 Bitget project scaffold + passphrase options`)

@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>CryptoExchanges.Net.Bitget</RootNamespace>
+    <AssemblyName>CryptoExchanges.Net.Bitget</AssemblyName>
+    <Description>Bitget exchange implementation for CryptoExchanges.Net.</Description>
+    <PackageId>CryptoExchanges.Net.Bitget</PackageId>
+    <!-- Suppress analysis noise for HTTP client / JSON deserialization library -->
+    <NoWarn>$(NoWarn);CA1812;CA1056;CA1031;CA2000;CA1305;CA1032;CS1591</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CryptoExchanges.Net.Core\CryptoExchanges.Net.Core.csproj" />
+    <ProjectReference Include="..\CryptoExchanges.Net.Http\CryptoExchanges.Net.Http.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Allow the test assemblies to unit-test internal DTOs, mapping profiles, signing,
+         services, value parsers, request validation, symbol format, and the composer. -->
+    <InternalsVisibleTo Include="CryptoExchanges.Net.Bitget.Tests.Unit" />
+    <InternalsVisibleTo Include="CryptoExchanges.Net.Bitget.Tests.Integration" />
+    <!-- Lets NSubstitute (Castle DynamicProxy) mock the internal IBitgetHttpClient in tests. -->
+    <InternalsVisibleTo Include="DynamicProxyGenAssembly2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="DeltaMapper" Version="1.2.0" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.*" />
+    <PackageReference Include="Microsoft.Extensions.Http" Version="10.0.*" />
+    <PackageReference Include="Microsoft.Extensions.Options" Version="10.0.*" />
+  </ItemGroup>
+</Project>

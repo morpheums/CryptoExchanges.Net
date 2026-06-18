@@ -201,7 +201,7 @@
     "headers": {}
   },
   "formatter": {
-    "enabled": false
+    "enabled": true
   },
   "notifications": {
     "on_complete": null

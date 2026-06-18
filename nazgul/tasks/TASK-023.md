@@ -1,7 +1,10 @@
 ---
 id: TASK-023
-status: IN_PROGRESS
+status: DONE
 ---
+
+> **DONE — gate PASSED (round 1), all 4 APPROVE** (architect 100, code 94, security PASS-all, api PASS-all; zero blocking, 5 non-blocking concerns noted). Commits: 524e017 (group A: #2/#4/#7), 0bee170 (group B: #1/#5/#6), a6380fc (Binance/Bybit composer comments + review artifacts). Pushed to feat/m4-bitget. 6 fixed threads replied+resolved; #3 (lenient token parsing) DECLINED — replied with rationale, left open. Full suite green (Core 100, Http 21, OKX 93, Bitget 90, Bybit 77, Binance 44, DI 13; integration Bybit 5/OKX 6/Bitget 6). #6 signature byte-consistency verified by security review + per-exchange signing tests.
+> **Non-blocking follow-ups surfaced (not gating):** ExchangeServiceRegistration double-TrimEnd cleanup when all 4 selectors use NormalizeHostRoot; deeper parser-base dedup (enum-token-parameterized); UriFormatException doc on ExchangeUrl.NormalizeHostRoot.
 
 > **PR #16 self-review remediation (automated `/code-review`, 7 findings).** User chose full scope (all 7, incl. cross-cutting). Triage:
 > - #2 (robustness, REAL): BitgetMarketDataService order-book `b[0]/b[1]` unguarded → bounds guard + test. Matches LR-004.

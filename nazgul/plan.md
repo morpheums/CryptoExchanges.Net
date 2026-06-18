@@ -307,12 +307,13 @@ Tasks touching shared Core/Http/DI projects are higher blast radius and REQUIRE 
 - M-BYBIT (TASK-001–008) on `feat/m2-exchange-expansion` → on TASK-008 DONE, open PR → main → **confirm with user before the merge click** → merge.
 - After merge: cut `feat/m3-okx` off updated main for M-OKX (TASK-009–015) → PR/merge → branch for M-BITGET (TASK-016–022).
 
-## Recovery Pointer — ⏸ OBJECTIVE COMPLETE (awaiting final PR #16 merge)
-- **Current Task:** none — **ALL 25 TASKS DONE. M-BITGET CLOSED. M2 exchange-expansion objective complete.**
-- **Final PR #16 OPEN:** https://github.com/morpheums/CryptoExchanges.Net/pull/16 (feat/m4-bitget → main; Bitget). All green (Bitget unit 92 + integration 6; full suite passing, 0W/0E). **Awaiting user merge** (per-exchange strategy — user merges).
+## Recovery Pointer — ⏸ OBJECTIVE COMPLETE + PR#16 self-review remediation DONE (awaiting final PR #16 merge)
+- **Current Task:** none — **ALL 26 TASKS DONE** (25 + TASK-023 PR#16 self-review remediation). M-BITGET CLOSED. M2 exchange-expansion objective complete.
+- **TASK-023 (just done):** addressed the 7 findings from the user's automated `/code-review` on PR #16. 6 fixed (gate PASSED, all 4 APPROVE: architect 100/code 94/security PASS/api PASS), 1 (#3 lenient token parsing) DECLINED with rationale (siblings throw; enums have no Unknown member — left thread open). Commits 524e017 / 0bee170 / a6380fc on feat/m4-bitget. Notables: #5 NormalizeHostRoot promoted to shared Http (`ExchangeUrl`) + OKX now guarded; #6 the 4 byte-identical BuildQueryString unified into `ExchangeUrl.BuildQueryString` (signature byte-consistency verified); #1 per-client graceful time-skip on serverTimeMs<=0.
+- **Final PR #16 OPEN:** https://github.com/morpheums/CryptoExchanges.Net/pull/16 (feat/m4-bitget → main; Bitget + TASK-023). **Build & Test green on HEAD a6380fc**, mergeable; only 1 review thread open by design (#3 decline). **Awaiting user merge** (per-exchange strategy — user merges).
 - **Resume trigger:** user says PR #16 is merged. THEN this is genuinely done — emit NAZGUL_COMPLETE. (No further milestones; the 3 new exchanges + Binance baseline all ship.)
-- **Shipped:** Bybit (PR #11), OKX + signing-generalization + per-exchange DI (PR #12), DI/TimeSync DRY refactor (PR #13), interface seams (PR #15), Bitget (PR #16). Tasks: 22 plan + TASK-009B (DI re-home) + TASK-REF-001 (DRY) + TASK-REF-002 (interface seams) = 25.
-- **Open follow-ups (non-blocking, post-objective):** retro lean-comment sweep (issue #14); shared cross-exchange polish before any 5th exchange (nested CryptoExchangesOptions, backport NormalizeHostRoot to OKX, parser/validation dedup, redacting ToString on options) — from the TASK-022 architect milestone-close note.
+- **Shipped:** Bybit (PR #11), OKX + signing-generalization + per-exchange DI (PR #12), DI/TimeSync DRY refactor (PR #13), interface seams (PR #15), Bitget + PR#16 self-review remediation (PR #16). Tasks: 22 plan + TASK-009B + TASK-REF-001 + TASK-REF-002 + TASK-023 = 26.
+- **Open follow-ups (non-blocking, post-objective):** retro lean-comment sweep (issue #14); ExchangeServiceRegistration double-TrimEnd cleanup; deeper parser-base dedup (enum-token-parameterized); UriFormatException doc on ExchangeUrl.NormalizeHostRoot; nested CryptoExchangesOptions, redacting ToString on options.
 
 ## Recovery Pointer (PRIOR) — ⏸ TASK-REF-001 DONE, shipped to PR #13 (awaiting user merge → then M-BITGET)
 - **Current Task:** none active. #13 (REF-001) MERGED. TASK-REF-002 DONE (gate PASSED round 2). 18/25 tasks done.

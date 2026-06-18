@@ -38,6 +38,13 @@ hooks:
 - `ArgumentException.ThrowIfNullOrWhiteSpace(param)` for strings — `SymbolMapper.cs:76`
 - These are NOT optional. Missing guards on public API are HIGH severity.
 
+### JSON reading (System.Text.Json) — guard ValueKind before typed accessors
+- `JsonElement.GetString()` / `GetInt32()` / etc. throw `InvalidOperationException` (NOT `JsonException`) when the element's `ValueKind` doesn't match. A `try/catch (JsonException)` around `JsonDocument.Parse` will NOT catch these — so an unguarded typed read on a malformed/edge payload escapes and can crash a resilience pipeline.
+- ALWAYS check `ValueKind` before a typed accessor: `el.ValueKind == JsonValueKind.String ? el.GetString() : null` (mirror `BybitErrorTranslator.Parse`). Flag any `TryGetProperty(...) ? x.GetString()/GetInt32()` without a `ValueKind` guard as HIGH severity. Watch for asymmetry — one field guarded, a sibling not.
+
+### Interface-default parameters — clamp, don't throw on the common path
+- When an override implements an interface method whose default parameter value (e.g. `int limit = 500`) exceeds an exchange-specific cap, do NOT validate-and-throw on that default — a caller using the documented interface default would get an unhandled exception (LSP violation). Clamp instead: `Math.Min(limit, MaxLimit)` (mirror `BybitTradingService.GetOrderHistoryAsync`). A genuinely invalid value (e.g. `< 1`) may still throw.
+
 ### Async
 - All async methods use `.ConfigureAwait(false)` — `BinanceHttpClient.cs:32`, `BinanceExchangeClient.cs:103`
 - `CancellationToken` re-thrown when `ct.IsCancellationRequested` — `BinanceExchangeClient.cs:119`

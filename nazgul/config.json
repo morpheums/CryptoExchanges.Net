@@ -1,11 +1,18 @@
 {
   "schema_version": 9,
   "install_mode": "shared",
-  "mode": "hitl",
-  "objective": null,
-  "feat_id": null,
-  "feat_display_id": null,
-  "objectives_history": [],
+  "mode": "afk",
+  "objective": "Add three new exchange integrations to CryptoExchanges.Net in strict priority order — (1) Bybit, (2) OKX, (3) Bitget — for a global (non-US) audience. Each exchange clones the verified Binance pattern (Core → Http → Exchange → DI, DeltaMapper DTO→model, bespoke ISymbolMapper, retry-only-on-GET, per-attempt re-signing). The signing/credential abstraction is generalized after Bybit, against OKX, and Bitget then reuses that abstraction.",
+  "feat_id": "FEAT-001",
+  "feat_display_id": "M2",
+  "objectives_history": [
+    {
+      "objective": "Add three new exchange integrations to CryptoExchanges.Net in strict priority order — (1) Bybit, (2) OKX, (3) Bitget — for a global (non-US) audience. Each exchange clones the verified Binance pattern (Core → Http → Exchange → DI, DeltaMapper DTO→model, bespoke ISymbolMapper, retry-only-on-GET, per-attempt re-signing). The signing/credential abstraction is generalized after Bybit, against OKX, and Bitget then reuses that abstraction.",
+      "feat_id": "FEAT-001",
+      "display_id": "M2",
+      "set_at": "2026-06-17T00:00:00Z"
+    }
+  ],
   "max_iterations": 40,
   "current_iteration": 0,
   "paused": false,
@@ -118,7 +125,8 @@
     "block_destructive_commands": true,
     "require_tests_pass_before_review": true,
     "max_consecutive_failures": 5,
-    "consecutive_failures": 0
+    "consecutive_failures": 0,
+    "_prev_done_count": 0
   },
   "budget": {
     "enabled": false,
@@ -132,9 +140,9 @@
     }
   },
   "branch": {
-    "feature": null,
-    "base": null,
-    "main_worktree_path": null,
+    "feature": "feat/m2-exchange-expansion",
+    "base": "main",
+    "main_worktree_path": "/Users/josemejia/ai-platform/personal/workspace/repos/CryptoExchanges.Net",
     "worktree_dir": null,
     "last_task_branch": null,
     "created_at": null,
@@ -142,13 +150,13 @@
     "sparse_paths": null
   },
   "afk": {
-    "enabled": false,
-    "yolo": false,
+    "enabled": true,
+    "yolo": true,
     "task_pr": false,
     "timeout_minutes": 90,
     "checkpoint_every_n_iterations": 5,
     "auto_commit": true,
-    "commit_prefix": null
+    "commit_prefix": "feat(M2):"
   },
   "context": {
     "budget_strategy": "aggressive",
@@ -197,5 +205,6 @@
   },
   "notifications": {
     "on_complete": "say 'Nazgul loop complete'"
-  }
+  },
+  "objective_set_at": "2026-06-17T00:00:00Z"
 }

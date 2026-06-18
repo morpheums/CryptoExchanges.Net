@@ -55,6 +55,8 @@ CryptoExchanges.Net.DependencyInjection  (Core + Http + Exchange(s))
 
 9. **No captive dependency** — `IExchangeClient` is a keyed singleton. The `HttpClient` it wraps is resolved via `IHttpClientFactory.CreateClient(...)` (named client), not as a typed client. This prevents a transient `HttpClient` being captured in a singleton. Evidence: `ServiceCollectionExtensions.cs:66-80`.
 
+10. **Package-level coupling / consumer cost** — As a NuGet SDK, an integration or aggregation package must NOT force consumers to take dependencies they don't use. The per-exchange DI registration (`AddXxxExchange`) lives in that exchange's OWN assembly so a consumer who wants one exchange does not transitively pull in every other exchange assembly. The aggregation package (`CryptoExchanges.Net.DependencyInjection`) is a thin opt-in convenience (`AddCryptoExchanges`) that depends on the exchanges — never the reverse forced on every consumer. Decided in ADR-001 (`nazgul/docs/ADR-001-per-exchange-di-and-conventions.md`). Flag any new code that makes a shared/aggregation package compile-time-reference a sibling integration that consumers would not all want.
+
 ## What You Review
 
 - [ ] Does the diff introduce any `using` or `ProjectReference` in Core pointing to Http, Binance, or DI?
@@ -68,6 +70,22 @@ CryptoExchanges.Net.DependencyInjection  (Core + Http + Exchange(s))
 - [ ] Does the diff add DI registration for a new exchange? Does it use a named (not typed) HttpClient? Does it register keyed singletons? Does it call `ValidateOnStart`?
 - [ ] Does the diff maintain the `long[] _offsetHolder` pattern for clock-skew sharing between the signing handler and `SyncServerTimeAsync`?
 - [ ] Does the diff add any global state or static mutable fields? (Thread-safety rule: `SymbolMapper._wireToSymbol` uses `volatile` + atomic swap — pattern to follow)
+- [ ] Does the diff make a shared/aggregation package (DI especially) compile-time-reference a sibling integration that not all consumers want? (Invariant 10 — package-level coupling)
+
+## Beyond conformance — question the reference pattern
+
+Your job is NOT only "does this diff faithfully clone its reference pattern?" A task can perfectly mirror an established pattern (per Rule 3) and still inherit an architectural smell that lives in the pattern itself. When the diff clones a reference:
+- Still assess whether the *pattern being cloned* is sound at the macro level (package coupling, OCP/DRY across the now-N copies, public-surface growth). If cloning the pattern an Nth time makes a latent problem materially worse (e.g. a shared file that must be edited per exchange, or duplication that now spans 3-4 copies), raise it as a **CONCERN (non-blocking)** so it surfaces to the orchestrator/human — do NOT block conformance work over a pre-existing pattern issue, but do NOT stay silent either. Naming it is the point; the earlier it's caught, the cheaper the fix.
+
+This closes the "conformance review ≠ architecture review" gap that let the centralized-DI coupling (ADR-001) reach the maintainer unflagged.
+
+## Milestone-boundary architecture pass
+
+In addition to per-task conformance review, when a MILESTONE closes (e.g. all tasks for an exchange are DONE), perform a short macro-architecture pass over the milestone's aggregate change, NOT just the last diff:
+- Has duplication/coupling/public-surface grown in a way that will compound when the next milestone repeats the pattern?
+- Does the package dependency graph still let consumers take only what they use?
+- Are there now N copies of something that should be factored?
+Report this as a brief "Milestone architecture note" (CONCERNs + recommendation), distinct from any single task verdict.
 
 ## How to Review
 

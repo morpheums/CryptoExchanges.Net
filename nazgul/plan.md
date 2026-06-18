@@ -118,7 +118,7 @@ Tasks touching shared Core/Http/DI projects are higher blast radius and REQUIRE 
 - [x] TASK-013: OkxSymbolFormat + value parsers + request validation -> DONE
 
 ### Group 9 (= Wave 9)
-- [ ] TASK-012: OkxSigningHandler (header-based) -> PLANNED
+- [x] TASK-012: OkxSigningHandler (header-based) -> IMPLEMENTED
 - [ ] TASK-014: OkxHttpClient + interface -> PLANNED
 
 ### Group 10 (= Wave 10)
@@ -222,9 +222,10 @@ Tasks touching shared Core/Http/DI projects are higher blast radius and REQUIRE 
 - **Manifest**: nazgul/tasks/TASK-013.md
 
 ### TASK-014: OkxHttpClient + interface
-- **Status**: PLANNED
+- **Status**: IN_PROGRESS
 - **Group**: 9
 - **Depends on**: TASK-013
+- **Base SHA**: 6522afa2dd0db87d19240cfdb952a9c331fd3970
 - **Manifest**: nazgul/tasks/TASK-014.md
 
 ### TASK-015: OKX services + mapping + error + time + tests + AddOkxExchange DI (closes M-OKX)

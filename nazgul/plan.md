@@ -304,8 +304,11 @@ Tasks touching shared Core/Http/DI projects are higher blast radius and REQUIRE 
 - M-BYBIT (TASK-001–008) on `feat/m2-exchange-expansion` → on TASK-008 DONE, open PR → main → **confirm with user before the merge click** → merge.
 - After merge: cut `feat/m3-okx` off updated main for M-OKX (TASK-009–015) → PR/merge → branch for M-BITGET (TASK-016–022).
 
-## Recovery Pointer — ▶ MILESTONE BOUNDARY (M-OKX CLOSED — awaiting user PR confirmation)
-- **Current Task:** none active. TASK-015 is DONE; **MILESTONE M-OKX is CLOSED** (TASK-009..015 all DONE). Branch `feat/m3-okx`, tip fb92660.
+## Recovery Pointer — ⏸ MILESTONE BOUNDARY (M-OKX shipped to PR #12 — awaiting user merge + TASK-REF-001 decision)
+- **Current Task:** none active. TASK-015 DONE; **MILESTONE M-OKX CLOSED** (TASK-009..015 all DONE). 16/23 done. Branch `feat/m3-okx` (current with main: dependabot CI bumps merged).
+- **PR #12 OPEN:** https://github.com/morpheums/CryptoExchanges.Net/pull/12 (feat/m3-okx → main). Pushed, all green (336 non-integration + 11 integration, 0W/0E). **Awaiting user review/merge** (per per-exchange strategy — user merges; main is protected: "Build & Test" check + strict up-to-date, enforce_admins on → branch must stay current with main).
+- **TWO USER DECISIONS PENDING:** (1) merge PR #12; (2) **TASK-REF-001** — architect milestone-macro note recommends extracting the ~90%-identical-across-3-exchanges duplication BEFORE Bitget repeats it a 4th time: (a) move TimeSync to Core, (b) shared keyed-singleton DI helper, (c) leave Composer duplication. Do TASK-REF-001 before M-BITGET, or proceed straight to Bitget (TASK-016)? AWAIT user.
+- **After decisions:** if merge → checkout main, pull, rebranch (e.g. feat/m4-bitget). M-BITGET = TASK-016 (Core ExchangeId.Bitget enum — Bitget is NOT yet in Core/Enums) → 017 scaffold → ... → 022 closer. Bitget reuses the OKX-era abstraction (base64 prehash incl. query, ACCESS-PASSPHRASE header, delimiter-less BTCUSDT symbol).
 
 - **What just happened:** Review gate for TASK-015 was redone (prior run hit a session limit before writing verdicts). Simplify pass ran (2 safe consolidations, b78be03). Pre-checks green. Board: architect APPROVED(92), security APPROVED(95), api APPROVED; code-reviewer CHANGES_REQUESTED(95) with 2 mechanical AUTO-FIX items — B1 (HIGH/95 unguarded `long.Parse(arr[0])` candlestick ts @ OkxMarketDataService.cs:214) and B2 (no GetCandlesticks test). Both fixed via fix-first auto-remediation (commit fb92660: `OkxValueParsers.ParseMs` + 4 GetCandlesticks regression tests, OKX unit 91->95). Build 0W/0E; non-integration 336 pass; integration 11 pass; no Binance/Bybit regression. Aggregate verdict PASSED.
 

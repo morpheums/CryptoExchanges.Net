@@ -57,4 +57,4 @@ Create `BitgetSymbolFormat.Instance` for Bitget's delimiter-less upper-case spot
 - `dotnet build CryptoExchanges.Net.sln` → Build succeeded, 0 Warning(s), 0 Error(s). Tests arrive in TASK-022.
 
 ## Commits
-- (pending — see git log for feat(M4): TASK-020)
+- 03a81d2 feat(M4): TASK-020 BitgetSymbolFormat + value parsers + request validation

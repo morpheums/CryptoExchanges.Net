@@ -110,8 +110,6 @@ internal sealed record OkxInstrument
 /// </summary>
 internal sealed class OkxMarketDataService(IOkxHttpClient http, ISymbolMapper mapper, IMapper modelMapper) : IMarketDataService
 {
-    private const string SpotInstType = "SPOT";
-
     // Lazily-fetched, cached snapshot of the supported symbol set, used only by the opt-in
     // IsSupportedAsync / ResolveSymbolAsync validation methods (mirrors the Bybit posture). The
     // Lazy<Task<>> guarantees the underlying GetExchangeInfoAsync call runs at most once even under
@@ -149,7 +147,7 @@ internal sealed class OkxMarketDataService(IOkxHttpClient http, ISymbolMapper ma
             return oneResp.Data.Select(modelMapper.Map<OkxTicker, Ticker>).ToList();
         }
 
-        var parameters = new Dictionary<string, string> { ["instType"] = SpotInstType };
+        var parameters = new Dictionary<string, string> { ["instType"] = OkxRequestValidation.SpotInstType };
         var response = await http.GetAsync<OkxResponse<OkxTicker>>("/api/v5/market/tickers", parameters, false, ct).ConfigureAwait(false);
 
         // The full universe includes obscure/transitional pairs that may not resolve against a cold
@@ -175,7 +173,7 @@ internal sealed class OkxMarketDataService(IOkxHttpClient http, ISymbolMapper ma
         var bids = book.Bids.Select(b => new OrderBookEntry(OkxValueParsers.ParseDecimal(b[0]), OkxValueParsers.ParseDecimal(b[1]))).ToList();
         var asks = book.Asks.Select(a => new OrderBookEntry(OkxValueParsers.ParseDecimal(a[0]), OkxValueParsers.ParseDecimal(a[1]))).ToList();
 
-        var ts = ParseMs(book.Ts);
+        var ts = OkxValueParsers.ParseMs(book.Ts);
         var timestamp = ts > 0 ? DateTimeOffset.FromUnixTimeMilliseconds(ts) : (DateTimeOffset?)null;
         return new OrderBook(symbol, bids, asks, timestamp);
     }
@@ -258,7 +256,7 @@ internal sealed class OkxMarketDataService(IOkxHttpClient http, ISymbolMapper ma
             t.TradeId,
             OkxValueParsers.ParseDecimal(t.Px),
             OkxValueParsers.ParseDecimal(t.Sz),
-            DateTimeOffset.FromUnixTimeMilliseconds(ParseMs(t.Ts)),
+            DateTimeOffset.FromUnixTimeMilliseconds(OkxValueParsers.ParseMs(t.Ts)),
             t.Side == "sell"
         )).ToList();
     }
@@ -266,7 +264,7 @@ internal sealed class OkxMarketDataService(IOkxHttpClient http, ISymbolMapper ma
     /// <inheritdoc />
     public async Task<ExchangeInfo> GetExchangeInfoAsync(CancellationToken ct = default)
     {
-        var parameters = new Dictionary<string, string> { ["instType"] = SpotInstType };
+        var parameters = new Dictionary<string, string> { ["instType"] = OkxRequestValidation.SpotInstType };
         var response = await http.GetAsync<OkxResponse<OkxInstrument>>("/api/v5/public/instruments", parameters, false, ct).ConfigureAwait(false);
 
         // OKX instruments can include entries whose base/quote are not representable assets; skip
@@ -319,10 +317,6 @@ internal sealed class OkxMarketDataService(IOkxHttpClient http, ISymbolMapper ma
 
         yield return ticker;
     }
-
-    /// <summary>Parses an OKX string-encoded unix-ms timestamp, returning 0 for null/empty/malformed.</summary>
-    private static long ParseMs(string value)
-        => long.TryParse(value, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out var ms) ? ms : 0L;
 
     private static string MapKlineInterval(KlineInterval interval) => interval switch
     {

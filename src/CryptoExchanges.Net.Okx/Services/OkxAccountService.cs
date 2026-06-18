@@ -106,7 +106,7 @@ internal sealed class OkxAccountService(IOkxHttpClient http, ISymbolMapper mappe
 
         var parameters = new Dictionary<string, string>
         {
-            ["instType"] = "SPOT",
+            ["instType"] = OkxRequestValidation.SpotInstType,
             ["instId"] = mapper.ToWire(symbol),
             ["limit"] = effectiveLimit.ToString(System.Globalization.CultureInfo.InvariantCulture)
         };
@@ -125,7 +125,7 @@ internal sealed class OkxAccountService(IOkxHttpClient http, ISymbolMapper mappe
             f.TradeId,
             OkxValueParsers.ParseDecimal(f.FillPx),
             OkxValueParsers.ParseDecimal(f.FillSz),
-            DateTimeOffset.FromUnixTimeMilliseconds(ParseMs(f.Ts)),
+            DateTimeOffset.FromUnixTimeMilliseconds(OkxValueParsers.ParseMs(f.Ts)),
             // IsBuyerMaker: a buy fill that is the maker, or a sell fill that is the taker.
             f.Side == "buy" ? f.ExecType == "M" : f.ExecType != "M",
             f.OrdId
@@ -142,6 +142,4 @@ internal sealed class OkxAccountService(IOkxHttpClient http, ISymbolMapper mappe
         return response.Data.SelectMany(a => a.Details).ToList();
     }
 
-    private static long ParseMs(string value)
-        => long.TryParse(value, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out var ms) ? ms : 0L;
 }

@@ -200,7 +200,7 @@ internal sealed class OkxTradingService(IOkxHttpClient http, ISymbolMapper mappe
     /// <inheritdoc />
     public async Task<IReadOnlyList<Order>> GetOpenOrdersAsync(Symbol? symbol = null, CancellationToken ct = default)
     {
-        var parameters = new Dictionary<string, string> { ["instType"] = "SPOT" };
+        var parameters = new Dictionary<string, string> { ["instType"] = OkxRequestValidation.SpotInstType };
         if (symbol.HasValue)
             parameters["instId"] = mapper.ToWire(symbol.Value);
 
@@ -223,7 +223,7 @@ internal sealed class OkxTradingService(IOkxHttpClient http, ISymbolMapper mappe
 
         var parameters = new Dictionary<string, string>
         {
-            ["instType"] = "SPOT",
+            ["instType"] = OkxRequestValidation.SpotInstType,
             ["instId"] = mapper.ToWire(symbol),
             ["limit"] = effectiveLimit.ToString(System.Globalization.CultureInfo.InvariantCulture)
         };

@@ -82,6 +82,13 @@ internal static class OkxValueParsers
     };
 
     /// <summary>
+    /// Parses an OKX string-encoded unix-ms timestamp, returning <c>0</c> for null/empty/malformed input.
+    /// OKX encodes timestamps as epoch-millisecond strings throughout the V5 API.
+    /// </summary>
+    public static long ParseMs(string value)
+        => long.TryParse(value, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out var ms) ? ms : 0L;
+
+    /// <summary>
     /// Parses the OKX wire <c>ordType</c> string into <see cref="TimeInForce"/>.
     /// OKX expresses time-in-force through <c>ordType</c>: <c>fok</c> and <c>ioc</c> map directly,
     /// while <c>limit</c> and <c>post_only</c> are resting orders that map to

@@ -7,6 +7,13 @@ namespace CryptoExchanges.Net.Okx.Internal;
 internal static class OkxRequestValidation
 {
     /// <summary>
+    /// The OKX V5 <c>instType</c> value for spot instruments.
+    /// Used as a query parameter on market data and trading endpoints (e.g. <c>/api/v5/market/tickers</c>,
+    /// <c>/api/v5/trade/orders-pending</c>).
+    /// </summary>
+    public const string SpotInstType = "SPOT";
+
+    /// <summary>
     /// Maximum number of records OKX returns per page for V5 list/history endpoints.
     /// OKX V5 caps <c>limit</c> at 100 for market and trade history endpoints
     /// (e.g. <c>/api/v5/trade/orders-history</c>, <c>/api/v5/market/trades</c>,

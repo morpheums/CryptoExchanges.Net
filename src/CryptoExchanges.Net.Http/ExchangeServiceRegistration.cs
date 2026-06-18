@@ -65,6 +65,10 @@ internal static class ExchangeServiceRegistration
 
         services.TryAddSingleton<IExchangeClientFactory, ExchangeClientFactory>();
 
+        // Exchange-agnostic clock-skew calculator. Non-keyed + TryAdd so a consumer can override it
+        // once (a prior registration wins) and every exchange shares the same implementation.
+        services.TryAddSingleton<IExchangeTimeSync, ExchangeTimeSync>();
+
         services.AddOptions<TOptions>()
             .Configure(applyEnvDefaults)
             .Configure(o => configure?.Invoke(o))

@@ -1,20 +1,17 @@
 using System.Security.Cryptography;
 using System.Text;
+using CryptoExchanges.Net.Core.Auth;
 
 namespace CryptoExchanges.Net.Binance.Auth;
 
 /// <summary>
 /// Creates HMAC-SHA256 signatures for Binance API requests.
 /// </summary>
-internal sealed class BinanceSignatureService(string secretKey)
+internal sealed class BinanceSignatureService(string secretKey) : ISignatureService
 {
     private readonly byte[] _secretKeyBytes = InitializeSecretKey(secretKey);
 
-    /// <summary>
-    /// Signs a query string using HMAC-SHA256 and returns the hex-encoded signature.
-    /// </summary>
-    /// <param name="queryString">The query string to sign (without leading '?').</param>
-    /// <returns>The hex-encoded HMAC-SHA256 signature.</returns>
+    /// <inheritdoc />
     public string Sign(string queryString)
     {
         var queryBytes = Encoding.UTF8.GetBytes(queryString);

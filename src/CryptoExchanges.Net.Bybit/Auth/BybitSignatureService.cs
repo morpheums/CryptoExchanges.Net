@@ -1,24 +1,18 @@
 using System.Security.Cryptography;
 using System.Text;
+using CryptoExchanges.Net.Core.Auth;
 
 namespace CryptoExchanges.Net.Bybit.Auth;
 
 /// <summary>
-/// Creates HMAC-SHA256 signatures for Bybit API requests.
+/// Creates HMAC-SHA256 signatures for Bybit API requests. The hex signature is returned to the
+/// caller for the <c>X-BAPI-SIGN</c> header (not appended to the query, unlike Binance).
 /// </summary>
-/// <remarks>
-/// Unlike Binance, Bybit does not append the signature to the query string. The signature is
-/// returned to the caller so the request handler can place it in the <c>X-BAPI-SIGN</c> header.
-/// </remarks>
-internal sealed class BybitSignatureService(string secretKey)
+internal sealed class BybitSignatureService(string secretKey) : ISignatureService
 {
     private readonly byte[] _secretKeyBytes = InitializeSecretKey(secretKey);
 
-    /// <summary>
-    /// Signs a Bybit sign-string using HMAC-SHA256 and returns the hex-encoded signature.
-    /// </summary>
-    /// <param name="signString">The canonical sign-string to sign.</param>
-    /// <returns>The hex-encoded HMAC-SHA256 signature.</returns>
+    /// <inheritdoc />
     public string Sign(string signString)
     {
         var signBytes = Encoding.UTF8.GetBytes(signString);

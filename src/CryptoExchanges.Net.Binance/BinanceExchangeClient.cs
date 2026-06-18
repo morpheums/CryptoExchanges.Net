@@ -44,6 +44,7 @@ public sealed class BinanceExchangeClient : IExchangeClient, IAsyncDisposable
     /// handler's closure and <see cref="SyncServerTimeAsync"/> read/write the SAME instance.
     /// </summary>
     private readonly long[] _offsetHolder;
+    private readonly Core.Resilience.IExchangeTimeSync _timeSync;
 
     /// <summary>
     /// Internal composition constructor — called exclusively by <see cref="Internal.BinanceClientComposer"/>.
@@ -57,10 +58,12 @@ public sealed class BinanceExchangeClient : IExchangeClient, IAsyncDisposable
         IAccountService account,
         bool ownsHttpClient,
         HttpClient? httpClient,
-        long[] offsetHolder)
+        long[] offsetHolder,
+        Core.Resilience.IExchangeTimeSync timeSync)
     {
         ArgumentNullException.ThrowIfNull(http);
         ArgumentNullException.ThrowIfNull(offsetHolder);
+        ArgumentNullException.ThrowIfNull(timeSync);
         _http = http;
         MarketData = marketData;
         Trading = trading;
@@ -68,6 +71,7 @@ public sealed class BinanceExchangeClient : IExchangeClient, IAsyncDisposable
         _ownsHttpClient = ownsHttpClient;
         _httpClient = httpClient;
         _offsetHolder = offsetHolder;
+        _timeSync = timeSync;
     }
 
     /// <inheritdoc />
@@ -101,7 +105,7 @@ public sealed class BinanceExchangeClient : IExchangeClient, IAsyncDisposable
     public async Task SyncServerTimeAsync(CancellationToken ct = default)
     {
         var resp = await _http.GetAsync<BinanceServerTimeResponse>("/api/v3/time", signed: false, ct: ct).ConfigureAwait(false);
-        Core.Resilience.ExchangeTimeSync.ApplyOffset(
+        _timeSync.ApplyOffset(
             resp.ServerTime, DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(), _offsetHolder);
     }
 

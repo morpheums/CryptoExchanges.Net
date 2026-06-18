@@ -24,6 +24,7 @@ public sealed class OkxExchangeClient : IExchangeClient, IAsyncDisposable
     /// closure and <see cref="SyncServerTimeAsync"/> read/write the SAME instance.
     /// </summary>
     private readonly long[] _offsetHolder;
+    private readonly Core.Resilience.IExchangeTimeSync _timeSync;
 
     /// <summary>
     /// Internal composition constructor — called exclusively by <see cref="Internal.OkxClientComposer"/>.
@@ -37,10 +38,12 @@ public sealed class OkxExchangeClient : IExchangeClient, IAsyncDisposable
         IAccountService account,
         bool ownsHttpClient,
         HttpClient? httpClient,
-        long[] offsetHolder)
+        long[] offsetHolder,
+        Core.Resilience.IExchangeTimeSync timeSync)
     {
         ArgumentNullException.ThrowIfNull(http);
         ArgumentNullException.ThrowIfNull(offsetHolder);
+        ArgumentNullException.ThrowIfNull(timeSync);
         _http = http;
         MarketData = marketData;
         Trading = trading;
@@ -48,6 +51,7 @@ public sealed class OkxExchangeClient : IExchangeClient, IAsyncDisposable
         _ownsHttpClient = ownsHttpClient;
         _httpClient = httpClient;
         _offsetHolder = offsetHolder;
+        _timeSync = timeSync;
     }
 
     /// <inheritdoc />
@@ -85,7 +89,7 @@ public sealed class OkxExchangeClient : IExchangeClient, IAsyncDisposable
     {
         var resp = await _http.GetAsync<OkxResponse<OkxServerTime>>("/api/v5/public/time", signed: false, ct: ct).ConfigureAwait(false);
         var serverTimeMs = ServerTimeMs(resp.Data.FirstOrDefault());
-        Core.Resilience.ExchangeTimeSync.ApplyOffset(serverTimeMs, DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(), _offsetHolder);
+        _timeSync.ApplyOffset(serverTimeMs, DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(), _offsetHolder);
     }
 
     /// <inheritdoc />

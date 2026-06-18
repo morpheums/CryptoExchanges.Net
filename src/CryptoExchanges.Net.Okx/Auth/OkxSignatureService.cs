@@ -4,24 +4,14 @@ using CryptoExchanges.Net.Core.Auth;
 namespace CryptoExchanges.Net.Okx.Auth;
 
 /// <summary>
-/// Creates HMAC-SHA256 signatures for OKX API requests, rendered as base64.
+/// Creates HMAC-SHA256 signatures for OKX API requests, rendered as base64 (not hex like Binance/Bybit)
+/// for the <c>OK-ACCESS-SIGN</c> header. Signs a prehash of <c>timestamp + METHOD + requestPath + body</c>.
 /// </summary>
-/// <remarks>
-/// OKX signs a prehash string of the form <c>timestamp + METHOD + requestPath + body</c> and places
-/// the resulting base64 signature in the <c>OK-ACCESS-SIGN</c> header. Unlike Binance/Bybit (lowercase
-/// hex), OKX renders the same HMAC-SHA256 hash as standard base64. The signature is returned to the
-/// caller rather than appended to the payload; the OKX signing handler (added in a later task) is
-/// responsible for supplying the timestamp and writing the header.
-/// </remarks>
-internal sealed class OkxSignatureService(string secretKey)
+internal sealed class OkxSignatureService(string secretKey) : ISignatureService
 {
     private readonly string _secretKey = InitializeSecretKey(secretKey);
 
-    /// <summary>
-    /// Signs an OKX prehash string using HMAC-SHA256 and returns the base64-encoded signature.
-    /// </summary>
-    /// <param name="prehash">The canonical OKX prehash string (see <see cref="BuildPrehash"/>).</param>
-    /// <returns>The base64-encoded HMAC-SHA256 signature for the <c>OK-ACCESS-SIGN</c> header.</returns>
+    /// <inheritdoc />
     public string Sign(string prehash) =>
         HmacSignature.Compute(_secretKey, prehash, SignatureEncoding.Base64);
 

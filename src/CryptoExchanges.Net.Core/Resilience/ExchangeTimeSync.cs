@@ -1,13 +1,13 @@
 namespace CryptoExchanges.Net.Core.Resilience;
 
-/// <summary>Venue-neutral clock-skew offset (server − local, in ms) shared by all exchange clients.</summary>
-public static class ExchangeTimeSync
+/// <inheritdoc cref="IExchangeTimeSync" />
+public sealed class ExchangeTimeSync : IExchangeTimeSync
 {
-    /// <summary>Returns <c>server − local</c>, in milliseconds.</summary>
-    public static long ComputeOffset(long serverTimeMs, long localNowMs) => serverTimeMs - localNowMs;
+    /// <inheritdoc />
+    public long ComputeOffset(long serverTimeMs, long localNowMs) => serverTimeMs - localNowMs;
 
-    /// <summary>Computes the offset and atomically writes it into <paramref name="offsetHolder"/>[0]; returns it.</summary>
-    public static long ApplyOffset(long serverTimeMs, long localNowMs, long[] offsetHolder)
+    /// <inheritdoc />
+    public long ApplyOffset(long serverTimeMs, long localNowMs, long[] offsetHolder)
     {
         ArgumentNullException.ThrowIfNull(offsetHolder);
         if (offsetHolder.Length < 1)

@@ -3,10 +3,6 @@ using DeltaMapper;
 
 namespace CryptoExchanges.Net.Bitget.Services;
 
-// ---------------------------------------------------------------------------
-//  BitgetMarketDataService
-// ---------------------------------------------------------------------------
-
 /// <summary>
 /// Bitget implementation of <see cref="IMarketDataService"/> against the V2 spot REST API.
 /// </summary>
@@ -197,8 +193,6 @@ internal sealed class BitgetMarketDataService(IBitgetHttpClient http, ISymbolMap
         var supported = await EnsureSupportedSymbols().Value.ConfigureAwait(false);
         return supported.TryGetValue(symbol, out var canonical) ? canonical : null;
     }
-
-    // ── Mapping helpers ──
 
     /// <summary>
     /// Maps a ticker, yielding nothing when its wire symbol cannot be resolved. Used for the

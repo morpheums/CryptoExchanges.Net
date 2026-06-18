@@ -25,8 +25,7 @@ public readonly record struct Asset
     /// <summary>True when this is <see cref="None"/> (no ticker).</summary>
     public bool IsNone => string.IsNullOrEmpty(Ticker);
 
-    // ── Curated, NON-exhaustive well-known assets (autocomplete for the common path).
-    //    The set is open: use Asset.Of("...") for anything not listed here. ──
+    // Curated, non-exhaustive well-known assets for autocomplete; the set is open — use Asset.Of("...") for anything not listed.
     /// <summary>Bitcoin (BTC).</summary>
     public static readonly Asset Btc   = Of("BTC");
     /// <summary>Ethereum (ETH).</summary>

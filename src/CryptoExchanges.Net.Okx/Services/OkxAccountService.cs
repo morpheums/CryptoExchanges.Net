@@ -3,10 +3,6 @@ using DeltaMapper;
 
 namespace CryptoExchanges.Net.Okx.Services;
 
-// ---------------------------------------------------------------------------
-//  OkxAccountService
-// ---------------------------------------------------------------------------
-
 /// <summary>
 /// OKX implementation of <see cref="IAccountService"/> against the V5 unified-account REST API.
 /// </summary>

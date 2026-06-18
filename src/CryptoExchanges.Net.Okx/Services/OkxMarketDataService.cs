@@ -3,10 +3,6 @@ using DeltaMapper;
 
 namespace CryptoExchanges.Net.Okx.Services;
 
-// ---------------------------------------------------------------------------
-//  OkxMarketDataService
-// ---------------------------------------------------------------------------
-
 /// <summary>
 /// OKX implementation of <see cref="IMarketDataService"/> against the V5 spot REST API.
 /// </summary>
@@ -198,8 +194,6 @@ internal sealed class OkxMarketDataService(IOkxHttpClient http, ISymbolMapper ma
         var supported = await EnsureSupportedSymbols().Value.ConfigureAwait(false);
         return supported.TryGetValue(symbol, out var canonical) ? canonical : null;
     }
-
-    // ── Mapping helpers ──
 
     /// <summary>
     /// Maps a ticker, yielding nothing when its wire symbol cannot be resolved. Used for the

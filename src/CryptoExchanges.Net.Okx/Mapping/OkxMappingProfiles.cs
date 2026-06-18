@@ -21,7 +21,6 @@ internal sealed class OkxResponseProfile : Profile
     {
         ArgumentNullException.ThrowIfNull(symbolMapper);
 
-        // OkxOrder -> Order
         CreateMap<OkxOrder, Order>()
             .ForMember(d => d.Symbol, o => o.MapFrom(s => symbolMapper.FromWire(s.InstId)))
             .ForMember(d => d.OrderId, o => o.MapFrom(s => s.OrdId))

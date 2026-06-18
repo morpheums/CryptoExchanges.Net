@@ -3,10 +3,6 @@ using DeltaMapper;
 
 namespace CryptoExchanges.Net.Okx.Services;
 
-// ---------------------------------------------------------------------------
-//  OkxTradingService
-// ---------------------------------------------------------------------------
-
 /// <summary>
 /// OKX implementation of <see cref="ITradingService"/> against the V5 spot REST API.
 /// </summary>
@@ -167,8 +163,6 @@ internal sealed class OkxTradingService(IOkxHttpClient http, ISymbolMapper mappe
         return modelMapper.Map<OkxOrder, Order>(response.Data);
     }
 
-    // ── Order re-fetch (V5 place/cancel return ids only) ──
-
     /// <summary>
     /// Resolves a full <see cref="Order"/> for an OKX order id. OKX place/cancel responses carry only
     /// the id, so we query <c>/api/v5/trade/order</c> (by ordId, or clOrdId when the ack omits ordId).
@@ -194,8 +188,6 @@ internal sealed class OkxTradingService(IOkxHttpClient http, ISymbolMapper mappe
         var fallbackId = !string.IsNullOrEmpty(orderId) ? orderId : (clientOrderId ?? string.Empty);
         return new Order(mapper.FromWire(wireSymbol), fallbackId);
     }
-
-    // ── Request-direction mapping helpers ──
 
     private static string MapOrderSide(OrderSide side) => side switch
     {

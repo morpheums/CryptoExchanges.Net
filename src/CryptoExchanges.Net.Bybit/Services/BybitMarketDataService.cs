@@ -209,8 +209,6 @@ internal sealed class BybitMarketDataService(IBybitHttpClient http, ISymbolMappe
         return supported.TryGetValue(symbol, out var canonical) ? canonical : null;
     }
 
-    // ── Mapping helpers ──
-
     /// <summary>
     /// Maps a ticker, yielding nothing when its wire symbol cannot be resolved. Used for the
     /// full-universe response where unknown/delisted pairs must not abort the whole batch.

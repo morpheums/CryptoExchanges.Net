@@ -21,7 +21,6 @@ internal sealed class BybitResponseProfile : Profile
     {
         ArgumentNullException.ThrowIfNull(symbolMapper);
 
-        // BybitOrder -> Order
         CreateMap<BybitOrder, Order>()
             .ForMember(d => d.Symbol, o => o.MapFrom(s => symbolMapper.FromWire(s.Symbol)))
             .ForMember(d => d.OrderId, o => o.MapFrom(s => s.OrderId))

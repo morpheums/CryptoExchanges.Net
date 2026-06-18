@@ -156,8 +156,6 @@ internal sealed class BybitTradingService(IBybitHttpClient http, ISymbolMapper m
         return modelMapper.Map<BybitOrder, Order>(orders);
     }
 
-    // ── Order re-fetch (V5 create/cancel return ids only) ──
-
     /// <summary>
     /// Resolves a full <see cref="Order"/> for a Bybit order id. Bybit's create/cancel responses
     /// carry only the id, so we query <c>/v5/order/realtime</c> (open/recently-closed orders) first
@@ -193,8 +191,6 @@ internal sealed class BybitTradingService(IBybitHttpClient http, ISymbolMapper m
         var fallbackId = !string.IsNullOrEmpty(orderId) ? orderId : (orderLinkId ?? string.Empty);
         return new Order(mapper.FromWire(wireSymbol), fallbackId);
     }
-
-    // ── Request-direction mapping helpers ──
 
     private static string MapOrderSide(OrderSide side) => side switch
     {

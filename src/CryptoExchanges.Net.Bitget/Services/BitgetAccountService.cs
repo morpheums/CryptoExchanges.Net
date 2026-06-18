@@ -3,10 +3,6 @@ using DeltaMapper;
 
 namespace CryptoExchanges.Net.Bitget.Services;
 
-// ---------------------------------------------------------------------------
-//  BitgetAccountService
-// ---------------------------------------------------------------------------
-
 /// <summary>
 /// Bitget implementation of <see cref="IAccountService"/> against the V2 spot REST API.
 /// </summary>

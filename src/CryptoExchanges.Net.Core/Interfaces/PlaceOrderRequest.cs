@@ -88,13 +88,11 @@ public sealed record PlaceOrderRequest
     /// <exception cref="ArgumentException">Thrown when required fields are missing or inconsistent.</exception>
     public void Validate()
     {
-        // Guard: symbol components
         if (Symbol.Base.IsNone || Symbol.Quote.IsNone)
             throw new ArgumentException("A valid trading symbol is required.", nameof(Symbol));
 
         var errors = new List<string>();
 
-        // Quantity validation
         if (Type != OrderType.Market || QuoteOrderQuantity is null or 0)
         {
             if (Quantity is null or <= 0)
@@ -104,14 +102,12 @@ public sealed record PlaceOrderRequest
         if (Type == OrderType.Market && QuoteOrderQuantity is not null && QuoteOrderQuantity <= 0)
             errors.Add("QuoteOrderQuantity must be positive.");
 
-        // Price validation
         if (Type is OrderType.Limit or OrderType.StopLossLimit or OrderType.TakeProfitLimit or OrderType.LimitMaker)
         {
             if (Price is null or <= 0)
                 errors.Add("Price is required for limit orders and must be positive.");
         }
 
-        // Stop price validation
         if (Type is OrderType.StopLoss or OrderType.StopLossLimit or OrderType.TakeProfit or OrderType.TakeProfitLimit)
         {
             if (StopPrice is null or <= 0)

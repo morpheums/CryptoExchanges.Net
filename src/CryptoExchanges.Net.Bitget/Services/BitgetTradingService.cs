@@ -3,10 +3,6 @@ using DeltaMapper;
 
 namespace CryptoExchanges.Net.Bitget.Services;
 
-// ---------------------------------------------------------------------------
-//  BitgetTradingService
-// ---------------------------------------------------------------------------
-
 /// <summary>
 /// Bitget implementation of <see cref="ITradingService"/> against the V2 spot REST API. Place/cancel
 /// endpoints return only the order id, so those methods re-fetch via <c>/api/v2/spot/trade/orderInfo</c>
@@ -146,8 +142,6 @@ internal sealed class BitgetTradingService(IBitgetHttpClient http, ISymbolMapper
         return modelMapper.Map<BitgetOrder, Order>(response.Data);
     }
 
-    // ── Order re-fetch (V2 place/cancel return ids only) ──
-
     /// <summary>
     /// Resolves a full <see cref="Order"/> for a Bitget order id. Bitget place/cancel responses carry
     /// only the id, so we query <c>/api/v2/spot/trade/orderInfo</c> (by orderId, or clientOid when the
@@ -174,8 +168,6 @@ internal sealed class BitgetTradingService(IBitgetHttpClient http, ISymbolMapper
         var fallbackId = !string.IsNullOrEmpty(orderId) ? orderId : (clientOrderId ?? string.Empty);
         return new Order(mapper.FromWire(wireSymbol), fallbackId);
     }
-
-    // ── Request-direction mapping helpers ──
 
     private static string MapOrderSide(OrderSide side) => side switch
     {

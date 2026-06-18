@@ -21,7 +21,6 @@ internal sealed class BinanceResponseProfile : Profile
     {
         ArgumentNullException.ThrowIfNull(symbolMapper);
 
-        // BinanceOrderResponse -> Order
         CreateMap<BinanceOrderResponse, Order>()
             .ForMember(d => d.Symbol, o => o.MapFrom(s => symbolMapper.FromWire(s.Symbol)))
             .ForMember(d => d.OrderId, o => o.MapFrom(s => s.OrderId.ToString()))
@@ -39,7 +38,6 @@ internal sealed class BinanceResponseProfile : Profile
             .ForMember(d => d.UpdatedAt, o => o.MapFrom(s => s.UpdateTime > 0 ? DateTimeOffset.FromUnixTimeMilliseconds(s.UpdateTime) : (DateTimeOffset?)null))
             .ForMember(d => d.CumulativeQuoteQuantity, o => o.MapFrom(s => BinanceValueParsers.ParseDecimal(s.CumulativeQuoteQty)));
 
-        // BinanceTickerResponse -> Ticker
         CreateMap<BinanceTickerResponse, Ticker>()
             .ForMember(d => d.Symbol, o => o.MapFrom(s => symbolMapper.FromWire(s.Symbol)))
             .ForMember(d => d.LastPrice, o => o.MapFrom(s => BinanceValueParsers.ParseDecimal(s.LastPrice)))
@@ -70,7 +68,6 @@ internal sealed class BinanceResponseProfile : Profile
             .ForMember(d => d.StepSize, o => o.Ignore())
             .ForMember(d => d.MinNotional, o => o.Ignore());
 
-        // BinanceBalance -> AssetBalance
         // Balances are where long-tail assets appear, so an unrepresentable ticker maps to
         // Asset.None rather than throwing.
         CreateMap<BinanceBalance, AssetBalance>()

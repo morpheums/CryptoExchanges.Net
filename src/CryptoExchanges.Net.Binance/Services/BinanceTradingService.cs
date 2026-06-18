@@ -152,8 +152,6 @@ internal sealed class BinanceTradingService(IBinanceHttpClient http, ISymbolMapp
         return modelMapper.Map<BinanceOrderResponse, Order>(results);
     }
 
-    // ── Request-direction mapping helpers ──
-
     private static string MapOrderSide(OrderSide side) => side switch
     {
         OrderSide.Buy => "BUY",

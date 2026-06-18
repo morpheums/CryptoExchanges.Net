@@ -1,6 +1,6 @@
 ---
 id: TASK-009B
-status: PLANNED
+status: IN_PROGRESS
 ---
 
 # TASK-009B: Per-exchange DI re-homing (ADR-001)

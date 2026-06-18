@@ -304,13 +304,12 @@ Tasks touching shared Core/Http/DI projects are higher blast radius and REQUIRE 
 - M-BYBIT (TASK-001–008) on `feat/m2-exchange-expansion` → on TASK-008 DONE, open PR → main → **confirm with user before the merge click** → merge.
 - After merge: cut `feat/m3-okx` off updated main for M-OKX (TASK-009–015) → PR/merge → branch for M-BITGET (TASK-016–022).
 
-## Recovery Pointer — TASK-REF-001 IMPLEMENTED (awaiting review gate)
-- **Current Task:** TASK-REF-001 (Extract shared per-exchange DI/TimeSync — DRY refactor). Status: **IMPLEMENTED**.
-- **Branch:** `refactor/di-timesync-dry` (cut from main @ 3960d4a, which contains Binance+Bybit+OKX). Working in the MAIN worktree (no git worktree per task instruction).
-- **Commits:** `93ea257` (Phase 1 — TimeSync→Core) + `80a5d5a` (Phase 2 — shared keyed-singleton DI helper).
-- **Verification (both phases, both filters):** build 0W/0E; non-integration 333 passed / 0 failed (336 baseline −7 removed per-exchange TimeSync tests +4 consolidated Core tests); integration 11 passed / 0 failed (Bybit 5 + OKX 6). Behavior-preserving — zero regression.
-- **Diff captured:** `nazgul/reviews/TASK-REF-001/diff.patch` (830 lines, src+tests).
-- **NEXT ACTION:** review gate (architect + api required — HIGH blast radius). After approval: push `refactor/di-timesync-dry`, open its OWN PR → main (separate from the Bitget feature PR). After that merges: rebranch `feat/m4-bitget` off main → M-BITGET = TASK-016 (add ExchangeId.Bitget to Core), reusing the OKX-era abstraction + the new shared DI helper.
+## Recovery Pointer — ⏸ TASK-REF-001 DONE, shipped to PR #13 (awaiting user merge → then M-BITGET)
+- **Current Task:** none active. TASK-REF-001 DONE (gate PASSED, all 4 APPROVE, behavior byte-identical). 17/24 tasks done (22 plan + TASK-009B + TASK-REF-001).
+- **PR #13 OPEN:** https://github.com/morpheums/CryptoExchanges.Net/pull/13 (refactor/di-timesync-dry → main). All green (333 non-integration + 11 integration, 0W/0E). PR body documents the breaking change (public BinanceTimeSync/BybitTimeSync deleted → use Core ExchangeTimeSync). **Awaiting user review/merge** (per-exchange/per-concern strategy — user merges).
+- **Resume trigger:** user says PR #13 is merged (or "continue"). THEN: `git checkout main && git pull`; rebranch `feat/m4-bitget` off updated main; start **M-BITGET**.
+- **M-BITGET plan (Waves 11–15):** TASK-016 (add `ExchangeId.Bitget` to Core/Enums — NOT yet present; touches Core enum → architect+api) → TASK-017 (scaffold + passphrase options, mirror OKX) → TASK-018/020 (BitgetSignatureService base64 prehash INCL. query + BitgetSymbolFormat delimiter-less `BTCUSDT`) → TASK-019/021 (signing handler header-based `ACCESS-*` + http client) → TASK-022 (services+mapping+composer+client+error+time+tests+AddBitgetExchange — closes M-BITGET). Bitget reuses: Core ExchangeCredentials/HmacSignature(base64), Core ExchangeTimeSync, the shared `ExchangeServiceRegistration.AddExchange` helper, internal error-translator+timesync from the start. Bitget signing delta vs OKX: prehash `timestamp+UPPER(method)+requestPath+'?'+queryString+body`; header `ACCESS-PASSPHRASE`/`ACCESS-KEY`/`ACCESS-SIGN`/`ACCESS-TIMESTAMP`.
+- **Carry-forwards into TASK-016+ (from REF-001 gate, non-blocking):** add ArgumentNullException guards to the helper's delegate params; re-evaluate gateFactory-hardcoded + 13-param helper signature when Bitget is wired (if Bitget fits cleanly, close).
 
 ## Recovery Pointer (PRIOR) — ⏸ MILESTONE BOUNDARY (M-OKX shipped to PR #12 — awaiting user merge + TASK-REF-001 decision)
 - **Current Task:** none active. TASK-015 DONE; **MILESTONE M-OKX CLOSED** (TASK-009..015 all DONE). 16/23 done. Branch `feat/m3-okx` (current with main: dependabot CI bumps merged).

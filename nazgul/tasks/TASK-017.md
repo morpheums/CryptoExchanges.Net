@@ -1,7 +1,9 @@
 ---
 id: TASK-017
-status: IMPLEMENTED
+status: DONE
 ---
+
+> **Gate PASSED** (4/4: architect 95, code/security/api APPROVE). Commit 9029eab. Carry to TASK-018: gate signing on passphrase presence (don't call ToCredentials() on default options).
 
 # TASK-017: Bitget project scaffold + passphrase options + DI seam stub
 

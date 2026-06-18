@@ -11,10 +11,10 @@ Add three new exchange integrations to CryptoExchanges.Net in strict priority or
 - [x] Documents generated: none (PRD/TRD/ADR absent — research doc is the source of truth)
 
 ## Status Summary
-- Total tasks: 23 (added TASK-009B per ADR-001)
-- DONE: 17 (incl. TASK-009B, TASK-REF-001) | IMPLEMENTED: 1 (TASK-REF-002) | PLANNED: 7 (M-BITGET) | READY/IN_PROGRESS/IN_REVIEW/CHANGES_REQUESTED/BLOCKED: 0
+- Total tasks: 25 (22 plan + TASK-009B + TASK-REF-001 + TASK-REF-002)
+- DONE: 20 | IN_PROGRESS: 0 | IN_REVIEW: 0 | CHANGES_REQUESTED: 0 | BLOCKED: 0 | PLANNED: 5 (M-BITGET: 018/019/020/021/022)
 - Current iteration: 9/40
-- Active task: TASK-REF-002 IMPLEMENTED (interface seams) — awaiting review gate. After APPROVE → own PR `refactor/interface-seams` → main; then rebranch `feat/m4-bitget` → M-BITGET (TASK-016+).
+- Active task: none — M-BITGET on `feat/m4-bitget`; TASK-016 + TASK-017 DONE; next Wave 13 = TASK-018 + TASK-020 (parallel)
 
 ## Scoping Decisions (HITL — committed, not open questions)
 The objective is fully prescriptive on scope/sequence/signing; these are the choices made decisively:
@@ -128,7 +128,7 @@ Tasks touching shared Core/Http/DI projects are higher blast radius and REQUIRE 
 - [x] TASK-016: Core ExchangeId.Bitget enum member -> DONE
 
 ### Group 12 (= Wave 12)
-- [ ] TASK-017: Bitget project scaffold + passphrase options + DI seam stub -> IMPLEMENTED
+- [x] TASK-017: Bitget project scaffold + passphrase options + DI seam stub -> DONE
 
 ### Group 13 (= Wave 13)
 - [ ] TASK-018: BitgetSignatureService (base64 prehash incl. query) + signing marker -> PLANNED

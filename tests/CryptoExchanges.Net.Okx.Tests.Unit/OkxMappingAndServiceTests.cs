@@ -485,6 +485,18 @@ public class OkxMappingAndServiceTests
     }
 
     [Fact]
+    public void Di_AddOkxExchange_BaseUrlWithPath_FailFast()
+    {
+        // OKX reassembles its signed prehash from RequestUri.AbsolutePath/Query, so a BaseUrl carrying a
+        // path segment would break sign-consistency. The shared ExchangeUrl.NormalizeHostRoot guard must
+        // fail fast rather than silently produce rejected signatures at runtime.
+        var services = new ServiceCollection();
+        services.AddOkxExchange(o => o.BaseUrl = "https://www.okx.com/api/v5");
+        var act = () => services.BuildServiceProvider().GetRequiredKeyedService<IExchangeClient>(ExchangeId.Okx);
+        act.Should().Throw<Exception>();
+    }
+
+    [Fact]
     public void Di_AddOkxExchange_MapperIsKeyedSingleton()
     {
         var services = new ServiceCollection();

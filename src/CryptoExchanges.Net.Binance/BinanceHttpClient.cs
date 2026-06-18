@@ -4,6 +4,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using CryptoExchanges.Net.Binance.Resilience;
+using CryptoExchanges.Net.Http;
 
 namespace CryptoExchanges.Net.Binance;
 
@@ -80,21 +81,9 @@ internal sealed class BinanceHttpClient(HttpClient httpClient, BinanceOptions op
 
     private string BuildBaseQuery(Dictionary<string, string>? parameters, bool signed)
     {
-        var query = BuildQueryString(parameters);
+        var query = ExchangeUrl.BuildQueryString(parameters);
         if (!signed) return query;
         var rw = "recvWindow=" + options.ReceiveWindow.ToString(CultureInfo.InvariantCulture);
         return string.IsNullOrEmpty(query) ? rw : $"{query}&{rw}";
-    }
-
-    private static string BuildQueryString(Dictionary<string, string>? parameters)
-    {
-        if (parameters is null || parameters.Count == 0) return string.Empty;
-        var sb = new StringBuilder();
-        foreach (var kvp in parameters)
-        {
-            if (sb.Length > 0) sb.Append('&');
-            sb.Append(Uri.EscapeDataString(kvp.Key)).Append('=').Append(Uri.EscapeDataString(kvp.Value));
-        }
-        return sb.ToString();
     }
 }

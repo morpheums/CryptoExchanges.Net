@@ -8,6 +8,8 @@
     <InternalsVisibleTo Include="CryptoExchanges.Net.Binance" />
     <InternalsVisibleTo Include="CryptoExchanges.Net.Bybit" />
     <InternalsVisibleTo Include="CryptoExchanges.Net.Okx" />
+    <InternalsVisibleTo Include="CryptoExchanges.Net.Bitget" />
+    <InternalsVisibleTo Include="CryptoExchanges.Net.Http.Tests.Unit" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Http.Resilience" Version="10.7.0" />

@@ -133,7 +133,9 @@ public enum ExchangeId
     /// <summary>OKX.</summary>
     Okx,
     /// <summary>KuCoin.</summary>
-    Kucoin
+    Kucoin,
+    /// <summary>Bitget.</summary>
+    Bitget
 }
 
 /// <summary>Letter casing an exchange uses for wire symbols.</summary>

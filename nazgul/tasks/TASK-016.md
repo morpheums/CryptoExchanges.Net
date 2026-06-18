@@ -1,7 +1,9 @@
 ---
 id: TASK-016
-status: PLANNED
+status: DONE
 ---
+
+> **Gate PASSED** (4/4 @99, no findings). Commit 03eb0d3. Additive enum member; Core tests 98 (+1).
 
 # TASK-016: Core ExchangeId.Bitget enum member
 

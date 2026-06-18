@@ -94,6 +94,9 @@ internal static class BybitClientComposer
 
         var hc = CryptoExchanges.Net.Http.HttpClientPipelineBuilder.Build(
             inner, resilienceOptions, translator, gate, requestFinalizer: finalizer);
+        // No ExchangeUrl.NormalizeHostRoot here: Bybit signs only the query string (not RequestUri
+        // path), so a BaseUrl path segment cannot corrupt the signature. A signing-sensitive exchange
+        // that rebuilds its prehash from AbsolutePath/Query (OKX, Bitget) MUST use NormalizeHostRoot.
         hc.BaseAddress = new Uri(options.BaseUrl.TrimEnd('/'));
         hc.Timeout = TimeSpan.FromSeconds(options.TimeoutSeconds);
         hc.DefaultRequestHeaders.Add("User-Agent", "CryptoExchanges.Net/0.1.0");

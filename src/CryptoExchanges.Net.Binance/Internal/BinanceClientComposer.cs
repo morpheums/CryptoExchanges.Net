@@ -80,6 +80,9 @@ internal static class BinanceClientComposer
 
         var hc = CryptoExchanges.Net.Http.HttpClientPipelineBuilder.Build(
             inner, resilienceOptions, translator, gate, requestFinalizer: signing);
+        // No ExchangeUrl.NormalizeHostRoot here: Binance signs the query string (HMAC appended as
+        // &signature=), not the RequestUri path, so a BaseUrl path segment cannot corrupt the signature.
+        // A signing-sensitive exchange that rebuilds its prehash from AbsolutePath/Query MUST use it.
         hc.BaseAddress = new Uri(options.BaseUrl.TrimEnd('/'));
         hc.Timeout = TimeSpan.FromSeconds(options.TimeoutSeconds);
         hc.DefaultRequestHeaders.Add("User-Agent", "CryptoExchanges.Net/0.1.0");

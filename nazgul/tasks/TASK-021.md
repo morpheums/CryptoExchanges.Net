@@ -1,6 +1,6 @@
 ---
 id: TASK-021
-status: PLANNED
+status: DONE
 ---
 
 # TASK-021: BitgetHttpClient + interface
@@ -40,3 +40,14 @@ Implement `IBitgetHttpClient` and `BitgetHttpClient` (`GetAsync<T>`, `PostAsync<
 
 ## Test Requirements
 - Integration tests in TASK-022 assert URL/body/signed-marker via stub handler; service unit tests mock `IBitgetHttpClient`.
+
+## Implementation Notes
+- `internal interface IBitgetHttpClient` + `internal sealed class BitgetHttpClient(HttpClient) : IBitgetHttpClient` mirroring the OKX wrapper: `GetAsync`/`PostAsync(Dictionary)`/`PostAsync(object)`/`DeleteAsync`. Object-body POST overload retained (Bitget batch endpoints take a JSON array). Endpoint guard `ThrowIfNullOrWhiteSpace` on all; case-insensitive JsonOptions; ConfigureAwait(false); ctor only HttpClient.
+- **Sign-consistency**: BaseAddress is host-only (`https://api.bitget.com`, no path); client builds full `/api/v2/...` path + escaped query, so `RequestUri.AbsolutePath` = the signed requestPath and `RequestUri.Query` = the signed query — byte-consistent with `BitgetSigningHandler`'s separate-path/query `BuildPrehash`. POST JSON body is verbatim (handler reads it back to sign). Client only `MarkSigned`s; no inline signing.
+- Lean comments per ADR-001 conv 7.
+
+## Verification
+- `dotnet build CryptoExchanges.Net.sln` → 0 Warning(s), 0 Error(s). Tests arrive in TASK-022.
+
+## Commits
+- (committed with Wave 14 finalize)

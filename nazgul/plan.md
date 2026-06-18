@@ -11,10 +11,10 @@ Add three new exchange integrations to CryptoExchanges.Net in strict priority or
 - [x] Documents generated: none (PRD/TRD/ADR absent — research doc is the source of truth)
 
 ## Status Summary
-- Total tasks: 23 (added TASK-009B per ADR-001)
-- DONE: 17 (incl. TASK-009B, TASK-REF-001) | IMPLEMENTED: 1 (TASK-REF-002) | PLANNED: 7 (M-BITGET) | READY/IN_PROGRESS/IN_REVIEW/CHANGES_REQUESTED/BLOCKED: 0
+- Total tasks: 25 (22 plan + TASK-009B + TASK-REF-001 + TASK-REF-002)
+- DONE: 24 | IN_PROGRESS: 0 | IN_REVIEW: 0 | IMPLEMENTED: 1 (022) | CHANGES_REQUESTED: 0 | BLOCKED: 0 | PLANNED: 0
 - Current iteration: 9/40
-- Active task: TASK-REF-002 IMPLEMENTED (interface seams) — awaiting review gate. After APPROVE → own PR `refactor/interface-seams` → main; then rebranch `feat/m4-bitget` → M-BITGET (TASK-016+).
+- Active task: TASK-022 IMPLEMENTED (M-BITGET closer) — awaiting review gate. Commit a9caa69. Bitget unit 92 + integration 6 pass; OKX 6 / Bybit 5 no regression; full sln 0 warn/0 err. NO Core change; Http change = single per-exchange InternalsVisibleTo only (generalization held). Deviation: BitgetTimeSync NOT created — reuses Core IExchangeTimeSync per REF-001. Recovery: next action = review gate for TASK-022.
 
 ## Scoping Decisions (HITL — committed, not open questions)
 The objective is fully prescriptive on scope/sequence/signing; these are the choices made decisively:
@@ -125,21 +125,21 @@ Tasks touching shared Core/Http/DI projects are higher blast radius and REQUIRE 
 - [x] TASK-015: OKX services + mapping + error + time + tests + AddOkxExchange DI (closes M-OKX) -> DONE (gate PASSED; CLOSES M-OKX)
 
 ### Group 11 (= Wave 11)
-- [ ] TASK-016: Core ExchangeId.Bitget enum member -> PLANNED
+- [x] TASK-016: Core ExchangeId.Bitget enum member -> DONE
 
 ### Group 12 (= Wave 12)
-- [ ] TASK-017: Bitget project scaffold + passphrase options + DI seam stub -> PLANNED
+- [x] TASK-017: Bitget project scaffold + passphrase options + DI seam stub -> DONE
 
 ### Group 13 (= Wave 13)
-- [ ] TASK-018: BitgetSignatureService (base64 prehash incl. query) + signing marker -> PLANNED
-- [ ] TASK-020: BitgetSymbolFormat + value parsers + request validation -> PLANNED
+- [x] TASK-018: BitgetSignatureService (base64 prehash incl. query) + signing marker -> DONE
+- [x] TASK-020: BitgetSymbolFormat + value parsers + request validation -> DONE
 
 ### Group 14 (= Wave 14)
-- [ ] TASK-019: BitgetSigningHandler (header-based) -> PLANNED
-- [ ] TASK-021: BitgetHttpClient + interface -> PLANNED
+- [x] TASK-019: BitgetSigningHandler (header-based) -> DONE
+- [ ] TASK-021: BitgetHttpClient + interface -> IN_PROGRESS
 
 ### Group 15 (= Wave 15)
-- [ ] TASK-022: Bitget services + mapping + error + time + tests + AddBitgetExchange DI (closes M-BITGET) -> PLANNED
+- [x] TASK-022: Bitget services + mapping + error + time + tests + AddBitgetExchange DI (closes M-BITGET) -> DONE
 
 ## Tasks
 ### TASK-001: Bybit project scaffold + options + DI seam stub
@@ -244,9 +244,11 @@ Tasks touching shared Core/Http/DI projects are higher blast radius and REQUIRE 
 - **Manifest**: nazgul/tasks/TASK-016.md
 
 ### TASK-017: Bitget project scaffold + passphrase options + DI seam stub
-- **Status**: PLANNED
+- **Status**: IMPLEMENTED
 - **Group**: 12
 - **Depends on**: TASK-016
+- **Base SHA**: 3ca50b84cbb3d4ec018b524cb3a1dc4d00a6db7d
+- **Commit**: 9029eab (build 0W/0E; Core+Http only)
 - **Manifest**: nazgul/tasks/TASK-017.md
 
 ### TASK-018: BitgetSignatureService (base64 prehash incl. query) + signing marker
@@ -268,9 +270,10 @@ Tasks touching shared Core/Http/DI projects are higher blast radius and REQUIRE 
 - **Manifest**: nazgul/tasks/TASK-020.md
 
 ### TASK-021: BitgetHttpClient + interface
-- **Status**: PLANNED
+- **Status**: IN_PROGRESS
 - **Group**: 14
 - **Depends on**: TASK-020
+- **Base SHA**: 9c5bef119e5ea19f76d7d0fcffd282efcffdedcf
 - **Manifest**: nazgul/tasks/TASK-021.md
 
 ### TASK-022: Bitget services + mapping + error + time + tests + AddBitgetExchange DI (closes M-BITGET)
@@ -304,11 +307,13 @@ Tasks touching shared Core/Http/DI projects are higher blast radius and REQUIRE 
 - M-BYBIT (TASK-001–008) on `feat/m2-exchange-expansion` → on TASK-008 DONE, open PR → main → **confirm with user before the merge click** → merge.
 - After merge: cut `feat/m3-okx` off updated main for M-OKX (TASK-009–015) → PR/merge → branch for M-BITGET (TASK-016–022).
 
-## Recovery Pointer — ✦ TASK-REF-002 IMPLEMENTED (interface seams: IExchangeTimeSync + ISignatureService)
-- **Current Task:** TASK-REF-002 IMPLEMENTED on branch `refactor/interface-seams` (base SHA 3eeb698). Commit 83da9ed. Diff captured at nazgul/reviews/TASK-REF-002/diff.patch (645 lines).
-- **Done:** (1) `IExchangeTimeSync` (Core.Resilience) — `ExchangeTimeSync` now sealed instance impl, registered non-keyed via `TryAddSingleton` in `ExchangeServiceRegistration.AddExchange` (overridable), threaded through 3 clients + 3 composers. (2) `ISignatureService` (Core.Auth) — 3 sig services implement it; 3 signing handlers take the interface. `HmacSignature`/`SignatureEncoding`/composers/registration-helper/pipeline-builders kept static. Lean comments per ADR-001 conv 7–8.
-- **Verification:** build 0W/0E; non-integration 335 pass (333 baseline + 2 new DI override tests); integration 11 pass (Bybit 5 + OKX 6). Behavior byte-identical.
-- **Next Action:** review gate for TASK-REF-002 (architect + api primary). On APPROVE → own PR `refactor/interface-seams` → main; after merge → rebranch `feat/m4-bitget` → M-BITGET (TASK-016+, uses both seams from the start).
+## Recovery Pointer — ⏸ OBJECTIVE COMPLETE + PR#16 self-review remediation DONE (awaiting final PR #16 merge)
+- **Current Task:** none — **ALL 26 TASKS DONE** (25 + TASK-023 PR#16 self-review remediation). M-BITGET CLOSED. M2 exchange-expansion objective complete.
+- **TASK-023 (just done):** addressed the 7 findings from the user's automated `/code-review` on PR #16. 6 fixed (gate PASSED, all 4 APPROVE: architect 100/code 94/security PASS/api PASS), 1 (#3 lenient token parsing) DECLINED with rationale (siblings throw; enums have no Unknown member — left thread open). Commits 524e017 / 0bee170 / a6380fc on feat/m4-bitget. Notables: #5 NormalizeHostRoot promoted to shared Http (`ExchangeUrl`) + OKX now guarded; #6 the 4 byte-identical BuildQueryString unified into `ExchangeUrl.BuildQueryString` (signature byte-consistency verified); #1 per-client graceful time-skip on serverTimeMs<=0.
+- **Final PR #16 OPEN:** https://github.com/morpheums/CryptoExchanges.Net/pull/16 (feat/m4-bitget → main; Bitget + TASK-023). **Build & Test green on HEAD a6380fc**, mergeable; only 1 review thread open by design (#3 decline). **Awaiting user merge** (per-exchange strategy — user merges).
+- **Resume trigger:** user says PR #16 is merged. THEN this is genuinely done — emit NAZGUL_COMPLETE. (No further milestones; the 3 new exchanges + Binance baseline all ship.)
+- **Shipped:** Bybit (PR #11), OKX + signing-generalization + per-exchange DI (PR #12), DI/TimeSync DRY refactor (PR #13), interface seams (PR #15), Bitget + PR#16 self-review remediation (PR #16). Tasks: 22 plan + TASK-009B + TASK-REF-001 + TASK-REF-002 + TASK-023 = 26.
+- **Open follow-ups (non-blocking, post-objective):** retro lean-comment sweep (issue #14); ExchangeServiceRegistration double-TrimEnd cleanup; deeper parser-base dedup (enum-token-parameterized); UriFormatException doc on ExchangeUrl.NormalizeHostRoot; nested CryptoExchangesOptions, redacting ToString on options.
 
 ## Recovery Pointer (PRIOR) — ⏸ TASK-REF-001 DONE, shipped to PR #13 (awaiting user merge → then M-BITGET)
 - **Current Task:** none active. #13 (REF-001) MERGED. TASK-REF-002 DONE (gate PASSED round 2). 18/25 tasks done.

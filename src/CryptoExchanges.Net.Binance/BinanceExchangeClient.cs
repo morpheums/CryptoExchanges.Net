@@ -105,8 +105,11 @@ public sealed class BinanceExchangeClient : IExchangeClient, IAsyncDisposable
     public async Task SyncServerTimeAsync(CancellationToken ct = default)
     {
         var resp = await _http.GetAsync<BinanceServerTimeResponse>("/api/v3/time", signed: false, ct: ct).ConfigureAwait(false);
-        _timeSync.ApplyOffset(
-            resp.ServerTime, DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(), _offsetHolder);
+        // A missing/malformed /time payload (serverTime <= 0) is a degraded but non-fatal response:
+        // skip the offset update (keep the prior/local clock) rather than throw out of SyncServerTimeAsync.
+        if (resp.ServerTime > 0)
+            _timeSync.ApplyOffset(
+                resp.ServerTime, DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(), _offsetHolder);
     }
 
     /// <inheritdoc />

@@ -1,0 +1,154 @@
+diff --git a/CryptoExchanges.Net.sln b/CryptoExchanges.Net.sln
+index 054a8ad..4fb66d7 100644
+--- a/CryptoExchanges.Net.sln
++++ b/CryptoExchanges.Net.sln
+@@ -37,6 +37,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CryptoExchanges.Net.Okx.Tes
+ EndProject
+ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CryptoExchanges.Net.Okx.Tests.Integration", "tests\CryptoExchanges.Net.Okx.Tests.Integration\CryptoExchanges.Net.Okx.Tests.Integration.csproj", "{FE28B1F8-2DA1-4A94-974C-43AA8BEA40B7}"
+ EndProject
++Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CryptoExchanges.Net.Bitget", "src\CryptoExchanges.Net.Bitget\CryptoExchanges.Net.Bitget.csproj", "{975387A7-B48B-4FD2-96F0-238BA8580CBC}"
++EndProject
+ Global
+ 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+ 		Debug|Any CPU = Debug|Any CPU
+@@ -203,6 +205,18 @@ Global
+ 		{179D89FC-030B-48CD-9893-D33E87FF1135}.Release|x64.Build.0 = Release|Any CPU
+ 		{179D89FC-030B-48CD-9893-D33E87FF1135}.Release|x86.ActiveCfg = Release|Any CPU
+ 		{179D89FC-030B-48CD-9893-D33E87FF1135}.Release|x86.Build.0 = Release|Any CPU
++		{975387A7-B48B-4FD2-96F0-238BA8580CBC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
++		{975387A7-B48B-4FD2-96F0-238BA8580CBC}.Debug|Any CPU.Build.0 = Debug|Any CPU
++		{975387A7-B48B-4FD2-96F0-238BA8580CBC}.Debug|x64.ActiveCfg = Debug|Any CPU
++		{975387A7-B48B-4FD2-96F0-238BA8580CBC}.Debug|x64.Build.0 = Debug|Any CPU
++		{975387A7-B48B-4FD2-96F0-238BA8580CBC}.Debug|x86.ActiveCfg = Debug|Any CPU
++		{975387A7-B48B-4FD2-96F0-238BA8580CBC}.Debug|x86.Build.0 = Debug|Any CPU
++		{975387A7-B48B-4FD2-96F0-238BA8580CBC}.Release|Any CPU.ActiveCfg = Release|Any CPU
++		{975387A7-B48B-4FD2-96F0-238BA8580CBC}.Release|Any CPU.Build.0 = Release|Any CPU
++		{975387A7-B48B-4FD2-96F0-238BA8580CBC}.Release|x64.ActiveCfg = Release|Any CPU
++		{975387A7-B48B-4FD2-96F0-238BA8580CBC}.Release|x64.Build.0 = Release|Any CPU
++		{975387A7-B48B-4FD2-96F0-238BA8580CBC}.Release|x86.ActiveCfg = Release|Any CPU
++		{975387A7-B48B-4FD2-96F0-238BA8580CBC}.Release|x86.Build.0 = Release|Any CPU
+ 		{66951EE4-0185-4F92-9C80-B8C7B8D9A761}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+ 		{66951EE4-0185-4F92-9C80-B8C7B8D9A761}.Debug|Any CPU.Build.0 = Debug|Any CPU
+ 		{66951EE4-0185-4F92-9C80-B8C7B8D9A761}.Debug|x64.ActiveCfg = Debug|Any CPU
+@@ -238,6 +252,7 @@ Global
+ 		{B1C2D3E4-F5A6-4789-9ABC-DEF012345601} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
+ 		{C2D3E4F5-A6B7-4890-9BCD-EF0123456702} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
+ 		{179D89FC-030B-48CD-9893-D33E87FF1135} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
++		{975387A7-B48B-4FD2-96F0-238BA8580CBC} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
+ 		{66951EE4-0185-4F92-9C80-B8C7B8D9A761} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
+ 		{FE28B1F8-2DA1-4A94-974C-43AA8BEA40B7} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
+ 	EndGlobalSection
+diff --git a/nazgul/tasks/TASK-017.md b/nazgul/tasks/TASK-017.md
+index cfb7c6a..be67476 100644
+--- a/nazgul/tasks/TASK-017.md
++++ b/nazgul/tasks/TASK-017.md
+@@ -1,6 +1,6 @@
+ ---
+ id: TASK-017
+-status: PLANNED
++status: IMPLEMENTED
+ ---
+ 
+ # TASK-017: Bitget project scaffold + passphrase options + DI seam stub
+@@ -43,3 +43,20 @@ Create the `CryptoExchanges.Net.Bitget` class library (Core + Http refs, GlobalU
+ 
+ ## Test Requirements
+ - No tests this task (scaffolding); build green. Tests arrive in TASK-022.
++
++## Implementation Notes
++- **Base SHA**: 3ca50b84cbb3d4ec018b524cb3a1dc4d00a6db7d
++- Mirrored the post-refactor OKX src project (most recent template).
++- Created `src/CryptoExchanges.Net.Bitget/`:
++  - `CryptoExchanges.Net.Bitget.csproj` — Core + Http ProjectReferences ONLY; DeltaMapper 1.2.0 + Microsoft.Extensions.Http/Options/DependencyInjection.Abstractions (10.0.*); same `NoWarn` set as OKX; IVT for `CryptoExchanges.Net.Bitget.Tests.Unit`, `.Tests.Integration`, and `DynamicProxyGenAssembly2` (NSubstitute). No IVT for the DI package (ADR-001). No other exchange/DI refs.
++  - `GlobalUsings.cs` — same global usings as OKX.
++  - `BitgetOptions.cs` — `public sealed`, namespace `CryptoExchanges.Net.Bitget`: `BaseUrl` (default `https://api.bitget.com`), `ApiKey`, `SecretKey`, `Passphrase` (required for signed endpoints), `TimeoutSeconds` (30), plus `ToCredentials()` → Core `ExchangeCredentials(ApiKey, SecretKey, Passphrase)`. No ReceiveWindow. LEAN comments (ADR-001 conv 7) — one concise `<summary>` per public member, no `<remarks>`.
++- Added `CryptoExchanges.Net.Bitget` to `CryptoExchanges.Net.sln` (GUID `975387A7-B48B-4FD2-96F0-238BA8580CBC`): full Debug/Release × Any CPU/x64/x86 config rows + nested under the `src` solution folder (`827E0CD3...`), mirroring the OKX registration.
++- No Core edit; `ExchangeId.Bitget` (from TASK-016) available for later tasks.
++
++## Verification
++- `dotnet build CryptoExchanges.Net.sln` → **Build succeeded. 0 Warning(s), 0 Error(s).**
++- `dotnet list src/CryptoExchanges.Net.Bitget reference` → Core + Http only (confirmed).
++
++## Commits
++- (see git log; `feat(M4): TASK-017 Bitget project scaffold + passphrase options`)
+diff --git a/src/CryptoExchanges.Net.Bitget/BitgetOptions.cs b/src/CryptoExchanges.Net.Bitget/BitgetOptions.cs
+new file mode 100644
+index 0000000..719873b
+--- /dev/null
++++ b/src/CryptoExchanges.Net.Bitget/BitgetOptions.cs
+@@ -0,0 +1,26 @@
++using CryptoExchanges.Net.Core.Auth;
++
++namespace CryptoExchanges.Net.Bitget;
++
++/// <summary>Configuration options for the Bitget exchange client.</summary>
++public sealed class BitgetOptions
++{
++    /// <summary>The Bitget REST API base URL. Default: https://api.bitget.com</summary>
++    public string BaseUrl { get; set; } = "https://api.bitget.com";
++
++    /// <summary>Bitget API key.</summary>
++    public string ApiKey { get; set; } = string.Empty;
++
++    /// <summary>Bitget API secret key.</summary>
++    public string SecretKey { get; set; } = string.Empty;
++
++    /// <summary>Bitget API passphrase; required for signed/private endpoints.</summary>
++    public string Passphrase { get; set; } = string.Empty;
++
++    /// <summary>Request timeout in seconds. Default: 30.</summary>
++    public int TimeoutSeconds { get; set; } = 30;
++
++    /// <summary>Builds an <see cref="ExchangeCredentials"/> carrying the API key, secret, and passphrase.</summary>
++    public ExchangeCredentials ToCredentials()
++        => new(ApiKey, SecretKey, Passphrase);
++}
+diff --git a/src/CryptoExchanges.Net.Bitget/CryptoExchanges.Net.Bitget.csproj b/src/CryptoExchanges.Net.Bitget/CryptoExchanges.Net.Bitget.csproj
+new file mode 100644
+index 0000000..b684a2a
+--- /dev/null
++++ b/src/CryptoExchanges.Net.Bitget/CryptoExchanges.Net.Bitget.csproj
+@@ -0,0 +1,31 @@
++<Project Sdk="Microsoft.NET.Sdk">
++  <PropertyGroup>
++    <RootNamespace>CryptoExchanges.Net.Bitget</RootNamespace>
++    <AssemblyName>CryptoExchanges.Net.Bitget</AssemblyName>
++    <Description>Bitget exchange implementation for CryptoExchanges.Net.</Description>
++    <PackageId>CryptoExchanges.Net.Bitget</PackageId>
++    <!-- Suppress analysis noise for HTTP client / JSON deserialization library -->
++    <NoWarn>$(NoWarn);CA1812;CA1056;CA1031;CA2000;CA1305;CA1032;CS1591</NoWarn>
++  </PropertyGroup>
++
++  <ItemGroup>
++    <ProjectReference Include="..\CryptoExchanges.Net.Core\CryptoExchanges.Net.Core.csproj" />
++    <ProjectReference Include="..\CryptoExchanges.Net.Http\CryptoExchanges.Net.Http.csproj" />
++  </ItemGroup>
++
++  <ItemGroup>
++    <!-- Allow the test assemblies to unit-test internal DTOs, mapping profiles, signing,
++         services, value parsers, request validation, symbol format, and the composer. -->
++    <InternalsVisibleTo Include="CryptoExchanges.Net.Bitget.Tests.Unit" />
++    <InternalsVisibleTo Include="CryptoExchanges.Net.Bitget.Tests.Integration" />
++    <!-- Lets NSubstitute (Castle DynamicProxy) mock the internal IBitgetHttpClient in tests. -->
++    <InternalsVisibleTo Include="DynamicProxyGenAssembly2" />
++  </ItemGroup>
++
++  <ItemGroup>
++    <PackageReference Include="DeltaMapper" Version="1.2.0" />
++    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.*" />
++    <PackageReference Include="Microsoft.Extensions.Http" Version="10.0.*" />
++    <PackageReference Include="Microsoft.Extensions.Options" Version="10.0.*" />
++  </ItemGroup>
++</Project>
+diff --git a/src/CryptoExchanges.Net.Bitget/GlobalUsings.cs b/src/CryptoExchanges.Net.Bitget/GlobalUsings.cs
+new file mode 100644
+index 0000000..fc69318
+--- /dev/null
++++ b/src/CryptoExchanges.Net.Bitget/GlobalUsings.cs
+@@ -0,0 +1,6 @@
++// Global usings for CryptoExchanges.Net.Bitget
++global using System.Text.Json;
++global using System.Text.Json.Serialization;
++global using CryptoExchanges.Net.Core.Enums;
++global using CryptoExchanges.Net.Core.Interfaces;
++global using CryptoExchanges.Net.Core.Models;

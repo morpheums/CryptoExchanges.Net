@@ -48,7 +48,8 @@ public static class ServiceCollectionExtensions
             configure: configure,
             timeoutSecondsSelector: o => o.TimeoutSeconds,
             // Host-only BaseAddress (no path) so RequestUri.PathAndQuery == the signed OKX requestPath.
-            baseUrlSelector: o => o.BaseUrl,
+            // ExchangeUrl.NormalizeHostRoot fails fast if a path segment is present (would break the prehash).
+            baseUrlSelector: o => ExchangeUrl.NormalizeHostRoot(o.BaseUrl),
             symbolMapperFactory: () => new SymbolMapper(OkxSymbolFormat.Instance),
             mapperFactory: OkxClientComposer.CreateMapper,
             configureHttpClient: null,

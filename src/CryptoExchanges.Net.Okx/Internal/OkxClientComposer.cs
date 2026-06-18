@@ -96,8 +96,9 @@ internal static class OkxClientComposer
         var hc = CryptoExchanges.Net.Http.HttpClientPipelineBuilder.Build(
             inner, resilienceOptions, translator, gate, requestFinalizer: finalizer);
         // BaseAddress is host-only (no path) so RequestUri.PathAndQuery == the OKX requestPath that gets
-        // signed (the prehash invariant from TASK-014).
-        hc.BaseAddress = new Uri(options.BaseUrl.TrimEnd('/'));
+        // signed (the prehash invariant from TASK-014). The shared ExchangeUrl.NormalizeHostRoot guard
+        // keeps sign-consistency self-enforcing on the container-free path too.
+        hc.BaseAddress = new Uri(CryptoExchanges.Net.Http.ExchangeUrl.NormalizeHostRoot(options.BaseUrl));
         hc.Timeout = TimeSpan.FromSeconds(options.TimeoutSeconds);
         hc.DefaultRequestHeaders.Add("User-Agent", "CryptoExchanges.Net/0.1.0");
         return hc;

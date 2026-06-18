@@ -5,6 +5,8 @@ claimed_at: 2026-06-18
 base_sha: 3eeb698fd117286b2a10c14e2150933655dc3534
 ---
 
+> **Rework (gate round 1):** architect+code REJECT@95/97 — the inlined Binance `BuildSignedQuery` in the handler orphaned the service-side copy (zero callers). Deleted `BinanceSignatureService.BuildSignedQuery` (dead code). Build 0w/0e; 335 tests pass. security+api already APPROVED. Non-blocking carry: CHANGELOG note for the static→instance `ExchangeTimeSync` break (pre-v1.0, → PR body).
+
 # TASK-REF-002: Interface seams for time-sync + signing (DIP, before Bitget)
 
 **Status**: PLANNED (architect-recommended 2026-06-18; maintainer mandate — interfaces over static for swappable behavior)

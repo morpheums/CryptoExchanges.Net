@@ -19,18 +19,6 @@ internal sealed class BinanceSignatureService(string secretKey) : ISignatureServ
         return Convert.ToHexStringLower(hash);
     }
 
-    /// <summary>
-    /// Builds a query string with the signature appended.
-    /// </summary>
-    /// <param name="queryString">The unsigned query string (without leading '?').</param>
-    /// <returns>The query string with signature parameter appended.</returns>
-    public string BuildSignedQuery(string queryString)
-    {
-        var signature = Sign(queryString);
-        var separator = string.IsNullOrEmpty(queryString) ? string.Empty : "&";
-        return $"{queryString}{separator}signature={signature}";
-    }
-
     private static byte[] InitializeSecretKey(string secretKey)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(secretKey);

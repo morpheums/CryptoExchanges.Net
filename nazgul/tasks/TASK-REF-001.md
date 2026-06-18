@@ -33,3 +33,10 @@ After 3 exchanges (Binance, Bybit, OKX) the per-exchange pattern shows ~90%-iden
 ## Notes
 - This is its OWN PR (refactor/di-timesync-dry → main), separate from the Bitget feature PR, per the per-exchange/per-concern PR strategy.
 - Sequence: PR #12 merges → branch off main → TASK-REF-001 → PR/merge → then M-BITGET (TASK-016+).
+
+## Polish candidates folded in from the /simplify pass (2026-06-18)
+A `/simplify` review of the OKX milestone found the OKX code clean on reuse/efficiency/altitude. The only items were cross-exchange harmonizations that belong HERE (applying them OKX-only would diverge from the Binance/Bybit idioms). Fold these in while harmonizing — apply consistently across ALL exchanges, not one:
+- **Shared HttpClient configuration**: BaseAddress(TrimEnd '/') + Timeout + User-Agent "CryptoExchanges.Net/0.1.0" is duplicated between each `XxxClientComposer.BuildResilientHttpClient` and each `AddXxxExchange` AddHttpClient lambda (×3 exchanges, 2 sites each). A shared `ConfigureExchangeHttpClient(HttpClient, baseUrl, timeoutSeconds, apiKeyHeader?)` would remove it.
+- **OK-ACCESS-* / X-BAPI-* / X-MBX-* header names** are inline string literals repeated (Remove+Add) in each signing handler — could be per-handler `const`s (low value; only do if touching those files).
+- **Auth/rate-limit/balance error-code sets** use long `code is "x" or "y" or …` chains in each XxxErrorTranslator — a `static readonly HashSet<string>` (or frozen set) per category reads better for the longer OKX/Bitget lists. Apply per-translator only if it improves readability; keep consistent across exchanges.
+- **JSON options block** + **BuildQueryString** are identical across the 3 HttpClients — candidates for a shared Http helper (consider alongside the DI helper).

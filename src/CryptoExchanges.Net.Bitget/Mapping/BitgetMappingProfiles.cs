@@ -82,10 +82,7 @@ internal sealed class BitgetResponseProfile : Profile
     /// <summary>Parses a Bitget string-encoded unix-ms timestamp into an optional instant (null when unset/zero).</summary>
     private static DateTimeOffset? ParseTimestamp(string value)
     {
-        if (string.IsNullOrEmpty(value)
-            || !long.TryParse(value, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out var ms)
-            || ms <= 0)
-            return null;
-        return DateTimeOffset.FromUnixTimeMilliseconds(ms);
+        var ms = BitgetValueParsers.ParseMs(value);
+        return ms > 0 ? DateTimeOffset.FromUnixTimeMilliseconds(ms) : null;
     }
 }

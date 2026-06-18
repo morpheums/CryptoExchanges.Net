@@ -139,7 +139,7 @@ Tasks touching shared Core/Http/DI projects are higher blast radius and REQUIRE 
 - [ ] TASK-021: BitgetHttpClient + interface -> IN_PROGRESS
 
 ### Group 15 (= Wave 15)
-- [ ] TASK-022: Bitget services + mapping + error + time + tests + AddBitgetExchange DI (closes M-BITGET) -> PLANNED
+- [x] TASK-022: Bitget services + mapping + error + time + tests + AddBitgetExchange DI (closes M-BITGET) -> DONE
 
 ## Tasks
 ### TASK-001: Bybit project scaffold + options + DI seam stub

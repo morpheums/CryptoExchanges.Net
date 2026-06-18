@@ -1,6 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
-using System.Globalization;
 using System.Text.Json.Serialization;
+using CryptoExchanges.Net.Bitget.Internal;
 using CryptoExchanges.Net.Bitget.Services;
 using CryptoExchanges.Net.Core.Enums;
 using CryptoExchanges.Net.Core.Interfaces;
@@ -125,11 +125,7 @@ public sealed class BitgetExchangeClient : IExchangeClient, IAsyncDisposable
 
     /// <summary>Resolves server time in unix milliseconds from the V2 time envelope (serverTime is ms as a string).</summary>
     private static long ServerTimeMs(BitgetServerTime? result)
-    {
-        if (result is null || string.IsNullOrEmpty(result.ServerTime))
-            return 0L;
-        return long.TryParse(result.ServerTime, NumberStyles.Integer, CultureInfo.InvariantCulture, out var ms) ? ms : 0L;
-    }
+        => result is null ? 0L : BitgetValueParsers.ParseMs(result.ServerTime);
 }
 
 /// <summary>The <c>data</c> element of the Bitget V2 <c>/api/v2/public/time</c> response.</summary>

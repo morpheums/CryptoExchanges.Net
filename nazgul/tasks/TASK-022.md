@@ -1,7 +1,9 @@
 ---
 id: TASK-022
-status: IMPLEMENTED
+status: DONE
 ---
+
+> **Gate PASSED (round 1)** — all 4 APPROVE (architect 97, code 95, security 94, api 95), zero blocking. +2 simplifier edits folded (ServerTimeMs/ParseTimestamp → BitgetValueParsers.ParseMs). Bitget unit 92 + integration 6. ZERO Core change; only the standard per-exchange Http InternalsVisibleTo line — proves the TASK-009 generalization held. **CLOSES MILESTONE M-BITGET (25/25).**
 
 # TASK-022: Bitget services + mapping + error + time + tests + AddBitgetExchange DI (closes M-BITGET)
 

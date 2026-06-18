@@ -89,13 +89,13 @@ index 4fb66d7..e0d3dfe 100644
  EndGlobal
 diff --git a/src/CryptoExchanges.Net.Bitget/BitgetExchangeClient.cs b/src/CryptoExchanges.Net.Bitget/BitgetExchangeClient.cs
 new file mode 100644
-index 0000000..4abbee0
+index 0000000..0916d17
 --- /dev/null
 +++ b/src/CryptoExchanges.Net.Bitget/BitgetExchangeClient.cs
-@@ -0,0 +1,141 @@
+@@ -0,0 +1,137 @@
 +using System.Diagnostics.CodeAnalysis;
-+using System.Globalization;
 +using System.Text.Json.Serialization;
++using CryptoExchanges.Net.Bitget.Internal;
 +using CryptoExchanges.Net.Bitget.Services;
 +using CryptoExchanges.Net.Core.Enums;
 +using CryptoExchanges.Net.Core.Interfaces;
@@ -220,11 +220,7 @@ index 0000000..4abbee0
 +
 +    /// <summary>Resolves server time in unix milliseconds from the V2 time envelope (serverTime is ms as a string).</summary>
 +    private static long ServerTimeMs(BitgetServerTime? result)
-+    {
-+        if (result is null || string.IsNullOrEmpty(result.ServerTime))
-+            return 0L;
-+        return long.TryParse(result.ServerTime, NumberStyles.Integer, CultureInfo.InvariantCulture, out var ms) ? ms : 0L;
-+    }
++        => result is null ? 0L : BitgetValueParsers.ParseMs(result.ServerTime);
 +}
 +
 +/// <summary>The <c>data</c> element of the Bitget V2 <c>/api/v2/public/time</c> response.</summary>
@@ -366,10 +362,10 @@ index 0000000..a4f0478
 +}
 diff --git a/src/CryptoExchanges.Net.Bitget/Mapping/BitgetMappingProfiles.cs b/src/CryptoExchanges.Net.Bitget/Mapping/BitgetMappingProfiles.cs
 new file mode 100644
-index 0000000..e8d953f
+index 0000000..4c21842
 --- /dev/null
 +++ b/src/CryptoExchanges.Net.Bitget/Mapping/BitgetMappingProfiles.cs
-@@ -0,0 +1,91 @@
+@@ -0,0 +1,88 @@
 +using DeltaMapper;
 +using CryptoExchanges.Net.Bitget.Internal;
 +using CryptoExchanges.Net.Bitget.Services;
@@ -454,11 +450,8 @@ index 0000000..e8d953f
 +    /// <summary>Parses a Bitget string-encoded unix-ms timestamp into an optional instant (null when unset/zero).</summary>
 +    private static DateTimeOffset? ParseTimestamp(string value)
 +    {
-+        if (string.IsNullOrEmpty(value)
-+            || !long.TryParse(value, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out var ms)
-+            || ms <= 0)
-+            return null;
-+        return DateTimeOffset.FromUnixTimeMilliseconds(ms);
++        var ms = BitgetValueParsers.ParseMs(value);
++        return ms > 0 ? DateTimeOffset.FromUnixTimeMilliseconds(ms) : null;
 +    }
 +}
 diff --git a/src/CryptoExchanges.Net.Bitget/Resilience/BitgetErrorTranslator.cs b/src/CryptoExchanges.Net.Bitget/Resilience/BitgetErrorTranslator.cs
@@ -1465,18 +1458,6 @@ index 0000000..641328b
 +        };
 +    }
 +}
-diff --git a/src/CryptoExchanges.Net.DependencyInjection/CryptoExchanges.Net.DependencyInjection.csproj b/src/CryptoExchanges.Net.DependencyInjection/CryptoExchanges.Net.DependencyInjection.csproj
-index 1e5c8fe..c4691ef 100644
---- a/src/CryptoExchanges.Net.DependencyInjection/CryptoExchanges.Net.DependencyInjection.csproj
-+++ b/src/CryptoExchanges.Net.DependencyInjection/CryptoExchanges.Net.DependencyInjection.csproj
-@@ -12,6 +12,7 @@
-     <ProjectReference Include="..\CryptoExchanges.Net.Binance\CryptoExchanges.Net.Binance.csproj" />
-     <ProjectReference Include="..\CryptoExchanges.Net.Bybit\CryptoExchanges.Net.Bybit.csproj" />
-     <ProjectReference Include="..\CryptoExchanges.Net.Okx\CryptoExchanges.Net.Okx.csproj" />
-+    <ProjectReference Include="..\CryptoExchanges.Net.Bitget\CryptoExchanges.Net.Bitget.csproj" />
-     <ProjectReference Include="..\CryptoExchanges.Net.Http\CryptoExchanges.Net.Http.csproj" />
-   </ItemGroup>
- 
 diff --git a/src/CryptoExchanges.Net.DependencyInjection/ServiceCollectionExtensions.cs b/src/CryptoExchanges.Net.DependencyInjection/ServiceCollectionExtensions.cs
 index adfc8db..3aa7c45 100644
 --- a/src/CryptoExchanges.Net.DependencyInjection/ServiceCollectionExtensions.cs

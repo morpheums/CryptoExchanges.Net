@@ -1,0 +1,174 @@
+diff --git a/src/CryptoExchanges.Net.Bitget/BitgetSymbolFormat.cs b/src/CryptoExchanges.Net.Bitget/BitgetSymbolFormat.cs
+new file mode 100644
+index 0000000..c07018c
+--- /dev/null
++++ b/src/CryptoExchanges.Net.Bitget/BitgetSymbolFormat.cs
+@@ -0,0 +1,20 @@
++using CryptoExchanges.Net.Core.Enums;
++using CryptoExchanges.Net.Core.Models;
++
++namespace CryptoExchanges.Net.Bitget;
++
++/// <summary>Bitget's wire-symbol format: upper-case concatenation (e.g. BTCUSDT), no delimiter.</summary>
++internal static class BitgetSymbolFormat
++{
++    /// <summary>The shared Bitget <see cref="SymbolFormat"/>.</summary>
++    public static readonly SymbolFormat Instance = new()
++    {
++        Delimiter = "",
++        Casing = SymbolCasing.Upper,
++        FallbackQuoteAssets =
++        [
++            "USDT", "USDC", "USDE", "DAI",
++            "USD", "EUR", "BTC", "ETH"
++        ]
++    };
++}
+diff --git a/src/CryptoExchanges.Net.Bitget/Internal/BitgetRequestValidation.cs b/src/CryptoExchanges.Net.Bitget/Internal/BitgetRequestValidation.cs
+new file mode 100644
+index 0000000..ee6d4b3
+--- /dev/null
++++ b/src/CryptoExchanges.Net.Bitget/Internal/BitgetRequestValidation.cs
+@@ -0,0 +1,34 @@
++namespace CryptoExchanges.Net.Bitget.Internal;
++
++/// <summary>
++/// Client-side validation for Bitget request parameters, surfacing constraint
++/// violations as local argument exceptions instead of opaque signed-request failures.
++/// </summary>
++internal static class BitgetRequestValidation
++{
++    /// <summary>
++    /// Maximum number of records Bitget returns per page for V2 spot list/history endpoints.
++    /// Bitget V2 spot caps <c>limit</c> at 100 (e.g. <c>/api/v2/spot/trade/history-orders</c>,
++    /// <c>/api/v2/spot/trade/fills</c>).
++    /// </summary>
++    public const int MaxHistoryLimit = 100;
++
++    /// <summary>
++    /// Validates the shared constraints for Bitget V2 spot history endpoints: <paramref name="limit"/>
++    /// must be in <c>1..100</c>, and any supplied <paramref name="startTime"/>/<paramref name="endTime"/>
++    /// window must be ordered (start no later than end). Bitget paginates via <c>idLessThan</c> cursors
++    /// rather than enforcing a fixed maximum window span, so only ordering is checked here.
++    /// </summary>
++    public static void ValidateHistoryWindow(
++        int limit,
++        DateTimeOffset? startTime,
++        DateTimeOffset? endTime)
++    {
++        if (limit is < 1 or > MaxHistoryLimit)
++            throw new ArgumentOutOfRangeException(
++                nameof(limit), limit, $"limit must be between 1 and {MaxHistoryLimit}.");
++
++        if (startTime.HasValue && endTime.HasValue && startTime.Value > endTime.Value)
++            throw new ArgumentException("startTime must not be later than endTime.", nameof(startTime));
++    }
++}
+diff --git a/src/CryptoExchanges.Net.Bitget/Internal/BitgetValueParsers.cs b/src/CryptoExchanges.Net.Bitget/Internal/BitgetValueParsers.cs
+new file mode 100644
+index 0000000..960663e
+--- /dev/null
++++ b/src/CryptoExchanges.Net.Bitget/Internal/BitgetValueParsers.cs
+@@ -0,0 +1,102 @@
++namespace CryptoExchanges.Net.Bitget.Internal;
++
++/// <summary>
++/// Shared response-side value parsers for Bitget V2 spot API payloads.
++/// All methods convert raw JSON field values (decimal strings, lower-case
++/// enum tokens) into domain types using <see cref="System.Globalization.CultureInfo.InvariantCulture"/>.
++/// </summary>
++internal static class BitgetValueParsers
++{
++    /// <summary>
++    /// Parses a decimal string from a Bitget response field.
++    /// Returns <c>0</c> for null or empty input (Bitget emits <c>""</c> for unset numeric fields).
++    /// </summary>
++    public static decimal ParseDecimal(string value)
++    {
++        if (string.IsNullOrEmpty(value))
++            return 0m;
++        return decimal.Parse(value, System.Globalization.CultureInfo.InvariantCulture);
++    }
++
++    /// <summary>
++    /// Parses an optional decimal string from a Bitget response field.
++    /// Returns <see langword="null"/> for null/empty input or any zero-valued amount
++    /// (e.g. <c>"0"</c>), which Bitget uses for unset optional fields such as priceAvg.
++    /// </summary>
++    public static decimal? ParseOptionalDecimal(string value)
++    {
++        if (string.IsNullOrEmpty(value))
++            return null;
++        var parsed = decimal.Parse(value, System.Globalization.CultureInfo.InvariantCulture);
++        return parsed == 0m ? null : parsed;
++    }
++
++    /// <summary>
++    /// Parses an asset ticker into a typed <see cref="Asset"/>, returning <see cref="Asset.None"/>
++    /// for null/empty or otherwise unrepresentable tickers rather than throwing. Used for balance
++    /// mapping where long-tail assets appear and must never abort the projection.
++    /// </summary>
++    public static Asset ParseAssetOrNone(string? ticker)
++        => Asset.TryOf(ticker, out var asset) ? asset : Asset.None;
++
++    /// <summary>
++    /// Parses the Bitget wire <c>side</c> string into <see cref="OrderSide"/>.
++    /// Bitget V2 uses lower-case <c>buy</c>/<c>sell</c>.
++    /// </summary>
++    /// <exception cref="ArgumentOutOfRangeException">Thrown for any unrecognized side string.</exception>
++    public static OrderSide ParseOrderSide(string s) => s switch
++    {
++        "buy" => OrderSide.Buy,
++        "sell" => OrderSide.Sell,
++        _ => throw new ArgumentOutOfRangeException(nameof(s), s, $"Unknown order side: {s}")
++    };
++
++    /// <summary>
++    /// Parses the Bitget wire <c>orderType</c> string into <see cref="OrderType"/>.
++    /// Bitget V2 spot exposes lower-case <c>limit</c> and <c>market</c> base types; time-in-force
++    /// is carried separately on the <c>force</c> field (see <see cref="ParseTimeInForce"/>).
++    /// </summary>
++    /// <exception cref="ArgumentOutOfRangeException">Thrown for any unrecognized type string.</exception>
++    public static OrderType ParseOrderType(string s) => s switch
++    {
++        "limit" => OrderType.Limit,
++        "market" => OrderType.Market,
++        _ => throw new ArgumentOutOfRangeException(nameof(s), s, $"Unknown order type: {s}")
++    };
++
++    /// <summary>
++    /// Parses the Bitget wire <c>status</c> string into <see cref="OrderStatus"/>.
++    /// Bitget V2 spot uses British spelling (<c>cancelled</c>); <c>init</c>/<c>new</c> denote a freshly
++    /// accepted resting order. Unknown statuses map to <see cref="OrderStatus.Unknown"/> rather than
++    /// throwing, mirroring the Bybit/OKX posture.
++    /// </summary>
++    public static OrderStatus ParseOrderStatus(string s) => s switch
++    {
++        "init" or "new" or "live" => OrderStatus.New,
++        "partially_filled" => OrderStatus.PartiallyFilled,
++        "filled" => OrderStatus.Filled,
++        "cancelled" => OrderStatus.Canceled,
++        _ => OrderStatus.Unknown
++    };
++
++    /// <summary>
++    /// Parses a Bitget string-encoded unix-ms timestamp, returning <c>0</c> for null/empty/malformed input.
++    /// Bitget encodes timestamps as epoch-millisecond strings throughout the V2 API.
++    /// </summary>
++    public static long ParseMs(string value)
++        => long.TryParse(value, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out var ms) ? ms : 0L;
++
++    /// <summary>
++    /// Parses the Bitget wire <c>force</c> string into <see cref="TimeInForce"/>.
++    /// Bitget V2 uses lower-case tokens; <c>post_only</c> is a resting maker-only order that maps to
++    /// <see cref="TimeInForce.Gtc"/>, the closest domain equivalent.
++    /// </summary>
++    /// <exception cref="ArgumentOutOfRangeException">Thrown for any unrecognized TIF string.</exception>
++    public static TimeInForce ParseTimeInForce(string s) => s switch
++    {
++        "gtc" or "post_only" => TimeInForce.Gtc,
++        "ioc" => TimeInForce.Ioc,
++        "fok" => TimeInForce.Fok,
++        _ => throw new ArgumentOutOfRangeException(nameof(s), s, $"Unknown TimeInForce: {s}")
++    };
++}

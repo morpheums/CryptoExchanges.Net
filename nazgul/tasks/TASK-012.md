@@ -74,4 +74,4 @@ Implement `OkxSigningHandler : DelegatingHandler` that, on each attempt (below r
 - No new tests this task (TASK-015 covers them).
 
 ## Commits
-- a93e6d84dfc8ad3a7159db0a7b3a82994bef07ce — feat(M3): TASK-012 OkxSigningHandler (header-based, re-sign per attempt)
+- f556191def86be9eaa094d6dc4f6b44c76286707 — feat(M3): TASK-012 OkxSigningHandler (header-based, re-sign per attempt)

@@ -1,6 +1,7 @@
 using CryptoExchanges.Net.Binance;
 using CryptoExchanges.Net.Bybit;
 using CryptoExchanges.Net.Okx;
+using CryptoExchanges.Net.Bitget;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace CryptoExchanges.Net.DependencyInjection;
@@ -51,6 +52,14 @@ public static class ServiceCollectionExtensions
             opt.Passphrase = options.OkxPassphrase ?? opt.Passphrase;
         });
 
+        services.AddBitgetExchange(opt =>
+        {
+            opt.BaseUrl = options.BitgetBaseUrl ?? opt.BaseUrl;
+            opt.ApiKey = options.BitgetApiKey ?? opt.ApiKey;
+            opt.SecretKey = options.BitgetSecretKey ?? opt.SecretKey;
+            opt.Passphrase = options.BitgetPassphrase ?? opt.Passphrase;
+        });
+
         return services;
     }
 }
@@ -90,4 +99,16 @@ public sealed class CryptoExchangesOptions
 
     /// <summary>OKX API passphrase (the third OKX credential, required for signed endpoints).</summary>
     public string? OkxPassphrase { get; set; }
+
+    /// <summary>Bitget API base URL override.</summary>
+    public string? BitgetBaseUrl { get; set; }
+
+    /// <summary>Bitget API key.</summary>
+    public string? BitgetApiKey { get; set; }
+
+    /// <summary>Bitget API secret key.</summary>
+    public string? BitgetSecretKey { get; set; }
+
+    /// <summary>Bitget API passphrase (the third Bitget credential, required for signed endpoints).</summary>
+    public string? BitgetPassphrase { get; set; }
 }

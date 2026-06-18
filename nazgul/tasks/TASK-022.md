@@ -1,6 +1,6 @@
 ---
 id: TASK-022
-status: PLANNED
+status: IN_PROGRESS
 ---
 
 # TASK-022: Bitget services + mapping + error + time + tests + AddBitgetExchange DI (closes M-BITGET)
@@ -8,9 +8,10 @@ status: PLANNED
 **Milestone**: M-BITGET
 **Wave**: 15
 **Group**: 15
-**Status**: PLANNED
+**Status**: IN_PROGRESS
 **Depends on**: TASK-019, TASK-021
 **Retry count**: 0/3
+**Base SHA**: 2456a1be28c6fe317140348e37609876609be353
 **Delegates to**: none
 **Traces to**: research#bitget (spot REST parity; DeltaMapper mandate); research#architectural-implication (Bitget validates the OKX-era abstraction holds with minimal new code)
 **Blast radius**: HIGH — modifies shared DI `ServiceCollectionExtensions`/`CryptoExchangesOptions` (architect + api review); defines public `BitgetExchangeClient`; closes the final milestone.

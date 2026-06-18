@@ -114,7 +114,7 @@ Tasks touching shared Core/Http/DI projects are higher blast radius and REQUIRE 
 - [x] TASK-010: OKX project scaffold + passphrase options + DI seam stub -> DONE
 
 ### Group 8 (= Wave 8)
-- [ ] TASK-011: OkxSignatureService (base64 prehash) + signing marker -> PLANNED
+- [ ] TASK-011: OkxSignatureService (base64 prehash) + signing marker -> IMPLEMENTED
 - [ ] TASK-013: OkxSymbolFormat + value parsers + request validation -> PLANNED
 
 ### Group 9 (= Wave 9)
@@ -203,7 +203,7 @@ Tasks touching shared Core/Http/DI projects are higher blast radius and REQUIRE 
 - **Manifest**: nazgul/tasks/TASK-010.md
 
 ### TASK-011: OkxSignatureService (base64 prehash) + signing marker
-- **Status**: PLANNED
+- **Status**: IMPLEMENTED
 - **Group**: 8
 - **Depends on**: TASK-009, TASK-010
 - **Manifest**: nazgul/tasks/TASK-011.md
@@ -299,8 +299,8 @@ Tasks touching shared Core/Http/DI projects are higher blast radius and REQUIRE 
 - After merge: cut `feat/m3-okx` off updated main for M-OKX (TASK-009–015) → PR/merge → branch for M-BITGET (TASK-016–022).
 
 ## Recovery Pointer — ▶ ACTIVE (M-OKX)
-- **Current Task:** none — Wave 7 done (TASK-010 OKX scaffold DONE, gate passed). 11/23 DONE. Branch `feat/m3-okx` off main; keep current with main (protected: "Build & Test" check + strict up-to-date).
-- **Status:** NEXT = Wave 8, run in PARALLEL (subagents: omit the `name` param): TASK-011 (OkxSignatureService — HMAC-SHA256 **base64** over prehash `timestamp+METHOD+requestPath+body`, ISO-8601 UTC timestamp; + OkxSigningRequest marker; consumes Core HmacSignature/ExchangeCredentials; depends TASK-009+010) and TASK-013 (OkxSymbolFormat `BTC-USDT` dash-delimiter upper + OkxValueParsers + OkxRequestValidation; depends TASK-010). Disjoint files. OKX headers: `OK-ACCESS-KEY/SIGN/TIMESTAMP/PASSPHRASE`. OKX ships AddOkxExchange in-assembly (ADR-001) with INTERNAL error-translator + time-sync from the start. CARRY: secret+passphrase gate for ToCredentials() (see TASK-010 review). OKX PR changelog: AddXxxExchange namespace moved to exchange assemblies; Binance signing types now internal.
+- **Current Task:** TASK-011 IMPLEMENTED (awaiting review gate); TASK-013 still PLANNED. Wave 8 in progress. 11/23 DONE. Branch `feat/m3-okx` off main; keep current with main (protected: "Build & Test" check + strict up-to-date).
+- **Status:** TASK-011 IMPLEMENTED — commit e4dc88c. Created `src/CryptoExchanges.Net.Okx/Auth/OkxSignatureService.cs` (internal; HMAC-SHA256 base64 via Core `HmacSignature.Compute(..., SignatureEncoding.Base64)` — no re-impl; static `BuildPrehash(ts,method,path,body)` upper-cases method, ISO-8601 UTC `FormatTimestamp` helper `yyyy-MM-ddTHH:mm:ss.fffZ`; `Sign` returns base64 for `OK-ACCESS-SIGN`, not appended) and `src/CryptoExchanges.Net.Okx/Resilience/OkxSigningRequest.cs` (internal, `okx.signed` marker, idempotent). Build 0W/0E. Diff at nazgul/reviews/TASK-011/diff.patch. NEXT for orchestrator: run review gate on TASK-011, and run TASK-013 (OkxSymbolFormat `BTC-USDT` dash-delimiter upper + OkxValueParsers + OkxRequestValidation; depends TASK-010 — disjoint files from TASK-011, can run in parallel). OKX headers: `OK-ACCESS-KEY/SIGN/TIMESTAMP/PASSPHRASE`. OKX ships AddOkxExchange in-assembly (ADR-001) with INTERNAL error-translator + time-sync from the start. CARRY: secret+passphrase gate for ToCredentials() (see TASK-010 review). OKX PR changelog: AddXxxExchange namespace moved to exchange assemblies; Binance signing types now internal.
 - **Historical note:** prior HOLD (await user merge of PR #11) is resolved — merged 2026-06-18.
 - **PR-review fixes applied (pushed, not merged):** GitHub Copilot reviewer found a real bug in BybitErrorTranslator.Parse (retMsg GetString() w/o ValueKind guard → InvalidOperationException escapes catch). Fixed + 3 regression tests in commit 5643ff5; Copilot thread resolved. CodeRabbit was rate-limited (no review). Bybit unit tests now 80.
 - **DI DESIGN — DECIDED (ADR-001, 2026-06-18):** adopt per-exchange DI (option b). Move `AddBinanceExchange`/`AddBybitExchange` into their own assemblies; `AddCryptoExchanges` becomes a thin aggregator. Apply at **M-OKX start, folded with TASK-009** (cheaper at 2 exchanges than 4); implement OKX/Bitget DI in-assembly from day one. Pre-v1.0 → breaking namespace move acceptable (optional `[Obsolete]` forwarders). See `nazgul/docs/ADR-001-per-exchange-di-and-conventions.md`.

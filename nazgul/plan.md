@@ -229,9 +229,11 @@ Tasks touching shared Core/Http/DI projects are higher blast radius and REQUIRE 
 - **Manifest**: nazgul/tasks/TASK-014.md
 
 ### TASK-015: OKX services + mapping + error + time + tests + AddOkxExchange DI (closes M-OKX)
-- **Status**: PLANNED
+- **Status**: IN_PROGRESS
 - **Group**: 10
 - **Depends on**: TASK-012, TASK-014
+- **Base SHA**: f03c2092318332a0dc16215fdae7e7b9ac25cc43
+- **claimed_at**: 2026-06-18
 - **Manifest**: nazgul/tasks/TASK-015.md
 
 ### TASK-016: Core ExchangeId.Bitget enum member

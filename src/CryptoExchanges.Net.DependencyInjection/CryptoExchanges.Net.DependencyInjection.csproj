@@ -11,6 +11,7 @@
     <ProjectReference Include="..\CryptoExchanges.Net.Core\CryptoExchanges.Net.Core.csproj" />
     <ProjectReference Include="..\CryptoExchanges.Net.Binance\CryptoExchanges.Net.Binance.csproj" />
     <ProjectReference Include="..\CryptoExchanges.Net.Bybit\CryptoExchanges.Net.Bybit.csproj" />
+    <ProjectReference Include="..\CryptoExchanges.Net.Okx\CryptoExchanges.Net.Okx.csproj" />
     <ProjectReference Include="..\CryptoExchanges.Net.Http\CryptoExchanges.Net.Http.csproj" />
   </ItemGroup>
 

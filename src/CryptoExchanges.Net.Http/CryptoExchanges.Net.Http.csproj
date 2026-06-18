@@ -7,6 +7,7 @@
          internal ExchangeClientFactory living here. -->
     <InternalsVisibleTo Include="CryptoExchanges.Net.Binance" />
     <InternalsVisibleTo Include="CryptoExchanges.Net.Bybit" />
+    <InternalsVisibleTo Include="CryptoExchanges.Net.Okx" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Http.Resilience" Version="10.7.0" />

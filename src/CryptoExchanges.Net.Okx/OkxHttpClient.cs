@@ -56,6 +56,25 @@ internal sealed class OkxHttpClient(HttpClient httpClient) : IOkxHttpClient
         // OKX V5 POST is JSON-bodied; the signing handler signs the exact raw body string it reads
         // back, so the serialized JSON must be the wire body verbatim.
         var json = JsonSerializer.Serialize(parameters ?? [], JsonOptions);
+        return await PostJsonAsync<T>(endpoint, json, signed, ct).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public async Task<T> PostAsync<T>(
+        string endpoint, object body, bool signed = true, CancellationToken ct = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(endpoint);
+        ArgumentNullException.ThrowIfNull(body);
+        // Object-body overload for endpoints whose wire body is a JSON array or nested object (e.g.
+        // /api/v5/trade/cancel-batch-orders). The serialized JSON is the verbatim body the signer reads.
+        var json = JsonSerializer.Serialize(body, JsonOptions);
+        return await PostJsonAsync<T>(endpoint, json, signed, ct).ConfigureAwait(false);
+    }
+
+    private async Task<T> PostJsonAsync<T>(string endpoint, string json, bool signed, CancellationToken ct)
+    {
+        // OKX V5 POST is JSON-bodied; the signing handler signs the exact raw body string it reads
+        // back, so the serialized JSON must be the wire body verbatim.
         using var content = new StringContent(json, Encoding.UTF8, "application/json");
         using var request = new HttpRequestMessage(HttpMethod.Post, endpoint) { Content = content };
         if (signed) OkxSigningRequest.MarkSigned(request);

@@ -304,7 +304,15 @@ Tasks touching shared Core/Http/DI projects are higher blast radius and REQUIRE 
 - M-BYBIT (TASK-001–008) on `feat/m2-exchange-expansion` → on TASK-008 DONE, open PR → main → **confirm with user before the merge click** → merge.
 - After merge: cut `feat/m3-okx` off updated main for M-OKX (TASK-009–015) → PR/merge → branch for M-BITGET (TASK-016–022).
 
-## Recovery Pointer — ⏸ MILESTONE BOUNDARY (M-OKX shipped to PR #12 — awaiting user merge + TASK-REF-001 decision)
+## Recovery Pointer — TASK-REF-001 IMPLEMENTED (awaiting review gate)
+- **Current Task:** TASK-REF-001 (Extract shared per-exchange DI/TimeSync — DRY refactor). Status: **IMPLEMENTED**.
+- **Branch:** `refactor/di-timesync-dry` (cut from main @ 3960d4a, which contains Binance+Bybit+OKX). Working in the MAIN worktree (no git worktree per task instruction).
+- **Commits:** `93ea257` (Phase 1 — TimeSync→Core) + `80a5d5a` (Phase 2 — shared keyed-singleton DI helper).
+- **Verification (both phases, both filters):** build 0W/0E; non-integration 333 passed / 0 failed (336 baseline −7 removed per-exchange TimeSync tests +4 consolidated Core tests); integration 11 passed / 0 failed (Bybit 5 + OKX 6). Behavior-preserving — zero regression.
+- **Diff captured:** `nazgul/reviews/TASK-REF-001/diff.patch` (830 lines, src+tests).
+- **NEXT ACTION:** review gate (architect + api required — HIGH blast radius). After approval: push `refactor/di-timesync-dry`, open its OWN PR → main (separate from the Bitget feature PR). After that merges: rebranch `feat/m4-bitget` off main → M-BITGET = TASK-016 (add ExchangeId.Bitget to Core), reusing the OKX-era abstraction + the new shared DI helper.
+
+## Recovery Pointer (PRIOR) — ⏸ MILESTONE BOUNDARY (M-OKX shipped to PR #12 — awaiting user merge + TASK-REF-001 decision)
 - **Current Task:** none active. TASK-015 DONE; **MILESTONE M-OKX CLOSED** (TASK-009..015 all DONE). 16/23 done. Branch `feat/m3-okx` (current with main: dependabot CI bumps merged).
 - **PR #12 OPEN:** https://github.com/morpheums/CryptoExchanges.Net/pull/12 (feat/m3-okx → main). Pushed, all green (336 non-integration + 11 integration, 0W/0E). **Awaiting user review/merge** (per per-exchange strategy — user merges; main is protected: "Build & Test" check + strict up-to-date, enforce_admins on → branch must stay current with main).
 - **DECIDED (2026-06-18):** (1) user reviews/merges PR #12 themselves — I HOLD, do not start the next task until OKX is in main. (2) **TASK-REF-001 = YES, before Bitget** (manifest written, nazgul/tasks/TASK-REF-001.md, PLANNED).

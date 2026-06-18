@@ -307,11 +307,12 @@ Tasks touching shared Core/Http/DI projects are higher blast radius and REQUIRE 
 - M-BYBIT (TASK-001–008) on `feat/m2-exchange-expansion` → on TASK-008 DONE, open PR → main → **confirm with user before the merge click** → merge.
 - After merge: cut `feat/m3-okx` off updated main for M-OKX (TASK-009–015) → PR/merge → branch for M-BITGET (TASK-016–022).
 
-## Recovery Pointer — ▶ M-BITGET ACTIVE (final milestone) on `feat/m4-bitget`
-- **Current Task:** **TASK-020 IMPLEMENTED** (BitgetSymbolFormat delimiter-less UPPER `BTCUSDT` via Core SymbolFormat; BitgetValueParsers internal — side `buy`/`sell`, type `limit`/`market`, force `gtc`/`post_only`/`ioc`/`fok`, status `init`/`new`/`live`/`partially_filled`/`filled`/`cancelled` non-throwing→Unknown, InvariantCulture; BitgetRequestValidation MaxHistoryLimit=100 + ordered-window guard). Build 0W/0E; commits 03a81d2 (src) + f6101d1 (manifest SHA); diff at nazgul/reviews/TASK-020/diff.patch. Awaiting review gate. TASK-018 prior IMPLEMENTED (commit d268e2a). 20/25 done.
-- **Next Action:** Review gate for TASK-020 (+TASK-018). Then Wave 14 = TASK-019/021 (signing handler `ACCESS-KEY/SIGN/TIMESTAMP/PASSPHRASE` + http client) → 022 closer (services+mapping+composer+client+error+time+tests+AddBitgetExchange).
-- **Bitget reuses (all new seams):** Core `ExchangeCredentials` + `HmacSignature(base64)`, `IExchangeTimeSync`, `ISignatureService`, the shared `ExchangeServiceRegistration.AddExchange` helper. Build error-translator + time-sync consumer INTERNAL from the start; lean comments (ADR-001 conv 7) + interface-over-static (conv 8). Signing delta vs OKX: prehash `timestamp + UPPER(method) + requestPath + '?' + queryString + body`; headers `ACCESS-KEY/SIGN/TIMESTAMP/PASSPHRASE`.
-- **On M-BITGET close:** open `feat/m4-bitget` → main PR (user merges) → NAZGUL_COMPLETE (all 22 plan tasks + 009B + REF-001 + REF-002 done).
+## Recovery Pointer — ⏸ OBJECTIVE COMPLETE (awaiting final PR #16 merge)
+- **Current Task:** none — **ALL 25 TASKS DONE. M-BITGET CLOSED. M2 exchange-expansion objective complete.**
+- **Final PR #16 OPEN:** https://github.com/morpheums/CryptoExchanges.Net/pull/16 (feat/m4-bitget → main; Bitget). All green (Bitget unit 92 + integration 6; full suite passing, 0W/0E). **Awaiting user merge** (per-exchange strategy — user merges).
+- **Resume trigger:** user says PR #16 is merged. THEN this is genuinely done — emit NAZGUL_COMPLETE. (No further milestones; the 3 new exchanges + Binance baseline all ship.)
+- **Shipped:** Bybit (PR #11), OKX + signing-generalization + per-exchange DI (PR #12), DI/TimeSync DRY refactor (PR #13), interface seams (PR #15), Bitget (PR #16). Tasks: 22 plan + TASK-009B (DI re-home) + TASK-REF-001 (DRY) + TASK-REF-002 (interface seams) = 25.
+- **Open follow-ups (non-blocking, post-objective):** retro lean-comment sweep (issue #14); shared cross-exchange polish before any 5th exchange (nested CryptoExchangesOptions, backport NormalizeHostRoot to OKX, parser/validation dedup, redacting ToString on options) — from the TASK-022 architect milestone-close note.
 
 ## Recovery Pointer (PRIOR) — ⏸ TASK-REF-001 DONE, shipped to PR #13 (awaiting user merge → then M-BITGET)
 - **Current Task:** none active. #13 (REF-001) MERGED. TASK-REF-002 DONE (gate PASSED round 2). 18/25 tasks done.

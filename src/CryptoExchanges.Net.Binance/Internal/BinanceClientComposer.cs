@@ -3,6 +3,7 @@ using CryptoExchanges.Net.Binance.Resilience;
 using CryptoExchanges.Net.Core;
 using CryptoExchanges.Net.Core.Enums;
 using CryptoExchanges.Net.Core.Interfaces;
+using CryptoExchanges.Net.Core.Resilience;
 using DeltaMapper;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -27,26 +28,27 @@ internal static class BinanceClientComposer
         var offsetHolder = new long[] { 0L };
         var hc = BuildResilientHttpClient(options, offsetHolder);
         var http = new BinanceHttpClient(hc, options);
-        return ComposeOver(http, hc, ownsHttpClient: true, offsetHolder);
+        return ComposeOver(http, hc, ownsHttpClient: true, offsetHolder, new ExchangeTimeSync());
     }
 
     /// <summary>Wires symbol mapper + IMapper + the 3 services + the client over a given http client.</summary>
     public static BinanceExchangeClient ComposeOver(
-        IBinanceHttpClient http, HttpClient? httpClient, bool ownsHttpClient, long[] offsetHolder)
+        IBinanceHttpClient http, HttpClient? httpClient, bool ownsHttpClient, long[] offsetHolder,
+        IExchangeTimeSync timeSync)
     {
         ISymbolMapper symbolMapper = new SymbolMapper(BinanceSymbolFormat.Instance);
-        return ComposeWith(http, symbolMapper, CreateMapper(symbolMapper), httpClient, ownsHttpClient, offsetHolder);
+        return ComposeWith(http, symbolMapper, CreateMapper(symbolMapper), httpClient, ownsHttpClient, offsetHolder, timeSync);
     }
 
     /// <summary>Wires the 3 services + client using already-resolved symbol mapper + IMapper (DI path).</summary>
     public static BinanceExchangeClient ComposeWith(
         IBinanceHttpClient http, ISymbolMapper symbolMapper, IMapper mapper,
-        HttpClient? httpClient, bool ownsHttpClient, long[] offsetHolder)
+        HttpClient? httpClient, bool ownsHttpClient, long[] offsetHolder, IExchangeTimeSync timeSync)
     {
         var market = new BinanceMarketDataService(http, symbolMapper, mapper);
         var trading = new BinanceTradingService(http, symbolMapper, mapper);
         var account = new BinanceAccountService(http, symbolMapper, mapper);
-        return new BinanceExchangeClient(http, market, trading, account, ownsHttpClient, httpClient, offsetHolder);
+        return new BinanceExchangeClient(http, market, trading, account, ownsHttpClient, httpClient, offsetHolder, timeSync);
     }
 
     /// <summary>DI composition: resolves the keyed symbol mapper + IMapper from the container and wires
@@ -57,9 +59,10 @@ internal static class BinanceClientComposer
         ArgumentNullException.ThrowIfNull(sp);
         var symbolMapper = sp.GetRequiredKeyedService<ISymbolMapper>(ExchangeId.Binance);
         var mapper = sp.GetRequiredKeyedService<IMapper>(ExchangeId.Binance);
+        var timeSync = sp.GetRequiredService<IExchangeTimeSync>();
         // INVARIANT: ownsHttpClient MUST stay false — IHttpClientFactory owns the HttpClient and its handler
         // chain; this client must NOT dispose it. Flipping this would double-dispose factory-owned state.
-        return ComposeWith(http, symbolMapper, mapper, httpClient: null, ownsHttpClient: false, offsetHolder);
+        return ComposeWith(http, symbolMapper, mapper, httpClient: null, ownsHttpClient: false, offsetHolder, timeSync);
     }
 
     /// <summary>Builds the resilient HttpClient (factory-less path) with a secret-gated signing finalizer

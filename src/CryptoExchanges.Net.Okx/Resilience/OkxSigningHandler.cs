@@ -1,3 +1,4 @@
+using CryptoExchanges.Net.Core.Auth;
 using CryptoExchanges.Net.Okx.Auth;
 
 namespace CryptoExchanges.Net.Okx.Resilience;
@@ -15,7 +16,7 @@ namespace CryptoExchanges.Net.Okx.Resilience;
 /// <param name="signatureService">Computes the base64 HMAC-SHA256 signature over the OKX prehash string.</param>
 /// <param name="timeOffset">Returns the current server-time offset in milliseconds, applied to each timestamp.</param>
 internal sealed class OkxSigningHandler(
-    string apiKey, string passphrase, OkxSignatureService signatureService, Func<long> timeOffset)
+    string apiKey, string passphrase, ISignatureService signatureService, Func<long> timeOffset)
     : DelegatingHandler
 {
     /// <inheritdoc />

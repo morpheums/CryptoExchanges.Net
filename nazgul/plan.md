@@ -12,9 +12,9 @@ Add three new exchange integrations to CryptoExchanges.Net in strict priority or
 
 ## Status Summary
 - Total tasks: 23 (added TASK-009B per ADR-001)
-- DONE: 16 | READY: 0 | IN_PROGRESS: 0 | IMPLEMENTED: 0 | IN_REVIEW: 0 | CHANGES_REQUESTED: 0 | BLOCKED: 0 | PLANNED: 7
+- DONE: 17 (incl. TASK-009B, TASK-REF-001) | IMPLEMENTED: 1 (TASK-REF-002) | PLANNED: 7 (M-BITGET) | READY/IN_PROGRESS/IN_REVIEW/CHANGES_REQUESTED/BLOCKED: 0
 - Current iteration: 9/40
-- Active task: none active — TASK-015 DONE, M-OKX CLOSED. 16/23 DONE. NEXT: open M-OKX PR (feat/m3-okx -> main; confirm with user before merge), then rebranch for M-BITGET (TASK-016+).
+- Active task: TASK-REF-002 IMPLEMENTED (interface seams) — awaiting review gate. After APPROVE → own PR `refactor/interface-seams` → main; then rebranch `feat/m4-bitget` → M-BITGET (TASK-016+).
 
 ## Scoping Decisions (HITL — committed, not open questions)
 The objective is fully prescriptive on scope/sequence/signing; these are the choices made decisively:
@@ -304,10 +304,16 @@ Tasks touching shared Core/Http/DI projects are higher blast radius and REQUIRE 
 - M-BYBIT (TASK-001–008) on `feat/m2-exchange-expansion` → on TASK-008 DONE, open PR → main → **confirm with user before the merge click** → merge.
 - After merge: cut `feat/m3-okx` off updated main for M-OKX (TASK-009–015) → PR/merge → branch for M-BITGET (TASK-016–022).
 
-## Recovery Pointer — ⏸ TASK-REF-001 DONE, shipped to PR #13 (awaiting user merge → then M-BITGET)
-- **Current Task:** none active. TASK-REF-001 DONE (gate PASSED, all 4 APPROVE, behavior byte-identical). 17/24 tasks done (22 plan + TASK-009B + TASK-REF-001).
-- **PR #13 OPEN:** https://github.com/morpheums/CryptoExchanges.Net/pull/13 (refactor/di-timesync-dry → main). All green (333 non-integration + 11 integration, 0W/0E). PR body documents the breaking change (public BinanceTimeSync/BybitTimeSync deleted → use Core ExchangeTimeSync). **Awaiting user review/merge** (per-exchange/per-concern strategy — user merges).
-- **Resume trigger:** user says PR #13 is merged (or "continue"). THEN: `git checkout main && git pull`; cut a branch off updated main and do **TASK-REF-002** FIRST (architect-scoped interface seams: `IExchangeTimeSync` + `ISignatureService`; keep `HmacSignature`/`SignatureEncoding` static), own PR; AFTER that merges → rebranch `feat/m4-bitget` → **M-BITGET**.
+## Recovery Pointer — ✦ TASK-REF-002 IMPLEMENTED (interface seams: IExchangeTimeSync + ISignatureService)
+- **Current Task:** TASK-REF-002 IMPLEMENTED on branch `refactor/interface-seams` (base SHA 3eeb698). Commit 83da9ed. Diff captured at nazgul/reviews/TASK-REF-002/diff.patch (645 lines).
+- **Done:** (1) `IExchangeTimeSync` (Core.Resilience) — `ExchangeTimeSync` now sealed instance impl, registered non-keyed via `TryAddSingleton` in `ExchangeServiceRegistration.AddExchange` (overridable), threaded through 3 clients + 3 composers. (2) `ISignatureService` (Core.Auth) — 3 sig services implement it; 3 signing handlers take the interface. `HmacSignature`/`SignatureEncoding`/composers/registration-helper/pipeline-builders kept static. Lean comments per ADR-001 conv 7–8.
+- **Verification:** build 0W/0E; non-integration 335 pass (333 baseline + 2 new DI override tests); integration 11 pass (Bybit 5 + OKX 6). Behavior byte-identical.
+- **Next Action:** review gate for TASK-REF-002 (architect + api primary). On APPROVE → own PR `refactor/interface-seams` → main; after merge → rebranch `feat/m4-bitget` → M-BITGET (TASK-016+, uses both seams from the start).
+
+## Recovery Pointer (PRIOR) — ⏸ TASK-REF-001 DONE, shipped to PR #13 (awaiting user merge → then M-BITGET)
+- **Current Task:** none active. #13 (REF-001) MERGED. TASK-REF-002 DONE (gate PASSED round 2). 18/25 tasks done.
+- **PR #15 OPEN:** https://github.com/morpheums/CryptoExchanges.Net/pull/15 (refactor/interface-seams → main; IExchangeTimeSync + ISignatureService). All green (335 non-integration + 11 integration, 0W/0E). **Awaiting user merge.**
+- **Resume trigger:** user says PR #15 is merged (or "continue"). THEN: `git checkout main && git pull`; rebranch `feat/m4-bitget` off updated main → start **M-BITGET** (final milestone), reusing every new seam (Core ExchangeCredentials/HmacSignature base64, IExchangeTimeSync, ISignatureService, the shared ExchangeServiceRegistration helper) + lean comments + internal error-translator/time-sync from the start.
 - **Conventions update (2026-06-18, maintainer):** LEAN comments — docs on interfaces + `<inheritdoc/>` on impls, no noise; prefer interfaces over static for swappable behavior. Enforced via code-reviewer + architect agents + ADR-001 conv 7–8 (commit 3991cef). All remaining work (REF-002, Bitget) follows it. Retro comment sweep of existing code = GitHub issue #14 (going-forward only for now).
 - **M-BITGET plan (Waves 11–15):** TASK-016 (add `ExchangeId.Bitget` to Core/Enums — NOT yet present; touches Core enum → architect+api) → TASK-017 (scaffold + passphrase options, mirror OKX) → TASK-018/020 (BitgetSignatureService base64 prehash INCL. query + BitgetSymbolFormat delimiter-less `BTCUSDT`) → TASK-019/021 (signing handler header-based `ACCESS-*` + http client) → TASK-022 (services+mapping+composer+client+error+time+tests+AddBitgetExchange — closes M-BITGET). Bitget reuses: Core ExchangeCredentials/HmacSignature(base64), Core ExchangeTimeSync, the shared `ExchangeServiceRegistration.AddExchange` helper, internal error-translator+timesync from the start. Bitget signing delta vs OKX: prehash `timestamp+UPPER(method)+requestPath+'?'+queryString+body`; header `ACCESS-PASSPHRASE`/`ACCESS-KEY`/`ACCESS-SIGN`/`ACCESS-TIMESTAMP`.
 - **Carry-forwards into TASK-016+ (from REF-001 gate, non-blocking):** add ArgumentNullException guards to the helper's delegate params; re-evaluate gateFactory-hardcoded + 13-param helper signature when Bitget is wired (if Bitget fits cleanly, close).

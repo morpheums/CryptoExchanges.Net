@@ -1,0 +1,645 @@
+diff --git a/src/CryptoExchanges.Net.Binance/Auth/BinanceSignatureService.cs b/src/CryptoExchanges.Net.Binance/Auth/BinanceSignatureService.cs
+index e2ed80b..e6b4c85 100644
+--- a/src/CryptoExchanges.Net.Binance/Auth/BinanceSignatureService.cs
++++ b/src/CryptoExchanges.Net.Binance/Auth/BinanceSignatureService.cs
+@@ -1,20 +1,17 @@
+ using System.Security.Cryptography;
+ using System.Text;
++using CryptoExchanges.Net.Core.Auth;
+ 
+ namespace CryptoExchanges.Net.Binance.Auth;
+ 
+ /// <summary>
+ /// Creates HMAC-SHA256 signatures for Binance API requests.
+ /// </summary>
+-internal sealed class BinanceSignatureService(string secretKey)
++internal sealed class BinanceSignatureService(string secretKey) : ISignatureService
+ {
+     private readonly byte[] _secretKeyBytes = InitializeSecretKey(secretKey);
+ 
+-    /// <summary>
+-    /// Signs a query string using HMAC-SHA256 and returns the hex-encoded signature.
+-    /// </summary>
+-    /// <param name="queryString">The query string to sign (without leading '?').</param>
+-    /// <returns>The hex-encoded HMAC-SHA256 signature.</returns>
++    /// <inheritdoc />
+     public string Sign(string queryString)
+     {
+         var queryBytes = Encoding.UTF8.GetBytes(queryString);
+diff --git a/src/CryptoExchanges.Net.Binance/BinanceExchangeClient.cs b/src/CryptoExchanges.Net.Binance/BinanceExchangeClient.cs
+index 3dae1f8..b3a5b9c 100644
+--- a/src/CryptoExchanges.Net.Binance/BinanceExchangeClient.cs
++++ b/src/CryptoExchanges.Net.Binance/BinanceExchangeClient.cs
+@@ -44,6 +44,7 @@ public sealed class BinanceExchangeClient : IExchangeClient, IAsyncDisposable
+     /// handler's closure and <see cref="SyncServerTimeAsync"/> read/write the SAME instance.
+     /// </summary>
+     private readonly long[] _offsetHolder;
++    private readonly Core.Resilience.IExchangeTimeSync _timeSync;
+ 
+     /// <summary>
+     /// Internal composition constructor — called exclusively by <see cref="Internal.BinanceClientComposer"/>.
+@@ -57,10 +58,12 @@ public sealed class BinanceExchangeClient : IExchangeClient, IAsyncDisposable
+         IAccountService account,
+         bool ownsHttpClient,
+         HttpClient? httpClient,
+-        long[] offsetHolder)
++        long[] offsetHolder,
++        Core.Resilience.IExchangeTimeSync timeSync)
+     {
+         ArgumentNullException.ThrowIfNull(http);
+         ArgumentNullException.ThrowIfNull(offsetHolder);
++        ArgumentNullException.ThrowIfNull(timeSync);
+         _http = http;
+         MarketData = marketData;
+         Trading = trading;
+@@ -68,6 +71,7 @@ public sealed class BinanceExchangeClient : IExchangeClient, IAsyncDisposable
+         _ownsHttpClient = ownsHttpClient;
+         _httpClient = httpClient;
+         _offsetHolder = offsetHolder;
++        _timeSync = timeSync;
+     }
+ 
+     /// <inheritdoc />
+@@ -101,7 +105,7 @@ public sealed class BinanceExchangeClient : IExchangeClient, IAsyncDisposable
+     public async Task SyncServerTimeAsync(CancellationToken ct = default)
+     {
+         var resp = await _http.GetAsync<BinanceServerTimeResponse>("/api/v3/time", signed: false, ct: ct).ConfigureAwait(false);
+-        Core.Resilience.ExchangeTimeSync.ApplyOffset(
++        _timeSync.ApplyOffset(
+             resp.ServerTime, DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(), _offsetHolder);
+     }
+ 
+diff --git a/src/CryptoExchanges.Net.Binance/Internal/BinanceClientComposer.cs b/src/CryptoExchanges.Net.Binance/Internal/BinanceClientComposer.cs
+index abd4c01..bf8333a 100644
+--- a/src/CryptoExchanges.Net.Binance/Internal/BinanceClientComposer.cs
++++ b/src/CryptoExchanges.Net.Binance/Internal/BinanceClientComposer.cs
+@@ -3,6 +3,7 @@ using CryptoExchanges.Net.Binance.Resilience;
+ using CryptoExchanges.Net.Core;
+ using CryptoExchanges.Net.Core.Enums;
+ using CryptoExchanges.Net.Core.Interfaces;
++using CryptoExchanges.Net.Core.Resilience;
+ using DeltaMapper;
+ using Microsoft.Extensions.DependencyInjection;
+ 
+@@ -27,26 +28,27 @@ internal static class BinanceClientComposer
+         var offsetHolder = new long[] { 0L };
+         var hc = BuildResilientHttpClient(options, offsetHolder);
+         var http = new BinanceHttpClient(hc, options);
+-        return ComposeOver(http, hc, ownsHttpClient: true, offsetHolder);
++        return ComposeOver(http, hc, ownsHttpClient: true, offsetHolder, new ExchangeTimeSync());
+     }
+ 
+     /// <summary>Wires symbol mapper + IMapper + the 3 services + the client over a given http client.</summary>
+     public static BinanceExchangeClient ComposeOver(
+-        IBinanceHttpClient http, HttpClient? httpClient, bool ownsHttpClient, long[] offsetHolder)
++        IBinanceHttpClient http, HttpClient? httpClient, bool ownsHttpClient, long[] offsetHolder,
++        IExchangeTimeSync timeSync)
+     {
+         ISymbolMapper symbolMapper = new SymbolMapper(BinanceSymbolFormat.Instance);
+-        return ComposeWith(http, symbolMapper, CreateMapper(symbolMapper), httpClient, ownsHttpClient, offsetHolder);
++        return ComposeWith(http, symbolMapper, CreateMapper(symbolMapper), httpClient, ownsHttpClient, offsetHolder, timeSync);
+     }
+ 
+     /// <summary>Wires the 3 services + client using already-resolved symbol mapper + IMapper (DI path).</summary>
+     public static BinanceExchangeClient ComposeWith(
+         IBinanceHttpClient http, ISymbolMapper symbolMapper, IMapper mapper,
+-        HttpClient? httpClient, bool ownsHttpClient, long[] offsetHolder)
++        HttpClient? httpClient, bool ownsHttpClient, long[] offsetHolder, IExchangeTimeSync timeSync)
+     {
+         var market = new BinanceMarketDataService(http, symbolMapper, mapper);
+         var trading = new BinanceTradingService(http, symbolMapper, mapper);
+         var account = new BinanceAccountService(http, symbolMapper, mapper);
+-        return new BinanceExchangeClient(http, market, trading, account, ownsHttpClient, httpClient, offsetHolder);
++        return new BinanceExchangeClient(http, market, trading, account, ownsHttpClient, httpClient, offsetHolder, timeSync);
+     }
+ 
+     /// <summary>DI composition: resolves the keyed symbol mapper + IMapper from the container and wires
+@@ -57,9 +59,10 @@ internal static class BinanceClientComposer
+         ArgumentNullException.ThrowIfNull(sp);
+         var symbolMapper = sp.GetRequiredKeyedService<ISymbolMapper>(ExchangeId.Binance);
+         var mapper = sp.GetRequiredKeyedService<IMapper>(ExchangeId.Binance);
++        var timeSync = sp.GetRequiredService<IExchangeTimeSync>();
+         // INVARIANT: ownsHttpClient MUST stay false — IHttpClientFactory owns the HttpClient and its handler
+         // chain; this client must NOT dispose it. Flipping this would double-dispose factory-owned state.
+-        return ComposeWith(http, symbolMapper, mapper, httpClient: null, ownsHttpClient: false, offsetHolder);
++        return ComposeWith(http, symbolMapper, mapper, httpClient: null, ownsHttpClient: false, offsetHolder, timeSync);
+     }
+ 
+     /// <summary>Builds the resilient HttpClient (factory-less path) with a secret-gated signing finalizer
+diff --git a/src/CryptoExchanges.Net.Binance/Resilience/BinanceSigningHandler.cs b/src/CryptoExchanges.Net.Binance/Resilience/BinanceSigningHandler.cs
+index 583e161..d9633b2 100644
+--- a/src/CryptoExchanges.Net.Binance/Resilience/BinanceSigningHandler.cs
++++ b/src/CryptoExchanges.Net.Binance/Resilience/BinanceSigningHandler.cs
+@@ -1,5 +1,5 @@
+ using System.Globalization;
+-using CryptoExchanges.Net.Binance.Auth;
++using CryptoExchanges.Net.Core.Auth;
+ 
+ namespace CryptoExchanges.Net.Binance.Resilience;
+ 
+@@ -10,7 +10,7 @@ namespace CryptoExchanges.Net.Binance.Resilience;
+ /// Supports query-signed (GET/DELETE) and body-signed (POST form) requests.
+ /// </summary>
+ internal sealed class BinanceSigningHandler(
+-    string apiKey, BinanceSignatureService signatureService, Func<long> timeOffset) : DelegatingHandler
++    string apiKey, ISignatureService signatureService, Func<long> timeOffset) : DelegatingHandler
+ {
+     /// <inheritdoc />
+     protected override async Task<HttpResponseMessage> SendAsync(
+@@ -39,7 +39,7 @@ internal sealed class BinanceSigningHandler(
+             var raw = await request.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
+             var unsigned = StripSigning(raw);
+             var withTs = Append(unsigned, $"timestamp={timestamp}");
+-            var signed = signatureService.BuildSignedQuery(withTs);
++            var signed = BuildSignedQuery(withTs);
+             var previous = request.Content;
+             request.Content = new StringContent(signed, System.Text.Encoding.UTF8, "application/x-www-form-urlencoded");
+             previous.Dispose();
+@@ -73,12 +73,21 @@ internal sealed class BinanceSigningHandler(
+ 
+             var unsigned = StripSigning(query);
+             var withTs = Append(unsigned, $"timestamp={timestamp}");
+-            var signed = signatureService.BuildSignedQuery(withTs);
++            var signed = BuildSignedQuery(withTs);
+             var newUriStr = path + "?" + signed;
+             request.RequestUri = new Uri(newUriStr, uri.IsAbsoluteUri ? UriKind.Absolute : UriKind.Relative);
+         }
+     }
+ 
++    // Binance carries the signature inline as a query parameter, so build the signed query here from
++    // the interface's Sign (the concrete service's BuildSignedQuery is intentionally off ISignatureService).
++    private string BuildSignedQuery(string queryString)
++    {
++        var signature = signatureService.Sign(queryString);
++        var separator = string.IsNullOrEmpty(queryString) ? string.Empty : "&";
++        return $"{queryString}{separator}signature={signature}";
++    }
++
+     private static string Append(string a, string b)
+         => string.IsNullOrEmpty(a) ? b : $"{a}&{b}";
+ 
+diff --git a/src/CryptoExchanges.Net.Bybit/Auth/BybitSignatureService.cs b/src/CryptoExchanges.Net.Bybit/Auth/BybitSignatureService.cs
+index 8182216..5ebcc14 100644
+--- a/src/CryptoExchanges.Net.Bybit/Auth/BybitSignatureService.cs
++++ b/src/CryptoExchanges.Net.Bybit/Auth/BybitSignatureService.cs
+@@ -1,24 +1,18 @@
+ using System.Security.Cryptography;
+ using System.Text;
++using CryptoExchanges.Net.Core.Auth;
+ 
+ namespace CryptoExchanges.Net.Bybit.Auth;
+ 
+ /// <summary>
+-/// Creates HMAC-SHA256 signatures for Bybit API requests.
++/// Creates HMAC-SHA256 signatures for Bybit API requests. The hex signature is returned to the
++/// caller for the <c>X-BAPI-SIGN</c> header (not appended to the query, unlike Binance).
+ /// </summary>
+-/// <remarks>
+-/// Unlike Binance, Bybit does not append the signature to the query string. The signature is
+-/// returned to the caller so the request handler can place it in the <c>X-BAPI-SIGN</c> header.
+-/// </remarks>
+-internal sealed class BybitSignatureService(string secretKey)
++internal sealed class BybitSignatureService(string secretKey) : ISignatureService
+ {
+     private readonly byte[] _secretKeyBytes = InitializeSecretKey(secretKey);
+ 
+-    /// <summary>
+-    /// Signs a Bybit sign-string using HMAC-SHA256 and returns the hex-encoded signature.
+-    /// </summary>
+-    /// <param name="signString">The canonical sign-string to sign.</param>
+-    /// <returns>The hex-encoded HMAC-SHA256 signature.</returns>
++    /// <inheritdoc />
+     public string Sign(string signString)
+     {
+         var signBytes = Encoding.UTF8.GetBytes(signString);
+diff --git a/src/CryptoExchanges.Net.Bybit/BybitExchangeClient.cs b/src/CryptoExchanges.Net.Bybit/BybitExchangeClient.cs
+index 88f7adb..67c49a0 100644
+--- a/src/CryptoExchanges.Net.Bybit/BybitExchangeClient.cs
++++ b/src/CryptoExchanges.Net.Bybit/BybitExchangeClient.cs
+@@ -24,6 +24,7 @@ public sealed class BybitExchangeClient : IExchangeClient, IAsyncDisposable
+     /// handler's closure and <see cref="SyncServerTimeAsync"/> read/write the SAME instance.
+     /// </summary>
+     private readonly long[] _offsetHolder;
++    private readonly Core.Resilience.IExchangeTimeSync _timeSync;
+ 
+     /// <summary>
+     /// Internal composition constructor — called exclusively by <see cref="Internal.BybitClientComposer"/>.
+@@ -37,10 +38,12 @@ public sealed class BybitExchangeClient : IExchangeClient, IAsyncDisposable
+         IAccountService account,
+         bool ownsHttpClient,
+         HttpClient? httpClient,
+-        long[] offsetHolder)
++        long[] offsetHolder,
++        Core.Resilience.IExchangeTimeSync timeSync)
+     {
+         ArgumentNullException.ThrowIfNull(http);
+         ArgumentNullException.ThrowIfNull(offsetHolder);
++        ArgumentNullException.ThrowIfNull(timeSync);
+         _http = http;
+         MarketData = marketData;
+         Trading = trading;
+@@ -48,6 +51,7 @@ public sealed class BybitExchangeClient : IExchangeClient, IAsyncDisposable
+         _ownsHttpClient = ownsHttpClient;
+         _httpClient = httpClient;
+         _offsetHolder = offsetHolder;
++        _timeSync = timeSync;
+     }
+ 
+     /// <inheritdoc />
+@@ -84,7 +88,7 @@ public sealed class BybitExchangeClient : IExchangeClient, IAsyncDisposable
+     {
+         var resp = await _http.GetAsync<BybitResponse<BybitServerTimeResult>>("/v5/market/time", signed: false, ct: ct).ConfigureAwait(false);
+         var serverTimeMs = ServerTimeMs(resp.Result);
+-        Core.Resilience.ExchangeTimeSync.ApplyOffset(serverTimeMs, DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(), _offsetHolder);
++        _timeSync.ApplyOffset(serverTimeMs, DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(), _offsetHolder);
+     }
+ 
+     /// <inheritdoc />
+diff --git a/src/CryptoExchanges.Net.Bybit/Internal/BybitClientComposer.cs b/src/CryptoExchanges.Net.Bybit/Internal/BybitClientComposer.cs
+index 5d3fa4e..5420d70 100644
+--- a/src/CryptoExchanges.Net.Bybit/Internal/BybitClientComposer.cs
++++ b/src/CryptoExchanges.Net.Bybit/Internal/BybitClientComposer.cs
+@@ -6,6 +6,7 @@ using CryptoExchanges.Net.Bybit.Services;
+ using CryptoExchanges.Net.Core;
+ using CryptoExchanges.Net.Core.Enums;
+ using CryptoExchanges.Net.Core.Interfaces;
++using CryptoExchanges.Net.Core.Resilience;
+ using DeltaMapper;
+ using Microsoft.Extensions.DependencyInjection;
+ 
+@@ -30,26 +31,27 @@ internal static class BybitClientComposer
+         var offsetHolder = new long[] { 0L };
+         var hc = BuildResilientHttpClient(options, offsetHolder);
+         var http = new BybitHttpClient(hc);
+-        return ComposeOver(http, hc, ownsHttpClient: true, offsetHolder);
++        return ComposeOver(http, hc, ownsHttpClient: true, offsetHolder, new ExchangeTimeSync());
+     }
+ 
+     /// <summary>Wires symbol mapper + IMapper + the 3 services + the client over a given http client.</summary>
+     public static BybitExchangeClient ComposeOver(
+-        IBybitHttpClient http, HttpClient? httpClient, bool ownsHttpClient, long[] offsetHolder)
++        IBybitHttpClient http, HttpClient? httpClient, bool ownsHttpClient, long[] offsetHolder,
++        IExchangeTimeSync timeSync)
+     {
+         ISymbolMapper symbolMapper = new SymbolMapper(BybitSymbolFormat.Instance);
+-        return ComposeWith(http, symbolMapper, CreateMapper(symbolMapper), httpClient, ownsHttpClient, offsetHolder);
++        return ComposeWith(http, symbolMapper, CreateMapper(symbolMapper), httpClient, ownsHttpClient, offsetHolder, timeSync);
+     }
+ 
+     /// <summary>Wires the 3 services + client using already-resolved symbol mapper + IMapper (DI path).</summary>
+     public static BybitExchangeClient ComposeWith(
+         IBybitHttpClient http, ISymbolMapper symbolMapper, IMapper mapper,
+-        HttpClient? httpClient, bool ownsHttpClient, long[] offsetHolder)
++        HttpClient? httpClient, bool ownsHttpClient, long[] offsetHolder, IExchangeTimeSync timeSync)
+     {
+         var market = new BybitMarketDataService(http, symbolMapper, mapper);
+         var trading = new BybitTradingService(http, symbolMapper, mapper);
+         var account = new BybitAccountService(http, symbolMapper, mapper);
+-        return new BybitExchangeClient(http, market, trading, account, ownsHttpClient, httpClient, offsetHolder);
++        return new BybitExchangeClient(http, market, trading, account, ownsHttpClient, httpClient, offsetHolder, timeSync);
+     }
+ 
+     /// <summary>DI composition: resolves the keyed symbol mapper + IMapper from the container and wires
+@@ -60,9 +62,10 @@ internal static class BybitClientComposer
+         ArgumentNullException.ThrowIfNull(sp);
+         var symbolMapper = sp.GetRequiredKeyedService<ISymbolMapper>(ExchangeId.Bybit);
+         var mapper = sp.GetRequiredKeyedService<IMapper>(ExchangeId.Bybit);
++        var timeSync = sp.GetRequiredService<IExchangeTimeSync>();
+         // INVARIANT: ownsHttpClient MUST stay false — IHttpClientFactory owns the HttpClient and its handler
+         // chain; this client must NOT dispose it. Flipping this would double-dispose factory-owned state.
+-        return ComposeWith(http, symbolMapper, mapper, httpClient: null, ownsHttpClient: false, offsetHolder);
++        return ComposeWith(http, symbolMapper, mapper, httpClient: null, ownsHttpClient: false, offsetHolder, timeSync);
+     }
+ 
+     /// <summary>Builds the resilient HttpClient (factory-less path) with a secret-gated signing finalizer
+diff --git a/src/CryptoExchanges.Net.Bybit/Resilience/BybitSigningHandler.cs b/src/CryptoExchanges.Net.Bybit/Resilience/BybitSigningHandler.cs
+index 0dee396..96545f9 100644
+--- a/src/CryptoExchanges.Net.Bybit/Resilience/BybitSigningHandler.cs
++++ b/src/CryptoExchanges.Net.Bybit/Resilience/BybitSigningHandler.cs
+@@ -1,5 +1,6 @@
+ using System.Globalization;
+ using CryptoExchanges.Net.Bybit.Auth;
++using CryptoExchanges.Net.Core.Auth;
+ 
+ namespace CryptoExchanges.Net.Bybit.Resilience;
+ 
+@@ -15,7 +16,7 @@ namespace CryptoExchanges.Net.Bybit.Resilience;
+ /// <param name="recvWindow">The receive-window value (pre-formatted, invariant) for the <c>X-BAPI-RECV-WINDOW</c> header.</param>
+ /// <param name="timeOffset">Returns the current server-time offset in milliseconds, applied to each timestamp.</param>
+ internal sealed class BybitSigningHandler(
+-    string apiKey, BybitSignatureService signatureService, string recvWindow, Func<long> timeOffset)
++    string apiKey, ISignatureService signatureService, string recvWindow, Func<long> timeOffset)
+     : DelegatingHandler
+ {
+     /// <inheritdoc />
+diff --git a/src/CryptoExchanges.Net.Core/Auth/ISignatureService.cs b/src/CryptoExchanges.Net.Core/Auth/ISignatureService.cs
+new file mode 100644
+index 0000000..2f3b46f
+--- /dev/null
++++ b/src/CryptoExchanges.Net.Core/Auth/ISignatureService.cs
+@@ -0,0 +1,8 @@
++namespace CryptoExchanges.Net.Core.Auth;
++
++/// <summary>Signs a request payload, returning the encoded signature the signing handler places on the wire.</summary>
++public interface ISignatureService
++{
++    /// <summary>Signs <paramref name="payload"/> and returns the encoded signature.</summary>
++    string Sign(string payload);
++}
+diff --git a/src/CryptoExchanges.Net.Core/Resilience/ExchangeTimeSync.cs b/src/CryptoExchanges.Net.Core/Resilience/ExchangeTimeSync.cs
+index 46e181c..bce6ec0 100644
+--- a/src/CryptoExchanges.Net.Core/Resilience/ExchangeTimeSync.cs
++++ b/src/CryptoExchanges.Net.Core/Resilience/ExchangeTimeSync.cs
+@@ -1,13 +1,13 @@
+ namespace CryptoExchanges.Net.Core.Resilience;
+ 
+-/// <summary>Venue-neutral clock-skew offset (server − local, in ms) shared by all exchange clients.</summary>
+-public static class ExchangeTimeSync
++/// <inheritdoc cref="IExchangeTimeSync" />
++public sealed class ExchangeTimeSync : IExchangeTimeSync
+ {
+-    /// <summary>Returns <c>server − local</c>, in milliseconds.</summary>
+-    public static long ComputeOffset(long serverTimeMs, long localNowMs) => serverTimeMs - localNowMs;
++    /// <inheritdoc />
++    public long ComputeOffset(long serverTimeMs, long localNowMs) => serverTimeMs - localNowMs;
+ 
+-    /// <summary>Computes the offset and atomically writes it into <paramref name="offsetHolder"/>[0]; returns it.</summary>
+-    public static long ApplyOffset(long serverTimeMs, long localNowMs, long[] offsetHolder)
++    /// <inheritdoc />
++    public long ApplyOffset(long serverTimeMs, long localNowMs, long[] offsetHolder)
+     {
+         ArgumentNullException.ThrowIfNull(offsetHolder);
+         if (offsetHolder.Length < 1)
+diff --git a/src/CryptoExchanges.Net.Core/Resilience/IExchangeTimeSync.cs b/src/CryptoExchanges.Net.Core/Resilience/IExchangeTimeSync.cs
+new file mode 100644
+index 0000000..154a37c
+--- /dev/null
++++ b/src/CryptoExchanges.Net.Core/Resilience/IExchangeTimeSync.cs
+@@ -0,0 +1,13 @@
++namespace CryptoExchanges.Net.Core.Resilience;
++
++/// <summary>Venue-neutral clock-skew offset (server − local, in ms) shared by all exchange clients.</summary>
++public interface IExchangeTimeSync
++{
++    /// <summary>Returns <c>server − local</c>, in milliseconds.</summary>
++    long ComputeOffset(long serverTimeMs, long localNowMs);
++
++    /// <summary>Computes the offset and atomically writes it into <paramref name="offsetHolder"/>[0]; returns it.</summary>
++    /// <exception cref="ArgumentNullException"><paramref name="offsetHolder"/> is null.</exception>
++    /// <exception cref="ArgumentException"><paramref name="offsetHolder"/> is empty.</exception>
++    long ApplyOffset(long serverTimeMs, long localNowMs, long[] offsetHolder);
++}
+diff --git a/src/CryptoExchanges.Net.Http/ExchangeServiceRegistration.cs b/src/CryptoExchanges.Net.Http/ExchangeServiceRegistration.cs
+index b3db370..b712a68 100644
+--- a/src/CryptoExchanges.Net.Http/ExchangeServiceRegistration.cs
++++ b/src/CryptoExchanges.Net.Http/ExchangeServiceRegistration.cs
+@@ -65,6 +65,10 @@ internal static class ExchangeServiceRegistration
+ 
+         services.TryAddSingleton<IExchangeClientFactory, ExchangeClientFactory>();
+ 
++        // Exchange-agnostic clock-skew calculator. Non-keyed + TryAdd so a consumer can override it
++        // once (a prior registration wins) and every exchange shares the same implementation.
++        services.TryAddSingleton<IExchangeTimeSync, ExchangeTimeSync>();
++
+         services.AddOptions<TOptions>()
+             .Configure(applyEnvDefaults)
+             .Configure(o => configure?.Invoke(o))
+diff --git a/src/CryptoExchanges.Net.Okx/Auth/OkxSignatureService.cs b/src/CryptoExchanges.Net.Okx/Auth/OkxSignatureService.cs
+index cbbe6f0..2d52d2b 100644
+--- a/src/CryptoExchanges.Net.Okx/Auth/OkxSignatureService.cs
++++ b/src/CryptoExchanges.Net.Okx/Auth/OkxSignatureService.cs
+@@ -4,24 +4,14 @@ using CryptoExchanges.Net.Core.Auth;
+ namespace CryptoExchanges.Net.Okx.Auth;
+ 
+ /// <summary>
+-/// Creates HMAC-SHA256 signatures for OKX API requests, rendered as base64.
++/// Creates HMAC-SHA256 signatures for OKX API requests, rendered as base64 (not hex like Binance/Bybit)
++/// for the <c>OK-ACCESS-SIGN</c> header. Signs a prehash of <c>timestamp + METHOD + requestPath + body</c>.
+ /// </summary>
+-/// <remarks>
+-/// OKX signs a prehash string of the form <c>timestamp + METHOD + requestPath + body</c> and places
+-/// the resulting base64 signature in the <c>OK-ACCESS-SIGN</c> header. Unlike Binance/Bybit (lowercase
+-/// hex), OKX renders the same HMAC-SHA256 hash as standard base64. The signature is returned to the
+-/// caller rather than appended to the payload; the OKX signing handler (added in a later task) is
+-/// responsible for supplying the timestamp and writing the header.
+-/// </remarks>
+-internal sealed class OkxSignatureService(string secretKey)
++internal sealed class OkxSignatureService(string secretKey) : ISignatureService
+ {
+     private readonly string _secretKey = InitializeSecretKey(secretKey);
+ 
+-    /// <summary>
+-    /// Signs an OKX prehash string using HMAC-SHA256 and returns the base64-encoded signature.
+-    /// </summary>
+-    /// <param name="prehash">The canonical OKX prehash string (see <see cref="BuildPrehash"/>).</param>
+-    /// <returns>The base64-encoded HMAC-SHA256 signature for the <c>OK-ACCESS-SIGN</c> header.</returns>
++    /// <inheritdoc />
+     public string Sign(string prehash) =>
+         HmacSignature.Compute(_secretKey, prehash, SignatureEncoding.Base64);
+ 
+diff --git a/src/CryptoExchanges.Net.Okx/Internal/OkxClientComposer.cs b/src/CryptoExchanges.Net.Okx/Internal/OkxClientComposer.cs
+index 95b2fdf..1911bc6 100644
+--- a/src/CryptoExchanges.Net.Okx/Internal/OkxClientComposer.cs
++++ b/src/CryptoExchanges.Net.Okx/Internal/OkxClientComposer.cs
+@@ -5,6 +5,7 @@ using CryptoExchanges.Net.Okx.Services;
+ using CryptoExchanges.Net.Core;
+ using CryptoExchanges.Net.Core.Enums;
+ using CryptoExchanges.Net.Core.Interfaces;
++using CryptoExchanges.Net.Core.Resilience;
+ using DeltaMapper;
+ using Microsoft.Extensions.DependencyInjection;
+ 
+@@ -29,26 +30,27 @@ internal static class OkxClientComposer
+         var offsetHolder = new long[] { 0L };
+         var hc = BuildResilientHttpClient(options, offsetHolder);
+         var http = new OkxHttpClient(hc);
+-        return ComposeOver(http, hc, ownsHttpClient: true, offsetHolder);
++        return ComposeOver(http, hc, ownsHttpClient: true, offsetHolder, new ExchangeTimeSync());
+     }
+ 
+     /// <summary>Wires symbol mapper + IMapper + the 3 services + the client over a given http client.</summary>
+     public static OkxExchangeClient ComposeOver(
+-        IOkxHttpClient http, HttpClient? httpClient, bool ownsHttpClient, long[] offsetHolder)
++        IOkxHttpClient http, HttpClient? httpClient, bool ownsHttpClient, long[] offsetHolder,
++        IExchangeTimeSync timeSync)
+     {
+         ISymbolMapper symbolMapper = new SymbolMapper(OkxSymbolFormat.Instance);
+-        return ComposeWith(http, symbolMapper, CreateMapper(symbolMapper), httpClient, ownsHttpClient, offsetHolder);
++        return ComposeWith(http, symbolMapper, CreateMapper(symbolMapper), httpClient, ownsHttpClient, offsetHolder, timeSync);
+     }
+ 
+     /// <summary>Wires the 3 services + client using already-resolved symbol mapper + IMapper (DI path).</summary>
+     public static OkxExchangeClient ComposeWith(
+         IOkxHttpClient http, ISymbolMapper symbolMapper, IMapper mapper,
+-        HttpClient? httpClient, bool ownsHttpClient, long[] offsetHolder)
++        HttpClient? httpClient, bool ownsHttpClient, long[] offsetHolder, IExchangeTimeSync timeSync)
+     {
+         var market = new OkxMarketDataService(http, symbolMapper, mapper);
+         var trading = new OkxTradingService(http, symbolMapper, mapper);
+         var account = new OkxAccountService(http, symbolMapper, mapper);
+-        return new OkxExchangeClient(http, market, trading, account, ownsHttpClient, httpClient, offsetHolder);
++        return new OkxExchangeClient(http, market, trading, account, ownsHttpClient, httpClient, offsetHolder, timeSync);
+     }
+ 
+     /// <summary>DI composition: resolves the keyed symbol mapper + IMapper from the container and wires
+@@ -59,9 +61,10 @@ internal static class OkxClientComposer
+         ArgumentNullException.ThrowIfNull(sp);
+         var symbolMapper = sp.GetRequiredKeyedService<ISymbolMapper>(ExchangeId.Okx);
+         var mapper = sp.GetRequiredKeyedService<IMapper>(ExchangeId.Okx);
++        var timeSync = sp.GetRequiredService<IExchangeTimeSync>();
+         // INVARIANT: ownsHttpClient MUST stay false — IHttpClientFactory owns the HttpClient and its
+         // handler chain; this client must NOT dispose it. Flipping this would double-dispose factory state.
+-        return ComposeWith(http, symbolMapper, mapper, httpClient: null, ownsHttpClient: false, offsetHolder);
++        return ComposeWith(http, symbolMapper, mapper, httpClient: null, ownsHttpClient: false, offsetHolder, timeSync);
+     }
+ 
+     /// <summary>Builds the resilient HttpClient (factory-less path) with a secret+passphrase-gated signing
+diff --git a/src/CryptoExchanges.Net.Okx/OkxExchangeClient.cs b/src/CryptoExchanges.Net.Okx/OkxExchangeClient.cs
+index 059f233..e3091fb 100644
+--- a/src/CryptoExchanges.Net.Okx/OkxExchangeClient.cs
++++ b/src/CryptoExchanges.Net.Okx/OkxExchangeClient.cs
+@@ -24,6 +24,7 @@ public sealed class OkxExchangeClient : IExchangeClient, IAsyncDisposable
+     /// closure and <see cref="SyncServerTimeAsync"/> read/write the SAME instance.
+     /// </summary>
+     private readonly long[] _offsetHolder;
++    private readonly Core.Resilience.IExchangeTimeSync _timeSync;
+ 
+     /// <summary>
+     /// Internal composition constructor — called exclusively by <see cref="Internal.OkxClientComposer"/>.
+@@ -37,10 +38,12 @@ public sealed class OkxExchangeClient : IExchangeClient, IAsyncDisposable
+         IAccountService account,
+         bool ownsHttpClient,
+         HttpClient? httpClient,
+-        long[] offsetHolder)
++        long[] offsetHolder,
++        Core.Resilience.IExchangeTimeSync timeSync)
+     {
+         ArgumentNullException.ThrowIfNull(http);
+         ArgumentNullException.ThrowIfNull(offsetHolder);
++        ArgumentNullException.ThrowIfNull(timeSync);
+         _http = http;
+         MarketData = marketData;
+         Trading = trading;
+@@ -48,6 +51,7 @@ public sealed class OkxExchangeClient : IExchangeClient, IAsyncDisposable
+         _ownsHttpClient = ownsHttpClient;
+         _httpClient = httpClient;
+         _offsetHolder = offsetHolder;
++        _timeSync = timeSync;
+     }
+ 
+     /// <inheritdoc />
+@@ -85,7 +89,7 @@ public sealed class OkxExchangeClient : IExchangeClient, IAsyncDisposable
+     {
+         var resp = await _http.GetAsync<OkxResponse<OkxServerTime>>("/api/v5/public/time", signed: false, ct: ct).ConfigureAwait(false);
+         var serverTimeMs = ServerTimeMs(resp.Data.FirstOrDefault());
+-        Core.Resilience.ExchangeTimeSync.ApplyOffset(serverTimeMs, DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(), _offsetHolder);
++        _timeSync.ApplyOffset(serverTimeMs, DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(), _offsetHolder);
+     }
+ 
+     /// <inheritdoc />
+diff --git a/src/CryptoExchanges.Net.Okx/Resilience/OkxSigningHandler.cs b/src/CryptoExchanges.Net.Okx/Resilience/OkxSigningHandler.cs
+index bfde484..b780ed9 100644
+--- a/src/CryptoExchanges.Net.Okx/Resilience/OkxSigningHandler.cs
++++ b/src/CryptoExchanges.Net.Okx/Resilience/OkxSigningHandler.cs
+@@ -1,3 +1,4 @@
++using CryptoExchanges.Net.Core.Auth;
+ using CryptoExchanges.Net.Okx.Auth;
+ 
+ namespace CryptoExchanges.Net.Okx.Resilience;
+@@ -15,7 +16,7 @@ namespace CryptoExchanges.Net.Okx.Resilience;
+ /// <param name="signatureService">Computes the base64 HMAC-SHA256 signature over the OKX prehash string.</param>
+ /// <param name="timeOffset">Returns the current server-time offset in milliseconds, applied to each timestamp.</param>
+ internal sealed class OkxSigningHandler(
+-    string apiKey, string passphrase, OkxSignatureService signatureService, Func<long> timeOffset)
++    string apiKey, string passphrase, ISignatureService signatureService, Func<long> timeOffset)
+     : DelegatingHandler
+ {
+     /// <inheritdoc />
+diff --git a/tests/CryptoExchanges.Net.Core.Tests.Unit/ExchangeTimeSyncTests.cs b/tests/CryptoExchanges.Net.Core.Tests.Unit/ExchangeTimeSyncTests.cs
+index 42d2a84..33cce58 100644
+--- a/tests/CryptoExchanges.Net.Core.Tests.Unit/ExchangeTimeSyncTests.cs
++++ b/tests/CryptoExchanges.Net.Core.Tests.Unit/ExchangeTimeSyncTests.cs
+@@ -6,18 +6,20 @@ namespace CryptoExchanges.Net.Core.Tests.Unit;
+ 
+ public class ExchangeTimeSyncTests
+ {
++    private readonly ExchangeTimeSync _sut = new();
++
+     [Fact]
+     public void ComputeOffset_ReturnsServerMinusLocal()
+     {
+-        ExchangeTimeSync.ComputeOffset(serverTimeMs: 10_000, localNowMs: 8_000).Should().Be(2_000);
+-        ExchangeTimeSync.ComputeOffset(serverTimeMs: 8_000, localNowMs: 10_000).Should().Be(-2_000);
++        _sut.ComputeOffset(serverTimeMs: 10_000, localNowMs: 8_000).Should().Be(2_000);
++        _sut.ComputeOffset(serverTimeMs: 8_000, localNowMs: 10_000).Should().Be(-2_000);
+     }
+ 
+     [Fact]
+     public void ApplyOffset_WritesIntoHolderAndReturnsOffset()
+     {
+         var holder = new long[] { 0L };
+-        var written = ExchangeTimeSync.ApplyOffset(serverTimeMs: 12_345, localNowMs: 12_000, holder);
++        var written = _sut.ApplyOffset(serverTimeMs: 12_345, localNowMs: 12_000, holder);
+ 
+         written.Should().Be(345);
+         holder[0].Should().Be(345);
+@@ -26,14 +28,14 @@ public class ExchangeTimeSyncTests
+     [Fact]
+     public void ApplyOffset_RejectsZeroLengthHolder()
+     {
+-        var act = () => ExchangeTimeSync.ApplyOffset(1, 0, []);
++        var act = () => _sut.ApplyOffset(1, 0, []);
+         act.Should().Throw<ArgumentException>();
+     }
+ 
+     [Fact]
+     public void ApplyOffset_RejectsNullHolder()
+     {
+-        var act = () => ExchangeTimeSync.ApplyOffset(1, 0, null!);
++        var act = () => _sut.ApplyOffset(1, 0, null!);
+         act.Should().Throw<ArgumentNullException>();
+     }
+ }
+diff --git a/tests/CryptoExchanges.Net.DependencyInjection.Tests.Unit/DiRegistrationTests.cs b/tests/CryptoExchanges.Net.DependencyInjection.Tests.Unit/DiRegistrationTests.cs
+index ffbd68a..f0088e8 100644
+--- a/tests/CryptoExchanges.Net.DependencyInjection.Tests.Unit/DiRegistrationTests.cs
++++ b/tests/CryptoExchanges.Net.DependencyInjection.Tests.Unit/DiRegistrationTests.cs
+@@ -5,7 +5,9 @@ using CryptoExchanges.Net.Binance;
+ using CryptoExchanges.Net.Bybit;
+ using CryptoExchanges.Net.Core.Enums;
+ using CryptoExchanges.Net.Core.Interfaces;
++using CryptoExchanges.Net.Core.Resilience;
+ using CryptoExchanges.Net.DependencyInjection;
++using Microsoft.Extensions.DependencyInjection.Extensions;
+ 
+ namespace CryptoExchanges.Net.DependencyInjection.Tests.Unit;
+ 
+@@ -60,6 +62,28 @@ public class DiRegistrationTests
+         sp.GetService<IExchangeClient>().Should().BeNull();
+     }
+ 
++    [Fact]
++    public void Registers_ExchangeTimeSync_AsDefault()
++        => Build().GetRequiredService<IExchangeTimeSync>().Should().BeOfType<ExchangeTimeSync>();
++
++    [Fact]
++    public void Consumer_Can_Override_ExchangeTimeSync()
++    {
++        // TryAdd semantics: a registration made before AddBinanceExchange wins, so a consumer can swap
++        // the clock-skew calculator (e.g. for deterministic tests).
++        var services = new ServiceCollection();
++        services.TryAddSingleton<IExchangeTimeSync>(new FixedTimeSync());
++        services.AddBinanceExchange(o => { o.ApiKey = "k"; o.SecretKey = "s"; });
++
++        services.BuildServiceProvider().GetRequiredService<IExchangeTimeSync>().Should().BeOfType<FixedTimeSync>();
++    }
++
++    private sealed class FixedTimeSync : IExchangeTimeSync
++    {
++        public long ComputeOffset(long serverTimeMs, long localNowMs) => 0;
++        public long ApplyOffset(long serverTimeMs, long localNowMs, long[] offsetHolder) => 0;
++    }
++
+     [Fact]
+     public async Task Registration_IsScopeClean()
+     {

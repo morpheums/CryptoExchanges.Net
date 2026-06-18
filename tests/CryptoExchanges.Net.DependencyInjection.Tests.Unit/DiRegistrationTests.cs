@@ -5,7 +5,9 @@ using CryptoExchanges.Net.Binance;
 using CryptoExchanges.Net.Bybit;
 using CryptoExchanges.Net.Core.Enums;
 using CryptoExchanges.Net.Core.Interfaces;
+using CryptoExchanges.Net.Core.Resilience;
 using CryptoExchanges.Net.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace CryptoExchanges.Net.DependencyInjection.Tests.Unit;
 
@@ -58,6 +60,28 @@ public class DiRegistrationTests
         sp.GetRequiredKeyedService<IExchangeClient>(ExchangeId.Bybit).ExchangeId
             .Should().Be(ExchangeId.Bybit);
         sp.GetService<IExchangeClient>().Should().BeNull();
+    }
+
+    [Fact]
+    public void Registers_ExchangeTimeSync_AsDefault()
+        => Build().GetRequiredService<IExchangeTimeSync>().Should().BeOfType<ExchangeTimeSync>();
+
+    [Fact]
+    public void Consumer_Can_Override_ExchangeTimeSync()
+    {
+        // TryAdd semantics: a registration made before AddBinanceExchange wins, so a consumer can swap
+        // the clock-skew calculator (e.g. for deterministic tests).
+        var services = new ServiceCollection();
+        services.TryAddSingleton<IExchangeTimeSync>(new FixedTimeSync());
+        services.AddBinanceExchange(o => { o.ApiKey = "k"; o.SecretKey = "s"; });
+
+        services.BuildServiceProvider().GetRequiredService<IExchangeTimeSync>().Should().BeOfType<FixedTimeSync>();
+    }
+
+    private sealed class FixedTimeSync : IExchangeTimeSync
+    {
+        public long ComputeOffset(long serverTimeMs, long localNowMs) => 0;
+        public long ApplyOffset(long serverTimeMs, long localNowMs, long[] offsetHolder) => 0;
     }
 
     [Fact]

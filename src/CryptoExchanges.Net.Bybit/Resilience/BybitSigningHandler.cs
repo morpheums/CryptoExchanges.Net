@@ -1,5 +1,6 @@
 using System.Globalization;
 using CryptoExchanges.Net.Bybit.Auth;
+using CryptoExchanges.Net.Core.Auth;
 
 namespace CryptoExchanges.Net.Bybit.Resilience;
 
@@ -15,7 +16,7 @@ namespace CryptoExchanges.Net.Bybit.Resilience;
 /// <param name="recvWindow">The receive-window value (pre-formatted, invariant) for the <c>X-BAPI-RECV-WINDOW</c> header.</param>
 /// <param name="timeOffset">Returns the current server-time offset in milliseconds, applied to each timestamp.</param>
 internal sealed class BybitSigningHandler(
-    string apiKey, BybitSignatureService signatureService, string recvWindow, Func<long> timeOffset)
+    string apiKey, ISignatureService signatureService, string recvWindow, Func<long> timeOffset)
     : DelegatingHandler
 {
     /// <inheritdoc />

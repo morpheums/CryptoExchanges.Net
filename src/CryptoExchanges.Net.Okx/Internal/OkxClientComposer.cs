@@ -5,6 +5,7 @@ using CryptoExchanges.Net.Okx.Services;
 using CryptoExchanges.Net.Core;
 using CryptoExchanges.Net.Core.Enums;
 using CryptoExchanges.Net.Core.Interfaces;
+using CryptoExchanges.Net.Core.Resilience;
 using DeltaMapper;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -29,26 +30,27 @@ internal static class OkxClientComposer
         var offsetHolder = new long[] { 0L };
         var hc = BuildResilientHttpClient(options, offsetHolder);
         var http = new OkxHttpClient(hc);
-        return ComposeOver(http, hc, ownsHttpClient: true, offsetHolder);
+        return ComposeOver(http, hc, ownsHttpClient: true, offsetHolder, new ExchangeTimeSync());
     }
 
     /// <summary>Wires symbol mapper + IMapper + the 3 services + the client over a given http client.</summary>
     public static OkxExchangeClient ComposeOver(
-        IOkxHttpClient http, HttpClient? httpClient, bool ownsHttpClient, long[] offsetHolder)
+        IOkxHttpClient http, HttpClient? httpClient, bool ownsHttpClient, long[] offsetHolder,
+        IExchangeTimeSync timeSync)
     {
         ISymbolMapper symbolMapper = new SymbolMapper(OkxSymbolFormat.Instance);
-        return ComposeWith(http, symbolMapper, CreateMapper(symbolMapper), httpClient, ownsHttpClient, offsetHolder);
+        return ComposeWith(http, symbolMapper, CreateMapper(symbolMapper), httpClient, ownsHttpClient, offsetHolder, timeSync);
     }
 
     /// <summary>Wires the 3 services + client using already-resolved symbol mapper + IMapper (DI path).</summary>
     public static OkxExchangeClient ComposeWith(
         IOkxHttpClient http, ISymbolMapper symbolMapper, IMapper mapper,
-        HttpClient? httpClient, bool ownsHttpClient, long[] offsetHolder)
+        HttpClient? httpClient, bool ownsHttpClient, long[] offsetHolder, IExchangeTimeSync timeSync)
     {
         var market = new OkxMarketDataService(http, symbolMapper, mapper);
         var trading = new OkxTradingService(http, symbolMapper, mapper);
         var account = new OkxAccountService(http, symbolMapper, mapper);
-        return new OkxExchangeClient(http, market, trading, account, ownsHttpClient, httpClient, offsetHolder);
+        return new OkxExchangeClient(http, market, trading, account, ownsHttpClient, httpClient, offsetHolder, timeSync);
     }
 
     /// <summary>DI composition: resolves the keyed symbol mapper + IMapper from the container and wires
@@ -59,9 +61,10 @@ internal static class OkxClientComposer
         ArgumentNullException.ThrowIfNull(sp);
         var symbolMapper = sp.GetRequiredKeyedService<ISymbolMapper>(ExchangeId.Okx);
         var mapper = sp.GetRequiredKeyedService<IMapper>(ExchangeId.Okx);
+        var timeSync = sp.GetRequiredService<IExchangeTimeSync>();
         // INVARIANT: ownsHttpClient MUST stay false — IHttpClientFactory owns the HttpClient and its
         // handler chain; this client must NOT dispose it. Flipping this would double-dispose factory state.
-        return ComposeWith(http, symbolMapper, mapper, httpClient: null, ownsHttpClient: false, offsetHolder);
+        return ComposeWith(http, symbolMapper, mapper, httpClient: null, ownsHttpClient: false, offsetHolder, timeSync);
     }
 
     /// <summary>Builds the resilient HttpClient (factory-less path) with a secret+passphrase-gated signing

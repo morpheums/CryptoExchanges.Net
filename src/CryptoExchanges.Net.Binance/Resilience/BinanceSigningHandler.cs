@@ -1,5 +1,5 @@
 using System.Globalization;
-using CryptoExchanges.Net.Binance.Auth;
+using CryptoExchanges.Net.Core.Auth;
 
 namespace CryptoExchanges.Net.Binance.Resilience;
 
@@ -10,7 +10,7 @@ namespace CryptoExchanges.Net.Binance.Resilience;
 /// Supports query-signed (GET/DELETE) and body-signed (POST form) requests.
 /// </summary>
 internal sealed class BinanceSigningHandler(
-    string apiKey, BinanceSignatureService signatureService, Func<long> timeOffset) : DelegatingHandler
+    string apiKey, ISignatureService signatureService, Func<long> timeOffset) : DelegatingHandler
 {
     /// <inheritdoc />
     protected override async Task<HttpResponseMessage> SendAsync(
@@ -39,7 +39,7 @@ internal sealed class BinanceSigningHandler(
             var raw = await request.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
             var unsigned = StripSigning(raw);
             var withTs = Append(unsigned, $"timestamp={timestamp}");
-            var signed = signatureService.BuildSignedQuery(withTs);
+            var signed = BuildSignedQuery(withTs);
             var previous = request.Content;
             request.Content = new StringContent(signed, System.Text.Encoding.UTF8, "application/x-www-form-urlencoded");
             previous.Dispose();
@@ -73,10 +73,19 @@ internal sealed class BinanceSigningHandler(
 
             var unsigned = StripSigning(query);
             var withTs = Append(unsigned, $"timestamp={timestamp}");
-            var signed = signatureService.BuildSignedQuery(withTs);
+            var signed = BuildSignedQuery(withTs);
             var newUriStr = path + "?" + signed;
             request.RequestUri = new Uri(newUriStr, uri.IsAbsoluteUri ? UriKind.Absolute : UriKind.Relative);
         }
+    }
+
+    // Binance carries the signature inline as a query parameter, so build the signed query here from
+    // the interface's Sign (the concrete service's BuildSignedQuery is intentionally off ISignatureService).
+    private string BuildSignedQuery(string queryString)
+    {
+        var signature = signatureService.Sign(queryString);
+        var separator = string.IsNullOrEmpty(queryString) ? string.Empty : "&";
+        return $"{queryString}{separator}signature={signature}";
     }
 
     private static string Append(string a, string b)

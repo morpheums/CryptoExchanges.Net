@@ -84,3 +84,6 @@ Adopt per-exchange DI registration (ADR-001 option b). Move `AddBinanceExchange`
 - `dotnet test --filter 'Category!=Integration'` → all pass: Core 93, Http 12, DI **11** (was 10, +1 new), Bybit.Unit 80, Binance.Integration 45 (no Integration trait, runs here) = 241, 0 failures.
 - `dotnet test --filter 'Category=Integration'` → Bybit integration **5/5** pass.
 - Dependency direction verified: `dotnet list src/CryptoExchanges.Net.Bybit reference` → only Core + Http (no Binance). Bybit-only consumer never pulls in Binance.
+
+## Commits
+- **Commit**: 1a56835 refactor(M3): TASK-009B per-exchange DI re-homing (ADR-001)

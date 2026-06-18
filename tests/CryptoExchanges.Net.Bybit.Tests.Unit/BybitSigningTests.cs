@@ -246,32 +246,6 @@ public class BybitSigningTests
         act.Should().NotThrow();
     }
 
-    // ── BybitTimeSync ──
-
-    [Fact]
-    public void ComputeOffset_ReturnsServerMinusLocal()
-    {
-        BybitTimeSync.ComputeOffset(serverTimeMs: 10_000, localNowMs: 8_000).Should().Be(2_000);
-        BybitTimeSync.ComputeOffset(serverTimeMs: 8_000, localNowMs: 10_000).Should().Be(-2_000);
-    }
-
-    [Fact]
-    public void ApplyOffset_WritesIntoHolderAndReturnsOffset()
-    {
-        var holder = new long[] { 0L };
-        var written = BybitTimeSync.ApplyOffset(serverTimeMs: 12_345, localNowMs: 12_000, holder);
-
-        written.Should().Be(345);
-        holder[0].Should().Be(345);
-    }
-
-    [Fact]
-    public void ApplyOffset_RejectsZeroLengthHolder()
-    {
-        var act = () => BybitTimeSync.ApplyOffset(1, 0, []);
-        act.Should().Throw<ArgumentException>();
-    }
-
     // ── BybitErrorTranslator: retCode / HTTP-status → exception type ──
 
     private static ExchangeException Translate(HttpStatusCode status, string body)

@@ -1,6 +1,8 @@
 ---
 id: TASK-REF-001
-status: PLANNED
+status: IN_PROGRESS
+claimed_at: 2026-06-18
+base_sha: 3960d4a2271d519e72c81dee147977510233d531
 ---
 
 # TASK-REF-001: Extract shared per-exchange DI/TimeSync (DRY before Bitget)

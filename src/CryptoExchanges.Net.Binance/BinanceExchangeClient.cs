@@ -101,9 +101,8 @@ public sealed class BinanceExchangeClient : IExchangeClient, IAsyncDisposable
     public async Task SyncServerTimeAsync(CancellationToken ct = default)
     {
         var resp = await _http.GetAsync<BinanceServerTimeResponse>("/api/v3/time", signed: false, ct: ct).ConfigureAwait(false);
-        var offset = Resilience.BinanceTimeSync.ComputeOffset(
-            resp.ServerTime, DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
-        Interlocked.Exchange(ref _offsetHolder[0], offset);
+        Core.Resilience.ExchangeTimeSync.ApplyOffset(
+            resp.ServerTime, DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(), _offsetHolder);
     }
 
     /// <inheritdoc />

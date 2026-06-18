@@ -1,6 +1,6 @@
 ---
 id: TASK-019
-status: IMPLEMENTED
+status: DONE
 ---
 
 # TASK-019: BitgetSigningHandler (header-based)
@@ -53,4 +53,4 @@ Implement `BitgetSigningHandler : DelegatingHandler` that, on each attempt (belo
 - Tests arrive in TASK-022.
 
 ## Commits
-- (see git log: feat(M4): TASK-019)
+- abdedd60b7664cd680775a05e3f8ffc26cab758a — feat(M4): TASK-019 BitgetSigningHandler

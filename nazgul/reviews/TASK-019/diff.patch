@@ -1,0 +1,85 @@
+diff --git a/src/CryptoExchanges.Net.Bitget/Resilience/BitgetSigningHandler.cs b/src/CryptoExchanges.Net.Bitget/Resilience/BitgetSigningHandler.cs
+new file mode 100644
+index 0000000..c401dd7
+--- /dev/null
++++ b/src/CryptoExchanges.Net.Bitget/Resilience/BitgetSigningHandler.cs
+@@ -0,0 +1,79 @@
++using System.Net.Http.Headers;
++using CryptoExchanges.Net.Bitget.Auth;
++using CryptoExchanges.Net.Core.Auth;
++
++namespace CryptoExchanges.Net.Bitget.Resilience;
++
++/// <summary>
++/// For signed Bitget requests, (re)computes the epoch-ms timestamp + base64 HMAC signature ON EACH
++/// ATTEMPT and sets the four Bitget credential headers: <c>ACCESS-KEY</c>, <c>ACCESS-SIGN</c>,
++/// <c>ACCESS-TIMESTAMP</c>, and <c>ACCESS-PASSPHRASE</c>. Sits below the retry strategy so a retried,
++/// delayed request is re-signed with a fresh timestamp (avoids Bitget timestamp-expiry rejections).
++/// Unsigned (public) requests pass through untouched with no auth headers added.
++/// </summary>
++/// <param name="apiKey">The Bitget API key set on the <c>ACCESS-KEY</c> header for signed requests.</param>
++/// <param name="passphrase">The Bitget API passphrase set on the <c>ACCESS-PASSPHRASE</c> header for signed requests.</param>
++/// <param name="signatureService">Computes the base64 HMAC-SHA256 signature over the Bitget prehash string.</param>
++/// <param name="timeOffset">Returns the current server-time offset in milliseconds, applied to each timestamp.</param>
++internal sealed class BitgetSigningHandler(
++    string apiKey, string passphrase, ISignatureService signatureService, Func<long> timeOffset)
++    : DelegatingHandler
++{
++    /// <inheritdoc />
++    protected override async Task<HttpResponseMessage> SendAsync(
++        HttpRequestMessage request, CancellationToken cancellationToken)
++    {
++        ArgumentNullException.ThrowIfNull(request);
++
++        if (BitgetSigningRequest.IsSigned(request))
++            await ResignAsync(request, cancellationToken).ConfigureAwait(false);
++
++        return await base.SendAsync(request, cancellationToken).ConfigureAwait(false);
++    }
++
++    private async Task ResignAsync(HttpRequestMessage request, CancellationToken ct)
++    {
++        // A signed Bitget request needs all three credentials: key, secret (held by the signature
++        // service), and passphrase. Guard here even though the composer's secret-gated finalizer
++        // should normally prevent constructing a signing handler without full credentials.
++        if (string.IsNullOrEmpty(apiKey))
++            throw new InvalidOperationException(
++                "Bitget signed request requires an API key (ACCESS-KEY); none was configured.");
++        if (string.IsNullOrEmpty(passphrase))
++            throw new InvalidOperationException(
++                "Bitget signed request requires a passphrase (ACCESS-PASSPHRASE); none was configured.");
++
++        // Fresh timestamp per attempt: UtcNow shifted by the server-time offset, then epoch-ms.
++        var instant = DateTimeOffset.UtcNow.AddMilliseconds(timeOffset());
++        var timestamp = BitgetSignatureService.FormatTimestamp(instant);
++
++        // Bitget's BuildPrehash takes path and query SEPARATELY (it re-inserts the '?'), so split the
++        // outgoing RequestUri instead of passing PathAndQuery. Using the actual AbsolutePath/Query
++        // keeps the signed prehash byte-for-byte consistent with what BitgetHttpClient sent.
++        var requestPath = request.RequestUri!.AbsolutePath;
++        var queryString = request.RequestUri.Query.TrimStart('?');
++        var method = request.Method.Method;
++
++        var body = string.Empty;
++        if ((request.Method == HttpMethod.Post || request.Method == HttpMethod.Put)
++            && request.Content is not null)
++        {
++            body = await request.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
++            request.Content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
++        }
++
++        var prehash = BitgetSignatureService.BuildPrehash(timestamp, method, requestPath, queryString, body);
++        var signature = signatureService.Sign(prehash);
++
++        // Strip any signing headers from a prior attempt so a retried request re-signs cleanly
++        // (exactly one set of ACCESS-* headers with a fresh timestamp/signature).
++        request.Headers.Remove("ACCESS-KEY");
++        request.Headers.Remove("ACCESS-SIGN");
++        request.Headers.Remove("ACCESS-TIMESTAMP");
++        request.Headers.Remove("ACCESS-PASSPHRASE");
++        request.Headers.Add("ACCESS-KEY", apiKey);
++        request.Headers.Add("ACCESS-SIGN", signature);
++        request.Headers.Add("ACCESS-TIMESTAMP", timestamp);
++        request.Headers.Add("ACCESS-PASSPHRASE", passphrase);
++    }
++}

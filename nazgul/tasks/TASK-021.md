@@ -1,6 +1,6 @@
 ---
 id: TASK-021
-status: IMPLEMENTED
+status: DONE
 ---
 
 # TASK-021: BitgetHttpClient + interface

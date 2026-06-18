@@ -7,18 +7,7 @@ using Microsoft.Extensions.Options;
 
 namespace CryptoExchanges.Net.Http;
 
-/// <summary>
-/// Shared per-exchange DI registration. Encapsulates the ~90%-identical body of each
-/// <c>AddXxxExchange</c> method (keyed offset-holder / symbol-mapper / IMapper / IExchangeClient
-/// singletons, the named HttpClient with the resilience pipeline, fail-fast options validation)
-/// so each exchange assembly only supplies its variation points.
-/// </summary>
-/// <remarks>
-/// Internal + InternalsVisibleTo to the three exchange assemblies (mirrors
-/// <see cref="ExchangeClientFactory"/>'s visibility posture). Http is the natural home: it already
-/// hosts the factory and the resilience pipeline seam (<see cref="ResilientHttpClientServiceCollectionExtensions"/>).
-/// Behavior is byte-identical to the previous per-exchange hand-rolled registrations.
-/// </remarks>
+/// <summary>Shared body of every <c>AddXxxExchange</c> registration; each exchange supplies only its variation points.</summary>
 internal static class ExchangeServiceRegistration
 {
     /// <summary>

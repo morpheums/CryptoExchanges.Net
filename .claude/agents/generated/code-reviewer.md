@@ -89,11 +89,11 @@ hooks:
 - [ ] Does any new `try/catch` silently return a default value without the caller knowing failure occurred?
 - [ ] Does any new fire-and-forget `Task` (no `await`) exist without justification?
 
-### XML documentation
-- [ ] Every new `public` type has a `/// <summary>` comment
-- [ ] Every new `public` member (property, method, constructor) has a `/// <summary>` comment
-- [ ] `/// <param>`, `/// <returns>`, `/// <exception>` present where applicable
-- [ ] `internal` types in Core/Http packages (public-facing) have XML docs too (since `GenerateDocumentationFile=true` generates for all)
+### Documentation & comments (LEAN — maintainer mandate, 2026-06-18)
+- [ ] **Docs live on the interface.** A public type that implements an interface uses `/// <inheritdoc />` — it must NOT repeat `<summary>`/`<param>`/`<returns>`. FLAG duplicated doc blocks on implementations as a defect.
+- [ ] An interface member has ONE concise `<summary>` (+ `<param>`/`<returns>`/`<exception>` only where they add information the signature doesn't). A public type with NO interface gets one short `<summary>`; skip `<param>`/`<returns>` when the names are self-explanatory.
+- [ ] **No comment noise.** FLAG: `<remarks>` essays, comments restating what the code already says, inline comments on routine lines. Comments should explain non-obvious *why*, not *what*. Over-commenting is a reviewable defect, not a nicety.
+- [ ] Prefer self-documenting names over comments.
 
 ### Code style
 - [ ] No new `public` mutable fields (use properties)

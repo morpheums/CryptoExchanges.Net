@@ -1,9 +1,11 @@
 ---
 id: TASK-REF-002
-status: IMPLEMENTED
+status: DONE
 claimed_at: 2026-06-18
 base_sha: 3eeb698fd117286b2a10c14e2150933655dc3534
 ---
+
+> **Review Gate: PASSED (round 2)** — all 4 APPROVE (architect + code re-approved after the B1 dead-code deletion; security + api approved round 1). Behavior byte-identical; 335 non-integration + 11 integration green. Commits 83da9ed + b695419.
 
 > **Rework (gate round 1):** architect+code REJECT@95/97 — the inlined Binance `BuildSignedQuery` in the handler orphaned the service-side copy (zero callers). Deleted `BinanceSignatureService.BuildSignedQuery` (dead code). Build 0w/0e; 335 tests pass. security+api already APPROVED. Non-blocking carry: CHANGELOG note for the static→instance `ExchangeTimeSync` break (pre-v1.0, → PR body).
 

@@ -19,19 +19,6 @@ internal static class BitgetValueParsers
     }
 
     /// <summary>
-    /// Parses an optional decimal string from a Bitget response field.
-    /// Returns <see langword="null"/> for null/empty input or any zero-valued amount
-    /// (e.g. <c>"0"</c>), which Bitget uses for unset optional fields such as priceAvg.
-    /// </summary>
-    public static decimal? ParseOptionalDecimal(string value)
-    {
-        if (string.IsNullOrEmpty(value))
-            return null;
-        var parsed = decimal.Parse(value, System.Globalization.CultureInfo.InvariantCulture);
-        return parsed == 0m ? null : parsed;
-    }
-
-    /// <summary>
     /// Parses an asset ticker into a typed <see cref="Asset"/>, returning <see cref="Asset.None"/>
     /// for null/empty or otherwise unrepresentable tickers rather than throwing. Used for balance
     /// mapping where long-tail assets appear and must never abort the projection.

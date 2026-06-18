@@ -139,19 +139,6 @@ public class BitgetSigningTests
         act.Should().Throw<FormatException>();
     }
 
-    [Theory]
-    [InlineData("", null)]
-    [InlineData("0", null)]
-    [InlineData("12.5", 12.5)]
-    public void ParseOptionalDecimal_TreatsZeroAndEmptyAsNull(string input, double? expected)
-    {
-        var result = BitgetValueParsers.ParseOptionalDecimal(input);
-        if (expected is null)
-            result.Should().BeNull();
-        else
-            result.Should().Be((decimal)expected.Value);
-    }
-
     [Fact]
     public void ParseAssetOrNone_FallsBackToNoneForUnrepresentable()
     {

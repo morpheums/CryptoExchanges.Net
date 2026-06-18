@@ -5,27 +5,10 @@ using CryptoExchanges.Net.Bitget.Resilience;
 namespace CryptoExchanges.Net.Bitget;
 
 /// <summary>
-/// Internal HTTP wrapper for Bitget V2 REST. Builds requests and deserializes successful responses.
-/// Signing (timestamp + base64 HMAC), the Bitget authentication headers
-/// (<c>ACCESS-KEY</c>/<c>ACCESS-SIGN</c>/<c>ACCESS-TIMESTAMP</c>/<c>ACCESS-PASSPHRASE</c>),
-/// retries, rate-limit handling, and typed error translation are all provided by the resilience
-/// pipeline on the injected <see cref="HttpClient"/>, so any response that reaches this type is
-/// already a success.
-/// <para>
-/// Bitget's prehash is <c>timestamp + METHOD + requestPath + ('?'+queryString when present) + body</c>,
-/// and <c>BitgetSigningHandler</c> reassembles it from <c>RequestUri.AbsolutePath</c> and
-/// <c>RequestUri.Query</c> SEPARATELY. To keep the signed string byte-consistent, the configured
-/// <see cref="HttpClient.BaseAddress"/> is the host root only (e.g. <c>https://api.bitget.com</c>, no
-/// path) and this client builds the full request path beginning with <c>/api/v2/...</c> plus the
-/// escaped query string. The resulting <c>RequestUri.AbsolutePath</c> is therefore exactly the Bitget
-/// <c>requestPath</c> and <c>RequestUri.Query</c> is exactly the signed query. Callers pass the full
-/// path (e.g. <c>/api/v2/spot/market/tickers</c>) as the endpoint.
-/// </para>
-/// <para>
-/// GET/DELETE append an escaped query string to the path; POST sends a JSON body. The signing handler
-/// reads the serialized JSON back to compute the signature, so the serialized JSON must be the wire
-/// body verbatim.
-/// </para>
+/// Internal HTTP wrapper for Bitget V2 REST; signing, auth headers, retries, rate limiting, and error
+/// translation are applied by the resilience pipeline, so any response reaching this type is a success.
+/// Callers pass the full request path (e.g. <c>/api/v2/spot/market/tickers</c>); GET/DELETE append an
+/// escaped query string, POST sends a verbatim JSON body that the signer reads back unchanged.
 /// </summary>
 internal sealed class BitgetHttpClient(HttpClient httpClient) : IBitgetHttpClient
 {

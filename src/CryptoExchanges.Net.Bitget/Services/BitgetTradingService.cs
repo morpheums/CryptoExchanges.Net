@@ -79,20 +79,10 @@ internal sealed record BitgetOrder
 // ---------------------------------------------------------------------------
 
 /// <summary>
-/// Bitget implementation of <see cref="ITradingService"/> against the V2 spot REST API.
+/// Bitget implementation of <see cref="ITradingService"/> against the V2 spot REST API. Place/cancel
+/// endpoints return only the order id, so those methods re-fetch via <c>/api/v2/spot/trade/orderInfo</c>
+/// to return a fully populated <see cref="Order"/> per the contract.
 /// </summary>
-/// <remarks>
-/// Bitget V2 place/cancel endpoints return only the order id (inside a per-order ack), not the full
-/// order, so <see cref="PlaceOrderAsync"/> and the cancel methods re-fetch the order via
-/// <c>/api/v2/spot/trade/orderInfo</c> to honour the <see cref="ITradingService"/> contract of
-/// returning a fully populated <see cref="Order"/>.
-/// <para>
-/// POST bodies (place/cancel) are flat string-keyed JSON objects (symbol, side, orderType, force,
-/// size, price, clientOid) — all Bitget spot single-order fields are scalar, so the existing
-/// <c>IBitgetHttpClient.PostAsync(Dictionary&lt;string,string&gt;)</c> serializes the exact wire body
-/// the signer reads back. The batch-cancel body is a JSON array, so it uses the typed object-body overload.
-/// </para>
-/// </remarks>
 internal sealed class BitgetTradingService(IBitgetHttpClient http, ISymbolMapper mapper, IMapper modelMapper) : ITradingService
 {
     /// <inheritdoc />

@@ -291,6 +291,34 @@ public class BitgetMappingAndServiceTests
         book.Asks.Should().ContainSingle().Which.Quantity.Should().Be(3m);
     }
 
+    [Fact]
+    public async Task MarketData_GetOrderBook_SkipsShortLevels()
+    {
+        var (symbolMapper, mapper) = BuildMappers();
+        var http = Substitute.For<IBitgetHttpClient>();
+        http.GetAsync<BitgetResponse<BitgetOrderBook>>(
+                "/api/v2/spot/market/orderbook", Arg.Any<Dictionary<string, string>>(), false, Arg.Any<CancellationToken>())
+            .Returns(new BitgetResponse<BitgetOrderBook>
+            {
+                Data =
+                [
+                    new BitgetOrderBook
+                    {
+                        // Malformed/short rows (fewer than [price, size]) must be skipped, not throw.
+                        Bids = [["100", "2"], [], ["99"]],
+                        Asks = [["101"], ["102", "3"]],
+                        Ts = "1700000000000"
+                    }
+                ]
+            });
+
+        var service = new BitgetMarketDataService(http, symbolMapper, mapper);
+        var book = await service.GetOrderBookAsync(BtcUsdt, ct: TestContext.Current.CancellationToken);
+
+        book.Bids.Should().ContainSingle().Which.Price.Should().Be(100m);
+        book.Asks.Should().ContainSingle().Which.Price.Should().Be(102m);
+    }
+
     // ── AccountService over mocked IBitgetHttpClient ──
 
     [Fact]

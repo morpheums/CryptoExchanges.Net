@@ -1,5 +1,5 @@
 {
-  "schema_version": 10,
+  "schema_version": 9,
   "install_mode": "shared",
   "mode": "afk",
   "objective": "Add three new exchange integrations to CryptoExchanges.Net in strict priority order — (1) Bybit, (2) OKX, (3) Bitget — for a global (non-US) audience. Each exchange clones the verified Binance pattern (Core → Http → Exchange → DI, DeltaMapper DTO→model, bespoke ISymbolMapper, retry-only-on-GET, per-attempt re-signing). The signing/credential abstraction is generalized after Bybit, against OKX, and Bitget then reuses that abstraction.",
@@ -204,14 +204,7 @@
     "enabled": false
   },
   "notifications": {
-    "on_complete": null
+    "on_complete": "say 'Nazgul loop complete'"
   },
-  "objective_set_at": "2026-06-17T00:00:00Z",
-  "learning": {
-    "enabled": true,
-    "rules_doc": "nazgul/learning/learned-rules.md",
-    "min_recurrence": 2,
-    "max_active_rules": 50,
-    "auto_distill_post_loop": true
-  }
+  "objective_set_at": "2026-06-17T00:00:00Z"
 }

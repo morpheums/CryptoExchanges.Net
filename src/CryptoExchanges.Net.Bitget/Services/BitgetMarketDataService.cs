@@ -188,9 +188,10 @@ internal sealed class BitgetMarketDataService(IBitgetHttpClient http, ISymbolMap
         var response = await http.GetAsync<BitgetResponse<BitgetOrderBook>>("/api/v2/spot/market/orderbook", parameters, false, ct).ConfigureAwait(false);
         var book = response.Data.FirstOrDefault() ?? new BitgetOrderBook();
 
-        // Bitget book levels are [price, size]; only price+size are used.
-        var bids = book.Bids.Select(b => new OrderBookEntry(BitgetValueParsers.ParseDecimal(b[0]), BitgetValueParsers.ParseDecimal(b[1]))).ToList();
-        var asks = book.Asks.Select(a => new OrderBookEntry(BitgetValueParsers.ParseDecimal(a[0]), BitgetValueParsers.ParseDecimal(a[1]))).ToList();
+        // Bitget book levels are [price, size]; only price+size are used. Skip short/malformed rows
+        // (fewer than 2 fields) rather than index out of range — mirrors the candle parser's guard.
+        var bids = book.Bids.Where(b => b.Count >= 2).Select(b => new OrderBookEntry(BitgetValueParsers.ParseDecimal(b[0]), BitgetValueParsers.ParseDecimal(b[1]))).ToList();
+        var asks = book.Asks.Where(a => a.Count >= 2).Select(a => new OrderBookEntry(BitgetValueParsers.ParseDecimal(a[0]), BitgetValueParsers.ParseDecimal(a[1]))).ToList();
 
         var ts = BitgetValueParsers.ParseMs(book.Ts);
         var timestamp = ts > 0 ? DateTimeOffset.FromUnixTimeMilliseconds(ts) : (DateTimeOffset?)null;

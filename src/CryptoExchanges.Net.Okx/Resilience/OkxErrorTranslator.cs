@@ -24,8 +24,9 @@ internal sealed class OkxErrorTranslator : IExchangeErrorTranslator
         var (code, msg) = Parse(body);
         var text = msg is null ? $"OKX HTTP {(int)response.StatusCode}" : $"OKX error {code}: {msg}";
 
-        // A success envelope (code == "0") is not an error and must pass through untranslated. Callers
-        // should not reach the translator with one, but guard defensively (mirrors Bybit's posture).
+        // Translate always returns an exception (it is only invoked on a failed/error response). When the
+        // JSON envelope still reports code "0" (e.g. an HTTP-level error with a success-shaped body), we
+        // return the generic ExchangeApiException rather than mapping to a more specific typed exception.
         if (code == "0")
             return new ExchangeApiException(text, ParseCode(code), body);
 
@@ -36,7 +37,7 @@ internal sealed class OkxErrorTranslator : IExchangeErrorTranslator
             return new RateLimitExceededException(text, RetryAfterReader.GetDelay(response), numeric, body);
 
         // Authentication / signature / permission / timestamp failures: HTTP 401/403, and OKX's
-        // 5031x auth family. 50100 = API frozen; 50101 = broker mismatch; 50102 = timestamp expired;
+        // 501xx auth family. 50100 = API frozen; 50101 = broker mismatch; 50102 = timestamp expired;
         // 50103 = missing auth header; 50104 = missing passphrase; 50105 = wrong passphrase;
         // 50111 = invalid API key; 50112 = invalid timestamp; 50113 = invalid signature; 50114 = invalid auth.
         if (response.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden

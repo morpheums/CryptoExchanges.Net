@@ -74,3 +74,6 @@ Read `src/CryptoExchanges.Net.Http/ResilientHttpClientServiceCollectionExtension
 - `dotnet build CryptoExchanges.Net.sln` -> Build succeeded, 0 Warning(s), 0 Error(s).
 - `dotnet test --filter 'Category!=Integration'` -> all pass: Core 92 (was 68; +24), Http 12, DI.Unit 10, Bybit.Unit 80, Binance.Integration 45 (untagged, ran and passed -> Binance non-breaking confirmed).
 - `git status` (excluding bin/obj) shows ONLY `src/CryptoExchanges.Net.Core/Auth/` + `tests/CryptoExchanges.Net.Core.Tests.Unit/AuthTests.cs` — no Binance/Bybit/Http/DI source touched.
+
+## Commits
+- **Commit**: 63b0006 feat(M3): TASK-009 Core auth generalization — ExchangeCredentials + HmacSignature

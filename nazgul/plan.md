@@ -12,7 +12,7 @@ Add three new exchange integrations to CryptoExchanges.Net in strict priority or
 
 ## Status Summary
 - Total tasks: 23 (added TASK-009B per ADR-001)
-- DONE: 8 | READY: 0 | IN_PROGRESS: 1 (TASK-009) | IN_REVIEW: 0 | CHANGES_REQUESTED: 0 | BLOCKED: 0 | PLANNED: 14
+- DONE: 8 | READY: 0 | IN_PROGRESS: 0 | IN_REVIEW: 1 (TASK-009) | CHANGES_REQUESTED: 0 | BLOCKED: 0 | PLANNED: 14
 - Current iteration: 6/40
 - Active task: starting **M-OKX** on branch `feat/m3-okx` (cut from main after PR #11 merged as e7c0268). First: TASK-009 (signing generalization) + TASK-009B (DI re-homing, ADR-001).
 
@@ -293,7 +293,7 @@ Tasks touching shared Core/Http/DI projects are higher blast radius and REQUIRE 
 
 ## Recovery Pointer — ▶ ACTIVE (M-OKX)
 - **Current Task:** starting M-OKX. 8/22 done (M-BYBIT shipped). Branch `feat/m3-okx` off main (PR #11 merged as e7c0268; main protected: required check "Build & Test" + strict up-to-date — keep this branch current with main).
-- **Status:** RESUMED. M-BYBIT merged to main. Next: re-plan the OKX wave to incorporate TASK-009B (DI re-homing) + ADR-001, then implement TASK-009 (credential/signing generalization — Core/Http, HIGHEST blast radius, must stay non-breaking for Binance AND Bybit).
+- **Status:** RESUMED. TASK-009 IMPLEMENTED + committed (63b0006, additive Core/Auth, 239 tests pass, no Binance/Bybit edits) and IN_REVIEW (4-reviewer gate dispatched). TASK-009B (DI re-homing) sequenced AFTER TASK-009 clears (both HIGH blast radius — keep diffs/build clean). Then Wave 7 = TASK-010 (OKX scaffold, depends on TASK-009). Keep feat/m3-okx current with main.
 - **Historical note:** prior HOLD (await user merge of PR #11) is resolved — merged 2026-06-18.
 - **PR-review fixes applied (pushed, not merged):** GitHub Copilot reviewer found a real bug in BybitErrorTranslator.Parse (retMsg GetString() w/o ValueKind guard → InvalidOperationException escapes catch). Fixed + 3 regression tests in commit 5643ff5; Copilot thread resolved. CodeRabbit was rate-limited (no review). Bybit unit tests now 80.
 - **DI DESIGN — DECIDED (ADR-001, 2026-06-18):** adopt per-exchange DI (option b). Move `AddBinanceExchange`/`AddBybitExchange` into their own assemblies; `AddCryptoExchanges` becomes a thin aggregator. Apply at **M-OKX start, folded with TASK-009** (cheaper at 2 exchanges than 4); implement OKX/Bitget DI in-assembly from day one. Pre-v1.0 → breaking namespace move acceptable (optional `[Obsolete]` forwarders). See `nazgul/docs/ADR-001-per-exchange-di-and-conventions.md`.

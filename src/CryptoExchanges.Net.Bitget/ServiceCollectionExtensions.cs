@@ -49,8 +49,8 @@ public static class ServiceCollectionExtensions
             configure: configure,
             timeoutSecondsSelector: o => o.TimeoutSeconds,
             // Host-only BaseAddress (no path) so RequestUri.AbsolutePath/Query == the signed Bitget
-            // requestPath/query. NormalizeHostRoot fails fast if a path segment is present (TASK-021).
-            baseUrlSelector: o => BitgetClientComposer.NormalizeHostRoot(o.BaseUrl),
+            // requestPath/query. ExchangeUrl.NormalizeHostRoot fails fast if a path segment is present.
+            baseUrlSelector: o => ExchangeUrl.NormalizeHostRoot(o.BaseUrl),
             symbolMapperFactory: () => new SymbolMapper(BitgetSymbolFormat.Instance),
             mapperFactory: BitgetClientComposer.CreateMapper,
             configureHttpClient: null,

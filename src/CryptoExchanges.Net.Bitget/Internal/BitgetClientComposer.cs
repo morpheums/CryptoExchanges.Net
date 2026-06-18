@@ -96,29 +96,11 @@ internal static class BitgetClientComposer
         var hc = CryptoExchanges.Net.Http.HttpClientPipelineBuilder.Build(
             inner, resilienceOptions, translator, gate, requestFinalizer: finalizer);
         // BaseAddress is host-only (no path) so RequestUri.AbsolutePath == the Bitget requestPath and
-        // RequestUri.Query == the signed query string (the prehash invariant from TASK-021). Guarding
-        // here keeps the sign-consistency self-enforcing on the container-free path too.
-        hc.BaseAddress = new Uri(NormalizeHostRoot(options.BaseUrl));
+        // RequestUri.Query == the signed query string (the prehash invariant from TASK-021). The shared
+        // ExchangeUrl.NormalizeHostRoot guard keeps sign-consistency self-enforcing on this path too.
+        hc.BaseAddress = new Uri(CryptoExchanges.Net.Http.ExchangeUrl.NormalizeHostRoot(options.BaseUrl));
         hc.Timeout = TimeSpan.FromSeconds(options.TimeoutSeconds);
         hc.DefaultRequestHeaders.Add("User-Agent", "CryptoExchanges.Net/0.1.0");
         return hc;
-    }
-
-    /// <summary>
-    /// Validates that the configured base URL is a host root with NO path segment, then trims a trailing
-    /// slash. Bitget's signed prehash is reassembled from <c>RequestUri.AbsolutePath</c>/<c>Query</c>; a
-    /// base URL carrying a path would shift those and break the sign-consistency invariant, so this fails
-    /// fast (TASK-021 CONCERN#1) rather than silently producing rejected signatures at runtime.
-    /// </summary>
-    public static string NormalizeHostRoot(string baseUrl)
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(baseUrl);
-        var uri = new Uri(baseUrl, UriKind.Absolute);
-        if (uri.AbsolutePath is not ("/" or ""))
-            throw new ArgumentException(
-                $"Bitget BaseUrl must be a host root with no path segment (got '{uri.AbsolutePath}'); " +
-                "the signed prehash is rebuilt from RequestUri.AbsolutePath/Query and a path prefix would break it.",
-                nameof(baseUrl));
-        return baseUrl.TrimEnd('/');
     }
 }

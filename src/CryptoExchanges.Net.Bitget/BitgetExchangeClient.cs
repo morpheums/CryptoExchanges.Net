@@ -89,7 +89,10 @@ public sealed class BitgetExchangeClient : IExchangeClient, IAsyncDisposable
     {
         var resp = await _http.GetAsync<BitgetObjectResponse<BitgetServerTime>>("/api/v2/public/time", signed: false, ct: ct).ConfigureAwait(false);
         var serverTimeMs = ServerTimeMs(resp.Data);
-        _timeSync.ApplyOffset(serverTimeMs, DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(), _offsetHolder);
+        // A missing/malformed /time payload (ServerTimeMs returns 0) is a degraded but non-fatal
+        // response: skip the offset update (keep the prior/local clock) rather than throw.
+        if (serverTimeMs > 0)
+            _timeSync.ApplyOffset(serverTimeMs, DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(), _offsetHolder);
     }
 
     /// <inheritdoc />

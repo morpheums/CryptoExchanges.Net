@@ -1,6 +1,7 @@
 using System.Net.Http.Json;
 using System.Text;
 using CryptoExchanges.Net.Bitget.Resilience;
+using CryptoExchanges.Net.Http;
 
 namespace CryptoExchanges.Net.Bitget;
 
@@ -78,19 +79,7 @@ internal sealed class BitgetHttpClient(HttpClient httpClient) : IBitgetHttpClien
 
     private static string BuildUrl(string endpoint, Dictionary<string, string>? parameters)
     {
-        var query = BuildQueryString(parameters);
+        var query = ExchangeUrl.BuildQueryString(parameters);
         return string.IsNullOrEmpty(query) ? endpoint : $"{endpoint}?{query}";
-    }
-
-    private static string BuildQueryString(Dictionary<string, string>? parameters)
-    {
-        if (parameters is null || parameters.Count == 0) return string.Empty;
-        var sb = new StringBuilder();
-        foreach (var kvp in parameters)
-        {
-            if (sb.Length > 0) sb.Append('&');
-            sb.Append(Uri.EscapeDataString(kvp.Key)).Append('=').Append(Uri.EscapeDataString(kvp.Value));
-        }
-        return sb.ToString();
     }
 }

@@ -12,9 +12,9 @@ Add three new exchange integrations to CryptoExchanges.Net in strict priority or
 
 ## Status Summary
 - Total tasks: 23 (added TASK-009B per ADR-001)
-- DONE: 15 | READY: 0 | IN_PROGRESS: 0 | IMPLEMENTED: 0 | IN_REVIEW: 0 | CHANGES_REQUESTED: 0 | BLOCKED: 0 | PLANNED: 8
-- Current iteration: 8/40
-- Active task: none — Wave 9 DONE (TASK-012 + TASK-014, gates passed). 15/23 done. Next: Wave 10 = TASK-015 (closes M-OKX).
+- DONE: 15 | READY: 0 | IN_PROGRESS: 0 | IMPLEMENTED: 1 | IN_REVIEW: 0 | CHANGES_REQUESTED: 0 | BLOCKED: 0 | PLANNED: 7
+- Current iteration: 9/40
+- Active task: TASK-015 IMPLEMENTED (awaiting review gate) — closes M-OKX. 15/23 DONE + 1 implemented.
 
 ## Scoping Decisions (HITL — committed, not open questions)
 The objective is fully prescriptive on scope/sequence/signing; these are the choices made decisively:
@@ -122,7 +122,7 @@ Tasks touching shared Core/Http/DI projects are higher blast radius and REQUIRE 
 - [x] TASK-014: OkxHttpClient + interface -> DONE
 
 ### Group 10 (= Wave 10)
-- [ ] TASK-015: OKX services + mapping + error + time + tests + AddOkxExchange DI (closes M-OKX) -> PLANNED
+- [ ] TASK-015: OKX services + mapping + error + time + tests + AddOkxExchange DI (closes M-OKX) -> IMPLEMENTED (awaiting review gate)
 
 ### Group 11 (= Wave 11)
 - [ ] TASK-016: Core ExchangeId.Bitget enum member -> PLANNED
@@ -229,11 +229,12 @@ Tasks touching shared Core/Http/DI projects are higher blast radius and REQUIRE 
 - **Manifest**: nazgul/tasks/TASK-014.md
 
 ### TASK-015: OKX services + mapping + error + time + tests + AddOkxExchange DI (closes M-OKX)
-- **Status**: IN_PROGRESS
+- **Status**: IMPLEMENTED
 - **Group**: 10
 - **Depends on**: TASK-012, TASK-014
 - **Base SHA**: f03c2092318332a0dc16215fdae7e7b9ac25cc43
 - **claimed_at**: 2026-06-18
+- **Commit**: 5fb566140c18f60833cd7bcb41a5ea8cd2c481c0
 - **Manifest**: nazgul/tasks/TASK-015.md
 
 ### TASK-016: Core ExchangeId.Bitget enum member
@@ -303,9 +304,9 @@ Tasks touching shared Core/Http/DI projects are higher blast radius and REQUIRE 
 - After merge: cut `feat/m3-okx` off updated main for M-OKX (TASK-009–015) → PR/merge → branch for M-BITGET (TASK-016–022).
 
 ## Recovery Pointer — ▶ ACTIVE (M-OKX)
-- **Current Task:** none — Wave 9 DONE (TASK-012 OkxSigningHandler + TASK-014 OkxHttpClient, both gates PASSED). 15/23 done. Branch `feat/m3-okx`; keep current with main (protected: "Build & Test" + strict up-to-date).
+- **Current Task:** TASK-015 IMPLEMENTED (commit 5fb5661) — awaiting review gate. Branch `feat/m3-okx`. Diff captured at nazgul/reviews/TASK-015/diff.patch.
 
-- **Status:** NEXT = Wave 10 = TASK-015 — the M-OKX milestone-closer (single large task): OKX market-data/trading/account services + DeltaMapper profiles + composer + public OkxExchangeClient + OkxErrorTranslator + OkxTimeSync + unit & integration tests + AddOkxExchange DI (in-assembly per ADR-001). Depends TASK-012 + TASK-014 (DONE). CARRY-INs for TASK-015: (1) secret+passphrase-gated finalizer so OkxOptions.ToCredentials() (throws on empty passphrase) is only called when both present; (2) build OkxErrorTranslator + OkxTimeSync INTERNAL from the start (ADR-001 conv #2); (3) market-order round-trip regression test (TASK-013 fix); (4) if OKX place-order needs a nested/array JSON body, add a typed-body overload to OkxHttpClient.PostAsync (TASK-014 carry). OKX signing: base64 prehash timestamp+METHOD+requestPath+body; headers OK-ACCESS-KEY/SIGN/TIMESTAMP/PASSPHRASE; symbol BTC-USDT. After M-OKX closes → PR feat/m3-okx → main (per-exchange PR strategy). OKX PR changelog: AddXxxExchange namespace moved to exchange assemblies; Binance signing types now internal.
+- **Status:** TASK-015 (M-OKX milestone-closer) is IMPLEMENTED. NEXT ACTION = review gate (architect + code + security + api). All carry-ins addressed: (1) secret+passphrase-gated finalizer returns PassThrough when either missing — strings passed directly, ToCredentials never hit in signing path; (2) OkxErrorTranslator + OkxTimeSync built INTERNAL; (3) market-order round-trip regression test present (ParseOrderType/ParseTimeInForce both accept "market"); (4) place-order single-order body uses the flat string dict (all spot fields scalar), and a NEW typed object-body PostAsync overload was added for cancel-batch-orders' JSON array. VERIFICATION: build 0W/0E (TWAE); unit ALL pass (OKX 91 new; no Binance/Bybit regression); integration ALL pass (OKX 6 new + Bybit 5/5). Public surface (reflection-confirmed): only OkxExchangeClient + OkxOptions (+ AddOkxExchange host). On gate PASS → mark TASK-015 DONE + close M-OKX → run milestone-close checklist (macro-architecture pass) → PR feat/m3-okx → main (per-exchange PR strategy; confirm with user before merge). OKX PR changelog: AddXxxExchange in exchange assemblies; Binance signing internal; OKX translator/timesync internal; new typed object-body OkxHttpClient.PostAsync overload.
 
 - **Historical note:** prior HOLD (await user merge of PR #11) is resolved — merged 2026-06-18.
 - **PR-review fixes applied (pushed, not merged):** GitHub Copilot reviewer found a real bug in BybitErrorTranslator.Parse (retMsg GetString() w/o ValueKind guard → InvalidOperationException escapes catch). Fixed + 3 regression tests in commit 5643ff5; Copilot thread resolved. CodeRabbit was rate-limited (no review). Bybit unit tests now 80.

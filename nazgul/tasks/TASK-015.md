@@ -107,4 +107,4 @@ Confirmed via reflection on the compiled assembly: ONLY `OkxExchangeClient`, `Ok
 - OKX Integration (OkxPipelineEndToEndTests, [Trait Category=Integration]): 6 tests — four OK-ACCESS-* headers on signed GET+POST with base64 sign, re-sign-on-retry (SeqStub 500→200) single fresh header set, passphrase-missing fast-fail, secretless/passphraseless → PassThrough emits no OK-ACCESS-SIGN, unsigned adds no auth headers.
 
 ## Commits
-- (to be appended after commit)
+- 5fb566140c18f60833cd7bcb41a5ea8cd2c481c0 — feat(M3): TASK-015 OKX services + mapping + error + time + tests + AddOkxExchange DI (closes M-OKX)

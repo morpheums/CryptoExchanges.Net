@@ -1,0 +1,2785 @@
+diff --git a/CryptoExchanges.Net.sln b/CryptoExchanges.Net.sln
+index 1d087b6..054a8ad 100644
+--- a/CryptoExchanges.Net.sln
++++ b/CryptoExchanges.Net.sln
+@@ -33,6 +33,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CryptoExchanges.Net.Bybit.T
+ EndProject
+ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CryptoExchanges.Net.Okx", "src\CryptoExchanges.Net.Okx\CryptoExchanges.Net.Okx.csproj", "{179D89FC-030B-48CD-9893-D33E87FF1135}"
+ EndProject
++Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CryptoExchanges.Net.Okx.Tests.Unit", "tests\CryptoExchanges.Net.Okx.Tests.Unit\CryptoExchanges.Net.Okx.Tests.Unit.csproj", "{66951EE4-0185-4F92-9C80-B8C7B8D9A761}"
++EndProject
++Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CryptoExchanges.Net.Okx.Tests.Integration", "tests\CryptoExchanges.Net.Okx.Tests.Integration\CryptoExchanges.Net.Okx.Tests.Integration.csproj", "{FE28B1F8-2DA1-4A94-974C-43AA8BEA40B7}"
++EndProject
+ Global
+ 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+ 		Debug|Any CPU = Debug|Any CPU
+@@ -199,6 +203,30 @@ Global
+ 		{179D89FC-030B-48CD-9893-D33E87FF1135}.Release|x64.Build.0 = Release|Any CPU
+ 		{179D89FC-030B-48CD-9893-D33E87FF1135}.Release|x86.ActiveCfg = Release|Any CPU
+ 		{179D89FC-030B-48CD-9893-D33E87FF1135}.Release|x86.Build.0 = Release|Any CPU
++		{66951EE4-0185-4F92-9C80-B8C7B8D9A761}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
++		{66951EE4-0185-4F92-9C80-B8C7B8D9A761}.Debug|Any CPU.Build.0 = Debug|Any CPU
++		{66951EE4-0185-4F92-9C80-B8C7B8D9A761}.Debug|x64.ActiveCfg = Debug|Any CPU
++		{66951EE4-0185-4F92-9C80-B8C7B8D9A761}.Debug|x64.Build.0 = Debug|Any CPU
++		{66951EE4-0185-4F92-9C80-B8C7B8D9A761}.Debug|x86.ActiveCfg = Debug|Any CPU
++		{66951EE4-0185-4F92-9C80-B8C7B8D9A761}.Debug|x86.Build.0 = Debug|Any CPU
++		{66951EE4-0185-4F92-9C80-B8C7B8D9A761}.Release|Any CPU.ActiveCfg = Release|Any CPU
++		{66951EE4-0185-4F92-9C80-B8C7B8D9A761}.Release|Any CPU.Build.0 = Release|Any CPU
++		{66951EE4-0185-4F92-9C80-B8C7B8D9A761}.Release|x64.ActiveCfg = Release|Any CPU
++		{66951EE4-0185-4F92-9C80-B8C7B8D9A761}.Release|x64.Build.0 = Release|Any CPU
++		{66951EE4-0185-4F92-9C80-B8C7B8D9A761}.Release|x86.ActiveCfg = Release|Any CPU
++		{66951EE4-0185-4F92-9C80-B8C7B8D9A761}.Release|x86.Build.0 = Release|Any CPU
++		{FE28B1F8-2DA1-4A94-974C-43AA8BEA40B7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
++		{FE28B1F8-2DA1-4A94-974C-43AA8BEA40B7}.Debug|Any CPU.Build.0 = Debug|Any CPU
++		{FE28B1F8-2DA1-4A94-974C-43AA8BEA40B7}.Debug|x64.ActiveCfg = Debug|Any CPU
++		{FE28B1F8-2DA1-4A94-974C-43AA8BEA40B7}.Debug|x64.Build.0 = Debug|Any CPU
++		{FE28B1F8-2DA1-4A94-974C-43AA8BEA40B7}.Debug|x86.ActiveCfg = Debug|Any CPU
++		{FE28B1F8-2DA1-4A94-974C-43AA8BEA40B7}.Debug|x86.Build.0 = Debug|Any CPU
++		{FE28B1F8-2DA1-4A94-974C-43AA8BEA40B7}.Release|Any CPU.ActiveCfg = Release|Any CPU
++		{FE28B1F8-2DA1-4A94-974C-43AA8BEA40B7}.Release|Any CPU.Build.0 = Release|Any CPU
++		{FE28B1F8-2DA1-4A94-974C-43AA8BEA40B7}.Release|x64.ActiveCfg = Release|Any CPU
++		{FE28B1F8-2DA1-4A94-974C-43AA8BEA40B7}.Release|x64.Build.0 = Release|Any CPU
++		{FE28B1F8-2DA1-4A94-974C-43AA8BEA40B7}.Release|x86.ActiveCfg = Release|Any CPU
++		{FE28B1F8-2DA1-4A94-974C-43AA8BEA40B7}.Release|x86.Build.0 = Release|Any CPU
+ 	EndGlobalSection
+ 	GlobalSection(SolutionProperties) = preSolution
+ 		HideSolutionNode = FALSE
+@@ -210,5 +238,7 @@ Global
+ 		{B1C2D3E4-F5A6-4789-9ABC-DEF012345601} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
+ 		{C2D3E4F5-A6B7-4890-9BCD-EF0123456702} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
+ 		{179D89FC-030B-48CD-9893-D33E87FF1135} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
++		{66951EE4-0185-4F92-9C80-B8C7B8D9A761} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
++		{FE28B1F8-2DA1-4A94-974C-43AA8BEA40B7} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
+ 	EndGlobalSection
+ EndGlobal
+diff --git a/nazgul/plan.md b/nazgul/plan.md
+index 0cbed4a..f7462f4 100644
+--- a/nazgul/plan.md
++++ b/nazgul/plan.md
+@@ -229,9 +229,11 @@ Tasks touching shared Core/Http/DI projects are higher blast radius and REQUIRE
+ - **Manifest**: nazgul/tasks/TASK-014.md
+ 
+ ### TASK-015: OKX services + mapping + error + time + tests + AddOkxExchange DI (closes M-OKX)
+-- **Status**: PLANNED
++- **Status**: IN_PROGRESS
+ - **Group**: 10
+ - **Depends on**: TASK-012, TASK-014
++- **Base SHA**: f03c2092318332a0dc16215fdae7e7b9ac25cc43
++- **claimed_at**: 2026-06-18
+ - **Manifest**: nazgul/tasks/TASK-015.md
+ 
+ ### TASK-016: Core ExchangeId.Bitget enum member
+diff --git a/nazgul/reviews/TASK-015/diff.patch b/nazgul/reviews/TASK-015/diff.patch
+new file mode 100644
+index 0000000..e69de29
+diff --git a/nazgul/tasks/TASK-015.md b/nazgul/tasks/TASK-015.md
+index fcd1202..1bfd054 100644
+--- a/nazgul/tasks/TASK-015.md
++++ b/nazgul/tasks/TASK-015.md
+@@ -1,6 +1,6 @@
+ ---
+ id: TASK-015
+-status: PLANNED
++status: IMPLEMENTED
+ ---
+ 
+ # TASK-015: OKX services + mapping + error + time + tests + AddOkxExchange DI (closes M-OKX)
+@@ -67,3 +67,44 @@ Complete OKX to spot-REST parity and ship it. Implement the three services, `Okx
+ 
+ ## Test Requirements
+ - This IS the test task for OKX. Coverage: base64 signature vector, prehash assembly (GET path+query vs POST body, ISO timestamp), four-header signing + re-sign-on-retry (stub handler), passphrase-missing fast-fail, hyphen symbol round-trip, parsers, validation, per-service DeltaMapper mapping, error mapping, time sync, and DI resolution.
++
++## Base SHA
++- f03c2092318332a0dc16215fdae7e7b9ac25cc43
++
++## Implementation Notes
++
++### Services + DTOs
++- **OkxMarketDataService** (`/api/v5/market/tickers`, `/ticker`, `/books`, `/candles`, `/trades`, `/public/instruments`). Single-symbol tickers use `/ticker?instId=`; full universe uses `/tickers?instType=SPOT` with per-row skip on unresolvable symbols (mirrors Bybit `TryMapTicker`). Lazy cached supported-symbol set for opt-in `IsSupportedAsync`/`ResolveSymbolAsync`. Order book/candles/trades built directly (Binance/Bybit-precedent exception to DeltaMapper). Book/candles/trades limits clamped (books≤400, candles≤100, trades≤500).
++- **OkxTradingService** (`/api/v5/trade/order` POST place + GET single, `/cancel-order`, `/cancel-batch-orders`, `/orders-pending`, `/orders-history`). Spot uses `tdMode=cash`. Place/cancel return id-only acks → re-fetch full order via GET `/api/v5/trade/order` (by ordId, falling back to clOrdId when the ack omits ordId — TASK-006 cancel-by-clientId precedent). `CancelAllOrdersAsync` enumerates open orders then batch-cancels (OKX has no symbol-scoped cancel-all).
++- **OkxAccountService** (`/api/v5/account/balance` → `data[].details[]`, `/api/v5/trade/fills`). Balances trimmed to non-zero. Fills→Trade built directly; IsBuyerMaker derived from side + execType (M=maker/T=taker). History limit clamped to 100.
++
++### Place-order POST-body decision (TASK-014 carry)
++OKX `/api/v5/trade/order` body is a JSON OBJECT whose spot fields are ALL scalar strings (instId, tdMode, side, ordType, sz, px, clOrdId, tgtCcy). The existing `IOkxHttpClient.PostAsync(Dictionary<string,string>)` serializes exactly that flat object as the verbatim wire body the signer reads back, so it is sufficient for single-order placement — no nested/typed body needed there. HOWEVER `/api/v5/trade/cancel-batch-orders` takes a JSON ARRAY of `{instId,ordId}`; to send that verbatim I ADDED a typed object-body overload `PostAsync<T>(string endpoint, object body, bool signed, ct)` (factored both POST paths through a shared `PostJsonAsync`). Market orders send NO `px` (OKX rejects px on market); market-buy-by-quote sets `sz`=quote value + `tgtCcy=quote_ccy`.
++
++### DeltaMapper profile (OkxResponseProfile)
++DTO→domain maps for OkxOrder→Order, OkxTicker→Ticker, OkxInstrument→SymbolInfo, OkxBalanceDetail→AssetBalance. All decimal/enum/timestamp conversions via `OkxValueParsers` + `ISymbolMapper.FromWire`/`FromComponents`. `AssertConfigurationIsValid()` invoked in `OkxClientComposer.CreateMapper` (unit-tested). Notable: `CumulativeQuoteQuantity` = accFillSz × avgPx (OKX exposes no direct quote-filled field); ticker `PriceChangePercent` computed from `(last-open24h)/open24h*100` (OKX has no fractional-change field), with a divide-by-zero guard; `TimeInForce` and `Type` both key off `ordType` (so both parsers accept every value incl. "market"). No AutoMapper, no hand-rolled mapping in services except the documented Trade/OrderBook/Candlestick direct-build precedent.
++
++### Error-code map (OkxErrorTranslator, INTERNAL)
++OKX success is `code == "0"` (STRING) → never an error. Inspects top-level `code`/`msg` AND per-order `data[0].sCode`/`sMsg` (used when top-level code is "0"/absent — OKX rejects individual orders that way). Mappings (real OKX V5 codes, conservative): 429 / 50011 / 50013 → RateLimitExceeded (RetryAfter from headers); 401/403 + 50100–50105 / 50111–50114 → Authentication (passphrase/timestamp/signature family); 51008/51119/51131 → InsufficientBalance; 51000/51001/51002/51005/51006/51020/51400/51402/51503 → InvalidOrder; everything else → ExchangeApiException. ValueKind-guarded JSON reads (no InvalidOperationException escape, per code-reviewer rule); numeric `code` is parsed to the typed exception's int? where possible.
++
++### Time sync (OkxTimeSync, INTERNAL)
++`ComputeOffset`/`ApplyOffset` (server-local ms) with the zero-length holder guard (TASK-007 precedent). `OkxExchangeClient.SyncServerTimeAsync` reads `/api/v5/public/time` `data[0].ts` (epoch-ms string) and Interlocked-writes the shared `long[]` holder. The handler does `UtcNow.AddMilliseconds(offset)` then `OkxSignatureService.FormatTimestamp` (ISO-8601) — offset stays in ms, consistent with Bybit.
++
++### DI wiring + AddOkxExchange location (ADR-001)
++`AddOkxExchange` lives IN the OKX assembly (`src/CryptoExchanges.Net.Okx/ServiceCollectionExtensions.cs`), mirroring `AddBybitExchange`. Keyed-by-`ExchangeId.Okx` singletons (offset holder, ISymbolMapper, IMapper, IExchangeClient), named HttpClient "okx" with host-only BaseAddress, `ApplyResiliencePipeline` (Okx translator + ReactiveRateLimitGate). **Secret+passphrase-gated finalizer**: returns `PassThroughHandler` when SecretKey OR Passphrase is missing/empty, else `OkxSigningHandler(apiKey, passphrase, new OkxSignatureService(secret), () => Interlocked.Read(holder))` — strings passed directly, so `OkxOptions.ToCredentials()` (throws on empty passphrase) is NEVER called in the signing path (resolves TASK-010 carry-in). The thin DI aggregator `CryptoExchanges.Net.DependencyInjection` was extended: `AddCryptoExchanges` now calls `AddOkxExchange`, and `CryptoExchangesOptions` gained `OkxBaseUrl/OkxApiKey/OkxSecretKey/OkxPassphrase`. Added ProjectReference DI→Okx and `InternalsVisibleTo` Http→Okx (for internal `ExchangeClientFactory`).
++
++### Public surface
++Confirmed via reflection on the compiled assembly: ONLY `OkxExchangeClient`, `OkxOptions`, and `ServiceCollectionExtensions` (the AddOkxExchange host) are public. OkxErrorTranslator, OkxTimeSync, all services/DTOs, the composer, value parsers, validation, symbol format, signing types — all internal. (OKX ships cleaner than Bybit, whose translator/timesync are public for legacy reasons; ADR-001 conv #2.)
++
++## Verification
++- `dotnet build CryptoExchanges.Net.sln` → **0 warnings, 0 errors** (Debug, TreatWarningsAsErrors).
++- `dotnet test --filter 'Category!=Integration'` → **ALL pass**. OKX unit = **91** (new). Others unchanged: Core 93, Http 12, Bybit 80, DI 11, Binance(unit) 45. No Binance/Bybit regression.
++- `dotnet test --filter 'Category=Integration'` → **ALL pass**. OKX integration = **6** (new), Bybit 5/5 unchanged.
++- Public surface confirmed (reflection): only `OkxExchangeClient` + `OkxOptions` (+ the AddOkxExchange `ServiceCollectionExtensions`) among new OKX types.
++
++### Test counts
++- OKX Unit (OkxSigningTests + OkxMappingAndServiceTests): 91 tests — base64 sig vector + Core-HMAC agreement, GET/POST prehash assembly, ISO-8601 timestamp (incl. tz→UTC), BTC-USDT round-trip, parsers + validation, error-code→exception (incl. code=="0" not-an-error + per-order sCode), time-sync + zero-length guard, per-service DeltaMapper mapping over mocked IOkxHttpClient, MARKET-ORDER round-trip regression, DI resolution (keyed client; secretless OR passphraseless → PassThrough/still-resolves; AddCryptoExchanges resolves OKX+Bybit+Binance).
++- OKX Integration (OkxPipelineEndToEndTests, [Trait Category=Integration]): 6 tests — four OK-ACCESS-* headers on signed GET+POST with base64 sign, re-sign-on-retry (SeqStub 500→200) single fresh header set, passphrase-missing fast-fail, secretless/passphraseless → PassThrough emits no OK-ACCESS-SIGN, unsigned adds no auth headers.
++
++## Commits
++- (to be appended after commit)
+diff --git a/src/CryptoExchanges.Net.DependencyInjection/CryptoExchanges.Net.DependencyInjection.csproj b/src/CryptoExchanges.Net.DependencyInjection/CryptoExchanges.Net.DependencyInjection.csproj
+index 51718ca..1e5c8fe 100644
+--- a/src/CryptoExchanges.Net.DependencyInjection/CryptoExchanges.Net.DependencyInjection.csproj
++++ b/src/CryptoExchanges.Net.DependencyInjection/CryptoExchanges.Net.DependencyInjection.csproj
+@@ -11,6 +11,7 @@
+     <ProjectReference Include="..\CryptoExchanges.Net.Core\CryptoExchanges.Net.Core.csproj" />
+     <ProjectReference Include="..\CryptoExchanges.Net.Binance\CryptoExchanges.Net.Binance.csproj" />
+     <ProjectReference Include="..\CryptoExchanges.Net.Bybit\CryptoExchanges.Net.Bybit.csproj" />
++    <ProjectReference Include="..\CryptoExchanges.Net.Okx\CryptoExchanges.Net.Okx.csproj" />
+     <ProjectReference Include="..\CryptoExchanges.Net.Http\CryptoExchanges.Net.Http.csproj" />
+   </ItemGroup>
+ 
+diff --git a/src/CryptoExchanges.Net.DependencyInjection/ServiceCollectionExtensions.cs b/src/CryptoExchanges.Net.DependencyInjection/ServiceCollectionExtensions.cs
+index 633fcc3..adfc8db 100644
+--- a/src/CryptoExchanges.Net.DependencyInjection/ServiceCollectionExtensions.cs
++++ b/src/CryptoExchanges.Net.DependencyInjection/ServiceCollectionExtensions.cs
+@@ -1,5 +1,6 @@
+ using CryptoExchanges.Net.Binance;
+ using CryptoExchanges.Net.Bybit;
++using CryptoExchanges.Net.Okx;
+ using Microsoft.Extensions.DependencyInjection;
+ 
+ namespace CryptoExchanges.Net.DependencyInjection;
+@@ -42,6 +43,14 @@ public static class ServiceCollectionExtensions
+             opt.SecretKey = options.BybitSecretKey ?? opt.SecretKey;
+         });
+ 
++        services.AddOkxExchange(opt =>
++        {
++            opt.BaseUrl = options.OkxBaseUrl ?? opt.BaseUrl;
++            opt.ApiKey = options.OkxApiKey ?? opt.ApiKey;
++            opt.SecretKey = options.OkxSecretKey ?? opt.SecretKey;
++            opt.Passphrase = options.OkxPassphrase ?? opt.Passphrase;
++        });
++
+         return services;
+     }
+ }
+@@ -69,4 +78,16 @@ public sealed class CryptoExchangesOptions
+ 
+     /// <summary>Bybit API secret key.</summary>
+     public string? BybitSecretKey { get; set; }
++
++    /// <summary>OKX API base URL override.</summary>
++    public string? OkxBaseUrl { get; set; }
++
++    /// <summary>OKX API key.</summary>
++    public string? OkxApiKey { get; set; }
++
++    /// <summary>OKX API secret key.</summary>
++    public string? OkxSecretKey { get; set; }
++
++    /// <summary>OKX API passphrase (the third OKX credential, required for signed endpoints).</summary>
++    public string? OkxPassphrase { get; set; }
+ }
+diff --git a/src/CryptoExchanges.Net.Http/CryptoExchanges.Net.Http.csproj b/src/CryptoExchanges.Net.Http/CryptoExchanges.Net.Http.csproj
+index c46ebec..9f17184 100644
+--- a/src/CryptoExchanges.Net.Http/CryptoExchanges.Net.Http.csproj
++++ b/src/CryptoExchanges.Net.Http/CryptoExchanges.Net.Http.csproj
+@@ -7,6 +7,7 @@
+          internal ExchangeClientFactory living here. -->
+     <InternalsVisibleTo Include="CryptoExchanges.Net.Binance" />
+     <InternalsVisibleTo Include="CryptoExchanges.Net.Bybit" />
++    <InternalsVisibleTo Include="CryptoExchanges.Net.Okx" />
+   </ItemGroup>
+   <ItemGroup>
+     <PackageReference Include="Microsoft.Extensions.Http.Resilience" Version="10.7.0" />
+diff --git a/src/CryptoExchanges.Net.Okx/IOkxHttpClient.cs b/src/CryptoExchanges.Net.Okx/IOkxHttpClient.cs
+index 4fc3e4c..5a96929 100644
+--- a/src/CryptoExchanges.Net.Okx/IOkxHttpClient.cs
++++ b/src/CryptoExchanges.Net.Okx/IOkxHttpClient.cs
+@@ -6,9 +6,15 @@ internal interface IOkxHttpClient
+     /// <summary>Sends a GET and deserializes the JSON response.</summary>
+     Task<T> GetAsync<T>(string endpoint, Dictionary<string, string>? parameters = null, bool signed = false, CancellationToken ct = default);
+ 
+-    /// <summary>Sends a POST (JSON body) and deserializes the JSON response.</summary>
++    /// <summary>Sends a POST (flat JSON-object body) and deserializes the JSON response.</summary>
+     Task<T> PostAsync<T>(string endpoint, Dictionary<string, string>? parameters = null, bool signed = true, CancellationToken ct = default);
+ 
++    /// <summary>
++    /// Sends a POST whose body is an arbitrary object (e.g. a JSON array for batch endpoints) and
++    /// deserializes the JSON response. The serialized body is the verbatim wire body the signer reads.
++    /// </summary>
++    Task<T> PostAsync<T>(string endpoint, object body, bool signed = true, CancellationToken ct = default);
++
+     /// <summary>Sends a DELETE and deserializes the JSON response.</summary>
+     Task<T> DeleteAsync<T>(string endpoint, Dictionary<string, string>? parameters = null, bool signed = true, CancellationToken ct = default);
+ }
+diff --git a/src/CryptoExchanges.Net.Okx/Internal/OkxClientComposer.cs b/src/CryptoExchanges.Net.Okx/Internal/OkxClientComposer.cs
+new file mode 100644
+index 0000000..95b2fdf
+--- /dev/null
++++ b/src/CryptoExchanges.Net.Okx/Internal/OkxClientComposer.cs
+@@ -0,0 +1,102 @@
++using CryptoExchanges.Net.Okx.Auth;
++using CryptoExchanges.Net.Okx.Mapping;
++using CryptoExchanges.Net.Okx.Resilience;
++using CryptoExchanges.Net.Okx.Services;
++using CryptoExchanges.Net.Core;
++using CryptoExchanges.Net.Core.Enums;
++using CryptoExchanges.Net.Core.Interfaces;
++using DeltaMapper;
++using Microsoft.Extensions.DependencyInjection;
++
++namespace CryptoExchanges.Net.Okx.Internal;
++
++/// <summary>Single composition point for an OKX client — shared by the container-free
++/// <see cref="OkxExchangeClient.Create"/> path and the DI registration.</summary>
++internal static class OkxClientComposer
++{
++    /// <summary>Builds an IMapper from the OKX response profile bound to the given symbol mapper.</summary>
++    public static IMapper CreateMapper(ISymbolMapper symbolMapper)
++    {
++        var config = MapperConfiguration.Create(cfg => cfg.AddProfile(new OkxResponseProfile(symbolMapper)));
++        config.AssertConfigurationIsValid();
++        return config.CreateMapper();
++    }
++
++    /// <summary>Container-free composition: builds the resilient HttpClient and the fully-wired client.</summary>
++    public static OkxExchangeClient Create(OkxOptions options)
++    {
++        ArgumentNullException.ThrowIfNull(options);
++        var offsetHolder = new long[] { 0L };
++        var hc = BuildResilientHttpClient(options, offsetHolder);
++        var http = new OkxHttpClient(hc);
++        return ComposeOver(http, hc, ownsHttpClient: true, offsetHolder);
++    }
++
++    /// <summary>Wires symbol mapper + IMapper + the 3 services + the client over a given http client.</summary>
++    public static OkxExchangeClient ComposeOver(
++        IOkxHttpClient http, HttpClient? httpClient, bool ownsHttpClient, long[] offsetHolder)
++    {
++        ISymbolMapper symbolMapper = new SymbolMapper(OkxSymbolFormat.Instance);
++        return ComposeWith(http, symbolMapper, CreateMapper(symbolMapper), httpClient, ownsHttpClient, offsetHolder);
++    }
++
++    /// <summary>Wires the 3 services + client using already-resolved symbol mapper + IMapper (DI path).</summary>
++    public static OkxExchangeClient ComposeWith(
++        IOkxHttpClient http, ISymbolMapper symbolMapper, IMapper mapper,
++        HttpClient? httpClient, bool ownsHttpClient, long[] offsetHolder)
++    {
++        var market = new OkxMarketDataService(http, symbolMapper, mapper);
++        var trading = new OkxTradingService(http, symbolMapper, mapper);
++        var account = new OkxAccountService(http, symbolMapper, mapper);
++        return new OkxExchangeClient(http, market, trading, account, ownsHttpClient, httpClient, offsetHolder);
++    }
++
++    /// <summary>DI composition: resolves the keyed symbol mapper + IMapper from the container and wires
++    /// the services + client over the factory-owned http client (ownsHttpClient: false — IHttpClientFactory
++    /// owns the underlying HttpClient lifetime).</summary>
++    public static OkxExchangeClient ComposeForDi(IServiceProvider sp, IOkxHttpClient http, long[] offsetHolder)
++    {
++        ArgumentNullException.ThrowIfNull(sp);
++        var symbolMapper = sp.GetRequiredKeyedService<ISymbolMapper>(ExchangeId.Okx);
++        var mapper = sp.GetRequiredKeyedService<IMapper>(ExchangeId.Okx);
++        // INVARIANT: ownsHttpClient MUST stay false — IHttpClientFactory owns the HttpClient and its
++        // handler chain; this client must NOT dispose it. Flipping this would double-dispose factory state.
++        return ComposeWith(http, symbolMapper, mapper, httpClient: null, ownsHttpClient: false, offsetHolder);
++    }
++
++    /// <summary>Builds the resilient HttpClient (factory-less path) with a secret+passphrase-gated signing
++    /// finalizer over the shared offset holder. A client missing the secret OR the passphrase gets a no-op
++    /// PassThrough finalizer so public market-data works without full credentials (mirrors the DI gate).</summary>
++    public static HttpClient BuildResilientHttpClient(OkxOptions options, long[] offsetHolder)
++    {
++        ArgumentNullException.ThrowIfNull(options);
++        ArgumentNullException.ThrowIfNull(offsetHolder);
++
++        var inner = new SocketsHttpHandler { PooledConnectionLifetime = TimeSpan.FromMinutes(2) };
++        var resilienceOptions = new CryptoExchanges.Net.Core.Resilience.ResilienceOptions();
++        var translator = new OkxErrorTranslator();
++        var gate = new CryptoExchanges.Net.Http.ReactiveRateLimitGate();
++
++        // Options are final here, so the gate is decided now. OKX signing needs BOTH the secret AND the
++        // passphrase; if either is missing the client gets a no-op PassThroughHandler. Because the gate
++        // requires both, the secret/passphrase are passed to OkxSigningHandler directly — no
++        // OkxOptions.ToCredentials() (which throws on an empty passphrase) is needed in the signing path.
++        DelegatingHandler finalizer =
++            (string.IsNullOrEmpty(options.SecretKey) || string.IsNullOrEmpty(options.Passphrase))
++                ? new CryptoExchanges.Net.Http.PassThroughHandler()
++                : new OkxSigningHandler(
++                    options.ApiKey,
++                    options.Passphrase,
++                    new OkxSignatureService(options.SecretKey),
++                    () => Interlocked.Read(ref offsetHolder[0]));
++
++        var hc = CryptoExchanges.Net.Http.HttpClientPipelineBuilder.Build(
++            inner, resilienceOptions, translator, gate, requestFinalizer: finalizer);
++        // BaseAddress is host-only (no path) so RequestUri.PathAndQuery == the OKX requestPath that gets
++        // signed (the prehash invariant from TASK-014).
++        hc.BaseAddress = new Uri(options.BaseUrl.TrimEnd('/'));
++        hc.Timeout = TimeSpan.FromSeconds(options.TimeoutSeconds);
++        hc.DefaultRequestHeaders.Add("User-Agent", "CryptoExchanges.Net/0.1.0");
++        return hc;
++    }
++}
+diff --git a/src/CryptoExchanges.Net.Okx/Mapping/OkxMappingProfiles.cs b/src/CryptoExchanges.Net.Okx/Mapping/OkxMappingProfiles.cs
+new file mode 100644
+index 0000000..e9a7358
+--- /dev/null
++++ b/src/CryptoExchanges.Net.Okx/Mapping/OkxMappingProfiles.cs
+@@ -0,0 +1,95 @@
++using DeltaMapper;
++using CryptoExchanges.Net.Okx.Internal;
++using CryptoExchanges.Net.Okx.Services;
++
++namespace CryptoExchanges.Net.Okx.Mapping;
++
++/// <summary>
++/// DeltaMapper profile mapping OKX V5 response DTOs to venue-neutral domain models.
++/// Decimal, enum, and timestamp fields are converted via <see cref="OkxValueParsers"/> so behaviour
++/// matches the hand-written projections elsewhere in the service exactly. Wire symbol strings are
++/// resolved through the injected <see cref="ISymbolMapper"/>.
++/// </summary>
++internal sealed class OkxResponseProfile : Profile
++{
++    /// <summary>
++    /// Creates the profile, capturing the <paramref name="symbolMapper"/> used to resolve wire symbol
++    /// strings into <see cref="Symbol"/> values inside the mapping expressions.
++    /// </summary>
++    /// <param name="symbolMapper">The symbol mapper used for wire-string resolution.</param>
++    public OkxResponseProfile(ISymbolMapper symbolMapper)
++    {
++        ArgumentNullException.ThrowIfNull(symbolMapper);
++
++        // OkxOrder -> Order
++        CreateMap<OkxOrder, Order>()
++            .ForMember(d => d.Symbol, o => o.MapFrom(s => symbolMapper.FromWire(s.InstId)))
++            .ForMember(d => d.OrderId, o => o.MapFrom(s => s.OrdId))
++            .ForMember(d => d.ClientOrderId, o => o.MapFrom(s => string.IsNullOrEmpty(s.ClOrdId) ? null : s.ClOrdId))
++            .ForMember(d => d.Price, o => o.MapFrom(s => OkxValueParsers.ParseDecimal(s.Px)))
++            .ForMember(d => d.OriginalQuantity, o => o.MapFrom(s => OkxValueParsers.ParseDecimal(s.Sz)))
++            .ForMember(d => d.ExecutedQuantity, o => o.MapFrom(s => OkxValueParsers.ParseDecimal(s.AccFillSz)))
++            .ForMember(d => d.Side, o => o.MapFrom(s => OkxValueParsers.ParseOrderSide(s.Side)))
++            .ForMember(d => d.Type, o => o.MapFrom(s => OkxValueParsers.ParseOrderType(s.OrdType)))
++            .ForMember(d => d.Status, o => o.MapFrom(s => OkxValueParsers.ParseOrderStatus(s.State)))
++            .ForMember(d => d.TimeInForce, o => o.MapFrom(s => OkxValueParsers.ParseTimeInForce(s.OrdType)))
++            .ForMember(d => d.StopPrice, o => o.Ignore())
++            .ForMember(d => d.IcebergQuantity, o => o.Ignore())
++            .ForMember(d => d.CreatedAt, o => o.MapFrom(s => ParseTimestamp(s.CTime)))
++            .ForMember(d => d.UpdatedAt, o => o.MapFrom(s => ParseTimestamp(s.UTime)))
++            // OKX gives accumulated base size (accFillSz) + average fill price (avgPx); the cumulative
++            // quote quantity is their product (0 when there are no fills, since avgPx parses to 0).
++            .ForMember(d => d.CumulativeQuoteQuantity, o => o.MapFrom(s =>
++                OkxValueParsers.ParseDecimal(s.AccFillSz) * OkxValueParsers.ParseDecimal(s.AvgPx)));
++
++        // OkxTicker -> Ticker. OKX reports open24h (the price 24h ago); price change is last - open24h,
++        // and the percent is that change over open24h * 100 (OKX exposes no fractional-change field).
++        CreateMap<OkxTicker, Ticker>()
++            .ForMember(d => d.Symbol, o => o.MapFrom(s => symbolMapper.FromWire(s.InstId)))
++            .ForMember(d => d.LastPrice, o => o.MapFrom(s => OkxValueParsers.ParseDecimal(s.Last)))
++            .ForMember(d => d.OpenPrice, o => o.MapFrom(s => OkxValueParsers.ParseDecimal(s.Open24h)))
++            .ForMember(d => d.HighPrice, o => o.MapFrom(s => OkxValueParsers.ParseDecimal(s.High24h)))
++            .ForMember(d => d.LowPrice, o => o.MapFrom(s => OkxValueParsers.ParseDecimal(s.Low24h)))
++            .ForMember(d => d.Volume, o => o.MapFrom(s => OkxValueParsers.ParseDecimal(s.Vol24h)))
++            .ForMember(d => d.QuoteVolume, o => o.MapFrom(s => OkxValueParsers.ParseDecimal(s.VolCcy24h)))
++            .ForMember(d => d.PriceChange, o => o.MapFrom(s => OkxValueParsers.ParseDecimal(s.Last) - OkxValueParsers.ParseDecimal(s.Open24h)))
++            .ForMember(d => d.PriceChangePercent, o => o.MapFrom(s =>
++                OkxValueParsers.ParseDecimal(s.Open24h) == 0m
++                    ? 0m
++                    : (OkxValueParsers.ParseDecimal(s.Last) - OkxValueParsers.ParseDecimal(s.Open24h)) / OkxValueParsers.ParseDecimal(s.Open24h) * 100m))
++            .ForMember(d => d.Timestamp, o => o.MapFrom(s => ParseTimestamp(s.Ts)));
++
++        // OkxInstrument -> SymbolInfo. OKX instruments expose lot/tick filters under separate fields
++        // this SDK does not yet surface; the numeric filter fields stay null pending a dedicated task.
++        CreateMap<OkxInstrument, SymbolInfo>()
++            .ForMember(d => d.Symbol, o => o.MapFrom(s => symbolMapper.FromComponents(s.BaseCcy, s.QuoteCcy)))
++            .ForMember(d => d.AllowedOrderTypes, o => o.MapFrom(s => DefaultSpotOrderTypes))
++            .ForMember(d => d.MinPrice, o => o.Ignore())
++            .ForMember(d => d.MaxPrice, o => o.Ignore())
++            .ForMember(d => d.TickSize, o => o.Ignore())
++            .ForMember(d => d.MinQuantity, o => o.Ignore())
++            .ForMember(d => d.MaxQuantity, o => o.Ignore())
++            .ForMember(d => d.StepSize, o => o.Ignore())
++            .ForMember(d => d.MinNotional, o => o.Ignore());
++
++        // OkxBalanceDetail -> AssetBalance. OKX reports availBal (free) + frozenBal (locked) directly.
++        // Long-tail coins map to Asset.None rather than throwing.
++        CreateMap<OkxBalanceDetail, AssetBalance>()
++            .ForMember(d => d.Asset, o => o.MapFrom(s => OkxValueParsers.ParseAssetOrNone(s.Ccy)))
++            .ForMember(d => d.Free, o => o.MapFrom(s => OkxValueParsers.ParseDecimal(s.AvailBal)))
++            .ForMember(d => d.Locked, o => o.MapFrom(s => OkxValueParsers.ParseDecimal(s.FrozenBal)));
++    }
++
++    /// <summary>The order types OKX V5 spot accepts (stop/take-profit use the separate algo API).</summary>
++    private static readonly OrderType[] DefaultSpotOrderTypes = [OrderType.Limit, OrderType.Market];
++
++    /// <summary>Parses an OKX string-encoded unix-ms timestamp into an optional instant (null when unset/zero).</summary>
++    private static DateTimeOffset? ParseTimestamp(string value)
++    {
++        if (string.IsNullOrEmpty(value)
++            || !long.TryParse(value, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out var ms)
++            || ms <= 0)
++            return null;
++        return DateTimeOffset.FromUnixTimeMilliseconds(ms);
++    }
++}
+diff --git a/src/CryptoExchanges.Net.Okx/OkxExchangeClient.cs b/src/CryptoExchanges.Net.Okx/OkxExchangeClient.cs
+new file mode 100644
+index 0000000..c4dde1d
+--- /dev/null
++++ b/src/CryptoExchanges.Net.Okx/OkxExchangeClient.cs
+@@ -0,0 +1,138 @@
++using System.Diagnostics.CodeAnalysis;
++using System.Globalization;
++using System.Text.Json.Serialization;
++using CryptoExchanges.Net.Okx.Services;
++using CryptoExchanges.Net.Core.Enums;
++using CryptoExchanges.Net.Core.Interfaces;
++
++namespace CryptoExchanges.Net.Okx;
++
++/// <summary>
++/// Full OKX exchange client implementing <see cref="IExchangeClient"/>.
++/// Composes market data, trading, and account services over the V5 spot REST API.
++/// </summary>
++public sealed class OkxExchangeClient : IExchangeClient, IAsyncDisposable
++{
++    private readonly HttpClient? _httpClient;
++    private readonly bool _ownsHttpClient;
++    // CA1859 suppressed: interface type is intentional — enables typed-client DI and unit testing.
++    [SuppressMessage("Performance", "CA1859:Use concrete types when possible for improved performance", Justification = "IOkxHttpClient is held intentionally for DI / testability.")]
++    private readonly IOkxHttpClient _http;
++
++    /// <summary>
++    /// Clock-skew offset (in ms) shared with the signing handler. Single-element array so the handler's
++    /// closure and <see cref="SyncServerTimeAsync"/> read/write the SAME instance.
++    /// </summary>
++    private readonly long[] _offsetHolder;
++
++    /// <summary>
++    /// Internal composition constructor — called exclusively by <see cref="Internal.OkxClientComposer"/>.
++    /// Signing and the four OK-ACCESS-* headers are owned by the resilience pipeline on
++    /// <paramref name="httpClient"/>, so this client needs no API key / secret / passphrase of its own.
++    /// </summary>
++    internal OkxExchangeClient(
++        IOkxHttpClient http,
++        IMarketDataService marketData,
++        ITradingService trading,
++        IAccountService account,
++        bool ownsHttpClient,
++        HttpClient? httpClient,
++        long[] offsetHolder)
++    {
++        ArgumentNullException.ThrowIfNull(http);
++        ArgumentNullException.ThrowIfNull(offsetHolder);
++        _http = http;
++        MarketData = marketData;
++        Trading = trading;
++        Account = account;
++        _ownsHttpClient = ownsHttpClient;
++        _httpClient = httpClient;
++        _offsetHolder = offsetHolder;
++    }
++
++    /// <inheritdoc />
++    public ExchangeId ExchangeId => ExchangeId.Okx;
++
++    /// <inheritdoc />
++    public IMarketDataService MarketData { get; }
++
++    /// <inheritdoc />
++    public ITradingService Trading { get; }
++
++    /// <inheritdoc />
++    public IAccountService Account { get; }
++
++    /// <summary>Creates a fully-wired client (container-free) for the given options.</summary>
++    /// <param name="options">The OKX client options.</param>
++    public static OkxExchangeClient Create(OkxOptions options)
++        => Internal.OkxClientComposer.Create(options);
++
++    /// <summary>Creates a client from OKX_API_KEY / OKX_SECRET_KEY / OKX_PASSPHRASE environment variables.</summary>
++    public static OkxExchangeClient CreateFromEnvironment()
++        => Create(new()
++        {
++            ApiKey = Environment.GetEnvironmentVariable("OKX_API_KEY") ?? string.Empty,
++            SecretKey = Environment.GetEnvironmentVariable("OKX_SECRET_KEY") ?? string.Empty,
++            Passphrase = Environment.GetEnvironmentVariable("OKX_PASSPHRASE") ?? string.Empty
++        });
++
++    /// <summary>
++    /// Syncs the clock-skew offset from OKX server time so signed requests don't trip a timestamp-expiry
++    /// rejection. Opt-in: call once after construction if the local clock may be skewed.
++    /// </summary>
++    /// <param name="ct">Cancellation token.</param>
++    public async Task SyncServerTimeAsync(CancellationToken ct = default)
++    {
++        var resp = await _http.GetAsync<OkxResponse<OkxServerTime>>("/api/v5/public/time", signed: false, ct: ct).ConfigureAwait(false);
++        var serverTimeMs = ServerTimeMs(resp.Data.FirstOrDefault());
++        var offset = Resilience.OkxTimeSync.ComputeOffset(serverTimeMs, DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
++        Interlocked.Exchange(ref _offsetHolder[0], offset);
++    }
++
++    /// <inheritdoc />
++    public async Task<bool> PingAsync(CancellationToken ct = default)
++    {
++        try
++        {
++            // The resilience pipeline throws typed exceptions on failure, so reaching here is success.
++            _ = await _http.GetAsync<OkxResponse<OkxServerTime>>("/api/v5/public/time", signed: false, ct: ct).ConfigureAwait(false);
++            return true;
++        }
++        catch (OperationCanceledException) when (ct.IsCancellationRequested)
++        {
++            throw;
++        }
++        catch (CryptoExchanges.Net.Core.Exceptions.ExchangeException)
++        {
++            return false;
++        }
++        catch
++        {
++            return false;
++        }
++    }
++
++    /// <inheritdoc />
++    public async ValueTask DisposeAsync()
++    {
++        if (_ownsHttpClient && _httpClient is not null)
++            _httpClient.Dispose();
++        await Task.CompletedTask.ConfigureAwait(false);
++    }
++
++    /// <summary>Resolves server time in unix milliseconds from the V5 time envelope (ts is ms as a string).</summary>
++    private static long ServerTimeMs(OkxServerTime? result)
++    {
++        if (result is null || string.IsNullOrEmpty(result.Ts))
++            return 0L;
++        return long.TryParse(result.Ts, NumberStyles.Integer, CultureInfo.InvariantCulture, out var ms) ? ms : 0L;
++    }
++}
++
++/// <summary>The <c>data</c> element of the OKX V5 <c>/api/v5/public/time</c> response.</summary>
++internal sealed record OkxServerTime
++{
++    /// <summary>Server time in unix milliseconds (string-encoded).</summary>
++    [JsonPropertyName("ts")]
++    public string Ts { get; init; } = "0";
++}
+diff --git a/src/CryptoExchanges.Net.Okx/OkxHttpClient.cs b/src/CryptoExchanges.Net.Okx/OkxHttpClient.cs
+index a720ae0..376b6ce 100644
+--- a/src/CryptoExchanges.Net.Okx/OkxHttpClient.cs
++++ b/src/CryptoExchanges.Net.Okx/OkxHttpClient.cs
+@@ -56,6 +56,25 @@ internal sealed class OkxHttpClient(HttpClient httpClient) : IOkxHttpClient
+         // OKX V5 POST is JSON-bodied; the signing handler signs the exact raw body string it reads
+         // back, so the serialized JSON must be the wire body verbatim.
+         var json = JsonSerializer.Serialize(parameters ?? [], JsonOptions);
++        return await PostJsonAsync<T>(endpoint, json, signed, ct).ConfigureAwait(false);
++    }
++
++    /// <inheritdoc />
++    public async Task<T> PostAsync<T>(
++        string endpoint, object body, bool signed = true, CancellationToken ct = default)
++    {
++        ArgumentException.ThrowIfNullOrWhiteSpace(endpoint);
++        ArgumentNullException.ThrowIfNull(body);
++        // Object-body overload for endpoints whose wire body is a JSON array or nested object (e.g.
++        // /api/v5/trade/cancel-batch-orders). The serialized JSON is the verbatim body the signer reads.
++        var json = JsonSerializer.Serialize(body, JsonOptions);
++        return await PostJsonAsync<T>(endpoint, json, signed, ct).ConfigureAwait(false);
++    }
++
++    private async Task<T> PostJsonAsync<T>(string endpoint, string json, bool signed, CancellationToken ct)
++    {
++        // OKX V5 POST is JSON-bodied; the signing handler signs the exact raw body string it reads
++        // back, so the serialized JSON must be the wire body verbatim.
+         using var content = new StringContent(json, Encoding.UTF8, "application/json");
+         using var request = new HttpRequestMessage(HttpMethod.Post, endpoint) { Content = content };
+         if (signed) OkxSigningRequest.MarkSigned(request);
+diff --git a/src/CryptoExchanges.Net.Okx/Resilience/OkxErrorTranslator.cs b/src/CryptoExchanges.Net.Okx/Resilience/OkxErrorTranslator.cs
+new file mode 100644
+index 0000000..55d4d96
+--- /dev/null
++++ b/src/CryptoExchanges.Net.Okx/Resilience/OkxErrorTranslator.cs
+@@ -0,0 +1,117 @@
++using System.Net;
++using CryptoExchanges.Net.Core.Exceptions;
++using CryptoExchanges.Net.Http;
++
++namespace CryptoExchanges.Net.Okx.Resilience;
++
++/// <summary>
++/// Maps OKX V5 error responses (HTTP status + <c>{code,msg,data}</c> envelope) to the SDK's typed
++/// exceptions. OKX returns a string <c>code</c> at the top level and, for order endpoints, a per-order
++/// <c>sCode</c>/<c>sMsg</c> inside the <c>data</c> array; both are inspected here. OKX success is
++/// <c>code == "0"</c> (a string), which must NEVER be treated as an error.
++/// </summary>
++/// <remarks>
++/// Internal per ADR-001 conv #2: the in-assembly composer/AddOkxExchange construct this directly, so
++/// there is no cross-assembly need for it to be public. OKX V5 error codes are documented as strings;
++/// the mappings below use real V5 codes and map conservatively, commenting where coverage is partial.
++/// </remarks>
++internal sealed class OkxErrorTranslator : IExchangeErrorTranslator
++{
++    /// <inheritdoc />
++    public ExchangeException Translate(HttpResponseMessage response, string body)
++    {
++        ArgumentNullException.ThrowIfNull(response);
++        var (code, msg) = Parse(body);
++        var text = msg is null ? $"OKX HTTP {(int)response.StatusCode}" : $"OKX error {code}: {msg}";
++
++        // A success envelope (code == "0") is not an error and must pass through untranslated. Callers
++        // should not reach the translator with one, but guard defensively (mirrors Bybit's posture).
++        if (code == "0")
++            return new ExchangeApiException(text, ParseCode(code), body);
++
++        var numeric = ParseCode(code);
++
++        // Rate limiting: HTTP 429, and OKX's "too many requests" code 50011. RetryAfter from headers.
++        if (response.StatusCode == HttpStatusCode.TooManyRequests || code is "50011" or "50013")
++            return new RateLimitExceededException(text, RetryAfterReader.GetDelay(response), numeric, body);
++
++        // Authentication / signature / permission / timestamp failures: HTTP 401/403, and OKX's
++        // 5031x auth family. 50100 = API frozen; 50101 = broker mismatch; 50102 = timestamp expired;
++        // 50103 = missing auth header; 50104 = missing passphrase; 50105 = wrong passphrase;
++        // 50111 = invalid API key; 50112 = invalid timestamp; 50113 = invalid signature; 50114 = invalid auth.
++        if (response.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden
++            || code is "50100" or "50101" or "50102" or "50103" or "50104" or "50105"
++                or "50111" or "50112" or "50113" or "50114")
++            return new AuthenticationException(text, numeric, body);
++
++        // Insufficient balance: 51008 = insufficient balance; 51119 = order placement failed (no funds);
++        // 51131 = insufficient balance.
++        if (code is "51008" or "51119" or "51131")
++            return new InsufficientBalanceException(text, numeric, body);
++
++        // Order errors: 51000 = parameter error; 51001 = instrument does not exist;
++        // 51002 = instrument id does not match; 51005 = order amount exceeds limit; 51006 = price out
++        // of range; 51020 = order amount below minimum; 51400 = cancellation failed (order not exist);
++        // 51402/51503 = order does not exist. The 51xxx family is the OKX V5 spot order-validation
++        // range; map the common members and let the rest fall through to ExchangeApiException rather
++        // than over-claiming coverage.
++        if (code is "51000" or "51001" or "51002" or "51005" or "51006" or "51020"
++            or "51400" or "51402" or "51503")
++            return new InvalidOrderException(text, numeric, body);
++
++        // Unknown / unmapped error codes: surface the venue code + raw body for diagnostics.
++        return new ExchangeApiException(text, numeric, body);
++    }
++
++    /// <summary>
++    /// Extracts the effective OKX error code + message: the top-level <c>code</c>/<c>msg</c>, but when
++    /// the top-level <c>code</c> is "0"/absent and a per-order <c>sCode</c> in the first <c>data</c>
++    /// element is non-zero, that per-order outcome is used (OKX reports order rejections that way).
++    /// </summary>
++    private static (string? code, string? msg) Parse(string body)
++    {
++        if (string.IsNullOrWhiteSpace(body))
++            return (null, null);
++        try
++        {
++            using var doc = JsonDocument.Parse(body);
++            var root = doc.RootElement;
++
++            string? topCode = ReadString(root, "code");
++            string? topMsg = ReadString(root, "msg");
++
++            // Inspect per-order sCode only when the top-level code is success/absent: an order endpoint
++            // can return code "0" overall yet reject an individual order via a non-zero sCode.
++            if ((topCode is null or "0")
++                && root.TryGetProperty("data", out var data)
++                && data.ValueKind == JsonValueKind.Array
++                && data.GetArrayLength() > 0)
++            {
++                var first = data[0];
++                if (first.ValueKind == JsonValueKind.Object)
++                {
++                    var sCode = ReadString(first, "sCode");
++                    if (sCode is not null && sCode != "0")
++                        return (sCode, ReadString(first, "sMsg") ?? topMsg);
++                }
++            }
++
++            return (topCode, topMsg);
++        }
++        catch (JsonException)
++        {
++            return (null, null);
++        }
++    }
++
++    /// <summary>Reads a string property, tolerating non-string value kinds (returns null) so a
++    /// malformed body never throws InvalidOperationException out of the catch.</summary>
++    private static string? ReadString(JsonElement element, string name)
++        => element.TryGetProperty(name, out var v) && v.ValueKind == JsonValueKind.String
++            ? v.GetString()
++            : null;
++
++    /// <summary>Parses the OKX string code into the numeric code carried on the typed exception, or null.</summary>
++    private static int? ParseCode(string? code)
++        => int.TryParse(code, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out var n) ? n : null;
++}
+diff --git a/src/CryptoExchanges.Net.Okx/Resilience/OkxTimeSync.cs b/src/CryptoExchanges.Net.Okx/Resilience/OkxTimeSync.cs
+new file mode 100644
+index 0000000..4171ca7
+--- /dev/null
++++ b/src/CryptoExchanges.Net.Okx/Resilience/OkxTimeSync.cs
+@@ -0,0 +1,29 @@
++namespace CryptoExchanges.Net.Okx.Resilience;
++
++/// <summary>
++/// Computes the clock-skew offset (server - local, in ms) applied to signed-request timestamps so a
++/// skewed local clock does not trip OKX's timestamp-expiry check. The offset is read from OKX's
++/// server-time endpoint (<c>/api/v5/public/time</c>, whose <c>data[0].ts</c> is epoch-ms as a string).
++/// </summary>
++/// <remarks>
++/// Internal per ADR-001 conv #2 (the in-assembly composer/client construct + read this directly). The
++/// offset holder works in milliseconds; the OKX signing handler does <c>UtcNow.AddMilliseconds(offset)</c>
++/// then formats the result as the ISO-8601 timestamp OKX expects, so this stays consistent with Bybit.
++/// </remarks>
++internal static class OkxTimeSync
++{
++    /// <summary>server - local, in milliseconds.</summary>
++    public static long ComputeOffset(long serverTimeMs, long localNowMs) => serverTimeMs - localNowMs;
++
++    /// <summary>Computes the offset and writes it atomically into the shared single-element holder that
++    /// the signing handler reads on each request. Returns the offset that was written.</summary>
++    public static long ApplyOffset(long serverTimeMs, long localNowMs, long[] offsetHolder)
++    {
++        ArgumentNullException.ThrowIfNull(offsetHolder);
++        if (offsetHolder.Length < 1)
++            throw new ArgumentException("offsetHolder must have at least one element.", nameof(offsetHolder));
++        var offset = ComputeOffset(serverTimeMs, localNowMs);
++        Interlocked.Exchange(ref offsetHolder[0], offset);
++        return offset;
++    }
++}
+diff --git a/src/CryptoExchanges.Net.Okx/ServiceCollectionExtensions.cs b/src/CryptoExchanges.Net.Okx/ServiceCollectionExtensions.cs
+new file mode 100644
+index 0000000..ce00bad
+--- /dev/null
++++ b/src/CryptoExchanges.Net.Okx/ServiceCollectionExtensions.cs
+@@ -0,0 +1,128 @@
++using CryptoExchanges.Net.Okx.Auth;
++using CryptoExchanges.Net.Okx.Internal;
++using CryptoExchanges.Net.Okx.Resilience;
++using CryptoExchanges.Net.Core;
++using CryptoExchanges.Net.Core.Enums;
++using CryptoExchanges.Net.Core.Interfaces;
++using CryptoExchanges.Net.Core.Resilience;
++using CryptoExchanges.Net.Http;
++using DeltaMapper;
++using Microsoft.Extensions.DependencyInjection;
++using Microsoft.Extensions.DependencyInjection.Extensions;
++using Microsoft.Extensions.Options;
++
++namespace CryptoExchanges.Net.Okx;
++
++/// <summary>
++/// Dependency-injection extensions for registering the OKX exchange client. Lives in the OKX assembly
++/// so a consumer can depend on OKX alone without transitively pulling in other exchange assemblies
++/// (see ADR-001).
++/// </summary>
++public static class ServiceCollectionExtensions
++{
++    /// <summary>Named-client / resilience-pipeline name for the OKX HTTP client — shared by the
++    /// registration and the <c>CreateClient</c> call so they can't drift.</summary>
++    private const string OkxClientName = "okx";
++
++    /// <summary>
++    /// Registers the OKX exchange client and all its dependencies as per-exchange keyed singletons,
++    /// backed by a typed <see cref="System.Net.Http.HttpClient"/> with the full resilience handler chain.
++    /// Options are validated with fail-fast (<c>ValidateOnStart</c>).
++    /// </summary>
++    /// <param name="services">The <see cref="IServiceCollection"/> to add services to.</param>
++    /// <param name="configure">An action to configure <see cref="OkxOptions"/>.</param>
++    /// <returns>The <see cref="IServiceCollection"/> for chaining.</returns>
++    public static IServiceCollection AddOkxExchange(
++        this IServiceCollection services,
++        Action<OkxOptions>? configure = null)
++    {
++        ArgumentNullException.ThrowIfNull(services);
++
++        services.TryAddSingleton<IExchangeClientFactory, ExchangeClientFactory>();
++
++        services.AddOptions<OkxOptions>()
++            .Configure(ApplyEnvDefaults)
++            .Configure(o => configure?.Invoke(o))
++            .Validate(o => o.TimeoutSeconds > 0, "OkxOptions.TimeoutSeconds must be > 0.")
++            .Validate(o => !string.IsNullOrWhiteSpace(o.BaseUrl), "OkxOptions.BaseUrl is required.")
++            .ValidateOnStart();
++
++        services.TryAddSingleton(sp => sp.GetRequiredService<IOptions<OkxOptions>>().Value);
++
++        // Shared clock-skew offset holder (single-element array so the signing handler's closure and
++        // SyncServerTimeAsync read/write the SAME instance). One per exchange registration.
++        // CA1861: must be a FRESH mutable instance per registration (not a shared static field), and the
++        // factory runs once for the singleton — so the "constant array" rule doesn't apply.
++#pragma warning disable CA1861
++        services.TryAddKeyedSingleton(ExchangeId.Okx, (_, _) => new long[] { 0L });
++#pragma warning restore CA1861
++        services.TryAddKeyedSingleton<ISymbolMapper>(ExchangeId.Okx,
++            (_, _) => new SymbolMapper(OkxSymbolFormat.Instance));
++        services.TryAddKeyedSingleton<IMapper>(ExchangeId.Okx, (sp, _) =>
++            OkxClientComposer.CreateMapper(sp.GetRequiredKeyedService<ISymbolMapper>(ExchangeId.Okx)));
++
++        // NAMED client (not typed): a typed client registers IOkxHttpClient as TRANSIENT, and capturing
++        // it inside the keyed IExchangeClient SINGLETON below would be a captive dependency (the
++        // HttpClient + handler chain would never rotate). Instead we resolve ONE long-lived HttpClient
++        // via IHttpClientFactory.CreateClient(OkxClientName) in the singleton factory; DNS rotation is
++        // handled by PooledConnectionLifetime on the primary handler.
++        var http = services.AddHttpClient(OkxClientName, (sp, c) =>
++            {
++                var o = sp.GetRequiredService<OkxOptions>();
++                // Host-only BaseAddress (no path) so RequestUri.PathAndQuery == the signed OKX requestPath.
++                c.BaseAddress = new Uri(o.BaseUrl.TrimEnd('/'));
++                c.Timeout = TimeSpan.FromSeconds(o.TimeoutSeconds);
++                c.DefaultRequestHeaders.Add("User-Agent", "CryptoExchanges.Net/0.1.0");
++            })
++            .ConfigurePrimaryHttpMessageHandler(() =>
++                new SocketsHttpHandler { PooledConnectionLifetime = TimeSpan.FromMinutes(2) });
++
++        // Handler chain — applied via the Http project's shared seam so the DI path and the
++        // container-free Create() path (HttpClientPipelineBuilder.Build) compose the SAME effective
++        // pipeline. Order (outer→inner): throttle → exhaustion-mapping → Polly(retry/timeout) →
++        // request-finalizer(signing) → error-translation → primary transport.
++        //
++        // The finalizer is ALWAYS registered: options are only final at resolution time, so the gate is
++        // decided then. OKX signing requires BOTH a secret AND a passphrase; if either is missing the
++        // client gets a no-op PassThroughHandler (mirrors Create()). Because the gate requires both,
++        // the secret/passphrase are passed to OkxSigningHandler directly — no OkxOptions.ToCredentials()
++        // (which throws on an empty passphrase) is needed in the signing path.
++        http.ApplyResiliencePipeline(
++            OkxClientName,
++            new ResilienceOptions(),
++            translatorFactory: _ => new OkxErrorTranslator(),
++            gateFactory: _ => new ReactiveRateLimitGate(),
++            requestFinalizerFactory: sp =>
++            {
++                var o = sp.GetRequiredService<OkxOptions>();
++                if (string.IsNullOrEmpty(o.SecretKey) || string.IsNullOrEmpty(o.Passphrase))
++                    return new PassThroughHandler();
++                var holder = sp.GetRequiredKeyedService<long[]>(ExchangeId.Okx);
++                return new OkxSigningHandler(
++                    o.ApiKey,
++                    o.Passphrase,
++                    new OkxSignatureService(o.SecretKey),
++                    () => Interlocked.Read(ref holder[0]));
++            });
++
++        services.AddKeyedSingleton<IExchangeClient>(ExchangeId.Okx, (sp, _) =>
++        {
++            var httpClient = sp.GetRequiredService<IHttpClientFactory>().CreateClient(OkxClientName);
++            var http = new OkxHttpClient(httpClient);
++            var holder = sp.GetRequiredKeyedService<long[]>(ExchangeId.Okx);
++            return OkxClientComposer.ComposeForDi(sp, http, holder);
++        });
++
++        return services;
++    }
++
++    private static void ApplyEnvDefaults(OkxOptions o)
++    {
++        var k = Environment.GetEnvironmentVariable("OKX_API_KEY");
++        var s = Environment.GetEnvironmentVariable("OKX_SECRET_KEY");
++        var p = Environment.GetEnvironmentVariable("OKX_PASSPHRASE");
++        if (!string.IsNullOrEmpty(k)) o.ApiKey = k;
++        if (!string.IsNullOrEmpty(s)) o.SecretKey = s;
++        if (!string.IsNullOrEmpty(p)) o.Passphrase = p;
++    }
++}
+diff --git a/src/CryptoExchanges.Net.Okx/Services/OkxAccountService.cs b/src/CryptoExchanges.Net.Okx/Services/OkxAccountService.cs
+new file mode 100644
+index 0000000..03c7363
+--- /dev/null
++++ b/src/CryptoExchanges.Net.Okx/Services/OkxAccountService.cs
+@@ -0,0 +1,147 @@
++using CryptoExchanges.Net.Okx.Internal;
++using DeltaMapper;
++
++namespace CryptoExchanges.Net.Okx.Services;
++
++// ---------------------------------------------------------------------------
++//  OKX V5 account DTOs
++// ---------------------------------------------------------------------------
++
++/// <summary>A single account snapshot carrying its per-currency balance details.</summary>
++internal sealed record OkxBalanceAccount
++{
++    [JsonPropertyName("details")]
++    public List<OkxBalanceDetail> Details { get; init; } = [];
++}
++
++internal sealed record OkxBalanceDetail
++{
++    [JsonPropertyName("ccy")]
++    public string Ccy { get; init; } = string.Empty;
++
++    /// <summary>Available (free) balance for the currency.</summary>
++    [JsonPropertyName("availBal")]
++    public string AvailBal { get; init; } = "0";
++
++    /// <summary>Balance frozen in open orders / pending settlement (locked).</summary>
++    [JsonPropertyName("frozenBal")]
++    public string FrozenBal { get; init; } = "0";
++}
++
++internal sealed record OkxFill
++{
++    [JsonPropertyName("instId")]
++    public string InstId { get; init; } = string.Empty;
++
++    [JsonPropertyName("tradeId")]
++    public string TradeId { get; init; } = string.Empty;
++
++    [JsonPropertyName("ordId")]
++    public string OrdId { get; init; } = string.Empty;
++
++    [JsonPropertyName("fillPx")]
++    public string FillPx { get; init; } = "0";
++
++    [JsonPropertyName("fillSz")]
++    public string FillSz { get; init; } = "0";
++
++    [JsonPropertyName("side")]
++    public string Side { get; init; } = "buy";
++
++    /// <summary>Liquidity taker/maker: <c>M</c> = maker, <c>T</c> = taker.</summary>
++    [JsonPropertyName("execType")]
++    public string ExecType { get; init; } = "T";
++
++    /// <summary>Fill time in unix milliseconds (string-encoded).</summary>
++    [JsonPropertyName("ts")]
++    public string Ts { get; init; } = "0";
++}
++
++// ---------------------------------------------------------------------------
++//  OkxAccountService
++// ---------------------------------------------------------------------------
++
++/// <summary>
++/// OKX implementation of <see cref="IAccountService"/> against the V5 unified-account REST API.
++/// </summary>
++internal sealed class OkxAccountService(IOkxHttpClient http, ISymbolMapper mapper, IMapper modelMapper) : IAccountService
++{
++    /// <inheritdoc />
++    public async Task<IReadOnlyList<AssetBalance>> GetBalancesAsync(CancellationToken ct = default)
++    {
++        var details = await FetchBalanceDetailsAsync(null, ct).ConfigureAwait(false);
++
++        // OKX returns the full currency list including zero balances; trim to non-zero to match the
++        // venue-neutral "non-zero balances" contract other exchanges honour server-side.
++        return details
++            .Select(modelMapper.Map<OkxBalanceDetail, AssetBalance>)
++            .Where(b => b.Total != 0m)
++            .ToList();
++    }
++
++    /// <inheritdoc />
++    public async Task<AssetBalance> GetBalanceAsync(Asset asset, CancellationToken ct = default)
++    {
++        var details = await FetchBalanceDetailsAsync(asset.Ticker, ct).ConfigureAwait(false);
++
++        var match = details
++            .Select(modelMapper.Map<OkxBalanceDetail, AssetBalance>)
++            .FirstOrDefault(b => b.Asset == asset);
++
++        return match.Asset == asset ? match : new AssetBalance(asset, 0, 0);
++    }
++
++    /// <inheritdoc />
++    public async Task<IReadOnlyList<Trade>> GetTradeHistoryAsync(
++        Symbol symbol,
++        int limit = 500,
++        DateTimeOffset? startTime = null,
++        DateTimeOffset? endTime = null,
++        CancellationToken ct = default)
++    {
++        // The IExchangeClient default (500) exceeds OKX V5's per-call max (100); clamp rather than
++        // throw so the common default-parameter call path succeeds. A value < 1 still fails validation.
++        var effectiveLimit = Math.Min(limit, OkxRequestValidation.MaxHistoryLimit);
++        OkxRequestValidation.ValidateHistoryWindow(effectiveLimit, startTime, endTime);
++
++        var parameters = new Dictionary<string, string>
++        {
++            ["instType"] = "SPOT",
++            ["instId"] = mapper.ToWire(symbol),
++            ["limit"] = effectiveLimit.ToString(System.Globalization.CultureInfo.InvariantCulture)
++        };
++
++        if (startTime.HasValue)
++            parameters["begin"] = startTime.Value.ToUnixTimeMilliseconds().ToString(System.Globalization.CultureInfo.InvariantCulture);
++        if (endTime.HasValue)
++            parameters["end"] = endTime.Value.ToUnixTimeMilliseconds().ToString(System.Globalization.CultureInfo.InvariantCulture);
++
++        var response = await http.GetAsync<OkxResponse<OkxFill>>("/api/v5/trade/fills", parameters, true, ct).ConfigureAwait(false);
++
++        // Trade.Symbol is taken from the caller's typed argument (the caller already holds it), not
++        // resolved from the wire string, so a cold mapper cache can never make this throw.
++        return response.Data.Select(f => new Trade(
++            symbol,
++            f.TradeId,
++            OkxValueParsers.ParseDecimal(f.FillPx),
++            OkxValueParsers.ParseDecimal(f.FillSz),
++            DateTimeOffset.FromUnixTimeMilliseconds(ParseMs(f.Ts)),
++            // IsBuyerMaker: a buy fill that is the maker, or a sell fill that is the taker.
++            f.Side == "buy" ? f.ExecType == "M" : f.ExecType != "M",
++            f.OrdId
++        )).ToList();
++    }
++
++    private async Task<IReadOnlyList<OkxBalanceDetail>> FetchBalanceDetailsAsync(string? ccy, CancellationToken ct)
++    {
++        var parameters = new Dictionary<string, string>();
++        if (!string.IsNullOrEmpty(ccy))
++            parameters["ccy"] = ccy;
++
++        var response = await http.GetAsync<OkxResponse<OkxBalanceAccount>>("/api/v5/account/balance", parameters, true, ct).ConfigureAwait(false);
++        return response.Data.SelectMany(a => a.Details).ToList();
++    }
++
++    private static long ParseMs(string value)
++        => long.TryParse(value, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out var ms) ? ms : 0L;
++}
+diff --git a/src/CryptoExchanges.Net.Okx/Services/OkxMarketDataService.cs b/src/CryptoExchanges.Net.Okx/Services/OkxMarketDataService.cs
+new file mode 100644
+index 0000000..76d1208
+--- /dev/null
++++ b/src/CryptoExchanges.Net.Okx/Services/OkxMarketDataService.cs
+@@ -0,0 +1,347 @@
++using CryptoExchanges.Net.Okx.Internal;
++using DeltaMapper;
++
++namespace CryptoExchanges.Net.Okx.Services;
++
++// ---------------------------------------------------------------------------
++//  OKX V5 response envelope + market-data DTOs (internal)
++// ---------------------------------------------------------------------------
++
++/// <summary>
++/// The uniform OKX V5 response envelope: <c>{ code, msg, data }</c>. A non-zero (string) <c>code</c>
++/// never reaches the services — the resilience pipeline's error translator converts such envelopes
++/// into typed exceptions — so any envelope deserialized here is already a success (<c>code == "0"</c>).
++/// </summary>
++/// <typeparam name="T">The element type of the <c>data</c> array for the endpoint.</typeparam>
++internal sealed record OkxResponse<T>
++{
++    [JsonPropertyName("code")]
++    public string Code { get; init; } = "0";
++
++    [JsonPropertyName("msg")]
++    public string Msg { get; init; } = string.Empty;
++
++    [JsonPropertyName("data")]
++    public List<T> Data { get; init; } = [];
++}
++
++internal sealed record OkxTicker
++{
++    [JsonPropertyName("instId")]
++    public string InstId { get; init; } = string.Empty;
++
++    [JsonPropertyName("last")]
++    public string Last { get; init; } = "0";
++
++    /// <summary>Open price 24h ago (UTC), used as the reference for the 24h change.</summary>
++    [JsonPropertyName("open24h")]
++    public string Open24h { get; init; } = "0";
++
++    [JsonPropertyName("high24h")]
++    public string High24h { get; init; } = "0";
++
++    [JsonPropertyName("low24h")]
++    public string Low24h { get; init; } = "0";
++
++    /// <summary>24h trading volume in the base currency.</summary>
++    [JsonPropertyName("vol24h")]
++    public string Vol24h { get; init; } = "0";
++
++    /// <summary>24h trading volume in the quote currency.</summary>
++    [JsonPropertyName("volCcy24h")]
++    public string VolCcy24h { get; init; } = "0";
++
++    /// <summary>Ticker timestamp in unix milliseconds (string-encoded).</summary>
++    [JsonPropertyName("ts")]
++    public string Ts { get; init; } = "0";
++}
++
++internal sealed record OkxOrderBook
++{
++    [JsonPropertyName("asks")]
++    public List<List<string>> Asks { get; init; } = [];
++
++    [JsonPropertyName("bids")]
++    public List<List<string>> Bids { get; init; } = [];
++
++    /// <summary>Snapshot timestamp in unix milliseconds (string-encoded).</summary>
++    [JsonPropertyName("ts")]
++    public string Ts { get; init; } = "0";
++}
++
++internal sealed record OkxTrade
++{
++    [JsonPropertyName("tradeId")]
++    public string TradeId { get; init; } = string.Empty;
++
++    [JsonPropertyName("px")]
++    public string Px { get; init; } = "0";
++
++    [JsonPropertyName("sz")]
++    public string Sz { get; init; } = "0";
++
++    /// <summary>The taker side (<c>buy</c>/<c>sell</c>); a <c>sell</c> taker means the buyer was the maker.</summary>
++    [JsonPropertyName("side")]
++    public string Side { get; init; } = "buy";
++
++    /// <summary>Trade time in unix milliseconds (string-encoded).</summary>
++    [JsonPropertyName("ts")]
++    public string Ts { get; init; } = "0";
++}
++
++internal sealed record OkxInstrument
++{
++    [JsonPropertyName("instId")]
++    public string InstId { get; init; } = string.Empty;
++
++    [JsonPropertyName("baseCcy")]
++    public string BaseCcy { get; init; } = string.Empty;
++
++    [JsonPropertyName("quoteCcy")]
++    public string QuoteCcy { get; init; } = string.Empty;
++}
++
++// ---------------------------------------------------------------------------
++//  OkxMarketDataService
++// ---------------------------------------------------------------------------
++
++/// <summary>
++/// OKX implementation of <see cref="IMarketDataService"/> against the V5 spot REST API.
++/// </summary>
++internal sealed class OkxMarketDataService(IOkxHttpClient http, ISymbolMapper mapper, IMapper modelMapper) : IMarketDataService
++{
++    private const string SpotInstType = "SPOT";
++
++    // Lazily-fetched, cached snapshot of the supported symbol set, used only by the opt-in
++    // IsSupportedAsync / ResolveSymbolAsync validation methods (mirrors the Bybit posture). The
++    // Lazy<Task<>> guarantees the underlying GetExchangeInfoAsync call runs at most once even under
++    // concurrent first calls; nothing else touches this, so other methods never force a fetch.
++    private Lazy<Task<IReadOnlyDictionary<Symbol, Symbol>>>? _supportedSymbols;
++    private readonly object _supportedSymbolsGate = new();
++
++    private Lazy<Task<IReadOnlyDictionary<Symbol, Symbol>>> EnsureSupportedSymbols()
++    {
++        if (_supportedSymbols is not null)
++            return _supportedSymbols;
++
++        lock (_supportedSymbolsGate)
++        {
++            _supportedSymbols ??= new Lazy<Task<IReadOnlyDictionary<Symbol, Symbol>>>(
++                async () =>
++                {
++                    var info = await GetExchangeInfoAsync().ConfigureAwait(false);
++                    return info.Symbols.ToDictionary(s => s.Symbol, s => s.Symbol);
++                },
++                LazyThreadSafetyMode.ExecutionAndPublication);
++            return _supportedSymbols;
++        }
++    }
++
++    /// <inheritdoc />
++    public async Task<IReadOnlyList<Ticker>> GetTickersAsync(Symbol? symbol = null, CancellationToken ct = default)
++    {
++        if (symbol.HasValue)
++        {
++            // Single-symbol path: /api/v5/market/ticker?instId=... . The caller asked for a specific
++            // symbol, so an unresolvable wire string is a genuine error — let the mapper throw.
++            var single = new Dictionary<string, string> { ["instId"] = mapper.ToWire(symbol.Value) };
++            var oneResp = await http.GetAsync<OkxResponse<OkxTicker>>("/api/v5/market/ticker", single, false, ct).ConfigureAwait(false);
++            return oneResp.Data.Select(modelMapper.Map<OkxTicker, Ticker>).ToList();
++        }
++
++        var parameters = new Dictionary<string, string> { ["instType"] = SpotInstType };
++        var response = await http.GetAsync<OkxResponse<OkxTicker>>("/api/v5/market/tickers", parameters, false, ct).ConfigureAwait(false);
++
++        // The full universe includes obscure/transitional pairs that may not resolve against a cold
++        // cache or any known quote suffix; skip those rather than failing the whole batch. Callers
++        // needing a complete set should first warm the wire-lookup cache via GetExchangeInfoAsync.
++        return response.Data.SelectMany(TryMapTicker).ToList();
++    }
++
++    /// <inheritdoc />
++    public async Task<OrderBook> GetOrderBookAsync(Symbol symbol, int depth = 100, CancellationToken ct = default)
++    {
++        var parameters = new Dictionary<string, string>
++        {
++            ["instId"] = mapper.ToWire(symbol),
++            // OKX caps the books depth at 400; clamp rather than fail the common default call path.
++            ["sz"] = Math.Clamp(depth, 1, 400).ToString(System.Globalization.CultureInfo.InvariantCulture)
++        };
++
++        var response = await http.GetAsync<OkxResponse<OkxOrderBook>>("/api/v5/market/books", parameters, false, ct).ConfigureAwait(false);
++        var book = response.Data.FirstOrDefault() ?? new OkxOrderBook();
++
++        // OKX book levels are [price, size, deprecatedField, numOrders]; only price+size are used.
++        var bids = book.Bids.Select(b => new OrderBookEntry(OkxValueParsers.ParseDecimal(b[0]), OkxValueParsers.ParseDecimal(b[1]))).ToList();
++        var asks = book.Asks.Select(a => new OrderBookEntry(OkxValueParsers.ParseDecimal(a[0]), OkxValueParsers.ParseDecimal(a[1]))).ToList();
++
++        var ts = ParseMs(book.Ts);
++        var timestamp = ts > 0 ? DateTimeOffset.FromUnixTimeMilliseconds(ts) : (DateTimeOffset?)null;
++        return new OrderBook(symbol, bids, asks, timestamp);
++    }
++
++    /// <inheritdoc />
++    public async Task<IReadOnlyList<Candlestick>> GetCandlesticksAsync(
++        Symbol symbol,
++        KlineInterval interval,
++        DateTimeOffset? startTime = null,
++        DateTimeOffset? endTime = null,
++        int limit = 500,
++        CancellationToken ct = default)
++    {
++        var parameters = new Dictionary<string, string>
++        {
++            ["instId"] = mapper.ToWire(symbol),
++            ["bar"] = MapKlineInterval(interval),
++            // OKX V5 candles cap limit at 100; clamp so the IExchangeClient default (500) succeeds.
++            ["limit"] = Math.Min(limit, OkxRequestValidation.MaxHistoryLimit).ToString(System.Globalization.CultureInfo.InvariantCulture)
++        };
++
++        // OKX uses 'before'/'after' (exclusive) cursors keyed by ts; expose start/end as those bounds.
++        if (startTime.HasValue)
++            parameters["after"] = startTime.Value.ToUnixTimeMilliseconds().ToString(System.Globalization.CultureInfo.InvariantCulture);
++        if (endTime.HasValue)
++            parameters["before"] = endTime.Value.ToUnixTimeMilliseconds().ToString(System.Globalization.CultureInfo.InvariantCulture);
++
++        // OKX returns candles as a data array of string arrays:
++        // [ts, open, high, low, close, vol, volCcy, volCcyQuote, confirm], newest-first.
++        var response = await http.GetAsync<OkxResponse<List<string>>>("/api/v5/market/candles", parameters, false, ct).ConfigureAwait(false);
++
++        var candles = new List<Candlestick>();
++        foreach (var arr in response.Data)
++        {
++            if (arr.Count < 7)
++                continue;
++            candles.Add(new Candlestick(
++                OpenTime: DateTimeOffset.FromUnixTimeMilliseconds(long.Parse(arr[0], System.Globalization.CultureInfo.InvariantCulture)),
++                CloseTime: null,
++                Open: OkxValueParsers.ParseDecimal(arr[1]),
++                High: OkxValueParsers.ParseDecimal(arr[2]),
++                Low: OkxValueParsers.ParseDecimal(arr[3]),
++                Close: OkxValueParsers.ParseDecimal(arr[4]),
++                Volume: OkxValueParsers.ParseDecimal(arr[5]),
++                QuoteVolume: OkxValueParsers.ParseDecimal(arr[6]),
++                TradeCount: null,
++                Interval: interval,
++                TradingSymbol: symbol
++            ));
++        }
++
++        return candles;
++    }
++
++    /// <inheritdoc />
++    public async Task<decimal> GetPriceAsync(Symbol symbol, CancellationToken ct = default)
++    {
++        var parameters = new Dictionary<string, string> { ["instId"] = mapper.ToWire(symbol) };
++        var response = await http.GetAsync<OkxResponse<OkxTicker>>("/api/v5/market/ticker", parameters, false, ct).ConfigureAwait(false);
++        var ticker = response.Data.FirstOrDefault();
++        return ticker is null ? 0m : OkxValueParsers.ParseDecimal(ticker.Last);
++    }
++
++    /// <inheritdoc />
++    public async Task<IReadOnlyList<Trade>> GetRecentTradesAsync(Symbol symbol, int limit = 500, CancellationToken ct = default)
++    {
++        var parameters = new Dictionary<string, string>
++        {
++            ["instId"] = mapper.ToWire(symbol),
++            // OKX trades endpoint caps limit at 500; clamp so the default succeeds.
++            ["limit"] = Math.Clamp(limit, 1, 500).ToString(System.Globalization.CultureInfo.InvariantCulture)
++        };
++
++        var response = await http.GetAsync<OkxResponse<OkxTrade>>("/api/v5/market/trades", parameters, false, ct).ConfigureAwait(false);
++
++        // Trade.Symbol is the caller's typed argument (already held), not resolved from the wire
++        // string, so a cold mapper cache can never make this throw. IsBuyerMaker = taker sold.
++        return response.Data.Select(t => new Trade(
++            symbol,
++            t.TradeId,
++            OkxValueParsers.ParseDecimal(t.Px),
++            OkxValueParsers.ParseDecimal(t.Sz),
++            DateTimeOffset.FromUnixTimeMilliseconds(ParseMs(t.Ts)),
++            t.Side == "sell"
++        )).ToList();
++    }
++
++    /// <inheritdoc />
++    public async Task<ExchangeInfo> GetExchangeInfoAsync(CancellationToken ct = default)
++    {
++        var parameters = new Dictionary<string, string> { ["instType"] = SpotInstType };
++        var response = await http.GetAsync<OkxResponse<OkxInstrument>>("/api/v5/public/instruments", parameters, false, ct).ConfigureAwait(false);
++
++        // OKX instruments can include entries whose base/quote are not representable assets; skip
++        // those rather than throw.
++        var representable = response.Data
++            .Where(s => Asset.TryOf(s.BaseCcy, out _) && Asset.TryOf(s.QuoteCcy, out _));
++        var symbols = modelMapper.Map<OkxInstrument, SymbolInfo>(representable);
++
++        // Populate the mapper's wire->Symbol lookup table from the freshly fetched symbols.
++        mapper.UpdateSymbols(symbols);
++
++        // OKX does not return per-endpoint rate-limit rules in instruments; the SDK's
++        // ReactiveRateLimitGate handles rate limits from response headers at runtime instead.
++        return new ExchangeInfo("OKX", symbols, []);
++    }
++
++    /// <inheritdoc />
++    public async Task<bool> IsSupportedAsync(Symbol symbol, CancellationToken ct = default)
++    {
++        ct.ThrowIfCancellationRequested();
++        var supported = await EnsureSupportedSymbols().Value.ConfigureAwait(false);
++        return supported.ContainsKey(symbol);
++    }
++
++    /// <inheritdoc />
++    public async Task<Symbol?> ResolveSymbolAsync(Symbol symbol, CancellationToken ct = default)
++    {
++        ct.ThrowIfCancellationRequested();
++        var supported = await EnsureSupportedSymbols().Value.ConfigureAwait(false);
++        return supported.TryGetValue(symbol, out var canonical) ? canonical : null;
++    }
++
++    // ── Mapping helpers ──
++
++    /// <summary>
++    /// Maps a ticker, yielding nothing when its wire symbol cannot be resolved. Used for the
++    /// full-universe response where unknown/delisted pairs must not abort the whole batch.
++    /// </summary>
++    private IEnumerable<Ticker> TryMapTicker(OkxTicker t)
++    {
++        Ticker ticker;
++        try
++        {
++            ticker = modelMapper.Map<OkxTicker, Ticker>(t);
++        }
++        catch (FormatException)
++        {
++            yield break;
++        }
++
++        yield return ticker;
++    }
++
++    /// <summary>Parses an OKX string-encoded unix-ms timestamp, returning 0 for null/empty/malformed.</summary>
++    private static long ParseMs(string value)
++        => long.TryParse(value, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out var ms) ? ms : 0L;
++
++    private static string MapKlineInterval(KlineInterval interval) => interval switch
++    {
++        KlineInterval.OneMinute => "1m",
++        KlineInterval.ThreeMinutes => "3m",
++        KlineInterval.FiveMinutes => "5m",
++        KlineInterval.FifteenMinutes => "15m",
++        KlineInterval.ThirtyMinutes => "30m",
++        KlineInterval.OneHour => "1H",
++        KlineInterval.TwoHours => "2H",
++        KlineInterval.FourHours => "4H",
++        // OKX expresses the >= 6h / day / week / month bars in UTC (the 'Hutc'/day suffix forms).
++        KlineInterval.SixHours => "6Hutc",
++        KlineInterval.TwelveHours => "12Hutc",
++        KlineInterval.OneDay => "1Dutc",
++        KlineInterval.ThreeDays => "3Dutc",
++        KlineInterval.OneWeek => "1Wutc",
++        KlineInterval.OneMonth => "1Mutc",
++        // OKX V5 spot candles do not expose an 8h bar.
++        _ => throw new ArgumentOutOfRangeException(nameof(interval), interval, $"Unsupported kline interval for OKX: {interval}")
++    };
++}
+diff --git a/src/CryptoExchanges.Net.Okx/Services/OkxTradingService.cs b/src/CryptoExchanges.Net.Okx/Services/OkxTradingService.cs
+new file mode 100644
+index 0000000..93ca610
+--- /dev/null
++++ b/src/CryptoExchanges.Net.Okx/Services/OkxTradingService.cs
+@@ -0,0 +1,297 @@
++using CryptoExchanges.Net.Okx.Internal;
++using DeltaMapper;
++
++namespace CryptoExchanges.Net.Okx.Services;
++
++// ---------------------------------------------------------------------------
++//  OKX V5 trading DTOs
++// ---------------------------------------------------------------------------
++
++/// <summary>
++/// The per-order acknowledgement OKX V5 returns from place/cancel: ids + a per-order status code.
++/// OKX nests a per-order outcome (<c>sCode</c>/<c>sMsg</c>) inside the data array even when the
++/// top-level <c>code</c> is "0"; a non-zero <c>sCode</c> never reaches the services because the
++/// resilience pipeline's error translator converts it into a typed exception.
++/// </summary>
++internal sealed record OkxOrderAck
++{
++    [JsonPropertyName("ordId")]
++    public string OrdId { get; init; } = string.Empty;
++
++    [JsonPropertyName("clOrdId")]
++    public string ClOrdId { get; init; } = string.Empty;
++
++    /// <summary>Per-order result code ("0" = success).</summary>
++    [JsonPropertyName("sCode")]
++    public string SCode { get; init; } = "0";
++
++    [JsonPropertyName("sMsg")]
++    public string SMsg { get; init; } = string.Empty;
++}
++
++/// <summary>A full OKX V5 order record as returned by <c>/api/v5/trade/order</c> and the order lists.</summary>
++internal sealed record OkxOrder
++{
++    [JsonPropertyName("instId")]
++    public string InstId { get; init; } = string.Empty;
++
++    [JsonPropertyName("ordId")]
++    public string OrdId { get; init; } = string.Empty;
++
++    [JsonPropertyName("clOrdId")]
++    public string ClOrdId { get; init; } = string.Empty;
++
++    [JsonPropertyName("px")]
++    public string Px { get; init; } = "0";
++
++    /// <summary>Original order size (in base currency for spot limit; quote for market-buy by quote).</summary>
++    [JsonPropertyName("sz")]
++    public string Sz { get; init; } = "0";
++
++    /// <summary>Accumulated filled size in the base currency.</summary>
++    [JsonPropertyName("accFillSz")]
++    public string AccFillSz { get; init; } = "0";
++
++    /// <summary>Average fill price; OKX emits "" when there are no fills yet.</summary>
++    [JsonPropertyName("avgPx")]
++    public string AvgPx { get; init; } = string.Empty;
++
++    [JsonPropertyName("side")]
++    public string Side { get; init; } = "buy";
++
++    [JsonPropertyName("ordType")]
++    public string OrdType { get; init; } = "limit";
++
++    [JsonPropertyName("state")]
++    public string State { get; init; } = "live";
++
++    /// <summary>Order creation time in unix milliseconds (string-encoded).</summary>
++    [JsonPropertyName("cTime")]
++    public string CTime { get; init; } = "0";
++
++    /// <summary>Last update time in unix milliseconds (string-encoded).</summary>
++    [JsonPropertyName("uTime")]
++    public string UTime { get; init; } = "0";
++}
++
++// ---------------------------------------------------------------------------
++//  OkxTradingService
++// ---------------------------------------------------------------------------
++
++/// <summary>
++/// OKX implementation of <see cref="ITradingService"/> against the V5 spot REST API.
++/// </summary>
++/// <remarks>
++/// OKX V5 place/cancel endpoints return only the order id (inside a per-order ack), not the full
++/// order, so <see cref="PlaceOrderAsync"/> and the cancel methods re-fetch the order via
++/// <c>/api/v5/trade/order</c> to honour the <see cref="ITradingService"/> contract of returning a
++/// fully populated <see cref="Order"/>.
++/// <para>
++/// POST bodies (place/cancel) are flat string-keyed JSON objects (instId, tdMode, side, ordType,
++/// sz, px, clOrdId) — all OKX spot order fields are scalar, so the existing
++/// <c>IOkxHttpClient.PostAsync(Dictionary&lt;string,string&gt;)</c> serializes the exact wire body
++/// the signer reads back; no nested/array overload is required.
++/// </para>
++/// </remarks>
++internal sealed class OkxTradingService(IOkxHttpClient http, ISymbolMapper mapper, IMapper modelMapper) : ITradingService
++{
++    /// <summary>Spot uses the cash trade mode (no margin).</summary>
++    private const string CashTradeMode = "cash";
++
++    /// <inheritdoc />
++    public async Task<Order> PlaceOrderAsync(PlaceOrderRequest request, CancellationToken ct = default)
++    {
++        request.Validate();
++
++        var wireSymbol = mapper.ToWire(request.Symbol);
++        var ordType = MapOrderType(request.Type, request.TimeInForce);
++        var parameters = new Dictionary<string, string>
++        {
++            ["instId"] = wireSymbol,
++            ["tdMode"] = CashTradeMode,
++            ["side"] = MapOrderSide(request.Side),
++            ["ordType"] = ordType
++        };
++
++        if (request.Quantity.HasValue)
++            parameters["sz"] = request.Quantity.Value.ToString(System.Globalization.CultureInfo.InvariantCulture);
++        else if (request.QuoteOrderQuantity.HasValue)
++        {
++            // OKX spot market-buy by quote amount: sz carries the quote value with tgtCcy=quote_ccy.
++            parameters["sz"] = request.QuoteOrderQuantity.Value.ToString(System.Globalization.CultureInfo.InvariantCulture);
++            if (request.Type == OrderType.Market)
++                parameters["tgtCcy"] = "quote_ccy";
++        }
++
++        // Market orders carry no price; OKX rejects a px on a market order.
++        if (request.Price.HasValue && request.Type != OrderType.Market)
++            parameters["px"] = request.Price.Value.ToString(System.Globalization.CultureInfo.InvariantCulture);
++
++        if (request.ClientOrderId is not null)
++            parameters["clOrdId"] = request.ClientOrderId;
++
++        var response = await http.PostAsync<OkxResponse<OkxOrderAck>>("/api/v5/trade/order", parameters, true, ct).ConfigureAwait(false);
++        var ack = response.Data.FirstOrDefault();
++        return await FetchOrderAsync(wireSymbol, ack?.OrdId ?? string.Empty, ct, clientOrderId: request.ClientOrderId).ConfigureAwait(false);
++    }
++
++    /// <inheritdoc />
++    public async Task<Order> CancelOrderAsync(Symbol symbol, string orderId, CancellationToken ct = default)
++    {
++        var wireSymbol = mapper.ToWire(symbol);
++        var parameters = new Dictionary<string, string>
++        {
++            ["instId"] = wireSymbol,
++            ["ordId"] = orderId
++        };
++
++        var response = await http.PostAsync<OkxResponse<OkxOrderAck>>("/api/v5/trade/cancel-order", parameters, true, ct).ConfigureAwait(false);
++        var canceledId = response.Data.FirstOrDefault()?.OrdId ?? orderId;
++        return await FetchOrderAsync(wireSymbol, canceledId, ct).ConfigureAwait(false);
++    }
++
++    /// <inheritdoc />
++    public async Task<Order> CancelOrderByClientIdAsync(Symbol symbol, string clientOrderId, CancellationToken ct = default)
++    {
++        var wireSymbol = mapper.ToWire(symbol);
++        var parameters = new Dictionary<string, string>
++        {
++            ["instId"] = wireSymbol,
++            ["clOrdId"] = clientOrderId
++        };
++
++        var response = await http.PostAsync<OkxResponse<OkxOrderAck>>("/api/v5/trade/cancel-order", parameters, true, ct).ConfigureAwait(false);
++        var canceledId = response.Data.FirstOrDefault()?.OrdId ?? string.Empty;
++        return await FetchOrderAsync(wireSymbol, canceledId, ct, clientOrderId: clientOrderId).ConfigureAwait(false);
++    }
++
++    /// <inheritdoc />
++    public async Task<IReadOnlyList<Order>> CancelAllOrdersAsync(Symbol symbol, CancellationToken ct = default)
++    {
++        // OKX has no symbol-scoped cancel-all; enumerate the open orders for the symbol and cancel
++        // each via cancel-batch-orders, then re-fetch the affected orders' full state via history.
++        var open = await GetOpenOrdersAsync(symbol, ct).ConfigureAwait(false);
++        if (open.Count == 0)
++            return [];
++
++        var wireSymbol = mapper.ToWire(symbol);
++        // cancel-batch-orders takes a JSON ARRAY of {instId, ordId} objects. All fields are scalar
++        // strings, but the body is an array, so build it through the typed object-body overload.
++        var cancels = open
++            .Where(o => !string.IsNullOrEmpty(o.OrderId))
++            .Select(o => new Dictionary<string, string> { ["instId"] = wireSymbol, ["ordId"] = o.OrderId })
++            .ToList();
++        if (cancels.Count == 0)
++            return [];
++
++        var response = await http.PostAsync<OkxResponse<OkxOrderAck>>("/api/v5/trade/cancel-batch-orders", cancels, true, ct).ConfigureAwait(false);
++        var canceledIds = response.Data.Select(a => a.OrdId).Where(id => !string.IsNullOrEmpty(id)).ToHashSet(StringComparer.Ordinal);
++        if (canceledIds.Count == 0)
++            return [];
++
++        var history = await GetOrderHistoryAsync(symbol, OkxRequestValidation.MaxHistoryLimit, ct: ct).ConfigureAwait(false);
++        return history.Where(o => canceledIds.Contains(o.OrderId)).ToList();
++    }
++
++    /// <inheritdoc />
++    public async Task<Order> GetOrderAsync(Symbol symbol, string orderId, CancellationToken ct = default)
++        => await FetchOrderAsync(mapper.ToWire(symbol), orderId, ct).ConfigureAwait(false);
++
++    /// <inheritdoc />
++    public async Task<IReadOnlyList<Order>> GetOpenOrdersAsync(Symbol? symbol = null, CancellationToken ct = default)
++    {
++        var parameters = new Dictionary<string, string> { ["instType"] = "SPOT" };
++        if (symbol.HasValue)
++            parameters["instId"] = mapper.ToWire(symbol.Value);
++
++        var response = await http.GetAsync<OkxResponse<OkxOrder>>("/api/v5/trade/orders-pending", parameters, true, ct).ConfigureAwait(false);
++        return modelMapper.Map<OkxOrder, Order>(response.Data);
++    }
++
++    /// <inheritdoc />
++    public async Task<IReadOnlyList<Order>> GetOrderHistoryAsync(
++        Symbol symbol,
++        int limit = 500,
++        DateTimeOffset? startTime = null,
++        DateTimeOffset? endTime = null,
++        CancellationToken ct = default)
++    {
++        // The IExchangeClient default (500) exceeds OKX V5's per-call max (100); clamp rather than
++        // throw so the common default-parameter call path succeeds. A value < 1 still fails validation.
++        var effectiveLimit = Math.Min(limit, OkxRequestValidation.MaxHistoryLimit);
++        OkxRequestValidation.ValidateHistoryWindow(effectiveLimit, startTime, endTime);
++
++        var parameters = new Dictionary<string, string>
++        {
++            ["instType"] = "SPOT",
++            ["instId"] = mapper.ToWire(symbol),
++            ["limit"] = effectiveLimit.ToString(System.Globalization.CultureInfo.InvariantCulture)
++        };
++
++        // OKX paginates history with 'before'/'after' (exclusive) cursors keyed by ts.
++        if (startTime.HasValue)
++            parameters["after"] = startTime.Value.ToUnixTimeMilliseconds().ToString(System.Globalization.CultureInfo.InvariantCulture);
++        if (endTime.HasValue)
++            parameters["before"] = endTime.Value.ToUnixTimeMilliseconds().ToString(System.Globalization.CultureInfo.InvariantCulture);
++
++        var response = await http.GetAsync<OkxResponse<OkxOrder>>("/api/v5/trade/orders-history", parameters, true, ct).ConfigureAwait(false);
++        return modelMapper.Map<OkxOrder, Order>(response.Data);
++    }
++
++    // ── Order re-fetch (V5 place/cancel return ids only) ──
++
++    /// <summary>
++    /// Resolves a full <see cref="Order"/> for an OKX order id. OKX place/cancel responses carry only
++    /// the id, so we query <c>/api/v5/trade/order</c> (by ordId, or clOrdId when the ack omits ordId).
++    /// </summary>
++    private async Task<Order> FetchOrderAsync(
++        string wireSymbol, string orderId, CancellationToken ct, string? clientOrderId = null)
++    {
++        // Some acks (notably cancel-by-clOrdId) omit ordId; fall back to querying by clOrdId so the
++        // re-fetch resolves the same order instead of sending an empty ordId to OKX.
++        var parameters = new Dictionary<string, string> { ["instId"] = wireSymbol };
++        if (!string.IsNullOrEmpty(orderId))
++            parameters["ordId"] = orderId;
++        else if (!string.IsNullOrEmpty(clientOrderId))
++            parameters["clOrdId"] = clientOrderId;
++
++        var response = await http.GetAsync<OkxResponse<OkxOrder>>("/api/v5/trade/order", parameters, true, ct).ConfigureAwait(false);
++        var match = response.Data.FirstOrDefault();
++        if (match is not null)
++            return modelMapper.Map<OkxOrder, Order>(match);
++
++        // The order did not surface; return a minimal record carrying whichever identifier we have
++        // (never empty) so callers still get an id to poll later rather than a null/throw.
++        var fallbackId = !string.IsNullOrEmpty(orderId) ? orderId : (clientOrderId ?? string.Empty);
++        return new Order(mapper.FromWire(wireSymbol), fallbackId);
++    }
++
++    // ── Request-direction mapping helpers ──
++
++    private static string MapOrderSide(OrderSide side) => side switch
++    {
++        OrderSide.Buy => "buy",
++        OrderSide.Sell => "sell",
++        _ => throw new ArgumentOutOfRangeException(nameof(side), side, $"Unsupported order side: {side}")
++    };
++
++    /// <summary>
++    /// Maps the domain order type (plus optional time-in-force) onto OKX's <c>ordType</c>, which folds
++    /// TIF semantics in: a limit order's TIF (<c>ioc</c>/<c>fok</c>/post-only) IS the ordType, while a
++    /// plain limit is <c>limit</c> (GTC). OKX V5 spot has no distinct stop/take-profit ordType (algo
++    /// orders use a separate API), so those limit-/market-shaped variants collapse onto their base type.
++    /// </summary>
++    private static string MapOrderType(OrderType type, TimeInForce? tif) => type switch
++    {
++        OrderType.Market or OrderType.StopLoss or OrderType.TakeProfit => "market",
++        OrderType.LimitMaker => "post_only",
++        OrderType.Limit or OrderType.StopLossLimit or OrderType.TakeProfitLimit => tif switch
++        {
++            TimeInForce.Ioc => "ioc",
++            TimeInForce.Fok => "fok",
++            // Gtc (or unspecified) is a resting limit order.
++            _ => "limit"
++        },
++        _ => throw new ArgumentOutOfRangeException(nameof(type), type, $"Unsupported order type: {type}")
++    };
++}
+diff --git a/tests/CryptoExchanges.Net.Okx.Tests.Integration/CryptoExchanges.Net.Okx.Tests.Integration.csproj b/tests/CryptoExchanges.Net.Okx.Tests.Integration/CryptoExchanges.Net.Okx.Tests.Integration.csproj
+new file mode 100644
+index 0000000..23cef39
+--- /dev/null
++++ b/tests/CryptoExchanges.Net.Okx.Tests.Integration/CryptoExchanges.Net.Okx.Tests.Integration.csproj
+@@ -0,0 +1,24 @@
++<Project Sdk="Microsoft.NET.Sdk">
++  <PropertyGroup>
++    <RootNamespace>CryptoExchanges.Net.Okx.Tests.Integration</RootNamespace>
++    <AssemblyName>CryptoExchanges.Net.Okx.Tests.Integration</AssemblyName>
++    <OutputType>Exe</OutputType>
++    <IsPackable>false</IsPackable>
++    <IsTestProject>true</IsTestProject>
++    <NoWarn>$(NoWarn);CA1812;CA1056;CA1031;CA2000;CA1305;CA1032;CA1707;CS1591;CA2007;CA1515;xUnit1051</NoWarn>
++  </PropertyGroup>
++
++  <ItemGroup>
++    <ProjectReference Include="..\..\src\CryptoExchanges.Net.Core\CryptoExchanges.Net.Core.csproj" />
++    <ProjectReference Include="..\..\src\CryptoExchanges.Net.Okx\CryptoExchanges.Net.Okx.csproj" />
++    <ProjectReference Include="..\..\src\CryptoExchanges.Net.Http\CryptoExchanges.Net.Http.csproj" />
++  </ItemGroup>
++
++  <ItemGroup>
++    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.6.0" />
++    <PackageReference Include="xunit.v3" Version="3.2.2" />
++    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5" />
++    <PackageReference Include="NSubstitute" Version="5.3.0" />
++    <PackageReference Include="FluentAssertions" Version="6.12.2" />
++  </ItemGroup>
++</Project>
+diff --git a/tests/CryptoExchanges.Net.Okx.Tests.Integration/OkxPipelineEndToEndTests.cs b/tests/CryptoExchanges.Net.Okx.Tests.Integration/OkxPipelineEndToEndTests.cs
+new file mode 100644
+index 0000000..d7b1f1e
+--- /dev/null
++++ b/tests/CryptoExchanges.Net.Okx.Tests.Integration/OkxPipelineEndToEndTests.cs
+@@ -0,0 +1,192 @@
++using System.Net;
++using Xunit;
++using FluentAssertions;
++using CryptoExchanges.Net.Okx;
++using CryptoExchanges.Net.Okx.Auth;
++using CryptoExchanges.Net.Okx.Resilience;
++using CryptoExchanges.Net.Core.Resilience;
++using CryptoExchanges.Net.Http;
++
++namespace CryptoExchanges.Net.Okx.Tests.Integration;
++
++/// <summary>
++/// End-to-end pipeline + signing-handler tests for OKX, exercised over stub primary handlers (no
++/// network). The signing handler carries the four OK-ACCESS-* headers and re-signs per attempt so a
++/// retried request gets a single fresh header set with a fresh ISO-8601 timestamp + base64 signature.
++/// </summary>
++[Trait("Category", "Integration")]
++public class OkxPipelineEndToEndTests
++{
++    private const string ApiKey = "key";
++    private const string Passphrase = "pass";
++
++    /// <summary>Captures each attempt's headers + body, returning 500 then 200 to force one retry.</summary>
++    private sealed class SeqStub : HttpMessageHandler
++    {
++        private int _n;
++        public List<Dictionary<string, string?>> Headers { get; } = [];
++        public List<string?> Bodies { get; } = [];
++
++        protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
++        {
++            var snapshot = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
++            foreach (var h in request.Headers)
++                snapshot[h.Key] = string.Join(",", h.Value);
++            Headers.Add(snapshot);
++            Bodies.Add(request.Content is null ? null : await request.Content.ReadAsStringAsync(ct).ConfigureAwait(false));
++
++            var status = _n++ == 0 ? HttpStatusCode.InternalServerError : HttpStatusCode.OK;
++            return new HttpResponseMessage(status) { RequestMessage = request };
++        }
++    }
++
++    private sealed class CaptureHandler : HttpMessageHandler
++    {
++        public List<Dictionary<string, string?>> Headers { get; } = [];
++        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
++        {
++            var snapshot = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
++            foreach (var h in request.Headers)
++                snapshot[h.Key] = string.Join(",", h.Value);
++            Headers.Add(snapshot);
++            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { RequestMessage = request });
++        }
++    }
++
++    private static OkxSigningHandler Signing(HttpMessageHandler inner)
++        => new(ApiKey, Passphrase, new OkxSignatureService("secret"), () => 0) { InnerHandler = inner };
++
++    [Fact]
++    public async Task SignedGet_SetsFourOkAccessHeaders()
++    {
++        var capture = new CaptureHandler();
++        using var c = new HttpClient(Signing(capture)) { BaseAddress = new Uri("https://www.okx.com") };
++
++        using var req = new HttpRequestMessage(HttpMethod.Get, "/api/v5/trade/orders-pending?instType=SPOT&instId=BTC-USDT");
++        OkxSigningRequest.MarkSigned(req);
++        await c.SendAsync(req, TestContext.Current.CancellationToken);
++
++        var h = capture.Headers[0];
++        h.Should().ContainKey("OK-ACCESS-KEY").WhoseValue.Should().Be(ApiKey);
++        h.Should().ContainKey("OK-ACCESS-PASSPHRASE").WhoseValue.Should().Be(Passphrase);
++        h.Should().ContainKey("OK-ACCESS-TIMESTAMP");
++        h.Should().ContainKey("OK-ACCESS-SIGN");
++        h["OK-ACCESS-SIGN"].Should().NotBeNullOrWhiteSpace();
++        // OKX renders the signature as base64; it must NOT be lowercase hex.
++        h["OK-ACCESS-SIGN"].Should().MatchRegex("^[A-Za-z0-9+/]+={0,2}$");
++    }
++
++    [Fact]
++    public async Task SignedPost_SetsHeadersAndSignsBody()
++    {
++        var capture = new CaptureHandler();
++        using var c = new HttpClient(Signing(capture)) { BaseAddress = new Uri("https://www.okx.com") };
++
++        using var req = new HttpRequestMessage(HttpMethod.Post, "/api/v5/trade/order")
++        {
++            Content = new StringContent("{\"instId\":\"BTC-USDT\",\"tdMode\":\"cash\"}", System.Text.Encoding.UTF8, "application/json")
++        };
++        OkxSigningRequest.MarkSigned(req);
++        await c.SendAsync(req, TestContext.Current.CancellationToken);
++
++        var h = capture.Headers[0];
++        h.Should().ContainKey("OK-ACCESS-KEY");
++        h.Should().ContainKey("OK-ACCESS-PASSPHRASE");
++        h.Should().ContainKey("OK-ACCESS-TIMESTAMP");
++        h.Should().ContainKey("OK-ACCESS-SIGN");
++        h["OK-ACCESS-SIGN"].Should().NotBeNullOrWhiteSpace();
++    }
++
++    [Fact]
++    public async Task UnsignedRequest_AddsNoAuthHeaders()
++    {
++        var capture = new CaptureHandler();
++        using var c = new HttpClient(Signing(capture)) { BaseAddress = new Uri("https://www.okx.com") };
++
++        using var req = new HttpRequestMessage(HttpMethod.Get, "/api/v5/market/tickers?instType=SPOT");
++        await c.SendAsync(req, TestContext.Current.CancellationToken);
++
++        var h = capture.Headers[0];
++        // Unlike Bybit (which always sets the api-key header), OKX adds NO auth header to public calls.
++        h.Should().NotContainKey("OK-ACCESS-KEY");
++        h.Should().NotContainKey("OK-ACCESS-SIGN");
++        h.Should().NotContainKey("OK-ACCESS-TIMESTAMP");
++    }
++
++    [Fact]
++    public async Task SignedGet_Retried_ReSignsWithSingleHeaderSet()
++    {
++        var stub = new SeqStub();
++        var signing = new OkxSigningHandler(ApiKey, Passphrase, new OkxSignatureService("secret"), () => 0);
++        using var client = HttpClientPipelineBuilder.Build(
++            innerHandler: stub,
++            options: new ResilienceOptions { MaxRetries = 2, BaseDelay = TimeSpan.FromMilliseconds(1) },
++            translator: new OkxErrorTranslator(),
++            gate: new ReactiveRateLimitGate(),
++            requestFinalizer: signing);
++        client.BaseAddress = new Uri("https://www.okx.com");
++
++        using var req = new HttpRequestMessage(HttpMethod.Get, "/api/v5/trade/orders-pending?instType=SPOT&instId=BTC-USDT");
++        OkxSigningRequest.MarkSigned(req);
++        using var resp = await client.SendAsync(req, TestContext.Current.CancellationToken);
++
++        resp.StatusCode.Should().Be(HttpStatusCode.OK);
++        // 1 failure (500) + 1 retry (200): two attempts, each independently signed with a SINGLE header set.
++        stub.Headers.Should().HaveCount(2);
++        foreach (var h in stub.Headers)
++        {
++            h.Should().ContainKey("OK-ACCESS-SIGN");
++            h.Should().ContainKey("OK-ACCESS-TIMESTAMP");
++            h.Should().ContainKey("OK-ACCESS-KEY");
++            h.Should().ContainKey("OK-ACCESS-PASSPHRASE");
++            // A single value per header (prior-attempt headers are stripped before re-signing).
++            h["OK-ACCESS-SIGN"].Should().NotContain(",");
++            h["OK-ACCESS-TIMESTAMP"].Should().NotContain(",");
++        }
++    }
++
++    [Fact]
++    public async Task PassphraseMissing_SignedRequest_FastFails()
++    {
++        // A signing handler constructed without a passphrase must throw on a signed request rather than
++        // sending an unsigned/partially-signed request to OKX.
++        var capture = new CaptureHandler();
++        var signing = new OkxSigningHandler(ApiKey, passphrase: string.Empty, new OkxSignatureService("secret"), () => 0)
++        {
++            InnerHandler = capture
++        };
++        using var c = new HttpClient(signing) { BaseAddress = new Uri("https://www.okx.com") };
++
++        using var req = new HttpRequestMessage(HttpMethod.Get, "/api/v5/account/balance");
++        OkxSigningRequest.MarkSigned(req);
++
++        var act = async () => await c.SendAsync(req, TestContext.Current.CancellationToken);
++        await act.Should().ThrowAsync<InvalidOperationException>();
++    }
++
++    [Fact]
++    public async Task Secretless_OrPassphraseless_BuildResilientHttpClient_DoesNotSign()
++    {
++        // Mirrors the DI gate: a missing secret OR passphrase yields a PassThroughHandler finalizer, so
++        // even a signed-marked request carries NO OK-ACCESS-SIGN header.
++        var capture = new CaptureHandler();
++        var options = new OkxOptions { BaseUrl = "https://www.okx.com", ApiKey = "k", SecretKey = "s" /* no passphrase */ };
++        var finalizer = (string.IsNullOrEmpty(options.SecretKey) || string.IsNullOrEmpty(options.Passphrase))
++            ? (DelegatingHandler)new PassThroughHandler()
++            : new OkxSigningHandler(options.ApiKey, options.Passphrase, new OkxSignatureService(options.SecretKey), () => 0);
++
++        using var client = HttpClientPipelineBuilder.Build(
++            innerHandler: capture,
++            options: new ResilienceOptions(),
++            translator: new OkxErrorTranslator(),
++            gate: new ReactiveRateLimitGate(),
++            requestFinalizer: finalizer);
++        client.BaseAddress = new Uri("https://www.okx.com");
++
++        using var req = new HttpRequestMessage(HttpMethod.Get, "/api/v5/account/balance");
++        OkxSigningRequest.MarkSigned(req);
++        await client.SendAsync(req, TestContext.Current.CancellationToken);
++
++        capture.Headers[0].Should().NotContainKey("OK-ACCESS-SIGN");
++    }
++}
+diff --git a/tests/CryptoExchanges.Net.Okx.Tests.Unit/CryptoExchanges.Net.Okx.Tests.Unit.csproj b/tests/CryptoExchanges.Net.Okx.Tests.Unit/CryptoExchanges.Net.Okx.Tests.Unit.csproj
+new file mode 100644
+index 0000000..c901660
+--- /dev/null
++++ b/tests/CryptoExchanges.Net.Okx.Tests.Unit/CryptoExchanges.Net.Okx.Tests.Unit.csproj
+@@ -0,0 +1,25 @@
++<Project Sdk="Microsoft.NET.Sdk">
++  <PropertyGroup>
++    <RootNamespace>CryptoExchanges.Net.Okx.Tests.Unit</RootNamespace>
++    <AssemblyName>CryptoExchanges.Net.Okx.Tests.Unit</AssemblyName>
++    <OutputType>Exe</OutputType>
++    <IsPackable>false</IsPackable>
++    <IsTestProject>true</IsTestProject>
++    <NoWarn>$(NoWarn);CA1812;CA1056;CA1031;CA2000;CA1305;CA1032;CA1707;CS1591;CA2007;CA1515;xUnit1051</NoWarn>
++  </PropertyGroup>
++
++  <ItemGroup>
++    <ProjectReference Include="..\..\src\CryptoExchanges.Net.Core\CryptoExchanges.Net.Core.csproj" />
++    <ProjectReference Include="..\..\src\CryptoExchanges.Net.Okx\CryptoExchanges.Net.Okx.csproj" />
++    <ProjectReference Include="..\..\src\CryptoExchanges.Net.Http\CryptoExchanges.Net.Http.csproj" />
++    <ProjectReference Include="..\..\src\CryptoExchanges.Net.DependencyInjection\CryptoExchanges.Net.DependencyInjection.csproj" />
++  </ItemGroup>
++
++  <ItemGroup>
++    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.6.0" />
++    <PackageReference Include="xunit.v3" Version="3.2.2" />
++    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5" />
++    <PackageReference Include="NSubstitute" Version="5.3.0" />
++    <PackageReference Include="FluentAssertions" Version="6.12.2" />
++  </ItemGroup>
++</Project>
+diff --git a/tests/CryptoExchanges.Net.Okx.Tests.Unit/OkxMappingAndServiceTests.cs b/tests/CryptoExchanges.Net.Okx.Tests.Unit/OkxMappingAndServiceTests.cs
+new file mode 100644
+index 0000000..b46794f
+--- /dev/null
++++ b/tests/CryptoExchanges.Net.Okx.Tests.Unit/OkxMappingAndServiceTests.cs
+@@ -0,0 +1,449 @@
++using Xunit;
++using FluentAssertions;
++using NSubstitute;
++using DeltaMapper;
++using Microsoft.Extensions.DependencyInjection;
++using CryptoExchanges.Net.Okx;
++using CryptoExchanges.Net.Okx.Internal;
++using CryptoExchanges.Net.Okx.Services;
++using CryptoExchanges.Net.Core;
++using CryptoExchanges.Net.Core.Interfaces;
++using CryptoExchanges.Net.Core.Models;
++using CryptoExchanges.Net.Core.Enums;
++using CryptoExchanges.Net.DependencyInjection;
++
++namespace CryptoExchanges.Net.Okx.Tests.Unit;
++
++/// <summary>
++/// No-network unit tests for the OKX DeltaMapper profile (DTO -> domain model) and the three services
++/// exercised over a mocked <see cref="IOkxHttpClient"/> (NSubstitute). Includes the market-order
++/// round-trip regression (TASK-013 carry) and DI resolution (incl. the secret+passphrase gate).
++/// </summary>
++public class OkxMappingAndServiceTests
++{
++    private static readonly Symbol BtcUsdt = new(Asset.Btc, Asset.Usdt);
++
++    private static (ISymbolMapper symbolMapper, IMapper mapper) BuildMappers()
++    {
++        var symbolMapper = new SymbolMapper(OkxSymbolFormat.Instance);
++        // Warm so FromWire("BTC-USDT") resolves to BTC/USDT exactly.
++        symbolMapper.UpdateSymbols([new SymbolInfo(BtcUsdt, [OrderType.Limit])]);
++        var mapper = OkxClientComposer.CreateMapper(symbolMapper);
++        return (symbolMapper, mapper);
++    }
++
++    // ── DeltaMapper config validity ──
++
++    [Fact]
++    public void MapperConfiguration_IsValid()
++    {
++        // CreateMapper invokes AssertConfigurationIsValid internally; if any member is unmapped it throws.
++        var act = () => BuildMappers();
++        act.Should().NotThrow();
++    }
++
++    // ── Profile mapping (representative V5 payloads) ──
++
++    [Fact]
++    public void OrderProfile_MapsAllScalarsAndResolvesSymbol()
++    {
++        var (_, mapper) = BuildMappers();
++        var dto = new OkxOrder
++        {
++            InstId = "BTC-USDT",
++            OrdId = "111",
++            ClOrdId = "cli-1",
++            Px = "100.5",
++            Sz = "2",
++            AccFillSz = "1",
++            AvgPx = "150.75",
++            Side = "buy",
++            OrdType = "limit",
++            State = "partially_filled",
++            CTime = "1700000000000",
++            UTime = "1700000001000"
++        };
++
++        var order = mapper.Map<OkxOrder, Order>(dto);
++
++        order.Symbol.Should().Be(BtcUsdt);
++        order.OrderId.Should().Be("111");
++        order.ClientOrderId.Should().Be("cli-1");
++        order.Price.Should().Be(100.5m);
++        order.OriginalQuantity.Should().Be(2m);
++        order.ExecutedQuantity.Should().Be(1m);
++        // CumulativeQuoteQuantity = accFillSz * avgPx = 1 * 150.75.
++        order.CumulativeQuoteQuantity.Should().Be(150.75m);
++        order.Side.Should().Be(OrderSide.Buy);
++        order.Type.Should().Be(OrderType.Limit);
++        order.Status.Should().Be(OrderStatus.PartiallyFilled);
++        order.TimeInForce.Should().Be(TimeInForce.Gtc);
++        order.CreatedAt.Should().Be(DateTimeOffset.FromUnixTimeMilliseconds(1700000000000));
++        order.UpdatedAt.Should().Be(DateTimeOffset.FromUnixTimeMilliseconds(1700000001000));
++    }
++
++    // ── MARKET-ORDER round-trip regression (TASK-013): a market order maps cleanly ──
++
++    [Fact]
++    public void OrderProfile_MarketOrder_MapsCleanly()
++    {
++        var (_, mapper) = BuildMappers();
++        var dto = new OkxOrder
++        {
++            InstId = "BTC-USDT",
++            OrdId = "222",
++            Sz = "0.5",
++            AccFillSz = "0.5",
++            AvgPx = "42000",
++            Side = "buy",
++            OrdType = "market",
++            State = "filled",
++            CTime = "1700000000000",
++            UTime = "1700000000500"
++        };
++
++        // ParseOrderType("market") -> Market and ParseTimeInForce("market") -> Ioc must both succeed.
++        var act = () => mapper.Map<OkxOrder, Order>(dto);
++        act.Should().NotThrow();
++
++        var order = mapper.Map<OkxOrder, Order>(dto);
++        order.Type.Should().Be(OrderType.Market);
++        order.TimeInForce.Should().Be(TimeInForce.Ioc);
++        order.Status.Should().Be(OrderStatus.Filled);
++        order.CumulativeQuoteQuantity.Should().Be(21000m); // 0.5 * 42000
++    }
++
++    [Fact]
++    public void TickerProfile_ComputesChangeFromOpen24h()
++    {
++        var (_, mapper) = BuildMappers();
++        var dto = new OkxTicker
++        {
++            InstId = "BTC-USDT",
++            Last = "42000",
++            Open24h = "40000",
++            High24h = "43000",
++            Low24h = "39000",
++            Vol24h = "123.45",
++            VolCcy24h = "5000000",
++            Ts = "1700000000000"
++        };
++
++        var ticker = mapper.Map<OkxTicker, Ticker>(dto);
++
++        ticker.Symbol.Should().Be(BtcUsdt);
++        ticker.LastPrice.Should().Be(42000m);
++        ticker.OpenPrice.Should().Be(40000m);
++        ticker.PriceChange.Should().Be(2000m);
++        // (42000 - 40000) / 40000 * 100 = 5%.
++        ticker.PriceChangePercent.Should().Be(5m);
++        ticker.Timestamp.Should().Be(DateTimeOffset.FromUnixTimeMilliseconds(1700000000000));
++    }
++
++    [Fact]
++    public void InstrumentProfile_MapsBaseQuoteToSymbol()
++    {
++        var (_, mapper) = BuildMappers();
++        var dto = new OkxInstrument { InstId = "BTC-USDT", BaseCcy = "BTC", QuoteCcy = "USDT" };
++
++        var info = mapper.Map<OkxInstrument, SymbolInfo>(dto);
++
++        info.Symbol.Should().Be(BtcUsdt);
++        info.AllowedOrderTypes.Should().Contain(OrderType.Limit).And.Contain(OrderType.Market);
++    }
++
++    [Fact]
++    public void BalanceProfile_MapsAvailAndFrozen()
++    {
++        var (_, mapper) = BuildMappers();
++        var dto = new OkxBalanceDetail { Ccy = "BTC", AvailBal = "1.5", FrozenBal = "0.25" };
++
++        var balance = mapper.Map<OkxBalanceDetail, AssetBalance>(dto);
++
++        balance.Asset.Should().Be(Asset.Btc);
++        balance.Free.Should().Be(1.5m);
++        balance.Locked.Should().Be(0.25m);
++        balance.Total.Should().Be(1.75m);
++    }
++
++    // ── MarketDataService over mocked IOkxHttpClient ──
++
++    [Fact]
++    public async Task MarketData_GetTickers_SingleSymbol_MapsPayload()
++    {
++        var (symbolMapper, mapper) = BuildMappers();
++        var http = Substitute.For<IOkxHttpClient>();
++        http.GetAsync<OkxResponse<OkxTicker>>(
++                "/api/v5/market/ticker", Arg.Any<Dictionary<string, string>>(), false, Arg.Any<CancellationToken>())
++            .Returns(new OkxResponse<OkxTicker>
++            {
++                Data = [new OkxTicker { InstId = "BTC-USDT", Last = "42000", Open24h = "40000" }]
++            });
++
++        var service = new OkxMarketDataService(http, symbolMapper, mapper);
++        var tickers = await service.GetTickersAsync(BtcUsdt, TestContext.Current.CancellationToken);
++
++        tickers.Should().HaveCount(1);
++        tickers[0].Symbol.Should().Be(BtcUsdt);
++        tickers[0].LastPrice.Should().Be(42000m);
++    }
++
++    [Fact]
++    public async Task MarketData_GetOrderBook_ParsesLevels()
++    {
++        var (symbolMapper, mapper) = BuildMappers();
++        var http = Substitute.For<IOkxHttpClient>();
++        http.GetAsync<OkxResponse<OkxOrderBook>>(
++                "/api/v5/market/books", Arg.Any<Dictionary<string, string>>(), false, Arg.Any<CancellationToken>())
++            .Returns(new OkxResponse<OkxOrderBook>
++            {
++                Data =
++                [
++                    new OkxOrderBook
++                    {
++                        Bids = [["100", "2", "0", "1"]],
++                        Asks = [["101", "3", "0", "1"]],
++                        Ts = "1700000000000"
++                    }
++                ]
++            });
++
++        var service = new OkxMarketDataService(http, symbolMapper, mapper);
++        var book = await service.GetOrderBookAsync(BtcUsdt, ct: TestContext.Current.CancellationToken);
++
++        book.Bids.Should().ContainSingle().Which.Price.Should().Be(100m);
++        book.Asks.Should().ContainSingle().Which.Quantity.Should().Be(3m);
++    }
++
++    // ── AccountService over mocked IOkxHttpClient ──
++
++    [Fact]
++    public async Task Account_GetBalances_TrimsZeroBalances()
++    {
++        var (symbolMapper, mapper) = BuildMappers();
++        var http = Substitute.For<IOkxHttpClient>();
++        http.GetAsync<OkxResponse<OkxBalanceAccount>>(
++                "/api/v5/account/balance", Arg.Any<Dictionary<string, string>>(), true, Arg.Any<CancellationToken>())
++            .Returns(new OkxResponse<OkxBalanceAccount>
++            {
++                Data =
++                [
++                    new OkxBalanceAccount
++                    {
++                        Details =
++                        [
++                            new OkxBalanceDetail { Ccy = "BTC", AvailBal = "1.5", FrozenBal = "0" },
++                            new OkxBalanceDetail { Ccy = "ZZZ", AvailBal = "0", FrozenBal = "0" }
++                        ]
++                    }
++                ]
++            });
++
++        var service = new OkxAccountService(http, symbolMapper, mapper);
++        var balances = await service.GetBalancesAsync(TestContext.Current.CancellationToken);
++
++        balances.Should().HaveCount(1);
++        balances[0].Asset.Should().Be(Asset.Btc);
++        balances[0].Total.Should().Be(1.5m);
++    }
++
++    [Fact]
++    public async Task Account_GetTradeHistory_DefaultLimit_ClampsToHundred()
++    {
++        var (symbolMapper, mapper) = BuildMappers();
++        var http = Substitute.For<IOkxHttpClient>();
++        Dictionary<string, string>? captured = null;
++        http.GetAsync<OkxResponse<OkxFill>>(
++                "/api/v5/trade/fills", Arg.Do<Dictionary<string, string>>(p => captured = p), true, Arg.Any<CancellationToken>())
++            .Returns(new OkxResponse<OkxFill>());
++
++        var service = new OkxAccountService(http, symbolMapper, mapper);
++
++        // Default IExchangeClient limit is 500; the service must clamp to 100, not throw.
++        var act = async () => await service.GetTradeHistoryAsync(BtcUsdt, ct: TestContext.Current.CancellationToken);
++        await act.Should().NotThrowAsync();
++
++        captured.Should().NotBeNull();
++        captured!["limit"].Should().Be("100");
++    }
++
++    // ── TradingService over mocked IOkxHttpClient ──
++
++    [Fact]
++    public async Task Trading_GetOpenOrders_MapsOrders()
++    {
++        var (symbolMapper, mapper) = BuildMappers();
++        var http = Substitute.For<IOkxHttpClient>();
++        http.GetAsync<OkxResponse<OkxOrder>>(
++                "/api/v5/trade/orders-pending", Arg.Any<Dictionary<string, string>>(), true, Arg.Any<CancellationToken>())
++            .Returns(new OkxResponse<OkxOrder>
++            {
++                Data = [new OkxOrder { InstId = "BTC-USDT", OrdId = "9", Sz = "1", Px = "5" }]
++            });
++
++        var service = new OkxTradingService(http, symbolMapper, mapper);
++        var orders = await service.GetOpenOrdersAsync(BtcUsdt, TestContext.Current.CancellationToken);
++
++        orders.Should().HaveCount(1);
++        orders[0].OrderId.Should().Be("9");
++        orders[0].Symbol.Should().Be(BtcUsdt);
++    }
++
++    [Fact]
++    public async Task Trading_GetOrderHistory_DefaultLimit_ClampsToHundred()
++    {
++        var (symbolMapper, mapper) = BuildMappers();
++        var http = Substitute.For<IOkxHttpClient>();
++        Dictionary<string, string>? captured = null;
++        http.GetAsync<OkxResponse<OkxOrder>>(
++                "/api/v5/trade/orders-history", Arg.Do<Dictionary<string, string>>(p => captured = p), true, Arg.Any<CancellationToken>())
++            .Returns(new OkxResponse<OkxOrder>());
++
++        var service = new OkxTradingService(http, symbolMapper, mapper);
++
++        var act = async () => await service.GetOrderHistoryAsync(BtcUsdt, ct: TestContext.Current.CancellationToken);
++        await act.Should().NotThrowAsync();
++
++        captured.Should().NotBeNull();
++        captured!["limit"].Should().Be("100");
++    }
++
++    [Fact]
++    public async Task Trading_PlaceMarketOrder_SendsMarketOrdTypeAndRefetches()
++    {
++        var (symbolMapper, mapper) = BuildMappers();
++        var http = Substitute.For<IOkxHttpClient>();
++
++        Dictionary<string, string>? placed = null;
++        http.PostAsync<OkxResponse<OkxOrderAck>>(
++                "/api/v5/trade/order", Arg.Do<Dictionary<string, string>>(p => placed = p), true, Arg.Any<CancellationToken>())
++            .Returns(new OkxResponse<OkxOrderAck> { Data = [new OkxOrderAck { OrdId = "ord-1", SCode = "0" }] });
++
++        http.GetAsync<OkxResponse<OkxOrder>>(
++                "/api/v5/trade/order", Arg.Any<Dictionary<string, string>>(), true, Arg.Any<CancellationToken>())
++            .Returns(new OkxResponse<OkxOrder>
++            {
++                Data = [new OkxOrder { InstId = "BTC-USDT", OrdId = "ord-1", Sz = "0.5", OrdType = "market", State = "filled", Side = "buy" }]
++            });
++
++        var service = new OkxTradingService(http, symbolMapper, mapper);
++        var request = PlaceOrderRequest.Create(BtcUsdt, OrderSide.Buy, OrderType.Market, quantity: 0.5m);
++        var order = await service.PlaceOrderAsync(request, TestContext.Current.CancellationToken);
++
++        placed.Should().NotBeNull();
++        placed!["ordType"].Should().Be("market");
++        placed["tdMode"].Should().Be("cash");
++        placed.Should().NotContainKey("px"); // market orders carry no price
++        order.OrderId.Should().Be("ord-1");
++        order.Type.Should().Be(OrderType.Market);
++    }
++
++    [Fact]
++    public async Task Trading_CancelByClientId_AckOmitsOrderId_RefetchesByClOrdId()
++    {
++        var (symbolMapper, mapper) = BuildMappers();
++        var http = Substitute.For<IOkxHttpClient>();
++
++        // The cancel ack omits ordId (only clOrdId is echoed).
++        http.PostAsync<OkxResponse<OkxOrderAck>>(
++                "/api/v5/trade/cancel-order", Arg.Any<Dictionary<string, string>>(), true, Arg.Any<CancellationToken>())
++            .Returns(new OkxResponse<OkxOrderAck> { Data = [new OkxOrderAck { OrdId = string.Empty, ClOrdId = "cli-77", SCode = "0" }] });
++
++        Dictionary<string, string>? refetchParams = null;
++        http.GetAsync<OkxResponse<OkxOrder>>(
++                "/api/v5/trade/order", Arg.Do<Dictionary<string, string>>(p => refetchParams = p), true, Arg.Any<CancellationToken>())
++            .Returns(new OkxResponse<OkxOrder>
++            {
++                Data = [new OkxOrder { InstId = "BTC-USDT", OrdId = "real-99", ClOrdId = "cli-77", State = "canceled" }]
++            });
++
++        var service = new OkxTradingService(http, symbolMapper, mapper);
++        var order = await service.CancelOrderByClientIdAsync(BtcUsdt, "cli-77", TestContext.Current.CancellationToken);
++
++        order.OrderId.Should().Be("real-99");
++        order.OrderId.Should().NotBeNullOrEmpty();
++        refetchParams.Should().NotBeNull();
++        refetchParams!.Should().ContainKey("clOrdId").WhoseValue.Should().Be("cli-77");
++        refetchParams.Should().NotContainKey("ordId");
++    }
++
++    // ── DI resolution ──
++
++    [Fact]
++    public async Task Di_AddOkxExchange_ResolvesKeyedClient()
++    {
++        var services = new ServiceCollection();
++        services.AddOkxExchange(o => { o.ApiKey = "k"; o.SecretKey = "s"; o.Passphrase = "p"; });
++        await using var sp = services.BuildServiceProvider();
++
++        var client = sp.GetRequiredKeyedService<IExchangeClient>(ExchangeId.Okx);
++        client.ExchangeId.Should().Be(ExchangeId.Okx);
++    }
++
++    [Fact]
++    public async Task Di_AddOkxExchange_Secretless_StillResolvesWorkingClient()
++    {
++        // A secretless registration must resolve (public market data needs no credentials); the
++        // finalizer is a PassThroughHandler rather than a signing handler in this path.
++        var services = new ServiceCollection();
++        services.AddOkxExchange();
++        await using var sp = services.BuildServiceProvider();
++
++        sp.GetRequiredKeyedService<IExchangeClient>(ExchangeId.Okx).ExchangeId.Should().Be(ExchangeId.Okx);
++    }
++
++    [Fact]
++    public async Task Di_AddOkxExchange_PassphraseMissing_StillResolves()
++    {
++        // Secret present but passphrase missing: signing is gated OFF (PassThrough), and the client
++        // must still resolve so this does NOT trip OkxOptions.ToCredentials() (which throws on empty
++        // passphrase). This is the TASK-010 carry-in.
++        var services = new ServiceCollection();
++        services.AddOkxExchange(o => { o.ApiKey = "k"; o.SecretKey = "s"; /* no passphrase */ });
++        await using var sp = services.BuildServiceProvider();
++
++        sp.GetRequiredKeyedService<IExchangeClient>(ExchangeId.Okx).ExchangeId.Should().Be(ExchangeId.Okx);
++    }
++
++    [Fact]
++    public void Di_AddOkxExchange_MapperIsKeyedSingleton()
++    {
++        var services = new ServiceCollection();
++        services.AddOkxExchange(o => { o.ApiKey = "k"; o.SecretKey = "s"; o.Passphrase = "p"; });
++        using var sp = services.BuildServiceProvider();
++
++        var m1 = sp.GetRequiredKeyedService<IMapper>(ExchangeId.Okx);
++        var m2 = sp.GetRequiredKeyedService<IMapper>(ExchangeId.Okx);
++        m1.Should().BeSameAs(m2);
++    }
++
++    [Fact]
++    public void Di_AddOkxExchange_InvalidOptions_FailFast()
++    {
++        var services = new ServiceCollection();
++        services.AddOkxExchange(o => o.TimeoutSeconds = 0);
++        var act = () => services.BuildServiceProvider().GetRequiredKeyedService<IExchangeClient>(ExchangeId.Okx);
++        act.Should().Throw<Microsoft.Extensions.Options.OptionsValidationException>();
++    }
++
++    [Fact]
++    public async Task Di_AddCryptoExchanges_ResolvesOkxBybitAndBinance()
++    {
++        var services = new ServiceCollection();
++        services.AddCryptoExchanges();
++        await using var sp = services.BuildServiceProvider();
++
++        sp.GetRequiredKeyedService<IExchangeClient>(ExchangeId.Okx).ExchangeId.Should().Be(ExchangeId.Okx);
++        sp.GetRequiredKeyedService<IExchangeClient>(ExchangeId.Bybit).ExchangeId.Should().Be(ExchangeId.Bybit);
++        sp.GetRequiredKeyedService<IExchangeClient>(ExchangeId.Binance).ExchangeId.Should().Be(ExchangeId.Binance);
++    }
++
++    [Fact]
++    public async Task Di_AddOkxExchange_IsScopeClean()
++    {
++        var services = new ServiceCollection();
++        services.AddOkxExchange(o => { o.ApiKey = "k"; o.SecretKey = "s"; o.Passphrase = "p"; });
++        await using var sp = services.BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true, ValidateOnBuild = true });
++        sp.GetRequiredKeyedService<IExchangeClient>(ExchangeId.Okx).Should().NotBeNull();
++    }
++}
+diff --git a/tests/CryptoExchanges.Net.Okx.Tests.Unit/OkxSigningTests.cs b/tests/CryptoExchanges.Net.Okx.Tests.Unit/OkxSigningTests.cs
+new file mode 100644
+index 0000000..7ce99e0
+--- /dev/null
++++ b/tests/CryptoExchanges.Net.Okx.Tests.Unit/OkxSigningTests.cs
+@@ -0,0 +1,362 @@
++using System.Net;
++using Xunit;
++using FluentAssertions;
++using CryptoExchanges.Net.Okx;
++using CryptoExchanges.Net.Okx.Auth;
++using CryptoExchanges.Net.Okx.Internal;
++using CryptoExchanges.Net.Okx.Resilience;
++using CryptoExchanges.Net.Core;
++using CryptoExchanges.Net.Core.Auth;
++using CryptoExchanges.Net.Core.Exceptions;
++using CryptoExchanges.Net.Core.Models;
++using CryptoExchanges.Net.Core.Enums;
++
++namespace CryptoExchanges.Net.Okx.Tests.Unit;
++
++/// <summary>
++/// No-network unit tests for the OKX signature service (base64 HMAC-SHA256 + prehash assembly),
++/// ISO-8601 timestamp format, symbol round-trip, value parsers, request validation, error mapping,
++/// and time-sync offset arithmetic.
++/// </summary>
++public class OkxSigningTests
++{
++    // ── base64 HMAC-SHA256 signature: FIXED known vectors ──
++
++    [Fact]
++    public void Sign_ProducesExpectedBase64ForFixedVector()
++    {
++        // HMAC-SHA256("hello", key="secret") rendered as base64 (the same hash Bybit renders as the
++        // hex 88aab3ed...7c0b). Computed independently.
++        var sig = new OkxSignatureService("secret").Sign("hello");
++        sig.Should().Be("iKqz7ejTrflNJquQ07r9SiCDBww7zOnAFO4EpEOEfAs=");
++    }
++
++    [Fact]
++    public void Sign_MatchesCoreHmacBase64()
++    {
++        // The service is exactly Core HmacSignature with base64 output — confirm they agree.
++        var viaService = new OkxSignatureService("mysecret").Sign("some-prehash");
++        var viaCore = HmacSignature.Compute("mysecret", "some-prehash", SignatureEncoding.Base64);
++        viaService.Should().Be(viaCore);
++    }
++
++    [Fact]
++    public void BuildPrehash_Get_AssemblesTimestampMethodPathQuery()
++    {
++        const string timestamp = "2026-06-17T12:00:00.000Z";
++        // GET prehash: timestamp + METHOD + requestPath(+query) + emptyBody.
++        var prehash = OkxSignatureService.BuildPrehash(timestamp, "GET", "/api/v5/market/tickers?instType=SPOT", string.Empty);
++        prehash.Should().Be("2026-06-17T12:00:00.000ZGET/api/v5/market/tickers?instType=SPOT");
++
++        var sig = new OkxSignatureService("mysecret").Sign(prehash);
++        sig.Should().Be("CTQIPrggIiN7qCvHtwmBM6aqCInZbmHwkf0tH0XjyK4=");
++    }
++
++    [Fact]
++    public void BuildPrehash_Post_AssemblesTimestampMethodPathBody()
++    {
++        const string timestamp = "2026-06-17T12:00:00.000Z";
++        const string body = "{\"instId\":\"BTC-USDT\",\"tdMode\":\"cash\"}";
++        // POST prehash: timestamp + METHOD + requestPath + jsonBody (no query string on the path).
++        var prehash = OkxSignatureService.BuildPrehash(timestamp, "POST", "/api/v5/trade/order", body);
++        prehash.Should().Be("2026-06-17T12:00:00.000ZPOST/api/v5/trade/order{\"instId\":\"BTC-USDT\",\"tdMode\":\"cash\"}");
++    }
++
++    [Fact]
++    public void BuildPrehash_UpperCasesMethod()
++        => OkxSignatureService.BuildPrehash("1", "get", "/p", string.Empty).Should().Be("1GET/p");
++
++    [Fact]
++    public void BuildPrehash_RejectsBlankRequiredFields()
++    {
++        var act = () => OkxSignatureService.BuildPrehash(" ", "GET", "/p", string.Empty);
++        act.Should().Throw<ArgumentException>();
++    }
++
++    [Fact]
++    public void BuildPrehash_RejectsNullBody()
++    {
++        var act = () => OkxSignatureService.BuildPrehash("1", "GET", "/p", null!);
++        act.Should().Throw<ArgumentNullException>();
++    }
++
++    [Fact]
++    public void FormatTimestamp_ProducesIso8601UtcMillisWithZ()
++    {
++        var instant = new DateTimeOffset(2026, 6, 17, 12, 0, 0, 123, TimeSpan.Zero);
++        OkxSignatureService.FormatTimestamp(instant).Should().Be("2026-06-17T12:00:00.123Z");
++    }
++
++    [Fact]
++    public void FormatTimestamp_ConvertsToUtc()
++    {
++        // A +05:00 instant must be rendered in UTC (07:00Z), milliseconds preserved.
++        var instant = new DateTimeOffset(2026, 6, 17, 12, 0, 0, 0, TimeSpan.FromHours(5));
++        OkxSignatureService.FormatTimestamp(instant).Should().Be("2026-06-17T07:00:00.000Z");
++    }
++
++    [Fact]
++    public void SignatureService_RejectsBlankSecret()
++    {
++        var act = () => new OkxSignatureService(" ");
++        act.Should().Throw<ArgumentException>();
++    }
++
++    // ── Symbol round-trip via SymbolMapper(OkxSymbolFormat.Instance) ──
++
++    [Fact]
++    public void Symbol_ToWire_UsesHyphenUpperCase()
++    {
++        var mapper = new SymbolMapper(OkxSymbolFormat.Instance);
++        mapper.ToWire(new Symbol(Asset.Btc, Asset.Usdt)).Should().Be("BTC-USDT");
++    }
++
++    [Fact]
++    public void Symbol_FromWire_RoundTrips()
++    {
++        var mapper = new SymbolMapper(OkxSymbolFormat.Instance);
++        var btcusdt = new Symbol(Asset.Btc, Asset.Usdt);
++
++        var wire = mapper.ToWire(btcusdt);
++        wire.Should().Be("BTC-USDT");
++        mapper.FromWire(wire).Should().Be(btcusdt);
++    }
++
++    // ── OkxValueParsers invariants + malformed-input rejection ──
++
++    [Theory]
++    [InlineData("", 0)]
++    [InlineData("0", 0)]
++    [InlineData("1.5", 1.5)]
++    [InlineData("100.25", 100.25)]
++    public void ParseDecimal_ParsesOrReturnsZero(string input, double expected)
++        => OkxValueParsers.ParseDecimal(input).Should().Be((decimal)expected);
++
++    [Fact]
++    public void ParseDecimal_RejectsMalformedInput()
++    {
++        var act = () => OkxValueParsers.ParseDecimal("not-a-number");
++        act.Should().Throw<FormatException>();
++    }
++
++    [Theory]
++    [InlineData("", null)]
++    [InlineData("0", null)]
++    [InlineData("12.5", 12.5)]
++    public void ParseOptionalDecimal_TreatsZeroAndEmptyAsNull(string input, double? expected)
++    {
++        var result = OkxValueParsers.ParseOptionalDecimal(input);
++        if (expected is null)
++            result.Should().BeNull();
++        else
++            result.Should().Be((decimal)expected.Value);
++    }
++
++    [Fact]
++    public void ParseAssetOrNone_FallsBackToNoneForUnrepresentable()
++    {
++        OkxValueParsers.ParseAssetOrNone("BTC").Should().Be(Asset.Btc);
++        OkxValueParsers.ParseAssetOrNone("bad-ticker!").Should().Be(Asset.None);
++        OkxValueParsers.ParseAssetOrNone(null).Should().Be(Asset.None);
++    }
++
++    [Theory]
++    [InlineData("buy", OrderSide.Buy)]
++    [InlineData("sell", OrderSide.Sell)]
++    public void ParseOrderSide_MapsKnownValues(string input, OrderSide expected)
++        => OkxValueParsers.ParseOrderSide(input).Should().Be(expected);
++
++    [Fact]
++    public void ParseOrderSide_RejectsUnknown()
++    {
++        var act = () => OkxValueParsers.ParseOrderSide("hold");
++        act.Should().Throw<ArgumentOutOfRangeException>();
++    }
++
++    [Theory]
++    [InlineData("limit", OrderType.Limit)]
++    [InlineData("post_only", OrderType.Limit)]
++    [InlineData("fok", OrderType.Limit)]
++    [InlineData("ioc", OrderType.Limit)]
++    [InlineData("market", OrderType.Market)]
++    public void ParseOrderType_MapsKnownValues(string input, OrderType expected)
++        => OkxValueParsers.ParseOrderType(input).Should().Be(expected);
++
++    [Fact]
++    public void ParseOrderType_RejectsUnknown()
++    {
++        var act = () => OkxValueParsers.ParseOrderType("conditional");
++        act.Should().Throw<ArgumentOutOfRangeException>();
++    }
++
++    [Theory]
++    [InlineData("live", OrderStatus.New)]
++    [InlineData("partially_filled", OrderStatus.PartiallyFilled)]
++    [InlineData("filled", OrderStatus.Filled)]
++    [InlineData("canceled", OrderStatus.Canceled)]
++    [InlineData("mmp_canceled", OrderStatus.Canceled)]
++    [InlineData("something_new", OrderStatus.Unknown)]
++    public void ParseOrderStatus_MapsKnownAndUnknown(string input, OrderStatus expected)
++        => OkxValueParsers.ParseOrderStatus(input).Should().Be(expected);
++
++    [Theory]
++    [InlineData("limit", TimeInForce.Gtc)]
++    [InlineData("post_only", TimeInForce.Gtc)]
++    [InlineData("ioc", TimeInForce.Ioc)]
++    [InlineData("fok", TimeInForce.Fok)]
++    [InlineData("market", TimeInForce.Ioc)]
++    public void ParseTimeInForce_MapsKnownValues(string input, TimeInForce expected)
++        => OkxValueParsers.ParseTimeInForce(input).Should().Be(expected);
++
++    [Fact]
++    public void ParseTimeInForce_RejectsUnknown()
++    {
++        var act = () => OkxValueParsers.ParseTimeInForce("whenever");
++        act.Should().Throw<ArgumentOutOfRangeException>();
++    }
++
++    [Fact]
++    public void ParseOrderTypeAndTimeInForce_BothAccept_Market()
++    {
++        // MARKET-ORDER regression (TASK-013 carry): both parsers must accept "market" so a market
++        // order round-trips through the mapping profile without throwing.
++        OkxValueParsers.ParseOrderType("market").Should().Be(OrderType.Market);
++        OkxValueParsers.ParseTimeInForce("market").Should().Be(TimeInForce.Ioc);
++    }
++
++    // ── OkxRequestValidation ──
++
++    [Fact]
++    public void ValidateHistoryWindow_AcceptsInRangeLimit()
++    {
++        var act = () => OkxRequestValidation.ValidateHistoryWindow(100, null, null);
++        act.Should().NotThrow();
++    }
++
++    [Theory]
++    [InlineData(0)]
++    [InlineData(-1)]
++    [InlineData(101)]
++    [InlineData(500)]
++    public void ValidateHistoryWindow_RejectsOutOfRangeLimit(int limit)
++    {
++        var act = () => OkxRequestValidation.ValidateHistoryWindow(limit, null, null);
++        act.Should().Throw<ArgumentOutOfRangeException>();
++    }
++
++    [Fact]
++    public void ValidateHistoryWindow_RejectsInvertedWindow()
++    {
++        var start = DateTimeOffset.UtcNow;
++        var end = start.AddHours(-1);
++        var act = () => OkxRequestValidation.ValidateHistoryWindow(10, start, end);
++        act.Should().Throw<ArgumentException>();
++    }
++
++    // ── OkxTimeSync ──
++
++    [Fact]
++    public void ComputeOffset_ReturnsServerMinusLocal()
++    {
++        OkxTimeSync.ComputeOffset(serverTimeMs: 10_000, localNowMs: 8_000).Should().Be(2_000);
++        OkxTimeSync.ComputeOffset(serverTimeMs: 8_000, localNowMs: 10_000).Should().Be(-2_000);
++    }
++
++    [Fact]
++    public void ApplyOffset_WritesIntoHolderAndReturnsOffset()
++    {
++        var holder = new long[] { 0L };
++        var written = OkxTimeSync.ApplyOffset(serverTimeMs: 12_345, localNowMs: 12_000, holder);
++
++        written.Should().Be(345);
++        holder[0].Should().Be(345);
++    }
++
++    [Fact]
++    public void ApplyOffset_RejectsZeroLengthHolder()
++    {
++        var act = () => OkxTimeSync.ApplyOffset(1, 0, []);
++        act.Should().Throw<ArgumentException>();
++    }
++
++    // ── OkxErrorTranslator: code / HTTP-status → exception type ──
++
++    private static ExchangeException Translate(HttpStatusCode status, string body)
++    {
++        using var resp = new HttpResponseMessage(status);
++        return new OkxErrorTranslator().Translate(resp, body);
++    }
++
++    [Theory]
++    [InlineData(HttpStatusCode.OK, "{\"code\":\"50111\",\"msg\":\"invalid key\"}", typeof(AuthenticationException))]
++    [InlineData(HttpStatusCode.OK, "{\"code\":\"50113\",\"msg\":\"bad sign\"}", typeof(AuthenticationException))]
++    [InlineData(HttpStatusCode.OK, "{\"code\":\"50105\",\"msg\":\"wrong passphrase\"}", typeof(AuthenticationException))]
++    [InlineData(HttpStatusCode.Unauthorized, "{\"code\":\"1\",\"msg\":\"unauth\"}", typeof(AuthenticationException))]
++    [InlineData(HttpStatusCode.OK, "{\"code\":\"51008\",\"msg\":\"insufficient\"}", typeof(InsufficientBalanceException))]
++    [InlineData(HttpStatusCode.OK, "{\"code\":\"51131\",\"msg\":\"insufficient balance\"}", typeof(InsufficientBalanceException))]
++    [InlineData(HttpStatusCode.OK, "{\"code\":\"51001\",\"msg\":\"instrument not found\"}", typeof(InvalidOrderException))]
++    [InlineData(HttpStatusCode.OK, "{\"code\":\"51020\",\"msg\":\"below min\"}", typeof(InvalidOrderException))]
++    [InlineData(HttpStatusCode.OK, "{\"code\":\"999999\",\"msg\":\"weird\"}", typeof(ExchangeApiException))]
++    public void ErrorTranslator_MapsCodes(HttpStatusCode status, string body, Type expected)
++        => Translate(status, body).Should().BeOfType(expected);
++
++    [Fact]
++    public void ErrorTranslator_Maps429_ToRateLimitWithRetryAfter()
++    {
++        using var resp = new HttpResponseMessage(HttpStatusCode.TooManyRequests);
++        resp.Headers.Add("Retry-After", "7");
++        var ex = new OkxErrorTranslator().Translate(resp, "{\"code\":\"50011\",\"msg\":\"too many\"}");
++        ex.Should().BeOfType<RateLimitExceededException>();
++        ((RateLimitExceededException)ex).RetryAfter.Should().Be(TimeSpan.FromSeconds(7));
++    }
++
++    [Fact]
++    public void ErrorTranslator_RateLimitCode_MapsToRateLimit()
++        => Translate(HttpStatusCode.OK, "{\"code\":\"50011\",\"msg\":\"rate limit\"}")
++            .Should().BeOfType<RateLimitExceededException>();
++
++    [Fact]
++    public void ErrorTranslator_SuccessEnvelope_IsNotARateLimitOrAuthError()
++    {
++        // code == "0" (a STRING) is a success envelope, not an error: must NOT become a typed subtype.
++        var ex = Translate(HttpStatusCode.OK, "{\"code\":\"0\",\"msg\":\"\",\"data\":[]}");
++        ex.Should().BeOfType<ExchangeApiException>();
++        ex.Should().NotBeOfType<RateLimitExceededException>();
++        ex.Should().NotBeOfType<AuthenticationException>();
++    }
++
++    [Fact]
++    public void ErrorTranslator_PerOrderSCode_IsClassifiedWhenTopLevelCodeIsSuccess()
++    {
++        // OKX order endpoints can return top-level code "0" yet reject an individual order via a
++        // non-zero sCode in data[0]; the translator must classify by that per-order code.
++        var ex = Translate(HttpStatusCode.OK,
++            "{\"code\":\"0\",\"msg\":\"\",\"data\":[{\"ordId\":\"\",\"clOrdId\":\"\",\"sCode\":\"51008\",\"sMsg\":\"insufficient\"}]}");
++        ex.Should().BeOfType<InsufficientBalanceException>();
++    }
++
++    [Fact]
++    public void ErrorTranslator_PerOrderSCodeZero_IsNotAnError()
++    {
++        // A successful per-order ack (sCode "0") under a top-level "0" must stay a plain ApiException.
++        var ex = Translate(HttpStatusCode.OK,
++            "{\"code\":\"0\",\"msg\":\"\",\"data\":[{\"ordId\":\"1\",\"sCode\":\"0\",\"sMsg\":\"\"}]}");
++        ex.Should().BeOfType<ExchangeApiException>();
++        ex.Should().NotBeOfType<AuthenticationException>();
++    }
++
++    [Fact]
++    public void ErrorTranslator_NonJsonBody_FallsBackToApiException()
++        => Translate(HttpStatusCode.BadGateway, "<html>502</html>")
++            .Should().BeOfType<ExchangeApiException>();
++
++    [Theory]
++    [InlineData("{\"code\":50111,\"msg\":\"num code\"}")] // code as a number (OKX uses strings) -> unparsed -> ApiException
++    [InlineData("{\"code\":\"50111\",\"msg\":12345}")]      // msg as a number
++    [InlineData("{\"code\":\"50111\",\"msg\":null}")]        // msg null
++    public void ErrorTranslator_MalformedFields_DoNotThrow(string body)
++    {
++        var act = () => Translate(HttpStatusCode.OK, body);
++        act.Should().NotThrow();
++    }
++}

@@ -12,6 +12,10 @@ public sealed class ExchangeTimeSync : IExchangeTimeSync
         ArgumentNullException.ThrowIfNull(offsetHolder);
         if (offsetHolder.Length < 1)
             throw new ArgumentException("offsetHolder must have at least one element.", nameof(offsetHolder));
+        // A missing/unparseable server time (0 or negative) would write a ~-localNow offset and break
+        // every subsequent signed request — reject it rather than corrupt the holder.
+        if (serverTimeMs <= 0)
+            throw new ArgumentOutOfRangeException(nameof(serverTimeMs), serverTimeMs, "Server time must be positive.");
         var offset = ComputeOffset(serverTimeMs, localNowMs);
         Interlocked.Exchange(ref offsetHolder[0], offset);
         return offset;

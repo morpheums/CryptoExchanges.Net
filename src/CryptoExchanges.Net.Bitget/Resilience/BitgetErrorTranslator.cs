@@ -6,14 +6,8 @@ namespace CryptoExchanges.Net.Bitget.Resilience;
 
 /// <summary>
 /// Maps Bitget V2 error responses (HTTP status + <c>{code,msg,data}</c> envelope) to the SDK's typed
-/// exceptions. Bitget returns a string <c>code</c> at the top level; SUCCESS is the string
-/// <c>"00000"</c>, which must NEVER be treated as an error.
+/// exceptions. Bitget's <c>code</c> is a string; success is <c>"00000"</c>, never treated as an error.
 /// </summary>
-/// <remarks>
-/// Internal per ADR-001 conv #2: the in-assembly composer/AddBitgetExchange construct this directly, so
-/// there is no cross-assembly need for it to be public. Bitget V2 error codes are documented as strings;
-/// the mappings below use real V2 codes and map conservatively, commenting where coverage is partial.
-/// </remarks>
 internal sealed class BitgetErrorTranslator : IExchangeErrorTranslator
 {
     /// <summary>Bitget V2 success code (a string, NOT zero).</summary>
@@ -24,13 +18,14 @@ internal sealed class BitgetErrorTranslator : IExchangeErrorTranslator
     {
         ArgumentNullException.ThrowIfNull(response);
         var (code, msg) = Parse(body);
-        var text = msg is null ? $"Bitget HTTP {(int)response.StatusCode}" : $"Bitget error {code}: {msg}";
 
-        // Translate always returns an exception (it is only invoked on a failed/error response). When the
-        // JSON envelope still reports the success code (e.g. an HTTP-level error with a success-shaped
-        // body), return the generic ExchangeApiException rather than a more specific typed exception.
-        if (code == SuccessCode)
-            return new ExchangeApiException(text, ParseCode(code), body);
+        // Translate is only invoked on a failed response. A success-shaped envelope (code "00000") here
+        // means an HTTP-level error with a success body — describe it by HTTP status, not the misleading
+        // "00000", and return the generic exception rather than a more specific typed one.
+        if (code is null || code == SuccessCode)
+            return new ExchangeApiException($"Bitget HTTP {(int)response.StatusCode}", ParseCode(code), body);
+
+        var text = msg is null ? $"Bitget error {code}" : $"Bitget error {code}: {msg}";
 
         var numeric = ParseCode(code);
 

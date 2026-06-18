@@ -38,4 +38,17 @@ public class ExchangeTimeSyncTests
         var act = () => _sut.ApplyOffset(1, 0, null!);
         act.Should().Throw<ArgumentNullException>();
     }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    public void ApplyOffset_RejectsNonPositiveServerTime_LeavingHolderUntouched(long serverTimeMs)
+    {
+        // A 0/negative server time (missing/unparseable payload) must not write a ~-localNow offset.
+        var holder = new long[] { 99L };
+        var act = () => _sut.ApplyOffset(serverTimeMs, 12_000, holder);
+
+        act.Should().Throw<ArgumentOutOfRangeException>();
+        holder[0].Should().Be(99L);
+    }
 }

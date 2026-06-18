@@ -3,6 +3,8 @@ id: TASK-022
 status: DONE
 ---
 
+> **PR #16 review fixes (GitHub Copilot):** (1) BUG — `ExchangeTimeSync.ApplyOffset` now rejects non-positive serverTimeMs (was writing ~-localNow offset, breaking signed requests); fixed at Core altitude → also protects OKX/Bybit/Binance (all shared the unguarded pattern). +2 Core tests. (2) removed a `<remarks>` essay violating ADR-001 conv #7. (3) BitgetErrorTranslator success-code/null branch now messages by HTTP status, not the misleading "00000". Full suite green.
+
 > **Gate PASSED (round 1)** — all 4 APPROVE (architect 97, code 95, security 94, api 95), zero blocking. +2 simplifier edits folded (ServerTimeMs/ParseTimestamp → BitgetValueParsers.ParseMs). Bitget unit 92 + integration 6. ZERO Core change; only the standard per-exchange Http InternalsVisibleTo line — proves the TASK-009 generalization held. **CLOSES MILESTONE M-BITGET (25/25).**
 
 # TASK-022: Bitget services + mapping + error + time + tests + AddBitgetExchange DI (closes M-BITGET)

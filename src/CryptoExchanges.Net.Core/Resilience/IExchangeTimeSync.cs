@@ -9,5 +9,6 @@ public interface IExchangeTimeSync
     /// <summary>Computes the offset and atomically writes it into <paramref name="offsetHolder"/>[0]; returns it.</summary>
     /// <exception cref="ArgumentNullException"><paramref name="offsetHolder"/> is null.</exception>
     /// <exception cref="ArgumentException"><paramref name="offsetHolder"/> is empty.</exception>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="serverTimeMs"/> is not positive.</exception>
     long ApplyOffset(long serverTimeMs, long localNowMs, long[] offsetHolder);
 }

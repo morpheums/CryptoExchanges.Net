@@ -27,8 +27,8 @@ public sealed record ExchangeCredentials
     /// <summary>
     /// Creates a credential set.
     /// </summary>
-    /// <param name="apiKey">The public API key. Must be non-empty.</param>
-    /// <param name="secretKey">The HMAC secret. Must be non-empty.</param>
+    /// <param name="apiKey">The public API key. Must be non-null, non-empty, and non-whitespace.</param>
+    /// <param name="secretKey">The HMAC secret. Must be non-null, non-empty, and non-whitespace.</param>
     /// <param name="passphrase">
     /// The optional API passphrase. Pass <see langword="null"/> (the default) for exchanges that do
     /// not use a passphrase. When supplied it must be non-whitespace.

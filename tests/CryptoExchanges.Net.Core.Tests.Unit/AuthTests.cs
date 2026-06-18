@@ -144,4 +144,9 @@ public class ExchangeCredentialsTests
     public void ToString_MasksShortApiKeyEntirely()
         => new ExchangeCredentials("ab", "secret").ToString()
             .Should().Contain("ApiKey = ****").And.NotContain("ab");
+
+    [Fact]
+    public void ToString_MasksExactlyFourCharApiKeyEntirely()
+        => new ExchangeCredentials("abcd", "secret").ToString()
+            .Should().Contain("ApiKey = ****").And.NotContain("abcd");
 }

@@ -1,6 +1,6 @@
 ---
 id: TASK-009
-status: IMPLEMENTED
+status: DONE
 ---
 
 # TASK-009: OKX-era credential/signing generalization (Core/Http)
@@ -77,3 +77,9 @@ Read `src/CryptoExchanges.Net.Http/ResilientHttpClientServiceCollectionExtension
 
 ## Commits
 - **Commit**: 63b0006 feat(M3): TASK-009 Core auth generalization — ExchangeCredentials + HmacSignature
+
+## Review
+- **Review Gate**: PASSED (round 1) — all 4 APPROVE: architect 97, security 99, api 96, code PASS. No blocking items.
+- **Verified**: additive/non-breaking (zero Binance/Bybit/Http/DI edits, conf 100); HMAC via BCL (no homemade crypto, hex==Binance vector); ToString fully suppresses synthesized PrintMembers — secrets never rendered (security 99); Http finalizer seam hosts OKX base64+passphrase+header signer with no Http change.
+- **Polish applied post-gate (non-blocking CONCERNs @90/@85)**: tightened 4 `<param>` docs ("non-empty" → "non-null, non-empty, and non-whitespace"); added the exactly-4-char ApiKey masking boundary test (Core 92→93). Build 0w/0e; all pass.
+- **Deferred (non-blocking)**: record Equals compares secrets by value (api @65, not in threat model — FixedTimeEquals is the upgrade path if raised).

@@ -29,8 +29,8 @@ public static class HmacSignature
     /// output is byte-for-byte identical to Binance's and Bybit's lowercase-hex signatures for the same
     /// secret and payload.
     /// </summary>
-    /// <param name="secret">The UTF-8 HMAC secret. Must be non-empty.</param>
-    /// <param name="payload">The UTF-8 string to sign (e.g. a query string or canonical sign-string). Must be non-empty.</param>
+    /// <param name="secret">The UTF-8 HMAC secret. Must be non-null, non-empty, and non-whitespace.</param>
+    /// <param name="payload">The UTF-8 string to sign (e.g. a query string or canonical sign-string). Must be non-null, non-empty, and non-whitespace.</param>
     /// <param name="encoding">The signature output form.</param>
     /// <returns>The encoded HMAC-SHA256 signature.</returns>
     /// <exception cref="ArgumentException"><paramref name="secret"/> or <paramref name="payload"/> is null/empty/whitespace.</exception>

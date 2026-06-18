@@ -12,9 +12,9 @@ Add three new exchange integrations to CryptoExchanges.Net in strict priority or
 
 ## Status Summary
 - Total tasks: 25 (22 plan + TASK-009B + TASK-REF-001 + TASK-REF-002)
-- DONE: 20 | IN_PROGRESS: 0 | IN_REVIEW: 0 | CHANGES_REQUESTED: 0 | BLOCKED: 0 | PLANNED: 5 (M-BITGET: 018/019/020/021/022)
+- DONE: 22 | IN_PROGRESS: 0 | IN_REVIEW: 0 | CHANGES_REQUESTED: 0 | BLOCKED: 0 | PLANNED: 3 (M-BITGET: 019/021/022)
 - Current iteration: 9/40
-- Active task: none — M-BITGET on `feat/m4-bitget`; TASK-016 + TASK-017 DONE; next Wave 13 = TASK-018 + TASK-020 (parallel)
+- Active task: none — M-BITGET; TASK-016/017/018/020 DONE; next Wave 14 = TASK-019 (signing handler) + TASK-021 (http client), parallel
 
 ## Scoping Decisions (HITL — committed, not open questions)
 The objective is fully prescriptive on scope/sequence/signing; these are the choices made decisively:
@@ -131,8 +131,8 @@ Tasks touching shared Core/Http/DI projects are higher blast radius and REQUIRE 
 - [x] TASK-017: Bitget project scaffold + passphrase options + DI seam stub -> DONE
 
 ### Group 13 (= Wave 13)
-- [ ] TASK-018: BitgetSignatureService (base64 prehash incl. query) + signing marker -> PLANNED
-- [ ] TASK-020: BitgetSymbolFormat + value parsers + request validation -> PLANNED
+- [x] TASK-018: BitgetSignatureService (base64 prehash incl. query) + signing marker -> DONE
+- [x] TASK-020: BitgetSymbolFormat + value parsers + request validation -> DONE
 
 ### Group 14 (= Wave 14)
 - [ ] TASK-019: BitgetSigningHandler (header-based) -> PLANNED

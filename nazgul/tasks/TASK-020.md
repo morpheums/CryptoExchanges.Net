@@ -1,6 +1,6 @@
 ---
 id: TASK-020
-status: IMPLEMENTED
+status: DONE
 ---
 
 # TASK-020: BitgetSymbolFormat + value parsers + request validation

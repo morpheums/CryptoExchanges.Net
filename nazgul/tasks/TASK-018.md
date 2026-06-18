@@ -1,6 +1,6 @@
 ---
 id: TASK-018
-status: IMPLEMENTED
+status: DONE
 ---
 
 # TASK-018: BitgetSignatureService (base64 prehash incl. query) + signing marker

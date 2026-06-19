@@ -1,7 +1,7 @@
 ---
 id: TASK-044
-status: IN_PROGRESS
-commit: 75ec4e8
+status: IMPLEMENTED
+commit: 501ad13
 depends_on: [TASK-043]
 ---
 # TASK-044: Http reconnecting byte-engine (pump / route / backoff / replay / heartbeat / channels)
@@ -18,10 +18,10 @@ depends_on: [TASK-043]
 - **Created at**: 2026-06-19T17:20:00Z
 - **Claimed at**: 2026-06-19T20:00:00Z
 - **Base SHA**: c18c48d0fdd53bd3f6934484ad028e9cff61637a
-- **Implemented at**: 2026-06-19T21:00:00Z
+- **Implemented at**: 2026-06-19T22:30:00Z
 - **Completed at**:
 - **Blocked at**:
-- **Retry count**: 1/3
+- **Retry count**: 2/3
 - **Test failures**: 1
 
 ## Description
@@ -103,6 +103,12 @@ Initial implementation (commit 2fb3895). One pre-check test failure: `Engine_Rec
 ### Attempt 2
 Fixed (commit 75ec4e8): FakeWebSocketConnection.ConnectAsync now swaps in a fresh SemaphoreSlim and drains stale frames, making the fake resilient to reuse across reconnect cycles. `Engine_Unsubscribe_RemovesFromReplaySet_NotResurrectedOnReconnect` also fixed to wait for the K2 replay send before snapshotting SentText (ConnectCount >= 2 does not guarantee replay has committed). All 70 Http unit tests pass + 546 total suite passes. Build 0W/0E.
 
+## Commits
+
+- `2fb3895` — Attempt 1 initial implementation
+- `75ec4e8` — Attempt 2: fix FakeWebSocketConnection reconnect resilience + K2 replay race
+- `501ad13` — Attempt 3: remediate CHANGES_REQUESTED review findings (SendPingAsync + cleanup)
+
 ## Review Results
 
 ### Attempt 1
@@ -110,3 +116,11 @@ Pre-check FAIL — test failure in reconnect tests (see Implementation Log Attem
 
 ### Attempt 2
 Pre-checks PASS — proceeding to review board.
+
+### Attempt 3 (CHANGES_REQUESTED → IMPLEMENTED)
+All review findings addressed:
+- BLOCKING: Added SendPingAsync to IWebSocketConnection + FakeWebSocketConnection; ClientPingLoopAsync ControlFrame branch now calls SendPingAsync (opcode 0x09) not SendPongAsync (opcode 0x0A). New test Engine_HeartbeatClientPing_ControlFrame_SendsPingNotPong verifies.
+- Removed MaxSubscriptionsPerSocket dead property from StreamEngineOptions.
+- Awaited _idleCloseTask in DisposeAsync with capture-before-cancel + swallow pattern.
+- Added [Range] on TimeSpan fields (IdleCloseDelay, BackoffInitial, BackoffMax) and MaxReconnectAttempts.
+- Extracted FakeStreamProtocol to its own file (FakeStreamProtocol.cs).

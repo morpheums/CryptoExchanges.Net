@@ -1,9 +1,9 @@
 ---
 id: TASK-039
-status: PLANNED
+status: IN_PROGRESS
 depends_on: [TASK-036, TASK-037, TASK-038]
 commit:
-claimed_at:
+claimed_at: 2026-06-19T13:30:00Z
 ---
 # TASK-039: README rewrite (lean) — links into docs/, uses icons, status table
 
@@ -17,7 +17,8 @@ claimed_at:
 - **Wave**: 2
 - **Traces to**: FEAT-003 spec §Scope-In "Lean README" (tagline+badges, 60s quick-start, supported-exchanges icon/status table, MCP blurb, links into docs/)
 - **Created at**: 2026-06-19T13:10:00Z
-- **Claimed at**:
+- **Claimed at**: 2026-06-19T13:30:00Z
+- **Base SHA**: 2bc2fa5
 - **Implemented at**:
 - **Completed at**:
 - **Blocked at**:

@@ -1,6 +1,6 @@
 ---
 id: TASK-044
-status: IMPLEMENTED
+status: DONE
 commit: 501ad13
 depends_on: [TASK-043]
 ---
@@ -19,7 +19,7 @@ depends_on: [TASK-043]
 - **Claimed at**: 2026-06-19T20:00:00Z
 - **Base SHA**: c18c48d0fdd53bd3f6934484ad028e9cff61637a
 - **Implemented at**: 2026-06-19T22:30:00Z
-- **Completed at**:
+- **Completed at**: 2026-06-19T23:45:00Z
 - **Blocked at**:
 - **Retry count**: 2/3
 - **Test failures**: 1
@@ -117,10 +117,21 @@ Pre-check FAIL — test failure in reconnect tests (see Implementation Log Attem
 ### Attempt 2
 Pre-checks PASS — proceeding to review board.
 
-### Attempt 3 (CHANGES_REQUESTED → IMPLEMENTED)
-All review findings addressed:
-- BLOCKING: Added SendPingAsync to IWebSocketConnection + FakeWebSocketConnection; ClientPingLoopAsync ControlFrame branch now calls SendPingAsync (opcode 0x09) not SendPongAsync (opcode 0x0A). New test Engine_HeartbeatClientPing_ControlFrame_SendsPingNotPong verifies.
+### Attempt 3 (CHANGES_REQUESTED → DONE)
+All review findings addressed and confirmed resolved in Cycle 2 review. All 4 reviewers APPROVED.
+
+**Cycle 1 findings resolved:**
+- BLOCKING: Added SendPingAsync to IWebSocketConnection + FakeWebSocketConnection; ClientPingLoopAsync ControlFrame branch now calls SendPingAsync (opcode 0x09) not SendPongAsync (opcode 0x0A). New test Engine_HeartbeatClientPing_ControlFrame_SendsPingNotPong verifies Ping sent / Pong not.
 - Removed MaxSubscriptionsPerSocket dead property from StreamEngineOptions.
 - Awaited _idleCloseTask in DisposeAsync with capture-before-cancel + swallow pattern.
 - Added [Range] on TimeSpan fields (IdleCloseDelay, BackoffInitial, BackoffMax) and MaxReconnectAttempts.
 - Extracted FakeStreamProtocol to its own file (FakeStreamProtocol.cs).
+
+**Cycle 2 reviewer verdicts:**
+- architect-reviewer: APPROVED (confidence 98/100) — K1/K2/K3/C1 all pass; all 5 fixes confirmed.
+- code-reviewer: APPROVED (confidence 98/100) — all 4 prior findings resolved; async correctness pass.
+- security-reviewer: APPROVED (confidence 97/100) — _idleCloseTask race closed; SendPingAsync surface clean.
+- api-reviewer: APPROVED (confidence 98/100) — interface contract correct (RFC 6455 §5.5.2); all findings resolved.
+
+**Pre-checks (Cycle 2):** Build 0W/0E. Tests: 503 passed, 0 failed, 0 skipped.
+- **Completion SHA**: 8e5021c9755b9bb8cb4724eb745528aa6371d22d

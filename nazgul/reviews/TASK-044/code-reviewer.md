@@ -1,101 +1,129 @@
-# Code Review — TASK-044
+# Code Review — TASK-044 (Cycle 2)
 
-## Verdict: CHANGES_REQUESTED
-
----
-
-## Findings
-
-### FINDING-1: PingFormat.ControlFrame sends Pong instead of Ping (MEDIUM, confidence 88, blocking)
-- **File**: `src/CryptoExchanges.Net.Http/Streaming/StreamEngine.cs:631-632`
-- **Blocking**: YES
-
-`ClientPingLoopAsync` handles `PingFormat.ControlFrame` by calling `_socket.SendPongAsync(policy.ClientPingPayload, ct)`. Per `IWebSocketConnection.SendPongAsync`'s XML doc: "Used by the engine to respond to server-initiated Ping frames (RFC 6455 §5.5.3)." A client-initiated control-frame heartbeat should send a WebSocket **Ping** (opcode 0x09, RFC 6455 §5.5.2), not a Pong (opcode 0x0A). An unsolicited Pong is technically valid per RFC 6455 as a unidirectional keep-alive, but it is not what `ControlFrame` implies in the docs, and it is not what a venue expecting an RFC 6455 Ping will respond to.
-
-`IWebSocketConnection` has no `SendPingAsync` method, so there is no correct path to follow today. This gap must be resolved:
-- Option A: Add `Task SendPingAsync(ReadOnlyMemory<byte> payload, CancellationToken ct)` to `IWebSocketConnection` and its fake; call it in the `ControlFrame` branch.
-- Option B: Document explicitly in code + XML doc that `PingFormat.ControlFrame` intentionally sends an unsolicited Pong (e.g., because .NET `ClientWebSocket` does not expose `SendPingAsync`), and rename `SendPongAsync` to `SendControlFrameAsync` across the interface.
-
-Same finding raised independently by architect-reviewer and api-reviewer. Three independent reviewers agree.
+## Verdict: APPROVED
 
 ---
 
-### FINDING-2: _idleCloseTask not awaited in DisposeAsync — narrow race with _gate.Dispose (LOW, confidence 65, non-blocking)
-- **File**: `src/CryptoExchanges.Net.Http/Streaming/StreamEngine.cs:745, 700, 794`
-- **Blocking**: NO
+## Prior Blocking Finding Resolution
 
-`DisposeAsync` calls `CancelIdleClose()` (cancels `_idleCloseCts`, disposes it) but does not await `_idleCloseTask`. The idle-close task body at line 696-697 awaits `Task.Delay(_options.IdleCloseDelay, token)` — if the delay completes just before the CTS is cancelled, the task proceeds to `_gate.WaitAsync(CancellationToken.None)` at line 700 (note: `CancellationToken.None`, not the CTS token). If `_gate.Dispose()` at line 794 executes concurrently, `WaitAsync` throws `ObjectDisposedException` on the fire-and-forget task. In practice the window is extremely narrow (the CTS cancel fires immediately on `CancelAsync`, so the task should see cancellation before `Task.Delay` unblocks), but there is no synchronization guarantee.
+### FINDING-1 (was BLOCKING): ControlFrame branch called SendPongAsync instead of SendPingAsync
 
-Fix: capture `_idleCloseTask` before calling `CancelIdleClose()`, then await it with a swallow block after the cancel — same pattern as `_heartbeatTask` and `_pumpTask`.
+**RESOLVED.**
 
----
+Evidence from `StreamEngine.cs:629-636` (current HEAD):
 
-### FINDING-3: MaxSubscriptionsPerSocket is dead — implied reserved member (LOW, confidence 90, non-blocking)
-- **File**: `src/CryptoExchanges.Net.Http/Streaming/StreamEngineOptions.cs:53-57`
-- **Blocking**: NO
+```csharp
+case PingFormat.ControlFrame:
+    // RFC 6455 §5.5.2: client-initiated heartbeat sends a Ping control
+    // frame (opcode 0x09). SendPingAsync carries the correct semantics;
+    // SendPongAsync (opcode 0x0A) is reserved for replying to server pings.
+    await _socket.SendPingAsync(policy.ClientPingPayload, ct).ConfigureAwait(false);
+    break;
+```
 
-`MaxSubscriptionsPerSocket = 1024` is defined, documented as "the engine opens a second socket (sharding)", but `StreamEngine` never reads `_options.MaxSubscriptionsPerSocket`. This is a configuration knob that does nothing. Per plan constraint: "no reserved-for-v1.1 members on any v1 interface." Remove until sharding is implemented. Also noted by architect-reviewer and api-reviewer.
+The regression check `grep -n "SendPongAsync" StreamEngine.cs` returns only line 634, which is inside the comment explaining why `SendPongAsync` is NOT called — confirming `SendPongAsync` is not invoked anywhere in the engine's send path.
 
----
+`IWebSocketConnection.SendPingAsync` (`IWebSocketConnection.cs:49-55`) has correct XML docs:
+- `<summary>` explicitly names "Ping control frame (RFC 6455 §5.5.2)"
+- Notes opcode semantics and `PingFormat.ControlFrame` usage
 
-### FINDING-4: FakeStreamProtocol co-located with tests — one-type-per-file convention violation (LOW, confidence 85, non-blocking)
-- **File**: `tests/CryptoExchanges.Net.Http.Tests.Unit/Streaming/StreamEngineTests.cs:760-796`
-- **Blocking**: NO
+`FakeWebSocketConnection.SendPingAsync` (`FakeWebSocketConnection.cs:83-87`) correctly enqueues to `SentPings`, not `SentPongs`.
 
-`FakeStreamProtocol` is a free-standing `internal sealed class` at the bottom of `StreamEngineTests.cs`. `FakeWebSocketConnection` was correctly extracted to its own file. The convention is one type per file. Extract to `FakeStreamProtocol.cs`.
+New test `Engine_HeartbeatClientPing_ControlFrame_SendsPingNotPong` (`StreamEngineTests.cs:2023-2056`):
+- Configures `ClientPing` + `PingFormat.ControlFrame` policy with a 100 ms interval.
+- Polls `fake.SentPings.IsEmpty` with a 3-second deadline — no flaky fixed sleep.
+- Asserts `fake.SentPings.Should().NotBeEmpty(...)` — positive assertion.
+- Asserts `fake.SentPongs.Should().BeEmpty(...)` — critical anti-regression, confirmed present.
+- Uses `FakeWebSocketConnection` — no network.
 
----
-
-### Async correctness — PASS items (no blocking issues found)
-
-- **Pump fire-and-forget** (`_ = Task.Run(() => ReconnectAsync(), _disposeCts.Token)`): Safe — pump task returns immediately, reconnect is bounded by `_disposeCts`. `_reconnecting` CAS prevents concurrent reconnect loops from watchdog + pump error firing simultaneously. CORRECT.
-
-- **Gate ordering in ReconnectCoreAsync**: Gate acquired → Reconnecting transition → gate released → pump cancel → socket dispose. Subscribe racing during the gap acquires the gate, finds `_socket` still non-null but potentially closed; the `_socket.IsOpen` check at line 190 catches it, sends on null/closed socket throws, caught by the subscribe gate's broad-catch. Benign.
-
-- **CancellationToken flow**: `SubscribeAsync` uses caller CT (short-lived, subscribe only). Pump runs on `_pumpCts.Token` (linked to `_disposeCts`). Reconnect uses `_disposeCts.Token`. `DisposeAsync` signals `_disposeCts` → pump unblocks → reconnect exits loop. CORRECT.
-
-- **Heartbeat task await**: `DisposeAsync` calls `StopHeartbeat()` then awaits `_heartbeatTask` with swallow at lines 759-763. CORRECT.
-
-- **Double-dispose guard**: `_isDisposed = true` then cancel `_disposeCts`. `volatile bool` is sufficient for this pattern (single setter, reader only checks). CORRECT.
-
-- **WatchdogAsync concurrent**: Fires `_ = Task.Run(() => ReconnectAsync(), ...)` and returns. `_reconnecting` CAS in `ReconnectAsync` ensures only one reconnect loop runs. CORRECT.
+All four sub-requirements confirmed.
 
 ---
 
-### _pendingCount accounting — CORRECT
+### FINDING-2 (was non-blocking): `_idleCloseTask` not awaited in `DisposeAsync`
 
-Single writer (pump), single reader (consumer). Write path: `Interlocked.Increment(_pendingCount)` → if `pending > _capacity` (channel full): `Interlocked.Decrement(_pendingCount)` (account for DropOldest eviction) + `Interlocked.Increment(_droppedCount)` → `TryWrite` (always succeeds, evicts oldest). Read path: `Interlocked.Decrement(_pendingCount)` after reading from channel. The accounting is correct: `_pendingCount` reflects in-flight items from the writer's view, and the decrement-before-TryWrite correctly accounts for the eviction that DropOldest will perform. Cannot go negative: consumer only decrements after a successful `ReadAllAsync` iteration; writer only decrements on overflow detection.
+**RESOLVED.**
 
----
+Evidence from `StreamEngine.cs:744-756`:
 
-## Test Quality Assessment
+```csharp
+var idleCloseTask = _idleCloseTask;   // capture BEFORE cancel
+CancelIdleClose();                     // cancels and nulls _idleCloseCts / _idleCloseTask
+if (idleCloseTask is not null)
+{
+    try { await idleCloseTask.ConfigureAwait(false); }
+#pragma warning disable CA1031 // intentional: idle-close task exits on cancellation
+    catch (Exception) { /* swallow — exits via OperationCanceledException */ }
+#pragma warning restore CA1031
+}
+```
 
-Tests are genuinely substantive, not smoke:
-
-- **Reconnect + K2 replay**: Waits for `lifecycle.Contains("reconnected")` (not just ConnectCount), then asserts `sub.State == Live` and `>= 2` SUBSCRIBE messages. The K2 unsubscribe test additionally verifies no TICKER replay after unsubscribe. SUBSTANTIVE.
-
-- **Backpressure / OnLagged**: Consumer stalled via `SemaphoreSlim`, 7 frames flooded on a capacity-2 channel, then verifies `lagged.DroppedCount > 0`. Uses precise stall/release mechanics. SUBSTANTIVE.
-
-- **Heartbeat ClientPing**: Waits for `>= 2` ping messages at 100ms interval via polling. Genuinely asserts the timer fires. SUBSTANTIVE.
-
-- **Callback exception isolation**: First frame throws, second frame delivered — verifies pump survived the exception. SUBSTANTIVE.
-
-- **Watchdog reconnect**: Short 150ms timeout, no frames sent, verifies `ConnectCount >= 2`. SUBSTANTIVE.
-
-- **All tests use FakeWebSocketConnection** — no network. CONFIRMED.
+Task reference is captured on line 744 before `CancelIdleClose()` is called on line 745. The pattern exactly matches the capture-before-cancel + await-with-swallow pattern required. `ConfigureAwait(false)` is present. The pragma pair is justified with a comment. This is consistent with how `_heartbeatTask` (lines 769-775) and `_pumpTask` (lines 777-782) are handled in the same method.
 
 ---
 
-## LR-001 Compliance
+### FINDING-3 (was non-blocking): `MaxSubscriptionsPerSocket` dead property
 
-Full compliance:
-- `StreamEngine.UnsubscribeAsync(string routingKey)`: `ArgumentException.ThrowIfNullOrWhiteSpace(routingKey)` at line 241 — PASS
-- `StreamSubscriptionHandle<T>` ctor `(string routingKey, ...)`: `ArgumentException.ThrowIfNullOrWhiteSpace(routingKey)` at line 32 — PASS
-- `StreamEngine.BuildRoutingKey(StreamRequest request)`: `ArgumentNullException.ThrowIfNull(request)` — PASS (request is not a string, correct guard type)
-- All other methods: no non-optional string params — PASS
+**RESOLVED.**
+
+`grep -n "MaxSubscriptionsPerSocket"` on `StreamEngineOptions.cs` returns no output. The property is completely absent. `[Range]` attributes are present on all remaining properties:
+- `[Range(typeof(TimeSpan), "00:00:00.001", "1.00:00:00")]` on `IdleCloseDelay`, `BackoffInitial`, and `BackoffMax`.
+- `[Range(0, int.MaxValue)]` on `MaxReconnectAttempts`.
+- `[Range(1.0, 10.0)]` on `BackoffMultiplier`.
+- `[Range(1, int.MaxValue)]` on `ChannelCapacity`.
 
 ---
 
-## Summary
+### FINDING-4 (was non-blocking): `FakeStreamProtocol` co-located in `StreamEngineTests.cs`
 
-TASK-044 delivers a solid async byte-engine with correct receive-pump lifecycle, safe fire-and-forget reconnect guards, proper CTS lifetime management, and substantive test coverage across all specified behaviors. One blocking issue shared by three independent reviewers: `PingFormat.ControlFrame` calls `SendPongAsync` where a Ping frame is semantically required — `IWebSocketConnection` lacks `SendPingAsync` and the design intent must be resolved either by adding the method or explicitly documenting the workaround. Two non-blocking low-severity concerns: the `_idleCloseTask` is not awaited in `DisposeAsync` (narrow race with `_gate.Dispose`), and `MaxSubscriptionsPerSocket` is a dead configuration knob violating the no-reserved-member rule.
+**RESOLVED.**
+
+`FakeStreamProtocol.cs` exists at `tests/CryptoExchanges.Net.Http.Tests.Unit/Streaming/FakeStreamProtocol.cs` with a single class — one-type-per-file convention satisfied. All interface members carry `/// <inheritdoc/>`. `StreamEngineTests.cs` (807 lines) contains no `FakeStreamProtocol` class definition.
+
+---
+
+## New Findings
+
+No new blocking findings were introduced by the remediation.
+
+### Finding: `FakeWebSocketConnection.IDisposable` — no `GC.SuppressFinalize`
+- **Severity**: LOW
+- **Confidence**: 50
+- **File**: `tests/CryptoExchanges.Net.Http.Tests.Unit/Streaming/FakeWebSocketConnection.cs:124-130`
+- **Category**: Code Quality
+- **Verdict**: PASS (confidence below threshold; test-only code; no finalizer; build is clean at 0 warnings)
+
+---
+
+## Async Correctness Assessment
+
+All async patterns in new and changed code are correct:
+
+- Every `await` in `StreamEngine.cs`, `StreamSubscriptionChannel.cs`, and `FakeWebSocketConnection.cs` uses `.ConfigureAwait(false)`.
+- `CancellationToken` is forwarded throughout. `OperationCanceledException` is re-thrown at every cancellation boundary in loops (`PumpLoopAsync:444`, `ClientPingLoopAsync:617`, `WatchdogAsync:771`, `ReconnectCoreAsync:490,592`).
+- No `async void` introduced anywhere.
+- All fire-and-forget `Task.Run(...)` invocations are intentional and documented.
+- All `IDisposable`/`IAsyncDisposable` instances are disposed in `DisposeAsync`. `await using` is used consistently in tests.
+
+---
+
+## LR-001 / LR-005 Compliance
+
+**LR-001**: `SendPingAsync` accepts `ReadOnlyMemory<byte>` (not a string) and `CancellationToken ct`. No string parameters — `ArgumentException.ThrowIfNullOrWhiteSpace` is not applicable. No new string-accepting public methods were added without guards.
+
+**LR-005**: `SendPingAsync` on the interface is covered by `Engine_HeartbeatClientPing_ControlFrame_SendsPingNotPong`. The test calls `SubscribeAsync`, waits for the heartbeat loop to fire, and asserts both `SentPings.NotBeEmpty` and `SentPongs.BeEmpty`. Coverage requirement satisfied.
+
+---
+
+## Build and Test Results
+
+- `dotnet build CryptoExchanges.Net.sln --configuration Release`: **0 warnings, 0 errors** (TreatWarningsAsErrors=true).
+- `dotnet test` (unit tests only): **503 passed, 0 failed, 0 skipped** across all unit test assemblies. The `CryptoExchanges.Net.Http.Tests.Unit` assembly passed all 71 tests including the new `Engine_HeartbeatClientPing_ControlFrame_SendsPingNotPong` test.
+
+---
+
+## Final Verdict: APPROVED
+
+Confidence: 98/100.
+
+All four prior findings — one blocking and three non-blocking — are fully resolved. The remediation is correct, minimal, and follows existing codebase patterns. No new blocking issues were introduced.

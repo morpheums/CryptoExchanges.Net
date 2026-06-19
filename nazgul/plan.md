@@ -79,12 +79,12 @@ REUSE existing discovery — do NOT re-run.
 |----------|-----------|------|-----------------------------------------------------------------------------|
 | TASK-042 | ✦ DONE    | 1    | Core streaming abstractions (`IStreamClient` family) — no transport         |
 | TASK-043 | ✦ DONE    | 2    | Http engine contracts + fake-transport test seam                            |
-| TASK-044 | ✦ IMPLEMENTED | 3    | Http reconnecting byte-engine (pump/route/backoff/replay/heartbeat/channels)|
+| TASK-044 | ✦ DONE    | 3    | Http reconnecting byte-engine (pump/route/backoff/replay/heartbeat/channels)|
 | TASK-045 | ◇ PLANNED | 4    | Generic `StreamClient` + `StreamClientFactory` + `AddStreams<TOptions>`      |
 | TASK-046 | ◇ PLANNED | 5    | Exchange-#1 package: protocol + 4 decode closures + options + `Add…Streams` |
 | TASK-047 | ◇ PLANNED | 6    | Wire 4 public subscribe methods end-to-end + live integration smoke + docs  |
 
-Tasks: 2/6 DONE — TASK-042 DONE, TASK-043 DONE, TASK-044 READY (dep satisfied), TASK-045..047 PLANNED.
+Tasks: 3/6 DONE — TASK-042 DONE, TASK-043 DONE, TASK-044 DONE, TASK-045 READY (dep satisfied), TASK-046..047 PLANNED.
 
 ## Wave Groups
 
@@ -101,8 +101,9 @@ distinct part of the tree, so there is no within-wave parallelism. Waves are str
   `src/CryptoExchanges.Net.Http/Streaming/` + Http unit-test fakes. Reviewed 4/4 APPROVED.
 
 ### Wave 3
-- **TASK-044** — Reconnecting byte-engine. Depends on TASK-043. Adds the engine + per-subscription
+- **TASK-044** — Reconnecting byte-engine. DONE. Adds the engine + per-subscription
   channels + heartbeat execution under `src/CryptoExchanges.Net.Http/Streaming/`; tested via the fake.
+  Reviewed 4/4 APPROVED (Cycle 2). Commit: 501ad13.
 
 ### Wave 4
 - **TASK-045** — Generic `StreamClient` + factory + `AddStreams<TOptions>` + decode-registry plumbing.
@@ -122,8 +123,9 @@ distinct part of the tree, so there is no within-wave parallelism. Waves are str
 TASK-042 ──► TASK-043 ──► TASK-044 ──► TASK-045 ──► TASK-046 ──► TASK-047
 ```
 
-State machine: TASK-042 is **DONE**; TASK-043 is now **DONE**; TASK-044 is now **READY**
-(dependency satisfied); TASK-045..047 remain **PLANNED** with explicit `depends_on` chain.
+State machine: TASK-042 is **DONE**; TASK-043 is now **DONE**; TASK-044 is now **DONE**;
+TASK-045 is now **READY** (dependency satisfied); TASK-046..047 remain **PLANNED** with explicit
+`depends_on` chain.
 
 ## Traceability
 
@@ -155,17 +157,20 @@ other exchanges, `IAsyncEnumerable`, System.Reactive) is planned.
   Commit: `1c041b5`. Review artifacts: `nazgul/reviews/TASK-042/`.
 - **TASK-043** — DONE (2026-06-19T19:00:00Z). Http engine contracts + fake-transport seam approved unanimously (4/4).
   Commits: `547f2f8` (impl) + `e1e87d0` (simplify). Review artifacts: `nazgul/reviews/TASK-043/`.
+- **TASK-044** — DONE (2026-06-19T23:45:00Z). Http reconnecting byte-engine approved unanimously (4/4, Cycle 2).
+  Commit: `501ad13`. Completion SHA: `8e5021c`. Review artifacts: `nazgul/reviews/TASK-044/`.
 
 ## Recovery Pointer
 
-- **Current stage**: TASK-044 IMPLEMENTED (commit 501ad13) — awaiting re-review.
-- **Next action**: Review board re-reviews TASK-044; on APPROVED → DONE, proceed to TASK-045.
-- **Active task**: TASK-044 (commit 501ad13)
+- **Current stage**: TASK-044 DONE — proceed to TASK-045.
+- **Next action**: Claim TASK-045; implement Generic StreamClient + StreamClientFactory + AddStreams<TOptions>.
+- **Active task**: TASK-045 (READY — dep TASK-044 satisfied)
 - **Files are truth**: task manifests in `nazgul/tasks/TASK-042..047.md` carry full state;
   frontmatter `status:` is canonical.
 
 ─── ◈ NEXT ─────────────────────────────────────────────
   ✦ TASK-042 — Core streaming abstractions. DONE.
   ✦ TASK-043 — Http engine contracts + fake-transport seam. DONE.
-  ◇ TASK-044 — Http reconnecting byte-engine. READY (claim next).
+  ✦ TASK-044 — Http reconnecting byte-engine. DONE.
+  ◆ TASK-045 — Generic StreamClient + factory + AddStreams<TOptions>. READY (claim next).
 ────────────────────────────────────────────────────────

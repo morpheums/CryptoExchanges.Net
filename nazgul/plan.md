@@ -69,11 +69,11 @@ REUSE existing discovery — do NOT re-run.
 |----------|---------|------|------------------------------------------------------|
 | TASK-028 | ✦ DONE | 1    | Project scaffold + host wiring + env→options binder  |
 | TASK-029 | ✦ DONE | 2    | Tool primitives (ToolResult, ToolInputs, ToolRunner) |
-| TASK-030 | ✦ IMPLEMENTED | 3  | Market-data tools (6, no keys)                    |
+| TASK-030 | ✦ DONE | 3  | Market-data tools (6, no keys)                    |
 | TASK-031 | ◇ PLANNED | 3  | Account tools (6, read-scoped keys)                  |
 | TASK-032 | ◇ PLANNED | 4  | Tool-roster guard test + README/packaging            |
 
-Tasks: 2/5 complete (TASK-030 IMPLEMENTED — pending review)
+Tasks: 3/5 complete (TASK-030 DONE — review board PASS, fix-first applied)
 
 ## Wave Groups
 
@@ -115,16 +115,17 @@ unmapped; writes/WebSockets/hosted-transport are correctly absent.
 
 - TASK-028 (Wave 1) — scaffold + host wiring. DONE.
 - TASK-029 (Wave 2) — tool primitives (ToolResult/ToolInputs/ToolRunner). DONE. Completion SHA: 66039b1.
+- TASK-030 (Wave 3) — 6 read-only market-data tools. DONE (review board PASS; fix-first added 8h/3d intervals). Completion SHA: 290869b.
 
 ## Recovery Pointer
 
-- **Current stage**: TASK-030 IMPLEMENTED (commit 91ced11, 2026-06-19T05:30:00Z). Awaiting review gate.
-- **Next action**: Review gate for TASK-030; then TASK-031 (account tools).
-- **Active task**: none — TASK-030 awaiting review.
+- **Current stage**: TASK-030 DONE (review board PASS, commit 290869b, 2026-06-19T06:15:00Z). Wave 3 next: TASK-031.
+- **Next action**: TASK-031 (account tools, read-scoped keys) — the remaining Wave 3 task.
+- **Active task**: none — TASK-030 complete; TASK-031 is next.
 - **Files are truth**: task manifests in `nazgul/tasks/TASK-028..032.md` carry full state;
   frontmatter `status:` is canonical.
 
 ─── ◈ NEXT ─────────────────────────────────────────────
-  Wave 3: TASK-030 (market-data tools) + TASK-031 (account tools) — parallel
+  Wave 3: TASK-031 (account tools) — TASK-030 DONE
   /nazgul:start to continue
 ────────────────────────────────────────────────────────

@@ -20,7 +20,7 @@
 | <img src="docs/assets/exchanges/kraken.svg" width="20"> Kraken | 🔝 Coming soon | — |
 | <img src="docs/assets/exchanges/kucoin.svg" width="20"> KuCoin | 🔝 Coming soon | — |
 
-REST, spot market data and account — read and write. All exchanges share one typed interface.
+REST, spot market data and account — read and write.
 
 ---
 
@@ -50,7 +50,7 @@ dotnet tool install -g CryptoExchanges.Net.Mcp
 claude mcp add crypto -- crypto-mcp
 ```
 
-That's it — your MCP-capable agent can now query live prices, order books, candles, and account balances across all four exchanges.
+Your MCP-capable agent can now query live prices, order books, candles, and account balances across all four exchanges.
 
 ---
 
@@ -59,8 +59,6 @@ That's it — your MCP-capable agent can now query live prices, order books, can
 `CryptoExchanges.Net.Mcp` is a **read-only** [Model Context Protocol](https://modelcontextprotocol.io) stdio server.
 It exposes **12 tools** — six market-data tools (no credentials required) and six account tools (read-scoped API keys).
 All four supported exchanges share the same tool vocabulary; no agent-side changes needed when switching exchanges.
-
-**Read-only — no order placement or write operations.**
 
 - [MCP server reference](docs/mcp-server.md) — tools, environment variables, error handling
 - [MCP client setup guides](docs/mcp-clients.md) — Claude Desktop, Claude Code, Cursor, Windsurf, and more

@@ -80,11 +80,14 @@ REUSE existing discovery — do NOT re-run.
 | TASK-042 | ✦ DONE    | 1    | Core streaming abstractions (`IStreamClient` family) — no transport         |
 | TASK-043 | ✦ DONE    | 2    | Http engine contracts + fake-transport test seam                            |
 | TASK-044 | ✦ DONE    | 3    | Http reconnecting byte-engine (pump/route/backoff/replay/heartbeat/channels)|
-| TASK-045 | ◆ IMPL    | 4    | Generic `StreamClient` + `StreamClientFactory` + `AddStreams<TOptions>`      |
-| TASK-046 | ✦ IMPL    | 5    | Exchange-#1 package: protocol + 4 decode closures + options + `Add…Streams` |
-| TASK-047 | ✦ IMPL    | 6    | Wire 4 public subscribe methods end-to-end + live integration smoke + docs  |
+| TASK-045 | ✦ DONE    | 4    | Generic `StreamClient` + `StreamClientFactory` + `AddStreams<TOptions>`      |
+| TASK-046 | ✦ DONE    | 5    | Exchange-#1 package: protocol + 4 decode closures + options + `Add…Streams` |
+| TASK-047 | ✦ DONE    | 6    | Wire 4 public subscribe methods end-to-end + live integration smoke + docs  |
+| TASK-048 | ✦ DONE    | 7    | Lean trim of low-value streaming tests                                       |
+| TASK-049 | ✦ DONE    | 7    | Fix routing-key keyspace mismatch + liveness reset (consolidated review)    |
+| TASK-050 | ✦ DONE    | 7    | PR #26 review findings — streaming hardening + house-rule cleanups          |
 
-Tasks: 3/6 DONE — TASK-042 DONE, TASK-043 DONE, TASK-044 DONE, TASK-045 IMPLEMENTED (906c568), TASK-046 IMPLEMENTED (27169ea), TASK-047 IMPLEMENTED (58d5216).
+Tasks: 9/9 DONE. Shipped in PR #26 (squash `5a50a8b`) + closeout. FEAT-005 complete — **NAZGUL_COMPLETE**.
 
 ## Wave Groups
 
@@ -162,11 +165,12 @@ other exchanges, `IAsyncEnumerable`, System.Reactive) is planned.
 
 ## Recovery Pointer
 
-- **Current stage**: TASK-050 IMPLEMENTED (00b894b) — PR #26 review findings addressed.
-- **Next action**: Review gate for TASK-050.
-- **Active task**: TASK-050 (IMPLEMENTED — commit 00b894b)
+- **Current stage**: ✦ OBJECTIVE COMPLETE — **NAZGUL_COMPLETE**. FEAT-005 WebSocket streaming v1
+  shipped via PR #26 (squash `5a50a8b` on `main`); closeout bookkeeping in this branch.
+- **Next action**: none — all 9 tasks (042–050) DONE. Tag the release and delete the feature branch.
+- **Active task**: none.
 - **Files are truth**: task manifests in `nazgul/tasks/TASK-042..050.md` carry full state;
-  frontmatter `status:` is canonical.
+  frontmatter `status:` is canonical (all DONE).
 
 ─── ◈ NEXT ─────────────────────────────────────────────
   ✦ TASK-042 — Core streaming abstractions. DONE.

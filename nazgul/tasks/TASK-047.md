@@ -1,6 +1,6 @@
 ---
 id: TASK-047
-status: IMPLEMENTED
+status: DONE
 depends_on: [TASK-046]
 ---
 # TASK-047: Wire the 4 public subscribe methods end-to-end + live integration smoke + docs note

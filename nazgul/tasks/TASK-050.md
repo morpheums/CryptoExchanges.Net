@@ -1,6 +1,6 @@
 ---
 id: TASK-050
-status: IMPLEMENTED
+status: DONE
 commit: 00b894b
 claimed_at: 2026-06-19
 ---

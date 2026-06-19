@@ -1,6 +1,6 @@
 ---
 id: TASK-045
-status: IMPLEMENTED
+status: DONE
 depends_on: [TASK-044]
 ---
 # TASK-045: Generic `StreamClient` + `StreamClientFactory` + `AddStreams<TOptions>` + decode-registry

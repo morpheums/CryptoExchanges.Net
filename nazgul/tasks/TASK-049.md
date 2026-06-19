@@ -1,6 +1,6 @@
 ---
 id: TASK-049
-status: IMPLEMENTED
+status: DONE
 commit: 5195052
 claimed_at: 2026-06-19
 base_sha: 72dc25f

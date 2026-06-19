@@ -1,0 +1,1062 @@
+diff --git a/docs/architecture.md b/docs/architecture.md
+new file mode 100644
+index 0000000..034493f
+--- /dev/null
++++ b/docs/architecture.md
+@@ -0,0 +1,199 @@
++# Architecture
++
++CryptoExchanges.Net is a multi-project .NET 10 class library organized in four layers.
++This page describes the shipped design only.
++
++---
++
++## Layer diagram
++
++```
++┌─────────────────────────────────────────────────────────────────┐
++│                      Consumer application                        │
++└────────────────────────────┬────────────────────────────────────┘
++                             │ depends on Core interfaces only
++┌────────────────────────────▼────────────────────────────────────┐
++│  CryptoExchanges.Net.Core                                        │
++│  Interfaces · Models · Enums · Exceptions · ISymbolMapper        │
++│  Zero production dependencies (only ME.Logging.Abstractions,     │
++│  ME.DI.Abstractions)                                             │
++└────────────┬───────────────────────────────────────────────────-┘
++             │ depends on Core
++┌────────────▼──────────────────────────────────────────────────--┐
++│  CryptoExchanges.Net.Http                                        │
++│  Shared resilience pipeline (Polly retry + timeout)              │
++│  DelegatingHandler chain — signing, rate-limit, error-translate  │
++└────────────┬────────────────────────────────────────────────────┘
++             │ depends on Core + Http
++┌────────────▼────────────────────────────────────────────────────┐
++│  Per-exchange packages                                           │
++│  Binance · Bybit · OKX · Bitget                                  │
++│  Exchange-specific HTTP client, services, DTO mapping, signing   │
++└────────────┬────────────────────────────────────────────────────┘
++             │ depends on Core + per-exchange packages
++┌────────────▼────────────────────────────────────────────────────┐
++│  CryptoExchanges.Net.DependencyInjection                         │
++│  AddCryptoExchanges() · AddBinanceExchange() · …                 │
++│  IExchangeClientFactory · keyed-singleton registration           │
++└─────────────────────────────────────────────────────────────────┘
++```
++
++---
++
++## Core (`CryptoExchanges.Net.Core`)
++
++The foundation layer. Contains **all public contracts** and **all canonical domain models**.
++No exchange implementation detail leaks here.
++
++### Interfaces
++
++| Interface | Purpose |
++|-----------|---------|
++| `IExchangeClient` | Unified entry point. Exposes `MarketData`, `Trading`, `Account`, and `PingAsync`. |
++| `IMarketDataService` | Public-data operations: price, tickers, order book, candles, recent trades, exchange info, symbol validation. |
++| `ITradingService` | Order lifecycle: place, cancel, query open/historical orders. |
++| `IAccountService` | Account state: balances, single asset balance, trade history. |
++| `IExchangeClientFactory` | Resolves a registered `IExchangeClient` by `ExchangeId`. |
++| `ISymbolMapper` | Translates between the typed `Symbol` domain model and each exchange's wire format. |
++
++### Domain models
++
++All methods return these canonical types regardless of which exchange backs them.
++Consumer code depends on models in `Core.Models`, never on exchange-specific DTOs.
++
++| Model | Fields (key) |
++|-------|-------------|
++| `Symbol` | `Base` (Asset), `Quote` (Asset) |
++| `Asset` | `Ticker` (string, normalized upper-case) — open-ended, with curated constants |
++| `Ticker` | `Symbol`, `LastPrice`, `HighPrice`, `LowPrice`, `Volume`, `PriceChangePercent` |
++| `OrderBook` | `LastUpdateId`, `Bids` (list of `OrderBookEntry`), `Asks` |
++| `OrderBookEntry` | `Price`, `Quantity` |
++| `Candlestick` | `OpenTime`, `Open`, `High`, `Low`, `Close`, `Volume`, `CloseTime` |
++| `Trade` | `TradeId`, `Price`, `Quantity`, `Timestamp`, `IsBuyerMaker` |
++| `Order` | `OrderId`, `Symbol`, `Side`, `Type`, `Status`, `Price`, `Quantity`, `FilledQuantity`, `CreatedAt` |
++| `AssetBalance` | `Asset`, `Free`, `Locked`, `Total` |
++| `ExchangeInfo` | `ExchangeName`, `Symbols` (list of `SymbolInfo`), `RateLimits` |
++
++### Exception hierarchy
++
++```
++ExchangeException                     (abstract)
++├── ExchangeApiException              — 4xx exchange error response
++│   ├── AuthenticationException       — bad key, signature, or IP restriction
++│   ├── RateLimitExceededException    — 429 / weight limit
++│   ├── InvalidOrderException         — invalid order parameters
++│   └── InsufficientBalanceException  — insufficient funds
++└── ExchangeConnectivityException     — network/transport failure
++```
++
++---
++
++## Http (`CryptoExchanges.Net.Http`)
++
++Shared, exchange-agnostic HTTP infrastructure. Exchange packages build their resilient
++`HttpClient` by composing this layer.
++
++### Handler chain (innermost → outermost)
++
++```
++ErrorTranslationHandler       — maps 4xx to typed ExchangeException via IExchangeErrorTranslator
++  ↑
++BinanceSigningHandler         — adds timestamp + HMAC-SHA256 signature (per-exchange impl)
++  ↑
++ResilienceHandler (Polly)     — retry (GET only) + per-attempt timeout
++  ↑
++TransientExhaustionHandler    — detects transient exhaustion, throws ExchangeConnectivityException
++  ↑
++RateLimitThrottleHandler      — proactive back-pressure from ReactiveRateLimitGate
++```
++
++The handler chain is assembled by `HttpClientPipelineBuilder.Build()` and is shared by both the
++container-free factory path and the DI registration path.
++
++---
++
++## Per-exchange packages
++
++Each exchange follows the same internal structure:
++
++| Component | Role |
++|-----------|------|
++| `*ExchangeClient` | Public entry point. Factory method `Create(*Options)` and `CreateFromEnvironment()`. Implements `IExchangeClient`. |
++| `*Options` | Configuration: `ApiKey`, `SecretKey`, and (for OKX/Bitget) `Passphrase`. |
++| `*MarketDataService` | `IMarketDataService` implementation. |
++| `*TradingService` | `ITradingService` implementation. |
++| `*AccountService` | `IAccountService` implementation. |
++| `*HttpClient` | Internal typed HTTP client (`GetAsync<T>`, `PostAsync<T>`, `DeleteAsync<T>`). |
++| `*SignatureService` | HMAC-SHA256 signing (Binance/Bybit) or HMAC-SHA256 with timestamp+passphrase (OKX/Bitget). |
++| `*SigningHandler` | `DelegatingHandler` that attaches the signature to each outbound request. |
++| `*ErrorTranslator` | `IExchangeErrorTranslator` impl — maps the exchange's error JSON to typed exceptions. |
++| `*MappingProfiles` | DeltaMapper profile: exchange DTOs → canonical Core.Models. |
++| `*SymbolFormat` | `SymbolFormat` config (delimiter, casing) consumed by the shared `SymbolMapper`. |
++| `*ClientComposer` | Single internal composition root; called by both factory and DI paths. |
++
++---
++
++## Symbol mapping (`ISymbolMapper`)
++
++`Symbol` is a typed domain model with no wire format. Conversion to and from exchange-specific
++strings (e.g. `"BTCUSDT"` on Binance, `"BTC-USDT"` on OKX) is the exclusive job of
++`ISymbolMapper`, parameterized by a per-exchange `SymbolFormat`:
++
++```
++new Symbol(Asset.Btc, Asset.Usdt)
++        │
++        │  ISymbolMapper.ToWire(symbol)
++        ▼
++"BTCUSDT"   (Binance — delimiter-less, upper-case)
++"BTCUSDT"   (Bybit  — delimiter-less, upper-case)
++"BTC-USDT"  (OKX    — hyphen delimiter, upper-case)
++"BTCUSDT"   (Bitget — delimiter-less, upper-case)
++```
++
++`ISymbolMapper.FromWire(string)` is the inverse path, used during response mapping.
++
++---
++
++## DTO mapping (`DeltaMapper`)
++
++Exchange REST responses are deserialized into exchange-specific DTO types and then mapped to
++canonical `Core.Models` via [DeltaMapper](https://github.com/morpheums/DeltaMapper). Each
++exchange package declares a `*MappingProfiles` class (e.g. `BinanceMappingProfiles`) that
++registers all DTO → model conversions.
++
++This keeps exchange-specific parsing (string-encoded decimals, custom enum labels, Unix
++milliseconds) isolated from the domain layer.
++
++---
++
++## Signing pipeline
++
++Signed endpoints require a timestamp and an HMAC-SHA256 signature appended to the query string
++or request body.
++
++1. The service method marks the outbound `HttpRequestMessage` as "needs signing".
++2. The per-exchange `*SigningHandler` intercepts it, reads the current UTC timestamp (adjusted by
++   any clock-skew offset), computes the signature, and injects the required headers or parameters.
++3. The signing handler is inserted between the Polly retry layer and the error-translation layer so
++   the signature is freshly computed on every retry attempt.
++
++OKX and Bitget additionally include the passphrase in the signed headers.
++
++---
++
++## Dependency injection
++
++`AddCryptoExchanges()` (in `CryptoExchanges.Net.DependencyInjection`) is a convenience aggregator
++that delegates to each exchange's own `Add*Exchange()` method (defined in the exchange's package,
++per ADR-001). Each exchange is registered as a keyed singleton under its `ExchangeId`.
++
++`IExchangeClientFactory` resolves clients by `ExchangeId` without requiring consumer code to
++depend on keyed-service infrastructure directly.
++
++---
++
++## Further reading
++
++- [Getting Started](getting-started.md) — install and first calls
++- [Library Usage](library-usage.md) — full code examples
++- [Exchanges](exchanges.md) — per-exchange support status and packages
+diff --git a/docs/exchanges.md b/docs/exchanges.md
+new file mode 100644
+index 0000000..7ff9d6d
+--- /dev/null
++++ b/docs/exchanges.md
+@@ -0,0 +1,245 @@
++# Exchanges
++
++CryptoExchanges.Net supports four exchanges today, with three more on the way.
++All supported exchanges expose the same `IExchangeClient` interface (REST, spot).
++
++---
++
++## Supported exchanges
++
++### Binance
++
++<img src="assets/exchanges/binance.svg" alt="Binance" width="32" height="32" />
++
++| | |
++|---|---|
++| **Package** | `CryptoExchanges.Net.Binance` |
++| **Client class** | `BinanceExchangeClient` |
++| **Credentials** | `ApiKey`, `SecretKey` |
++| **Env vars** | `BINANCE_API_KEY`, `BINANCE_SECRET_KEY` |
++| **Signing** | HMAC-SHA256 |
++| **Endpoints** | REST v3 (spot) |
++
++```bash
++dotnet add package CryptoExchanges.Net.Binance
++```
++
++```csharp
++using CryptoExchanges.Net.Binance;
++
++// From explicit options
++await using var client = BinanceExchangeClient.Create(new BinanceOptions
++{
++    ApiKey    = "...",
++    SecretKey = "..."
++});
++
++// From environment variables (BINANCE_API_KEY / BINANCE_SECRET_KEY)
++await using var client = BinanceExchangeClient.CreateFromEnvironment();
++```
++
++DI registration:
++
++```csharp
++services.AddBinanceExchange(opt =>
++{
++    opt.ApiKey    = configuration["Binance:ApiKey"];
++    opt.SecretKey = configuration["Binance:SecretKey"];
++});
++```
++
++---
++
++### Bybit
++
++<img src="assets/exchanges/bybit.svg" alt="Bybit" width="32" height="32" />
++
++| | |
++|---|---|
++| **Package** | `CryptoExchanges.Net.Bybit` |
++| **Client class** | `BybitExchangeClient` |
++| **Credentials** | `ApiKey`, `SecretKey` |
++| **Env vars** | `BYBIT_API_KEY`, `BYBIT_SECRET_KEY` |
++| **Signing** | HMAC-SHA256 |
++| **Endpoints** | REST v5 (spot) |
++
++```bash
++dotnet add package CryptoExchanges.Net.Bybit
++```
++
++```csharp
++using CryptoExchanges.Net.Bybit;
++
++await using var client = BybitExchangeClient.Create(new BybitOptions
++{
++    ApiKey    = "...",
++    SecretKey = "..."
++});
++
++// From environment variables (BYBIT_API_KEY / BYBIT_SECRET_KEY)
++await using var client = BybitExchangeClient.CreateFromEnvironment();
++```
++
++DI registration:
++
++```csharp
++services.AddBybitExchange(opt =>
++{
++    opt.ApiKey    = configuration["Bybit:ApiKey"];
++    opt.SecretKey = configuration["Bybit:SecretKey"];
++});
++```
++
++---
++
++### OKX
++
++<img src="assets/exchanges/okx.svg" alt="OKX" width="32" height="32" />
++
++| | |
++|---|---|
++| **Package** | `CryptoExchanges.Net.Okx` |
++| **Client class** | `OkxExchangeClient` |
++| **Credentials** | `ApiKey`, `SecretKey`, **`Passphrase`** |
++| **Env vars** | `OKX_API_KEY`, `OKX_SECRET_KEY`, `OKX_PASSPHRASE` |
++| **Signing** | HMAC-SHA256 + ISO-8601 timestamp + passphrase header |
++| **Endpoints** | REST v5 (spot) |
++
++> **Passphrase required.** OKX API keys have a mandatory passphrase set at key-creation time.
++> Supply it via the `Passphrase` option or `OKX_PASSPHRASE` environment variable.
++
++```bash
++dotnet add package CryptoExchanges.Net.Okx
++```
++
++```csharp
++using CryptoExchanges.Net.Okx;
++
++await using var client = OkxExchangeClient.Create(new OkxOptions
++{
++    ApiKey     = "...",
++    SecretKey  = "...",
++    Passphrase = "..."
++});
++
++// From environment variables (OKX_API_KEY / OKX_SECRET_KEY / OKX_PASSPHRASE)
++await using var client = OkxExchangeClient.CreateFromEnvironment();
++```
++
++DI registration:
++
++```csharp
++services.AddOkxExchange(opt =>
++{
++    opt.ApiKey     = configuration["Okx:ApiKey"];
++    opt.SecretKey  = configuration["Okx:SecretKey"];
++    opt.Passphrase = configuration["Okx:Passphrase"];
++});
++```
++
++---
++
++### Bitget
++
++<img src="assets/exchanges/bitget.svg" alt="Bitget" width="32" height="32" />
++
++| | |
++|---|---|
++| **Package** | `CryptoExchanges.Net.Bitget` |
++| **Client class** | `BitgetExchangeClient` |
++| **Credentials** | `ApiKey`, `SecretKey`, **`Passphrase`** |
++| **Env vars** | `BITGET_API_KEY`, `BITGET_SECRET_KEY`, `BITGET_PASSPHRASE` |
++| **Signing** | HMAC-SHA256 + Unix timestamp + passphrase header |
++| **Endpoints** | REST v2 (spot) |
++
++> **Passphrase required.** Bitget API keys have a mandatory passphrase set at key-creation time.
++> Supply it via the `Passphrase` option or `BITGET_PASSPHRASE` environment variable.
++
++```bash
++dotnet add package CryptoExchanges.Net.Bitget
++```
++
++```csharp
++using CryptoExchanges.Net.Bitget;
++
++await using var client = BitgetExchangeClient.Create(new BitgetOptions
++{
++    ApiKey     = "...",
++    SecretKey  = "...",
++    Passphrase = "..."
++});
++
++// From environment variables (BITGET_API_KEY / BITGET_SECRET_KEY / BITGET_PASSPHRASE)
++await using var client = BitgetExchangeClient.CreateFromEnvironment();
++```
++
++DI registration:
++
++```csharp
++services.AddBitgetExchange(opt =>
++{
++    opt.ApiKey     = configuration["Bitget:ApiKey"];
++    opt.SecretKey  = configuration["Bitget:SecretKey"];
++    opt.Passphrase = configuration["Bitget:Passphrase"];
++});
++```
++
++---
++
++## Register all exchanges at once
++
++`CryptoExchanges.Net.DependencyInjection` provides a single `AddCryptoExchanges()` call that
++registers all four exchanges:
++
++```csharp
++using CryptoExchanges.Net.DependencyInjection;
++
++services.AddCryptoExchanges(opt =>
++{
++    opt.BinanceApiKey    = configuration["Binance:ApiKey"];
++    opt.BinanceSecretKey = configuration["Binance:SecretKey"];
++
++    opt.BybitApiKey      = configuration["Bybit:ApiKey"];
++    opt.BybitSecretKey   = configuration["Bybit:SecretKey"];
++
++    opt.OkxApiKey        = configuration["Okx:ApiKey"];
++    opt.OkxSecretKey     = configuration["Okx:SecretKey"];
++    opt.OkxPassphrase    = configuration["Okx:Passphrase"];
++
++    opt.BitgetApiKey     = configuration["Bitget:ApiKey"];
++    opt.BitgetSecretKey  = configuration["Bitget:SecretKey"];
++    opt.BitgetPassphrase = configuration["Bitget:Passphrase"];
++});
++```
++
++Resolve by exchange ID at runtime:
++
++```csharp
++using CryptoExchanges.Net.Core.Interfaces;
++using CryptoExchanges.Net.Core.Enums;
++
++IExchangeClient binance = factory.GetClient(ExchangeId.Binance);
++IExchangeClient bybit   = factory.GetClient(ExchangeId.Bybit);
++IExchangeClient okx     = factory.GetClient(ExchangeId.Okx);
++IExchangeClient bitget  = factory.GetClient(ExchangeId.Bitget);
++```
++
++---
++
++## Coming soon
++
++| Exchange | Package |
++|----------|---------|
++| <img src="assets/exchanges/coinbase.svg" alt="Coinbase" width="20" height="20" /> Coinbase | `CryptoExchanges.Net.Coinbase` |
++| <img src="assets/exchanges/kraken.svg" alt="Kraken" width="20" height="20" /> Kraken | `CryptoExchanges.Net.Kraken` |
++| <img src="assets/exchanges/kucoin.svg" alt="KuCoin" width="20" height="20" /> KuCoin | `CryptoExchanges.Net.KuCoin` |
++
++These exchange IDs are present in the `ExchangeId` enum but are not yet implemented.
++
++---
++
++## Further reading
++
++- [Getting Started](getting-started.md) — install and credential setup
++- [Library Usage](library-usage.md) — code examples for every operation
++- [Architecture](architecture.md) — how the layers fit together
+diff --git a/docs/getting-started.md b/docs/getting-started.md
+new file mode 100644
+index 0000000..96d083d
+--- /dev/null
++++ b/docs/getting-started.md
+@@ -0,0 +1,150 @@
++# Getting Started
++
++CryptoExchanges.Net provides a unified .NET 10 interface to multiple cryptocurrency exchanges.
++This guide covers installation, credential configuration, and your first API calls.
++
++---
++
++## Prerequisites
++
++- .NET 10.0 SDK or later
++- API keys from your chosen exchange (market-data endpoints are public; trading and account
++  endpoints require authentication)
++
++---
++
++## Install
++
++Each exchange ships as its own NuGet package. Install only the exchange(s) you need:
++
++```bash
++# Binance
++dotnet add package CryptoExchanges.Net.Binance
++
++# Bybit
++dotnet add package CryptoExchanges.Net.Bybit
++
++# OKX
++dotnet add package CryptoExchanges.Net.Okx
++
++# Bitget
++dotnet add package CryptoExchanges.Net.Bitget
++```
++
++To register all four exchanges in one call (ASP.NET Core / hosted services):
++
++```bash
++dotnet add package CryptoExchanges.Net.DependencyInjection
++```
++
++---
++
++## Configure credentials
++
++### Environment variables (recommended)
++
++Set exchange credentials as environment variables before running your application:
++
++| Exchange | Variables |
++|----------|-----------|
++| Binance  | `BINANCE_API_KEY`, `BINANCE_SECRET_KEY` |
++| Bybit    | `BYBIT_API_KEY`, `BYBIT_SECRET_KEY` |
++| OKX      | `OKX_API_KEY`, `OKX_SECRET_KEY`, `OKX_PASSPHRASE` |
++| Bitget   | `BITGET_API_KEY`, `BITGET_SECRET_KEY`, `BITGET_PASSPHRASE` |
++
++OKX and Bitget require a **passphrase** — a third credential set in the exchange's API management
++console — in addition to the key and secret.
++
++### Direct options (container-free)
++
++Pass credentials explicitly when constructing the client:
++
++```csharp
++using CryptoExchanges.Net.Binance;
++
++await using var client = BinanceExchangeClient.Create(new BinanceOptions
++{
++    ApiKey    = "your-api-key",
++    SecretKey = "your-secret-key"
++});
++```
++
++For OKX or Bitget, add the passphrase:
++
++```csharp
++using CryptoExchanges.Net.Okx;
++
++await using var client = OkxExchangeClient.Create(new OkxOptions
++{
++    ApiKey     = "your-api-key",
++    SecretKey  = "your-secret-key",
++    Passphrase = "your-passphrase"
++});
++```
++
++---
++
++## Create a client
++
++### From environment variables
++
++The quickest path — reads credentials automatically from the environment:
++
++```csharp
++using CryptoExchanges.Net.Binance;
++using CryptoExchanges.Net.Core.Models;
++
++await using var client = BinanceExchangeClient.CreateFromEnvironment();
++Console.WriteLine($"Exchange: {client.ExchangeId}");
++```
++
++### From explicit options
++
++```csharp
++await using var client = BinanceExchangeClient.Create(new BinanceOptions
++{
++    ApiKey    = Environment.GetEnvironmentVariable("BINANCE_API_KEY") ?? "",
++    SecretKey = Environment.GetEnvironmentVariable("BINANCE_SECRET_KEY") ?? ""
++});
++```
++
++---
++
++## First calls
++
++### Ping the exchange
++
++```csharp
++bool alive = await client.PingAsync();
++Console.WriteLine($"Binance reachable: {alive}");
++```
++
++### Get a price
++
++Symbols are typed — construct them with `Asset` constants rather than raw strings:
++
++```csharp
++using CryptoExchanges.Net.Core.Models;
++
++var btcUsdt = new Symbol(Asset.Btc, Asset.Usdt);
++decimal price = await client.MarketData.GetPriceAsync(btcUsdt);
++Console.WriteLine($"BTC/USDT: ${price:N2}");
++```
++
++### Get a 24-hour ticker
++
++```csharp
++var ethUsdt = new Symbol(Asset.Eth, Asset.Usdt);
++var tickers = await client.MarketData.GetTickersAsync(ethUsdt);
++foreach (var t in tickers)
++    Console.WriteLine($"{t.Symbol}: last=${t.LastPrice:N2}, 24h change={t.PriceChangePercent:F2}%");
++```
++
++---
++
++## Next steps
++
++- [Library Usage](library-usage.md) — fuller examples: market data, trading, account, DI,
++  and error handling
++- [Exchanges](exchanges.md) — per-exchange packages, credential requirements, and support status
++- [Architecture](architecture.md) — how the layers fit together
+diff --git a/docs/library-usage.md b/docs/library-usage.md
+new file mode 100644
+index 0000000..eb1e90c
+--- /dev/null
++++ b/docs/library-usage.md
+@@ -0,0 +1,391 @@
++# Library Usage
++
++Full reference with code examples for every major operation.
++All examples compile against the shipped API — signatures are verified from source.
++
++See [Getting Started](getting-started.md) for installation and credential setup.
++
++---
++
++## Symbols and Assets
++
++Symbols are typed value types — never raw strings. Use the built-in `Asset` constants for common
++tickers, or `Asset.Of(string)` for anything not in the curated list:
++
++```csharp
++using CryptoExchanges.Net.Core.Models;
++
++// Typed constants
++var btcUsdt  = new Symbol(Asset.Btc,  Asset.Usdt);
++var ethUsdt  = new Symbol(Asset.Eth,  Asset.Usdt);
++var solUsdc  = new Symbol(Asset.Sol,  Asset.Usdc);
++
++// Long-tail tickers not in the curated list
++var pepeUsdt = new Symbol(Asset.Of("PEPE"), Asset.Usdt);
++
++// Asset.Of validates: non-empty, A-Z/0-9, max 32 chars
++// Non-throwing variant
++bool ok = Asset.TryOf("BTC", out var btc);
++```
++
++Built-in `Asset` constants include: `Btc`, `Eth`, `Bnb`, `Sol`, `Xrp`, `Ada`, `Doge`, `Trx`,
++`Usdt`, `Usdc`, `Fdusd`, `Dai`, `Eur`, `Gbp`.
++
++### Opt-in exchange validation
++
++Validation against the exchange's supported symbol set is **opt-in** and is not called implicitly
++by other methods. Results are cached from `GetExchangeInfoAsync`:
++
++```csharp
++// Check whether a symbol is listed
++bool supported = await client.MarketData.IsSupportedAsync(btcUsdt);
++
++// Resolve to the canonical form as returned by the exchange, or null if unsupported
++Symbol? canonical = await client.MarketData.ResolveSymbolAsync(btcUsdt);
++```
++
++---
++
++## Market Data
++
++All market-data endpoints are public — no API key required.
++
++### Latest price
++
++```csharp
++decimal price = await client.MarketData.GetPriceAsync(new Symbol(Asset.Btc, Asset.Usdt));
++```
++
++### 24-hour ticker
++
++Pass a symbol for a single ticker, or omit it to receive all tickers:
++
++```csharp
++// Single ticker
++IReadOnlyList<Ticker> tickers = await client.MarketData.GetTickersAsync(
++    new Symbol(Asset.Eth, Asset.Usdt));
++
++foreach (var t in tickers)
++{
++    Console.WriteLine(
++        $"{t.Symbol}: last={t.LastPrice:N2}  " +
++        $"high={t.HighPrice:N2}  low={t.LowPrice:N2}  " +
++        $"change={t.PriceChangePercent:F2}%  vol={t.Volume:F4}");
++}
++
++// All tickers (no symbol filter)
++IReadOnlyList<Ticker> all = await client.MarketData.GetTickersAsync();
++```
++
++### Order book
++
++```csharp
++OrderBook book = await client.MarketData.GetOrderBookAsync(
++    new Symbol(Asset.Btc, Asset.Usdt), depth: 10);
++
++Console.WriteLine($"Last update ID: {book.LastUpdateId}");
++foreach (var ask in book.Asks.Take(5))
++    Console.WriteLine($"  Ask {ask.Price:N2} qty {ask.Quantity:F6}");
++foreach (var bid in book.Bids.Take(5))
++    Console.WriteLine($"  Bid {bid.Price:N2} qty {bid.Quantity:F6}");
++```
++
++### Candlesticks
++
++```csharp
++using CryptoExchanges.Net.Core.Enums;
++
++IReadOnlyList<Candlestick> candles = await client.MarketData.GetCandlesticksAsync(
++    new Symbol(Asset.Btc, Asset.Usdt),
++    KlineInterval.OneHour,
++    limit: 24);
++
++foreach (var c in candles)
++{
++    Console.WriteLine(
++        $"[{c.OpenTime:HH:mm}] O={c.Open:N2} H={c.High:N2} L={c.Low:N2} C={c.Close:N2} V={c.Volume:F4}");
++}
++```
++
++`KlineInterval` values: `OneMinute`, `ThreeMinutes`, `FiveMinutes`, `FifteenMinutes`,
++`ThirtyMinutes`, `OneHour`, `TwoHours`, `FourHours`, `SixHours`, `EightHours`, `TwelveHours`,
++`OneDay`, `ThreeDays`, `OneWeek`, `OneMonth`.
++
++Optional `startTime`/`endTime` (`DateTimeOffset?`) filter the result window.
++
++### Recent public trades
++
++```csharp
++IReadOnlyList<Trade> trades = await client.MarketData.GetRecentTradesAsync(
++    new Symbol(Asset.Btc, Asset.Usdt), limit: 10);
++
++foreach (var t in trades)
++{
++    var side = t.IsBuyerMaker ? "SELL" : "BUY";
++    Console.WriteLine($"[{t.Timestamp:HH:mm:ss}] {side} {t.Quantity:F6} @ {t.Price:N2}");
++}
++```
++
++### Exchange info
++
++Returns trading rules, allowed order types, rate limits, and the full symbol list:
++
++```csharp
++ExchangeInfo info = await client.MarketData.GetExchangeInfoAsync();
++Console.WriteLine($"Exchange: {info.ExchangeName}, symbols: {info.Symbols.Count}");
++
++foreach (var s in info.Symbols.Take(3))
++    Console.WriteLine($"  {s.Symbol}: {string.Join(", ", s.AllowedOrderTypes)}");
++```
++
++---
++
++## Trading
++
++Trading endpoints require an API key and secret.
++
++### Place an order
++
++Use `PlaceOrderRequest` — a `record` with required properties and an optional `Create` factory
++that validates before returning:
++
++```csharp
++using CryptoExchanges.Net.Core.Interfaces;
++using CryptoExchanges.Net.Core.Enums;
++
++var btcUsdt = new Symbol(Asset.Btc, Asset.Usdt);
++
++// Object initializer (inline validation via Validate())
++Order order = await client.Trading.PlaceOrderAsync(new PlaceOrderRequest
++{
++    Symbol   = btcUsdt,
++    Side     = OrderSide.Buy,
++    Type     = OrderType.Limit,
++    Quantity = 0.001m,
++    Price    = 50_000m
++});
++
++Console.WriteLine($"Order ID: {order.OrderId}, status: {order.Status}");
++```
++
++Or use the factory method for explicit pre-call validation:
++
++```csharp
++var request = PlaceOrderRequest.Create(
++    symbol:   btcUsdt,
++    side:     OrderSide.Sell,
++    type:     OrderType.Market,
++    quantity: 0.001m);
++
++Order order = await client.Trading.PlaceOrderAsync(request);
++```
++
++Market orders accept either `Quantity` (base asset) or `QuoteOrderQuantity` (quote asset spend),
++not both.
++
++### Cancel an order
++
++```csharp
++// Cancel by exchange-assigned order ID
++Order cancelled = await client.Trading.CancelOrderAsync(btcUsdt, order.OrderId);
++
++// Cancel by client-assigned ID
++Order cancelled2 = await client.Trading.CancelOrderByClientIdAsync(btcUsdt, "my-client-id");
++
++// Cancel ALL open orders for a symbol
++IReadOnlyList<Order> cancelled3 = await client.Trading.CancelAllOrdersAsync(btcUsdt);
++```
++
++### Query orders
++
++```csharp
++// Retrieve a specific order
++Order fetched = await client.Trading.GetOrderAsync(btcUsdt, order.OrderId);
++
++// All currently open orders (all symbols)
++IReadOnlyList<Order> open = await client.Trading.GetOpenOrdersAsync();
++
++// Open orders for a specific symbol
++IReadOnlyList<Order> openForBtc = await client.Trading.GetOpenOrdersAsync(btcUsdt);
++
++// Historical orders
++IReadOnlyList<Order> history = await client.Trading.GetOrderHistoryAsync(
++    btcUsdt, limit: 50,
++    startTime: DateTimeOffset.UtcNow.AddDays(-7));
++```
++
++---
++
++## Account
++
++Account endpoints require an API key and secret.
++
++### Balances
++
++```csharp
++// All non-zero balances
++IReadOnlyList<AssetBalance> balances = await client.Account.GetBalancesAsync();
++foreach (var b in balances)
++    Console.WriteLine($"{b.Asset}: free={b.Free:F8}, locked={b.Locked:F8}, total={b.Total:F8}");
++
++// Single asset
++AssetBalance btcBalance = await client.Account.GetBalanceAsync(Asset.Btc);
++Console.WriteLine($"BTC total: {btcBalance.Total:F8}");
++```
++
++`AssetBalance.Asset` is a typed `Asset` value (not a raw string).
++
++### Trade history
++
++```csharp
++IReadOnlyList<Trade> myTrades = await client.Account.GetTradeHistoryAsync(
++    new Symbol(Asset.Btc, Asset.Usdt),
++    limit: 100,
++    startTime: DateTimeOffset.UtcNow.AddDays(-30));
++```
++
++---
++
++## Dependency Injection (ASP.NET Core / hosted services)
++
++### Register all exchanges at once
++
++```csharp
++// Program.cs
++builder.Services.AddCryptoExchanges(opt =>
++{
++    opt.BinanceApiKey    = builder.Configuration["Binance:ApiKey"];
++    opt.BinanceSecretKey = builder.Configuration["Binance:SecretKey"];
++    opt.BybitApiKey      = builder.Configuration["Bybit:ApiKey"];
++    opt.BybitSecretKey   = builder.Configuration["Bybit:SecretKey"];
++    opt.OkxApiKey        = builder.Configuration["Okx:ApiKey"];
++    opt.OkxSecretKey     = builder.Configuration["Okx:SecretKey"];
++    opt.OkxPassphrase    = builder.Configuration["Okx:Passphrase"];
++    opt.BitgetApiKey     = builder.Configuration["Bitget:ApiKey"];
++    opt.BitgetSecretKey  = builder.Configuration["Bitget:SecretKey"];
++    opt.BitgetPassphrase = builder.Configuration["Bitget:Passphrase"];
++});
++```
++
++### Register a single exchange
++
++```csharp
++// AddBinanceExchange / AddBybitExchange / AddOkxExchange / AddBitgetExchange
++// live in the per-exchange package, not DependencyInjection
++builder.Services.AddBinanceExchange(opt =>
++{
++    opt.ApiKey    = builder.Configuration["Binance:ApiKey"];
++    opt.SecretKey = builder.Configuration["Binance:SecretKey"];
++});
++```
++
++### Resolve via factory
++
++```csharp
++using CryptoExchanges.Net.Core.Interfaces;
++using CryptoExchanges.Net.Core.Enums;
++
++app.MapGet("/btc-price", async (IExchangeClientFactory factory) =>
++{
++    IExchangeClient ex = factory.GetClient(ExchangeId.Binance);
++    return await ex.MarketData.GetPriceAsync(new Symbol(Asset.Btc, Asset.Usdt));
++});
++```
++
++`IExchangeClientFactory.Available` lists registered exchange IDs. `TryGet` is the non-throwing
++variant.
++
++### Resolve a specific exchange directly (keyed DI)
++
++```csharp
++using Microsoft.AspNetCore.Mvc;
++
++app.MapGet("/eth-price", async ([FromKeyedServices(ExchangeId.Binance)] IExchangeClient ex) =>
++    await ex.MarketData.GetPriceAsync(new Symbol(Asset.Eth, Asset.Usdt)));
++```
++
++---
++
++## Error Handling
++
++All exchange failures surface as typed exceptions derived from `ExchangeException`:
++
++```
++ExchangeException
++├── ExchangeApiException          — 4xx exchange error response
++│   ├── AuthenticationException   — bad key / signature / IP restriction
++│   ├── RateLimitExceededException — 429 / weight-limit breached
++│   ├── InvalidOrderException     — bad order parameters
++│   └── InsufficientBalanceException — insufficient funds
++└── ExchangeConnectivityException — network/transport failure
++```
++
++Catch by specificity:
++
++```csharp
++using CryptoExchanges.Net.Core.Exceptions;
++
++try
++{
++    var order = await client.Trading.PlaceOrderAsync(new PlaceOrderRequest
++    {
++        Symbol   = new Symbol(Asset.Btc, Asset.Usdt),
++        Side     = OrderSide.Buy,
++        Type     = OrderType.Limit,
++        Quantity = 0.001m,
++        Price    = 50_000m
++    });
++}
++catch (AuthenticationException ex)
++{
++    Console.Error.WriteLine($"Authentication failed: {ex.Message}");
++}
++catch (RateLimitExceededException ex)
++{
++    Console.Error.WriteLine($"Rate limit hit: {ex.Message}");
++}
++catch (InvalidOrderException ex)
++{
++    Console.Error.WriteLine($"Bad order parameters: {ex.Message}");
++}
++catch (InsufficientBalanceException ex)
++{
++    Console.Error.WriteLine($"Insufficient funds: {ex.Message}");
++}
++catch (ExchangeApiException ex)
++{
++    // Catch-all for other 4xx errors
++    Console.Error.WriteLine($"API error (code {ex.Code}): {ex.Message}");
++}
++catch (ExchangeConnectivityException ex)
++{
++    Console.Error.WriteLine($"Network error: {ex.Message}");
++}
++```
++
++`ExchangeApiException` exposes an optional integer `Code` (the exchange's raw numeric error code)
++and the raw response body for diagnostics.
++
++---
++
++## Disposal
++
++`IExchangeClient` implements `IAsyncDisposable`. When constructed directly (factory-free), dispose
++the client to release the underlying `HttpClient`:
++
++```csharp
++await using var client = BinanceExchangeClient.CreateFromEnvironment();
++// ...use client...
++// Disposed automatically at end of scope
++```
++
++When registered via DI, the container owns the lifetime — do not dispose the injected instance.
++
++---
++
++## Further reading
++
++- [Getting Started](getting-started.md) — install and first calls
++- [Architecture](architecture.md) — how the layers fit together
++- [Exchanges](exchanges.md) — per-exchange packages, credentials, and status
++- [MCP server](mcp-server.md) — AI-agent read-only access via the Model Context Protocol
+diff --git a/nazgul/plan.md b/nazgul/plan.md
+index 8a75f90..dc54941 100644
+--- a/nazgul/plan.md
++++ b/nazgul/plan.md
+@@ -58,7 +58,7 @@ REUSE existing discovery — do NOT re-run.
+ | Task     | Status   | Wave | Description                                                        |
+ |----------|----------|------|--------------------------------------------------------------------|
+ | TASK-036 | ✦ DONE   | 1    | Exchange brand SVG assets (7) under `docs/assets/exchanges/`       |
+-| TASK-037 | ◇ READY  | 1    | Core library docs (getting-started, library-usage, architecture, exchanges) |
++| TASK-037 | ◆ IN_PROGRESS | 1 | Core library docs (getting-started, library-usage, architecture, exchanges) |
+ | TASK-038 | ◇ READY  | 1    | MCP docs (mcp-server.md + mcp-clients.md, major clients)           |
+ | TASK-039 | ◇ PLANNED| 2    | README rewrite (lean) — links into docs/, uses icons, status table |
+ 
+diff --git a/nazgul/tasks/TASK-037.md b/nazgul/tasks/TASK-037.md
+index bb9c125..d2ce783 100644
+--- a/nazgul/tasks/TASK-037.md
++++ b/nazgul/tasks/TASK-037.md
+@@ -1,9 +1,9 @@
+ ---
+ id: TASK-037
+-status: READY
++status: IN_PROGRESS
+ depends_on: []
+ commit:
+-claimed_at:
++claimed_at: 2026-06-19T14:00:00Z
+ ---
+ # TASK-037: Core library docs (getting-started, library-usage, architecture, exchanges)
+ 
+@@ -17,7 +17,7 @@ claimed_at:
+ - **Wave**: 1
+ - **Traces to**: FEAT-003 spec §Scope-In "New public docs/ folder" (getting-started, library-usage, architecture, exchanges)
+ - **Created at**: 2026-06-19T13:10:00Z
+-- **Claimed at**:
++- **Claimed at**: 2026-06-19T14:00:00Z
+ - **Implemented at**:
+ - **Completed at**:
+ - **Blocked at**:
+@@ -92,9 +92,14 @@ TASK-036's filenames.)
+ - **TRD Component**: n/a — `nazgul/context/architecture-map.md` is the architecture source
+ - **ADR Reference**: n/a
+ 
++- **Base SHA**: e17d246
++
+ ## Implementation Log
+ 
+ ### Attempt 1
++- Claimed 2026-06-19T14:00:00Z on feat/FEAT-003-docs-overhaul
++- Verified all API signatures from source before writing docs
++- Creating 4 markdown docs under public docs/
+ 
+ ## Review Results
+ 

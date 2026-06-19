@@ -1,8 +1,8 @@
 ---
 id: TASK-037
-status: IN_PROGRESS
+status: IMPLEMENTED
 depends_on: []
-commit:
+commit: 7deb9c0
 claimed_at: 2026-06-19T14:00:00Z
 ---
 # TASK-037: Core library docs (getting-started, library-usage, architecture, exchanges)
@@ -18,7 +18,7 @@ claimed_at: 2026-06-19T14:00:00Z
 - **Traces to**: FEAT-003 spec §Scope-In "New public docs/ folder" (getting-started, library-usage, architecture, exchanges)
 - **Created at**: 2026-06-19T13:10:00Z
 - **Claimed at**: 2026-06-19T14:00:00Z
-- **Implemented at**:
+- **Implemented at**: 2026-06-19T14:10:00Z
 - **Completed at**:
 - **Blocked at**:
 - **Retry count**: 0/3
@@ -94,12 +94,23 @@ TASK-036's filenames.)
 
 - **Base SHA**: e17d246
 
+## Commits
+- 7deb9c0 — feat(FEAT-003): core library docs — getting-started, library-usage, architecture, exchanges (TASK-037)
+
 ## Implementation Log
 
 ### Attempt 1
 - Claimed 2026-06-19T14:00:00Z on feat/FEAT-003-docs-overhaul
-- Verified all API signatures from source before writing docs
-- Creating 4 markdown docs under public docs/
+- Read all source interfaces, models, exchange clients, DI extensions before writing
+- Verified env var names from source: BINANCE_API_KEY/SECRET, BYBIT_API_KEY/SECRET, OKX_API_KEY/SECRET/PASSPHRASE, BITGET_API_KEY/SECRET/PASSPHRASE
+- Verified PlaceOrderRequest is a `record` with required properties + optional Create() factory
+- Verified CancelOrderAsync returns Order (not void), GetOpenOrdersAsync returns IReadOnlyList<Order>
+- Verified IExchangeClientFactory.TryGet + Available exist
+- Verified AddCryptoExchanges delegates to per-exchange Add*Exchange methods
+- All 4 docs created under docs/ (not gitignored docs/superpowers/)
+- docs/exchanges.md references docs/assets/exchanges/<slug>.svg by relative path (TASK-036 outputs)
+- Build: green (dotnet build succeeded, 0 errors)
+- Tests: 488 passed, 0 failed, no source edits
 
 ## Review Results
 

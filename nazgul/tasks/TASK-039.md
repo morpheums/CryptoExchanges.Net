@@ -1,8 +1,8 @@
 ---
 id: TASK-039
-status: IN_PROGRESS
+status: IMPLEMENTED
 depends_on: [TASK-036, TASK-037, TASK-038]
-commit:
+commit: 6030fa2
 claimed_at: 2026-06-19T13:30:00Z
 ---
 # TASK-039: README rewrite (lean) — links into docs/, uses icons, status table
@@ -19,7 +19,7 @@ claimed_at: 2026-06-19T13:30:00Z
 - **Created at**: 2026-06-19T13:10:00Z
 - **Claimed at**: 2026-06-19T13:30:00Z
 - **Base SHA**: 2bc2fa5
-- **Implemented at**:
+- **Implemented at**: 2026-06-19T13:35:00Z
 - **Completed at**:
 - **Blocked at**:
 - **Retry count**: 0/3
@@ -97,6 +97,19 @@ Constraints:
 ## Implementation Log
 
 ### Attempt 1
+
+- Promoted PLANNED → IN_PROGRESS at 2026-06-19T13:30:00Z; base SHA 2bc2fa5.
+- Read current README.md (255 lines), all 6 docs/ pages confirmed present, all 7 SVG icons confirmed present.
+- Rewrote README.md to 100 lines: badges, exchange status table with icons, 60s quick-start, MCP blurb, docs links, building + license footer.
+- Removed: Roadmap section, Philosophy, Architecture ASCII art, Supported Operations prose, Project Structure, stale exchange table.
+- Fixed stale facts: 4 supported exchanges, Apache-2.0 badge, v0.2.0-preview.1 version, read-only MCP.
+- Build: green (0 errors, 0 warnings).
+- All 13 internal links/icon paths verified to exist.
+- Committed as 6030fa2.
+
+## Commits
+
+- 6030fa2 — feat(FEAT-003): lean README rewrite with exchange icon table + docs links (TASK-039)
 
 ## Review Results
 

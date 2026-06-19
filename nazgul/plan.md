@@ -60,9 +60,9 @@ REUSE existing discovery — do NOT re-run.
 | TASK-036 | ✦ DONE   | 1    | Exchange brand SVG assets (7) under `docs/assets/exchanges/`       |
 | TASK-037 | ✦ DONE   | 1    | Core library docs (getting-started, library-usage, architecture, exchanges) |
 | TASK-038 | ✦ DONE   | 1    | MCP docs (mcp-server.md + mcp-clients.md, major clients)           |
-| TASK-039 | ◆ IN_PROGRESS | 2 | README rewrite (lean) — links into docs/, uses icons, status table |
+| TASK-039 | ✦ IMPLEMENTED | 2 | README rewrite (lean) — links into docs/, uses icons, status table |
 
-Tasks: 3/4 DONE
+Tasks: 3/4 DONE + 1 IMPLEMENTED (awaiting review)
 
 ## Wave Groups
 
@@ -123,9 +123,9 @@ docs-site generator, WebSockets) is planned.
 
 ## Recovery Pointer
 
-- **Current stage**: Wave 2 — TASK-039 IN_PROGRESS (final task).
-- **Next action**: Complete README rewrite, commit, set IMPLEMENTED.
-- **Active task**: TASK-039.
+- **Current stage**: Wave 2 complete — TASK-039 IMPLEMENTED (commit 6030fa2). Awaiting review gate.
+- **Next action**: Review gate — all 4 reviewers must APPROVE TASK-039.
+- **Active task**: TASK-039 (IMPLEMENTED, in review).
 - **Files are truth**: task manifests in `nazgul/tasks/TASK-036..039.md` carry full state;
   frontmatter `status:` is canonical.
 

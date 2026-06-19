@@ -1,9 +1,9 @@
 ---
 id: TASK-036
-status: READY
+status: IN_PROGRESS
 depends_on: []
 commit:
-claimed_at:
+claimed_at: 2026-06-19T14:00:00Z
 ---
 # TASK-036: Exchange brand SVG assets (7) under docs/assets/exchanges/
 
@@ -17,7 +17,7 @@ claimed_at:
 - **Wave**: 1
 - **Traces to**: FEAT-003 spec §Scope-In "Assets" (`docs/assets/exchanges/*.svg`, curated set for all 7, kept small + consistent)
 - **Created at**: 2026-06-19T13:10:00Z
-- **Claimed at**:
+- **Claimed at**: 2026-06-19T14:00:00Z
 - **Implemented at**:
 - **Completed at**:
 - **Blocked at**:
@@ -84,6 +84,15 @@ This is a no-dependency task (Wave 1) and is file-disjoint from TASK-037/TASK-03
 ## Implementation Log
 
 ### Attempt 1
+
+- Created `docs/assets/exchanges/` directory.
+- Fetched 4 official CC0 icons from `cdn.simpleicons.org`: binance, coinbase, kucoin, okx.
+  All have `viewBox="0 0 24 24"` and minimal path-only SVG markup.
+- Created 3 placeholder monogram SVGs (bybit, bitget, kraken) with matching `viewBox="0 0 24 24"`,
+  rounded-rect background, initial letter in white on black — no trademark reproduction.
+- Created `ATTRIBUTION.md` distinguishing official (CC0 from Simple Icons) vs placeholder files.
+- All 7 SVGs validated as well-formed XML (python3 xml.etree.ElementTree).
+- No source files touched; build/test unaffected.
 
 ## Review Results
 

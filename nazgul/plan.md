@@ -57,7 +57,7 @@ REUSE existing discovery — do NOT re-run.
 
 | Task     | Status   | Wave | Description                                                        |
 |----------|----------|------|--------------------------------------------------------------------|
-| TASK-036 | ◇ READY  | 1    | Exchange brand SVG assets (7) under `docs/assets/exchanges/`       |
+| TASK-036 | ◆ IN_PROGRESS | 1 | Exchange brand SVG assets (7) under `docs/assets/exchanges/`    |
 | TASK-037 | ◇ READY  | 1    | Core library docs (getting-started, library-usage, architecture, exchanges) |
 | TASK-038 | ◇ READY  | 1    | MCP docs (mcp-server.md + mcp-clients.md, major clients)           |
 | TASK-039 | ◇ PLANNED| 2    | README rewrite (lean) — links into docs/, uses icons, status table |
@@ -109,10 +109,9 @@ docs-site generator, WebSockets) is planned.
 
 ## Recovery Pointer
 
-- **Current stage**: PLANNING COMPLETE. Ready for implementation (Wave 1).
-- **Next action**: Create branch `feat/FEAT-003-docs-overhaul` off `main`, then start Wave 1
-  (TASK-036, TASK-037, TASK-038 in parallel — file-disjoint).
-- **Active task**: none — all tasks PLANNED/READY.
+- **Current stage**: Wave 1 — implementation in progress.
+- **Next action**: TASK-036 IN_PROGRESS — creating 7 SVG assets + ATTRIBUTION.md under `docs/assets/exchanges/`.
+- **Active task**: TASK-036 (claimed 2026-06-19T14:00:00Z).
 - **Files are truth**: task manifests in `nazgul/tasks/TASK-036..039.md` carry full state;
   frontmatter `status:` is canonical.
 

@@ -77,7 +77,7 @@ REUSE existing discovery — do NOT re-run.
 
 | Task     | Status    | Wave | Description                                                                 |
 |----------|-----------|------|-----------------------------------------------------------------------------|
-| TASK-042 | ◆ IN_PROGRESS | 1 | Core streaming abstractions (`IStreamClient` family) — no transport      |
+| TASK-042 | ✦ IMPLEMENTED | 1 | Core streaming abstractions (`IStreamClient` family) — no transport      |
 | TASK-043 | ◇ PLANNED | 2    | Http engine contracts + fake-transport test seam                            |
 | TASK-044 | ◇ PLANNED | 3    | Http reconnecting byte-engine (pump/route/backoff/replay/heartbeat/channels)|
 | TASK-045 | ◇ PLANNED | 4    | Generic `StreamClient` + `StreamClientFactory` + `AddStreams<TOptions>`      |
@@ -151,12 +151,13 @@ other exchanges, `IAsyncEnumerable`, System.Reactive) is planned.
 
 ## Recovery Pointer
 
-- **Current stage**: TASK-042 IN_PROGRESS — implementing Core streaming abstractions.
-- **Next action**: Create files under `src/CryptoExchanges.Net.Core/Streaming/` + `Interfaces/`, write tests, build, commit.
-- **Active task**: TASK-042 (IN_PROGRESS, claimed 2026-06-19T17:30:00Z).
+- **Current stage**: TASK-042 IMPLEMENTED → awaiting review gate.
+- **Next action**: Review gate must approve TASK-042; then TASK-043 becomes READY.
+- **Active task**: TASK-042 (IMPLEMENTED, commit `1c041b5`).
 - **Files are truth**: task manifests in `nazgul/tasks/TASK-042..047.md` carry full state;
   frontmatter `status:` is canonical.
 
 ─── ◈ NEXT ─────────────────────────────────────────────
-  ◆ TASK-042 — Core streaming abstractions (`IStreamClient` family). IN_PROGRESS.
+  ✦ TASK-042 — Core streaming abstractions. IMPLEMENTED (awaiting review).
+  ◇ TASK-043 — Http engine contracts + fake-transport seam. PLANNED (deps: TASK-042).
 ────────────────────────────────────────────────────────

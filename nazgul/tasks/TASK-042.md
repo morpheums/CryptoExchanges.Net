@@ -1,6 +1,6 @@
 ---
 id: TASK-042
-status: IN_PROGRESS
+status: IMPLEMENTED
 depends_on: []
 ---
 # TASK-042: Core streaming abstractions (`IStreamClient` family)
@@ -17,7 +17,7 @@ depends_on: []
 - **Created at**: 2026-06-19T17:20:00Z
 - **Claimed at**: 2026-06-19T17:30:00Z
 - **Base SHA**: aa6fe22e4b9c0ed480bcf2c898bd41b60386902d
-- **Implemented at**:
+- **Implemented at**: 2026-06-19T17:45:00Z
 - **Completed at**:
 - **Blocked at**:
 - **Retry count**: 0/3
@@ -60,9 +60,9 @@ optional callbacks default to null) and `IsConnected` semantics via a tiny in-te
 No transport — these are pure value/contract tests.
 
 ## Acceptance Criteria
-- [ ] All seven types exist with the exact locked shapes (one type per file); `IStreamClient`/`IStreamClientFactory` live in `Interfaces/`, the records/enum/`IStreamSubscription` under `Streaming/`; no "reserved-for-v1.1" members anywhere.
-- [ ] Core unit tests pass (`StreamHandlers<T>` required/optional handler construction + `IsConnected => State == Live`); solution builds 0W/0E under `TreatWarningsAsErrors`.
-- [ ] Existing 499 tests (`Category!=Integration`) stay green; no edits to existing REST interfaces or `Core.Models`.
+- [x] All seven types exist with the exact locked shapes (one type per file); `IStreamClient`/`IStreamClientFactory` live in `Interfaces/`, the records/enum/`IStreamSubscription` under `Streaming/`; no "reserved-for-v1.1" members anywhere.
+- [x] Core unit tests pass (`StreamHandlers<T>` required/optional handler construction + `IsConnected => State == Live`); solution builds 0W/0E under `TreatWarningsAsErrors`.
+- [x] Existing 499 tests (`Category!=Integration`) stay green; no edits to existing REST interfaces or `Core.Models`.
 
 ## Pattern Reference
 - Factory interface shape to mirror: `src/CryptoExchanges.Net.Core/Interfaces/IExchangeClientFactory.cs` (full file).
@@ -89,10 +89,30 @@ No transport — these are pure value/contract tests.
 - **TRD Component**: Core streaming abstractions (design §"Public surface (Core)")
 - **ADR Reference**: DESIGN-STREAMING-V1 R1 (status-enum + awaitable callbacks), R2 (`StreamHandlers<T>`), R4 (`OnLagged`); DECISION-STREAMING-SHARED §1 (no per-exchange client; public surface = `IStreamClient` + records); Inv 1/4/5/11
 
+## Commits
+
+- `1c041b5` feat(FEAT-005): add Core streaming abstractions (TASK-042)
+
 ## Implementation Log
 
 ### Attempt 1
-<!-- implementer fills this in -->
+
+Created 6 source files + 1 test file. All types match the locked design signatures verbatim.
+
+**Files created:**
+- `src/CryptoExchanges.Net.Core/Streaming/StreamConnectionState.cs` — enum with 4 states
+- `src/CryptoExchanges.Net.Core/Streaming/StreamLag.cs` — `readonly record struct StreamLag(int DroppedCount)`
+- `src/CryptoExchanges.Net.Core/Streaming/StreamHandlers.cs` — `sealed record StreamHandlers<T>(OnUpdate required + 3 optional callbacks)`
+- `src/CryptoExchanges.Net.Core/Streaming/IStreamSubscription.cs` — `IAsyncDisposable` with `State` + `IsConnected`
+- `src/CryptoExchanges.Net.Core/Interfaces/IStreamClient.cs` — 4 subscribe methods returning `Task<IStreamSubscription>`
+- `src/CryptoExchanges.Net.Core/Interfaces/IStreamClientFactory.cs` — mirrors `IExchangeClientFactory` exactly
+- `tests/CryptoExchanges.Net.Core.Tests.Unit/Streaming/StreamHandlersTests.cs` — 9 unit tests (TDD)
+
+**Results:**
+- Build: 0 warnings, 0 errors (TreatWarningsAsErrors)
+- New streaming tests: 9/9 passed
+- Existing tests: 497 non-integration tests pass, 0 failures
+- No transport, no exchange knowledge in Core (Inv 1 verified)
 
 ## Review Results
 

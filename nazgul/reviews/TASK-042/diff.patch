@@ -1,0 +1,390 @@
+diff --git a/nazgul/plan.md b/nazgul/plan.md
+index 116da06..94d2c0d 100644
+--- a/nazgul/plan.md
++++ b/nazgul/plan.md
+@@ -77,7 +77,7 @@ REUSE existing discovery — do NOT re-run.
+ 
+ | Task     | Status    | Wave | Description                                                                 |
+ |----------|-----------|------|-----------------------------------------------------------------------------|
+-| TASK-042 | ◆ READY   | 1    | Core streaming abstractions (`IStreamClient` family) — no transport         |
++| TASK-042 | ◆ IN_PROGRESS | 1 | Core streaming abstractions (`IStreamClient` family) — no transport      |
+ | TASK-043 | ◇ PLANNED | 2    | Http engine contracts + fake-transport test seam                            |
+ | TASK-044 | ◇ PLANNED | 3    | Http reconnecting byte-engine (pump/route/backoff/replay/heartbeat/channels)|
+ | TASK-045 | ◇ PLANNED | 4    | Generic `StreamClient` + `StreamClientFactory` + `AddStreams<TOptions>`      |
+@@ -151,14 +151,12 @@ other exchanges, `IAsyncEnumerable`, System.Reactive) is planned.
+ 
+ ## Recovery Pointer
+ 
+-- **Current stage**: PLANNING complete → ready to IMPLEMENT.
+-- **Next action**: Create branch `feat/FEAT-005-websocket-streaming` off `main`, then claim
+-  **TASK-042** (READY) — Core streaming abstractions.
+-- **Active task**: none yet (TASK-042 is next to claim).
++- **Current stage**: TASK-042 IN_PROGRESS — implementing Core streaming abstractions.
++- **Next action**: Create files under `src/CryptoExchanges.Net.Core/Streaming/` + `Interfaces/`, write tests, build, commit.
++- **Active task**: TASK-042 (IN_PROGRESS, claimed 2026-06-19T17:30:00Z).
+ - **Files are truth**: task manifests in `nazgul/tasks/TASK-042..047.md` carry full state;
+   frontmatter `status:` is canonical.
+ 
+ ─── ◈ NEXT ─────────────────────────────────────────────
+-  ◆ TASK-042 — Core streaming abstractions (`IStreamClient` family). READY.
+-  Branch off main first: feat/FEAT-005-websocket-streaming.
++  ◆ TASK-042 — Core streaming abstractions (`IStreamClient` family). IN_PROGRESS.
+ ────────────────────────────────────────────────────────
+diff --git a/nazgul/tasks/TASK-042.md b/nazgul/tasks/TASK-042.md
+index 055b9d4..f93db11 100644
+--- a/nazgul/tasks/TASK-042.md
++++ b/nazgul/tasks/TASK-042.md
+@@ -1,6 +1,6 @@
+ ---
+ id: TASK-042
+-status: READY
++status: IN_PROGRESS
+ depends_on: []
+ ---
+ # TASK-042: Core streaming abstractions (`IStreamClient` family)
+@@ -15,7 +15,8 @@ depends_on: []
+ - **Wave**: 1
+ - **Traces to**: FEAT-005 spec §Architecture "Core"; design §"Public surface (Core)"; DESIGN-STREAMING-V1 R1/R2/R4; DECISION-STREAMING-SHARED §1 (public surface is `IStreamClient`/`IStreamSubscription` + records)
+ - **Created at**: 2026-06-19T17:20:00Z
+-- **Claimed at**:
++- **Claimed at**: 2026-06-19T17:30:00Z
++- **Base SHA**: aa6fe22e4b9c0ed480bcf2c898bd41b60386902d
+ - **Implemented at**:
+ - **Completed at**:
+ - **Blocked at**:
+diff --git a/src/CryptoExchanges.Net.Core/Interfaces/IStreamClient.cs b/src/CryptoExchanges.Net.Core/Interfaces/IStreamClient.cs
+new file mode 100644
+index 0000000..1cc58ad
+--- /dev/null
++++ b/src/CryptoExchanges.Net.Core/Interfaces/IStreamClient.cs
+@@ -0,0 +1,82 @@
++using CryptoExchanges.Net.Core.Enums;
++using CryptoExchanges.Net.Core.Models;
++using CryptoExchanges.Net.Core.Streaming;
++
++namespace CryptoExchanges.Net.Core.Interfaces;
++
++/// <summary>
++/// Real-time market-data streaming client for a single exchange. Provides subscribe
++/// methods for the four standard public streams, each delivering canonical
++/// <c>Core.Models</c> via awaitable callbacks. Disposing the client closes its
++/// underlying connection and disposes all active subscriptions.
++/// </summary>
++public interface IStreamClient : IAsyncDisposable
++{
++    /// <summary>The exchange this client is connected to.</summary>
++    ExchangeId ExchangeId { get; }
++
++    /// <summary>
++    /// Subscribes to real-time ticker (24-hour price statistics) updates for
++    /// <paramref name="symbol"/>.
++    /// </summary>
++    /// <param name="symbol">The trading pair to subscribe to.</param>
++    /// <param name="handlers">Callbacks for updates and lifecycle events.</param>
++    /// <param name="ct">Token to cancel the subscribe handshake.</param>
++    /// <returns>
++    /// An <see cref="IStreamSubscription"/> that remains active until disposed.
++    /// </returns>
++    Task<IStreamSubscription> SubscribeToTickerAsync(
++        Symbol symbol,
++        StreamHandlers<Ticker> handlers,
++        CancellationToken ct = default);
++
++    /// <summary>
++    /// Subscribes to real-time trade updates for <paramref name="symbol"/>.
++    /// </summary>
++    /// <param name="symbol">The trading pair to subscribe to.</param>
++    /// <param name="handlers">Callbacks for updates and lifecycle events.</param>
++    /// <param name="ct">Token to cancel the subscribe handshake.</param>
++    /// <returns>
++    /// An <see cref="IStreamSubscription"/> that remains active until disposed.
++    /// </returns>
++    Task<IStreamSubscription> SubscribeToTradesAsync(
++        Symbol symbol,
++        StreamHandlers<Trade> handlers,
++        CancellationToken ct = default);
++
++    /// <summary>
++    /// Subscribes to real-time order-book updates for <paramref name="symbol"/> at
++    /// the specified <paramref name="depth"/>. Updates are delivered as per-frame
++    /// snapshots; <see cref="OrderBook.LastUpdateId"/> exposes the sequence identifier
++    /// for consumer-side gap detection.
++    /// </summary>
++    /// <param name="symbol">The trading pair to subscribe to.</param>
++    /// <param name="depth">The number of price levels requested on each side.</param>
++    /// <param name="handlers">Callbacks for updates and lifecycle events.</param>
++    /// <param name="ct">Token to cancel the subscribe handshake.</param>
++    /// <returns>
++    /// An <see cref="IStreamSubscription"/> that remains active until disposed.
++    /// </returns>
++    Task<IStreamSubscription> SubscribeToOrderBookAsync(
++        Symbol symbol,
++        int depth,
++        StreamHandlers<OrderBook> handlers,
++        CancellationToken ct = default);
++
++    /// <summary>
++    /// Subscribes to real-time kline (candlestick) updates for <paramref name="symbol"/>
++    /// at the given <paramref name="interval"/>.
++    /// </summary>
++    /// <param name="symbol">The trading pair to subscribe to.</param>
++    /// <param name="interval">The candlestick time interval.</param>
++    /// <param name="handlers">Callbacks for updates and lifecycle events.</param>
++    /// <param name="ct">Token to cancel the subscribe handshake.</param>
++    /// <returns>
++    /// An <see cref="IStreamSubscription"/> that remains active until disposed.
++    /// </returns>
++    Task<IStreamSubscription> SubscribeToKlinesAsync(
++        Symbol symbol,
++        KlineInterval interval,
++        StreamHandlers<Candlestick> handlers,
++        CancellationToken ct = default);
++}
+diff --git a/src/CryptoExchanges.Net.Core/Interfaces/IStreamClientFactory.cs b/src/CryptoExchanges.Net.Core/Interfaces/IStreamClientFactory.cs
+new file mode 100644
+index 0000000..6abe8f3
+--- /dev/null
++++ b/src/CryptoExchanges.Net.Core/Interfaces/IStreamClientFactory.cs
+@@ -0,0 +1,36 @@
++using System.Diagnostics.CodeAnalysis;
++using CryptoExchanges.Net.Core.Enums;
++using CryptoExchanges.Net.Core.Exceptions;
++
++namespace CryptoExchanges.Net.Core.Interfaces;
++
++/// <summary>
++/// Exchange-agnostic entry point: resolves a registered <see cref="IStreamClient"/> by
++/// <see cref="ExchangeId"/> so consumer code depends only on this factory, not on keyed DI.
++/// Mirrors <see cref="IExchangeClientFactory"/>.
++/// </summary>
++public interface IStreamClientFactory
++{
++    /// <summary>The exchanges that currently have a registered stream client.</summary>
++    IReadOnlyCollection<ExchangeId> Available { get; }
++
++    /// <summary>Gets the stream client for <paramref name="exchange"/>.</summary>
++    /// <param name="exchange">The exchange to resolve.</param>
++    /// <returns>The registered <see cref="IStreamClient"/>.</returns>
++    /// <exception cref="ExchangeNotRegisteredException">
++    /// No stream client is registered for <paramref name="exchange"/>.
++    /// </exception>
++    IStreamClient GetClient(ExchangeId exchange);
++
++    /// <summary>
++    /// Attempts to get the stream client for <paramref name="exchange"/> without throwing.
++    /// </summary>
++    /// <param name="exchange">The exchange to resolve.</param>
++    /// <param name="client">
++    /// The resolved client, or <see langword="null"/> when not registered.
++    /// </param>
++    /// <returns>
++    /// <see langword="true"/> if a stream client is registered for <paramref name="exchange"/>.
++    /// </returns>
++    bool TryGet(ExchangeId exchange, [NotNullWhen(true)] out IStreamClient? client);
++}
+diff --git a/src/CryptoExchanges.Net.Core/Streaming/IStreamSubscription.cs b/src/CryptoExchanges.Net.Core/Streaming/IStreamSubscription.cs
+new file mode 100644
+index 0000000..5935e3b
+--- /dev/null
++++ b/src/CryptoExchanges.Net.Core/Streaming/IStreamSubscription.cs
+@@ -0,0 +1,27 @@
++namespace CryptoExchanges.Net.Core.Streaming;
++
++/// <summary>
++/// Represents an active stream subscription returned by
++/// <see cref="Interfaces.IStreamClient"/>. Disposing the subscription unsubscribes
++/// from the stream and releases all associated resources.
++/// </summary>
++public interface IStreamSubscription : IAsyncDisposable
++{
++    /// <summary>
++    /// The current connection state of this subscription. This is the source of truth
++    /// for the subscription lifecycle; transitions are
++    /// <see cref="StreamConnectionState.Connecting"/> →
++    /// <see cref="StreamConnectionState.Live"/> →
++    /// <see cref="StreamConnectionState.Reconnecting"/> →
++    /// <see cref="StreamConnectionState.Live"/> (cycle on reconnect) →
++    /// <see cref="StreamConnectionState.Closed"/> (on dispose).
++    /// </summary>
++    StreamConnectionState State { get; }
++
++    /// <summary>
++    /// Convenience property. Returns <see langword="true"/> when
++    /// <see cref="State"/> is <see cref="StreamConnectionState.Live"/>;
++    /// <see langword="false"/> for all other states.
++    /// </summary>
++    bool IsConnected { get; }
++}
+diff --git a/src/CryptoExchanges.Net.Core/Streaming/StreamConnectionState.cs b/src/CryptoExchanges.Net.Core/Streaming/StreamConnectionState.cs
+new file mode 100644
+index 0000000..93e8c90
+--- /dev/null
++++ b/src/CryptoExchanges.Net.Core/Streaming/StreamConnectionState.cs
+@@ -0,0 +1,19 @@
++namespace CryptoExchanges.Net.Core.Streaming;
++
++/// <summary>
++/// Represents the connection lifecycle state of a stream subscription.
++/// </summary>
++public enum StreamConnectionState
++{
++    /// <summary>The subscription is being established for the first time.</summary>
++    Connecting,
++
++    /// <summary>The subscription is active and receiving updates.</summary>
++    Live,
++
++    /// <summary>The connection was lost and the engine is attempting to reconnect.</summary>
++    Reconnecting,
++
++    /// <summary>The subscription has been disposed (unsubscribed) and will receive no further updates.</summary>
++    Closed,
++}
+diff --git a/src/CryptoExchanges.Net.Core/Streaming/StreamHandlers.cs b/src/CryptoExchanges.Net.Core/Streaming/StreamHandlers.cs
+new file mode 100644
+index 0000000..59e6bcc
+--- /dev/null
++++ b/src/CryptoExchanges.Net.Core/Streaming/StreamHandlers.cs
+@@ -0,0 +1,32 @@
++namespace CryptoExchanges.Net.Core.Streaming;
++
++/// <summary>
++/// Bundles all awaitable callbacks for a single stream subscription into one record.
++/// Only <see cref="OnUpdate"/> is required; lifecycle callbacks are optional.
++/// </summary>
++/// <typeparam name="T">The <c>Core.Models</c> type delivered by the subscription
++/// (e.g. <c>Ticker</c>, <c>Trade</c>, <c>OrderBook</c>, <c>Candlestick</c>).</typeparam>
++/// <param name="OnUpdate">
++/// Invoked for every update arriving on the stream. Must not be <see langword="null"/>.
++/// </param>
++/// <param name="OnReconnecting">
++/// Optional. Invoked when the engine detects a lost connection and begins a reconnect
++/// attempt. The subscription's <see cref="IStreamSubscription.State"/> transitions to
++/// <see cref="StreamConnectionState.Reconnecting"/> before this callback is called.
++/// </param>
++/// <param name="OnReconnected">
++/// Optional. Invoked when the engine has successfully reconnected and resubscribed.
++/// The subscription's <see cref="IStreamSubscription.State"/> transitions to
++/// <see cref="StreamConnectionState.Live"/> before this callback is called.
++/// </param>
++/// <param name="OnLagged">
++/// Optional. Invoked when the subscription's bounded buffer fills and the oldest
++/// pending update is dropped. Receives a <see cref="StreamLag"/> with the drop count.
++/// The lagged signal is never injected into the <typeparamref name="T"/> update stream
++/// and is never thrown as an exception.
++/// </param>
++public sealed record StreamHandlers<T>(
++    Func<T, ValueTask> OnUpdate,
++    Func<ValueTask>? OnReconnecting = null,
++    Func<ValueTask>? OnReconnected = null,
++    Func<StreamLag, ValueTask>? OnLagged = null);
+diff --git a/src/CryptoExchanges.Net.Core/Streaming/StreamLag.cs b/src/CryptoExchanges.Net.Core/Streaming/StreamLag.cs
+new file mode 100644
+index 0000000..0bce2cc
+--- /dev/null
++++ b/src/CryptoExchanges.Net.Core/Streaming/StreamLag.cs
+@@ -0,0 +1,9 @@
++namespace CryptoExchanges.Net.Core.Streaming;
++
++/// <summary>
++/// Signals that one or more updates were dropped because the subscription's internal
++/// buffer was full. The engine evicts the oldest item (DropOldest) and reports the
++/// accumulated drop count via <see cref="StreamHandlers{T}.OnLagged"/>.
++/// </summary>
++/// <param name="DroppedCount">The number of updates dropped since the last lag signal.</param>
++public readonly record struct StreamLag(int DroppedCount);
+diff --git a/tests/CryptoExchanges.Net.Core.Tests.Unit/Streaming/StreamHandlersTests.cs b/tests/CryptoExchanges.Net.Core.Tests.Unit/Streaming/StreamHandlersTests.cs
+new file mode 100644
+index 0000000..3e494b8
+--- /dev/null
++++ b/tests/CryptoExchanges.Net.Core.Tests.Unit/Streaming/StreamHandlersTests.cs
+@@ -0,0 +1,89 @@
++using CryptoExchanges.Net.Core.Models;
++using CryptoExchanges.Net.Core.Streaming;
++using FluentAssertions;
++using Xunit;
++
++namespace CryptoExchanges.Net.Core.Tests.Unit.Streaming;
++
++public class StreamHandlersTests
++{
++    // ── StreamHandlers<T> construction ──────────────────────────────────────
++
++    [Fact]
++    public void StreamHandlers_RequiredOnUpdate_ShouldConstruct()
++    {
++        Func<Ticker, ValueTask> onUpdate = _ => ValueTask.CompletedTask;
++
++        var handlers = new StreamHandlers<Ticker>(onUpdate);
++
++        handlers.OnUpdate.Should().BeSameAs(onUpdate);
++    }
++
++    [Fact]
++    public void StreamHandlers_OptionalCallbacks_DefaultToNull()
++    {
++        var handlers = new StreamHandlers<Ticker>(_ => ValueTask.CompletedTask);
++
++        handlers.OnReconnecting.Should().BeNull();
++        handlers.OnReconnected.Should().BeNull();
++        handlers.OnLagged.Should().BeNull();
++    }
++
++    [Fact]
++    public void StreamHandlers_AllCallbacksProvided_ShouldStore()
++    {
++        Func<Ticker, ValueTask> onUpdate = _ => ValueTask.CompletedTask;
++        Func<ValueTask> onReconnecting = () => ValueTask.CompletedTask;
++        Func<ValueTask> onReconnected = () => ValueTask.CompletedTask;
++        Func<StreamLag, ValueTask> onLagged = _ => ValueTask.CompletedTask;
++
++        var handlers = new StreamHandlers<Ticker>(onUpdate, onReconnecting, onReconnected, onLagged);
++
++        handlers.OnUpdate.Should().BeSameAs(onUpdate);
++        handlers.OnReconnecting.Should().BeSameAs(onReconnecting);
++        handlers.OnReconnected.Should().BeSameAs(onReconnected);
++        handlers.OnLagged.Should().BeSameAs(onLagged);
++    }
++
++    // ── StreamLag ───────────────────────────────────────────────────────────
++
++    [Fact]
++    public void StreamLag_ShouldStoreDroppedCount()
++    {
++        var lag = new StreamLag(42);
++
++        lag.DroppedCount.Should().Be(42);
++    }
++
++    [Fact]
++    public void StreamLag_ShouldSupportValueEquality()
++    {
++        var a = new StreamLag(5);
++        var b = new StreamLag(5);
++
++        a.Should().Be(b);
++    }
++
++    // ── IStreamSubscription / IsConnected ───────────────────────────────────
++
++    [Theory]
++    [InlineData(StreamConnectionState.Live, true)]
++    [InlineData(StreamConnectionState.Connecting, false)]
++    [InlineData(StreamConnectionState.Reconnecting, false)]
++    [InlineData(StreamConnectionState.Closed, false)]
++    public void IsConnected_ShouldReflect_StateLive(StreamConnectionState state, bool expected)
++    {
++        var sub = new FakeSubscription(state);
++
++        sub.IsConnected.Should().Be(expected);
++    }
++
++    // ── Minimal fake subscription (compile-time contract test) ──────────────
++
++    private sealed class FakeSubscription(StreamConnectionState state) : IStreamSubscription
++    {
++        public StreamConnectionState State => state;
++        public bool IsConnected => State == StreamConnectionState.Live;
++        public ValueTask DisposeAsync() => ValueTask.CompletedTask;
++    }
++}

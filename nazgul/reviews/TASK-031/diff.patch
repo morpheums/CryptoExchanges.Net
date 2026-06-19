@@ -1,69 +1,9 @@
-diff --git a/nazgul/plan.md b/nazgul/plan.md
-index 64585a1..881c2f0 100644
---- a/nazgul/plan.md
-+++ b/nazgul/plan.md
-@@ -70,7 +70,7 @@ REUSE existing discovery — do NOT re-run.
- | TASK-028 | ✦ DONE | 1    | Project scaffold + host wiring + env→options binder  |
- | TASK-029 | ✦ DONE | 2    | Tool primitives (ToolResult, ToolInputs, ToolRunner) |
- | TASK-030 | ✦ DONE | 3  | Market-data tools (6, no keys)                    |
--| TASK-031 | ◇ PLANNED | 3  | Account tools (6, read-scoped keys)                  |
-+| TASK-031 | ◆ IN_PROGRESS | 3  | Account tools (6, read-scoped keys)                  |
- | TASK-032 | ◇ PLANNED | 4  | Tool-roster guard test + README/packaging            |
- 
- Tasks: 3/5 complete (TASK-030 DONE — review board PASS, fix-first applied)
-@@ -119,9 +119,9 @@ unmapped; writes/WebSockets/hosted-transport are correctly absent.
- 
- ## Recovery Pointer
- 
--- **Current stage**: TASK-030 DONE (review board PASS, commit 290869b, 2026-06-19T06:15:00Z). Wave 3 next: TASK-031.
--- **Next action**: TASK-031 (account tools, read-scoped keys) — the remaining Wave 3 task.
--- **Active task**: none — TASK-030 complete; TASK-031 is next.
-+- **Current stage**: TASK-031 IN_PROGRESS (claimed 2026-06-19T07:00:00Z). Implementing AccountTools.cs.
-+- **Next action**: Write AccountToolsTests.cs (failing), implement AccountTools.cs, run tests, commit.
-+- **Active task**: TASK-031 — account tools (6 read-scoped tools).
- - **Files are truth**: task manifests in `nazgul/tasks/TASK-028..032.md` carry full state;
-   frontmatter `status:` is canonical.
- 
-diff --git a/nazgul/tasks/TASK-031.md b/nazgul/tasks/TASK-031.md
-index 55c27d4..f23a828 100644
---- a/nazgul/tasks/TASK-031.md
-+++ b/nazgul/tasks/TASK-031.md
-@@ -1,9 +1,9 @@
- ---
- id: TASK-031
--status: PLANNED
-+status: IN_PROGRESS
- depends_on: [TASK-029]
- commit:
--claimed_at:
-+claimed_at: 2026-06-19T07:00:00Z
- ---
- # TASK-031: Account tools (read-scoped credentials)
- 
-@@ -17,7 +17,7 @@ claimed_at:
- - **Wave**: 3
- - **Traces to**: Approved design §Tool surface (Account — read-scoped) + §Credentials (AuthRequired); Approved plan **Task 4**
- - **Created at**: 2026-06-19T04:00:00Z
--- **Claimed at**:
-+- **Claimed at**: 2026-06-19T07:00:00Z
- - **Implemented at**:
- - **Completed at**:
- - **Blocked at**:
-@@ -80,6 +80,8 @@ NOTE (from plan): confirm the `AssetBalance` constructor arg order
- ## Implementation Log
- 
- ### Attempt 1
-+- **Base SHA**: 36704699930575d375bb5852dc09f928395be89b
-+- Claimed at: 2026-06-19T07:00:00Z
- 
- ## Review Results
- 
 diff --git a/src/CryptoExchanges.Net.Mcp/Tools/AccountTools.cs b/src/CryptoExchanges.Net.Mcp/Tools/AccountTools.cs
 new file mode 100644
-index 0000000..2970b80
+index 0000000..a396bf6
 --- /dev/null
 +++ b/src/CryptoExchanges.Net.Mcp/Tools/AccountTools.cs
-@@ -0,0 +1,132 @@
+@@ -0,0 +1,125 @@
 +using System.ComponentModel;
 +using CryptoExchanges.Net.Core.Interfaces;
 +using CryptoExchanges.Net.Core.Models;
@@ -96,15 +36,14 @@ index 0000000..2970b80
 +    {
 +        ArgumentNullException.ThrowIfNull(factory);
 +        ArgumentException.ThrowIfNullOrWhiteSpace(exchange);
-+        // asset is intentionally NOT guarded here — an empty/whitespace asset is a valid
-+        // user error that we surface as a structured ToolError rather than an ArgumentException.
++        // empty/whitespace asset → structured ToolError, not ArgumentException.
 +        if (!ToolInputs.TryParseExchange(exchange, out var id) || !factory.TryGet(id, out var client))
 +            return Task.FromResult(ToolResult<AssetBalance>.Failure(Unavailable(exchange)));
 +        return ToolRunner.RunAsync(() =>
 +        {
 +            if (!Asset.TryOf(asset, out var a))
 +                throw new FormatException($"Unknown asset '{asset}'.");
-+            return client!.Account.GetBalanceAsync(a, default);
++            return client.Account.GetBalanceAsync(a, default);
 +        });
 +    }
 +
@@ -116,12 +55,10 @@ index 0000000..2970b80
 +    {
 +        ArgumentNullException.ThrowIfNull(factory);
 +        ArgumentException.ThrowIfNullOrWhiteSpace(exchange);
-+        if (!ToolInputs.TryParseExchange(exchange, out var id) || !factory.TryGet(id, out var client))
-+            return Task.FromResult(ToolResult<IReadOnlyList<Order>>.Failure(Unavailable(exchange)));
-+        return ToolRunner.RunAsync(() =>
++        return Run(factory, exchange, (c, ct) =>
 +        {
 +            Symbol? s = symbol is null ? null : ToolInputs.ParseSymbol(symbol);
-+            return client!.Trading.GetOpenOrdersAsync(s, default);
++            return c.Trading.GetOpenOrdersAsync(s, ct);
 +        });
 +    }
 +
@@ -136,13 +73,7 @@ index 0000000..2970b80
 +        ArgumentException.ThrowIfNullOrWhiteSpace(exchange);
 +        ArgumentException.ThrowIfNullOrWhiteSpace(symbol);
 +        ArgumentException.ThrowIfNullOrWhiteSpace(orderId);
-+        if (!ToolInputs.TryParseExchange(exchange, out var id) || !factory.TryGet(id, out var client))
-+            return Task.FromResult(ToolResult<Order>.Failure(Unavailable(exchange)));
-+        return ToolRunner.RunAsync(() =>
-+        {
-+            var s = ToolInputs.ParseSymbol(symbol);
-+            return client!.Trading.GetOrderAsync(s, orderId, default);
-+        });
++        return Resolve(factory, exchange, symbol, (c, s, ct) => c.Trading.GetOrderAsync(s, orderId, ct));
 +    }
 +
 +    [McpServerTool, Description("Historical orders for a pair. Requires API credentials.")]
@@ -155,13 +86,7 @@ index 0000000..2970b80
 +        ArgumentNullException.ThrowIfNull(factory);
 +        ArgumentException.ThrowIfNullOrWhiteSpace(exchange);
 +        ArgumentException.ThrowIfNullOrWhiteSpace(symbol);
-+        if (!ToolInputs.TryParseExchange(exchange, out var id) || !factory.TryGet(id, out var client))
-+            return Task.FromResult(ToolResult<IReadOnlyList<Order>>.Failure(Unavailable(exchange)));
-+        return ToolRunner.RunAsync(() =>
-+        {
-+            var s = ToolInputs.ParseSymbol(symbol);
-+            return client!.Trading.GetOrderHistoryAsync(s, limit, null, null, default);
-+        });
++        return Resolve(factory, exchange, symbol, (c, s, ct) => c.Trading.GetOrderHistoryAsync(s, limit, null, null, ct));
 +    }
 +
 +    [McpServerTool, Description("The account's own executed trades for a pair. Requires API credentials.")]
@@ -174,13 +99,7 @@ index 0000000..2970b80
 +        ArgumentNullException.ThrowIfNull(factory);
 +        ArgumentException.ThrowIfNullOrWhiteSpace(exchange);
 +        ArgumentException.ThrowIfNullOrWhiteSpace(symbol);
-+        if (!ToolInputs.TryParseExchange(exchange, out var id) || !factory.TryGet(id, out var client))
-+            return Task.FromResult(ToolResult<IReadOnlyList<Trade>>.Failure(Unavailable(exchange)));
-+        return ToolRunner.RunAsync(() =>
-+        {
-+            var s = ToolInputs.ParseSymbol(symbol);
-+            return client!.Account.GetTradeHistoryAsync(s, limit, null, null, default);
-+        });
++        return Resolve(factory, exchange, symbol, (c, s, ct) => c.Account.GetTradeHistoryAsync(s, limit, null, null, ct));
 +    }
 +
 +    // Shared path for tools that only need exchange resolution (no symbol parsing).
@@ -190,7 +109,21 @@ index 0000000..2970b80
 +    {
 +        if (!ToolInputs.TryParseExchange(exchange, out var id) || !factory.TryGet(id, out var client))
 +            return Task.FromResult(ToolResult<T>.Failure(Unavailable(exchange)));
-+        return ToolRunner.RunAsync(() => call(client!, default));
++        return ToolRunner.RunAsync(() => call(client, default));
++    }
++
++    // Shared path for tools that require symbol parsing.
++    private static Task<ToolResult<T>> Resolve<T>(
++        IExchangeClientFactory factory, string exchange, string symbol,
++        Func<IExchangeClient, Symbol, CancellationToken, Task<T>> call)
++    {
++        if (!ToolInputs.TryParseExchange(exchange, out var id) || !factory.TryGet(id, out var client))
++            return Task.FromResult(ToolResult<T>.Failure(Unavailable(exchange)));
++        return ToolRunner.RunAsync(() =>
++        {
++            var s = ToolInputs.ParseSymbol(symbol);
++            return call(client, s, default);
++        });
 +    }
 +
 +    private static ToolError Unavailable(string exchange) =>

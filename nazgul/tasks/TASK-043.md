@@ -1,6 +1,6 @@
 ---
 id: TASK-043
-status: PLANNED
+status: IN_PROGRESS
 depends_on: [TASK-042]
 ---
 # TASK-043: Http engine contracts + fake-transport test seam
@@ -15,7 +15,8 @@ depends_on: [TASK-042]
 - **Wave**: 2
 - **Traces to**: FEAT-005 spec §Architecture "Http" + §"Binding constraints" C1; design §"The seam" + §"Testing"; DECISION-STREAMING-SHARED §2 (`IStreamProtocol`) + §6 (C1, Inv 11)
 - **Created at**: 2026-06-19T17:20:00Z
-- **Claimed at**:
+- **Claimed at**: 2026-06-19T17:30:00Z
+- **Base SHA**: 1a16f66
 - **Implemented at**:
 - **Completed at**:
 - **Blocked at**:

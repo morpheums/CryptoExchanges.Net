@@ -79,7 +79,7 @@ REUSE existing discovery — do NOT re-run.
 |----------|-----------|------|-----------------------------------------------------------------------------|
 | TASK-042 | ✦ DONE    | 1    | Core streaming abstractions (`IStreamClient` family) — no transport         |
 | TASK-043 | ✦ DONE    | 2    | Http engine contracts + fake-transport test seam                            |
-| TASK-044 | ◇ PLANNED | 3    | Http reconnecting byte-engine (pump/route/backoff/replay/heartbeat/channels)|
+| TASK-044 | ◆ IN_PROGRESS | 3    | Http reconnecting byte-engine (pump/route/backoff/replay/heartbeat/channels)|
 | TASK-045 | ◇ PLANNED | 4    | Generic `StreamClient` + `StreamClientFactory` + `AddStreams<TOptions>`      |
 | TASK-046 | ◇ PLANNED | 5    | Exchange-#1 package: protocol + 4 decode closures + options + `Add…Streams` |
 | TASK-047 | ◇ PLANNED | 6    | Wire 4 public subscribe methods end-to-end + live integration smoke + docs  |
@@ -158,9 +158,9 @@ other exchanges, `IAsyncEnumerable`, System.Reactive) is planned.
 
 ## Recovery Pointer
 
-- **Current stage**: TASK-043 DONE — review gate passed unanimously (4/4). Simplify applied (1 fix).
-- **Next action**: Claim TASK-044 (Http reconnecting byte-engine). TASK-044 is now READY (TASK-043 dep satisfied).
-- **Active task**: none (TASK-043 complete; TASK-044 is next).
+- **Current stage**: TASK-044 IN_PROGRESS — Http reconnecting byte-engine implementation underway.
+- **Next action**: Implement StreamEngine, StreamSubscriptionChannel, BackoffSchedule, StreamEngineOptions; write StreamEngineTests; build + test; set IMPLEMENTED.
+- **Active task**: TASK-044 (base SHA c18c48d0fdd53bd3f6934484ad028e9cff61637a)
 - **Files are truth**: task manifests in `nazgul/tasks/TASK-042..047.md` carry full state;
   frontmatter `status:` is canonical.
 

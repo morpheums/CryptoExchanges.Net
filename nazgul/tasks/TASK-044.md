@@ -1,6 +1,6 @@
 ---
 id: TASK-044
-status: PLANNED
+status: IN_PROGRESS
 depends_on: [TASK-043]
 ---
 # TASK-044: Http reconnecting byte-engine (pump / route / backoff / replay / heartbeat / channels)
@@ -15,7 +15,8 @@ depends_on: [TASK-043]
 - **Wave**: 3
 - **Traces to**: FEAT-005 spec §Architecture "Delivery"/"Connection" + C1/K2/K3; design §"Delivery model" + §"Connection & disposal (R5)"; DESIGN-STREAMING-V1 R4/R5; DECISION-STREAMING-SHARED §1 (Http byte-engine) + §6 (K1/K2/K3, C1)
 - **Created at**: 2026-06-19T17:20:00Z
-- **Claimed at**:
+- **Claimed at**: 2026-06-19T20:00:00Z
+- **Base SHA**: c18c48d0fdd53bd3f6934484ad028e9cff61637a
 - **Implemented at**:
 - **Completed at**:
 - **Blocked at**:

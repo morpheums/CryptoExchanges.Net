@@ -10,16 +10,24 @@ namespace CryptoExchanges.Net.Http.Tests.Unit.Streaming;
 /// Emits canned frames on demand, captures sent messages, and can simulate
 /// clean disconnects or reconnects — all without a network.
 /// </summary>
+/// <remarks>
+/// All public members are thread-safe: the engine's receive-pump runs on a background
+/// task concurrently with test assertions, so <see cref="SentText"/> and
+/// <see cref="SentPongs"/> use <see cref="ConcurrentQueue{T}"/> instead of plain
+/// <see cref="List{T}"/> to avoid data races.
+/// </remarks>
 public sealed class FakeWebSocketConnection : IWebSocketConnection
 {
     private readonly ConcurrentQueue<ReadOnlyMemory<byte>?> _inbound = new();
     private readonly SemaphoreSlim _available = new(0);
 
-    /// <summary>Messages sent via <see cref="SendTextAsync"/> in order.</summary>
-    public List<string> SentText { get; } = [];
+    // ── Captured outbound messages (thread-safe) ──────────────────────────────
 
-    /// <summary>Pong payloads sent via <see cref="SendPongAsync"/> in order.</summary>
-    public List<ReadOnlyMemory<byte>> SentPongs { get; } = [];
+    /// <summary>Messages sent via <see cref="SendTextAsync"/> in arrival order.</summary>
+    public ConcurrentQueue<string> SentText { get; } = new();
+
+    /// <summary>Pong payloads sent via <see cref="SendPongAsync"/> in arrival order.</summary>
+    public ConcurrentQueue<ReadOnlyMemory<byte>> SentPongs { get; } = new();
 
     /// <summary>
     /// Number of times <see cref="ConnectAsync"/> has been called.
@@ -44,14 +52,14 @@ public sealed class FakeWebSocketConnection : IWebSocketConnection
     /// <inheritdoc/>
     public Task SendTextAsync(string text, CancellationToken ct)
     {
-        SentText.Add(text);
+        SentText.Enqueue(text);
         return Task.CompletedTask;
     }
 
     /// <inheritdoc/>
     public Task SendPongAsync(ReadOnlyMemory<byte> payload, CancellationToken ct)
     {
-        SentPongs.Add(payload);
+        SentPongs.Enqueue(payload);
         return Task.CompletedTask;
     }
 

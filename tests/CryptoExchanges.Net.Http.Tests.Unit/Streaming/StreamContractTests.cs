@@ -211,9 +211,10 @@ public sealed class StreamContractTests
         await fake.SendTextAsync("{\"method\":\"SUBSCRIBE\"}", TestContext.Current.CancellationToken);
         await fake.SendTextAsync("{\"method\":\"UNSUBSCRIBE\"}", TestContext.Current.CancellationToken);
 
-        fake.SentText.Should().HaveCount(2);
-        fake.SentText[0].Should().Be("{\"method\":\"SUBSCRIBE\"}");
-        fake.SentText[1].Should().Be("{\"method\":\"UNSUBSCRIBE\"}");
+        var messages = fake.SentText.ToArray();
+        messages.Should().HaveCount(2);
+        messages[0].Should().Be("{\"method\":\"SUBSCRIBE\"}");
+        messages[1].Should().Be("{\"method\":\"UNSUBSCRIBE\"}");
     }
 
     [Fact]
@@ -225,8 +226,9 @@ public sealed class StreamContractTests
         var payload = Encoding.UTF8.GetBytes("pong-data");
         await fake.SendPongAsync(payload, TestContext.Current.CancellationToken);
 
-        fake.SentPongs.Should().HaveCount(1);
-        fake.SentPongs[0].Span.SequenceEqual(payload).Should().BeTrue();
+        var pongs = fake.SentPongs.ToArray();
+        pongs.Should().HaveCount(1);
+        pongs[0].Span.SequenceEqual(payload).Should().BeTrue();
     }
 
     [Fact]

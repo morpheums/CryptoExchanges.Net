@@ -1,13 +1,13 @@
 ---
 id: TASK-026
-status: IMPLEMENTED
+status: DONE
 commit: d39c545
 claimed_at: 2026-06-19
 ---
 
 # TASK-026: Canonicalize DTO names across all exchanges (architect ruling)
 
-**Status**: IN_PROGRESS
+**Status**: DONE (merged to main via PR #17, squash 0d93d20)
 
 **Blast radius**: LOW — rename of `internal` wire DTOs only. No public API, no behavior
 change. 455-test suite is the regression net; build must stay 0W/0E.

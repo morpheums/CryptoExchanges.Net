@@ -1,13 +1,13 @@
 ---
 id: TASK-025
-status: IMPLEMENTED
+status: DONE
 commit: 3af2201
 claimed_at: 2026-06-19
 ---
 
 # TASK-025: Rename per-exchange wire DTOs — drop redundant exchange prefix, add `Dto` suffix
 
-**Status**: IMPLEMENTED
+**Status**: DONE (merged to main via PR #17, squash 0d93d20)
 
 > **Implementation note (2026-06-19):** Build 0W/0E (Release). Full suite green: 455 tests (438 non-integration + 17 integration), 0 failed. 47 internal wire DTOs renamed across Binance (12), Bybit (13), OKX (11), Bitget (11) via `git mv` + type/reference updates; mapping-profile and symbol-format CLASS names left untouched. Commit 3af2201.
 

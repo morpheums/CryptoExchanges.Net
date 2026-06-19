@@ -1,6 +1,6 @@
 ---
 id: TASK-029
-status: IMPLEMENTED
+status: DONE
 depends_on: [TASK-028]
 commit: f784105
 claimed_at: 2026-06-19T00:00:00Z
@@ -20,10 +20,10 @@ claimed_at: 2026-06-19T00:00:00Z
 - **Claimed at**: 2026-06-19T00:00:00Z
 - **Implemented at**: 2026-06-19T00:00:00Z
 - **Base SHA**: 7ba548c
-- **Implemented at**:
-- **Completed at**:
+- **Completed at**: 2026-06-19T00:00:00Z
 - **Blocked at**:
 - **Retry count**: 0/3
+- **Completion SHA**: 66039b1
 
 ## Status
 
@@ -50,9 +50,9 @@ NOTE (from plan): confirm each exception's public constructor signature when imp
 adjust the test's `CreateException` helper to match; the asserted **categories are the contract**.
 
 ## Acceptance Criteria
-- [ ] `dotnet build CryptoExchanges.Net.sln -c Release` succeeds with **0 warnings / 0 errors** (TreatWarningsAsErrors).
-- [ ] `ToolPrimitivesTests` pass (exchange parsing, symbol parse + FormatException paths, interval parsing, RunAsync success, and one mapping per error category); existing 455 tests stay green.
-- [ ] Error categories match the contract: AuthRequired, RateLimited, ExchangeUnavailable, Connectivity, SymbolNotSupported, ExchangeError, Unknown.
+- [x] `dotnet build CryptoExchanges.Net.sln -c Release` succeeds with **0 warnings / 0 errors** (TreatWarningsAsErrors).
+- [x] `ToolPrimitivesTests` pass (exchange parsing, symbol parse + FormatException paths, interval parsing, RunAsync success, and one mapping per error category); existing 455 tests stay green (463 total pass).
+- [x] Error categories match the contract: AuthRequired, RateLimited, ExchangeUnavailable, Connectivity, SymbolNotSupported, ExchangeError, Unknown.
 
 ## Pattern Reference
 - Typed exception hierarchy being mapped: `src/CryptoExchanges.Net.Core/Exceptions/ExchangeExceptions.cs`
@@ -100,8 +100,27 @@ adjust the test's `CreateException` helper to match; the asserted **categories a
 ## Commits
 
 - `73cc77e` — feat(FEAT-002): tool result envelope, input parsing, error mapping (TASK-029)
+- `4fdef79` — feat(FEAT-002): simplify TASK-029 (OperationCanceledException re-throw, string? widening)
 - `f784105` — feat(FEAT-002): review fixes — seal ToolError/ToolResult<T>, add ExchangeApiException test arm (TASK-029)
+- `66039b1` — feat(FEAT-002): update TASK-029 manifest + plan after review fixes
 
 ## Review Results
 
 ### Attempt 1
+
+| Reviewer           | Verdict             | Confidence |
+|--------------------|---------------------|------------|
+| architect-reviewer | APPROVED            | 97         |
+| code-reviewer      | CHANGES_REQUESTED   | 82         |
+| security-reviewer  | APPROVED            | 95         |
+| api-reviewer       | APPROVED            | 97         |
+
+Auto-fixed: `sealed` on ToolError/ToolResult<T>; ExchangeApiException test arm added.
+
+### Attempt 1 Re-review (code-reviewer only)
+
+| Reviewer           | Verdict   | Confidence |
+|--------------------|-----------|------------|
+| code-reviewer      | APPROVED  | 97         |
+
+**Final verdict: ALL APPROVED — DONE**

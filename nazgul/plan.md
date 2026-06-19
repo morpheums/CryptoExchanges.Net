@@ -68,12 +68,12 @@ REUSE existing discovery — do NOT re-run.
 | Task     | Status  | Wave | Description                                          |
 |----------|---------|------|------------------------------------------------------|
 | TASK-028 | ✦ DONE | 1    | Project scaffold + host wiring + env→options binder  |
-| TASK-029 | ✦ IMPLEMENTED | 2  | Tool primitives (ToolResult, ToolInputs, ToolRunner) |
+| TASK-029 | ✦ DONE | 2    | Tool primitives (ToolResult, ToolInputs, ToolRunner) |
 | TASK-030 | ◇ PLANNED | 3  | Market-data tools (6, no keys)                       |
 | TASK-031 | ◇ PLANNED | 3  | Account tools (6, read-scoped keys)                  |
 | TASK-032 | ◇ PLANNED | 4  | Tool-roster guard test + README/packaging            |
 
-Tasks: 1/5 complete
+Tasks: 2/5 complete
 
 ## Wave Groups
 
@@ -111,15 +111,20 @@ TASK-029; 6 market-data tools → TASK-030; 6 account tools + AuthRequired → T
 read-only-structural guard + packaging/README → TASK-032. No design requirement is left
 unmapped; writes/WebSockets/hosted-transport are correctly absent.
 
+## Completed
+
+- TASK-028 (Wave 1) — scaffold + host wiring. DONE.
+- TASK-029 (Wave 2) — tool primitives (ToolResult/ToolInputs/ToolRunner). DONE. Completion SHA: 66039b1.
+
 ## Recovery Pointer
 
-- **Current stage**: TASK-029 IMPLEMENTED (commit f784105 — review fixes applied). Awaiting review gate.
-- **Next action**: Review Board runs on TASK-029; on APPROVED → TASK-030/TASK-031 (Wave 3, parallel).
-- **Active task**: TASK-029 (IMPLEMENTED — pending review).
+- **Current stage**: TASK-029 DONE (completion SHA 66039b1). Wave 3 ready to start.
+- **Next action**: Implement TASK-030 and TASK-031 in parallel (Wave 3).
+- **Active task**: none (Wave 3 — TASK-030 + TASK-031 ready to claim).
 - **Files are truth**: task manifests in `nazgul/tasks/TASK-028..032.md` carry full state;
   frontmatter `status:` is canonical.
 
 ─── ◈ NEXT ─────────────────────────────────────────────
-  TASK-029: Tool primitives (ToolResult, ToolInputs, ToolRunner)
+  Wave 3: TASK-030 (market-data tools) + TASK-031 (account tools) — parallel
   /nazgul:start to continue
 ────────────────────────────────────────────────────────

@@ -82,9 +82,9 @@ REUSE existing discovery — do NOT re-run.
 | TASK-044 | ✦ DONE    | 3    | Http reconnecting byte-engine (pump/route/backoff/replay/heartbeat/channels)|
 | TASK-045 | ◆ IMPL    | 4    | Generic `StreamClient` + `StreamClientFactory` + `AddStreams<TOptions>`      |
 | TASK-046 | ✦ IMPL    | 5    | Exchange-#1 package: protocol + 4 decode closures + options + `Add…Streams` |
-| TASK-047 | ◆ IN_PROG | 6    | Wire 4 public subscribe methods end-to-end + live integration smoke + docs  |
+| TASK-047 | ✦ IMPL    | 6    | Wire 4 public subscribe methods end-to-end + live integration smoke + docs  |
 
-Tasks: 3/6 DONE — TASK-042 DONE, TASK-043 DONE, TASK-044 DONE, TASK-045 IMPLEMENTED (906c568), TASK-046 IMPLEMENTED (27169ea), TASK-047 PLANNED.
+Tasks: 3/6 DONE — TASK-042 DONE, TASK-043 DONE, TASK-044 DONE, TASK-045 IMPLEMENTED (906c568), TASK-046 IMPLEMENTED (27169ea), TASK-047 IMPLEMENTED (58d5216).
 
 ## Wave Groups
 
@@ -162,9 +162,9 @@ other exchanges, `IAsyncEnumerable`, System.Reactive) is planned.
 
 ## Recovery Pointer
 
-- **Current stage**: TASK-047 IN_PROGRESS — implementing DI test + integration smoke + docs.
-- **Next action**: Implement, run tests, build 0W/0E, set IMPLEMENTED.
-- **Active task**: TASK-047 (IN_PROGRESS — base 358a8d8)
+- **Current stage**: TASK-047 IMPLEMENTED (58d5216) — awaiting consolidated review gate.
+- **Next action**: Review gate for TASK-047 (all tasks IMPLEMENTED; final review + DONE).
+- **Active task**: TASK-047 (IMPLEMENTED — commit 58d5216)
 - **Files are truth**: task manifests in `nazgul/tasks/TASK-042..047.md` carry full state;
   frontmatter `status:` is canonical.
 
@@ -173,6 +173,6 @@ other exchanges, `IAsyncEnumerable`, System.Reactive) is planned.
   ✦ TASK-043 — Http engine contracts + fake-transport seam. DONE.
   ✦ TASK-044 — Http reconnecting byte-engine. DONE.
   ✦ TASK-045 — Generic StreamClient + factory + AddStreams<TOptions>. IMPLEMENTED (906c568).
-  ◇ TASK-046 — Exchange-#1 streaming package. PLANNED (dep: TASK-045).
-  ◇ TASK-047 — Wire 4 subscribe methods end-to-end + integration smoke. PLANNED.
+  ✦ TASK-046 — Exchange-#1 streaming package. IMPLEMENTED (27169ea).
+  ✦ TASK-047 — Wire 4 subscribe methods end-to-end + integration smoke. IMPLEMENTED (58d5216).
 ────────────────────────────────────────────────────────

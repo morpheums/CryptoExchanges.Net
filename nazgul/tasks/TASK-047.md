@@ -1,6 +1,6 @@
 ---
 id: TASK-047
-status: IN_PROGRESS
+status: IMPLEMENTED
 depends_on: [TASK-046]
 ---
 # TASK-047: Wire the 4 public subscribe methods end-to-end + live integration smoke + docs note
@@ -17,7 +17,7 @@ depends_on: [TASK-046]
 - **Created at**: 2026-06-19T17:20:00Z
 - **Claimed at**: 2026-06-19T00:00:00Z
 - **Base SHA**: 358a8d8
-- **Implemented at**:
+- **Implemented at**: 2026-06-19T00:30:00Z
 - **Completed at**:
 - **Blocked at**:
 - **Retry count**: 0/3
@@ -74,10 +74,40 @@ No changes to the REST `IExchangeClient` surface. Opt-in throughout.
 - **TRD Component**: end-to-end public subscribe methods + live smoke (design §"Build approach", §"Testing")
 - **ADR Reference**: DECISION-STREAMING-SHARED §1 (optional thin `CreateStreams` construction-glue static permitted, zero behavior); FEAT-005 spec §Scope-In (4 public streams)
 
+## Commits
+
+- `58d5216` — feat(FEAT-005): DI wiring test + integration smoke + docs (TASK-047)
+
 ## Implementation Log
 
 ### Attempt 1
-<!-- implementer fills this in -->
+
+**BinanceStreams.cs decision**: Omitted. `StreamClientFactory.Create` is already a
+static container-free factory on the Http assembly, and `AddBinanceStreams` provides the
+full DI path. A `BinanceStreams` wrapper would be zero-behavior thin glue with no
+additional consumer value — omission noted per the task manifest carve-out.
+
+**DI unit tests** (`BinanceStreamDiTests.cs` — 3 tests):
+- `AddBinanceStreams_ResolvesStreamClientFactory` — verifies factory resolves from DI.
+- `AddBinanceStreams_FactoryGetClient_ReturnsBinanceClient` — asserts correct ExchangeId.
+- `AddBinanceStreams_AvailableExchanges_ContainsBinance` — asserts Available contains Binance.
+All use `await using var sp` (StreamClient is IAsyncDisposable-only; sync Dispose throws).
+
+**Integration smoke tests** (`BinanceStreamSmokeTests.cs` — 4 tests):
+- `[Trait("Category","Integration")]` excludes them from the default `--filter` run.
+- Each test calls `CheckReachabilityAsync()` (helper, not test method — avoids xUnit1030)
+  and calls `Assert.SkipWhen` when offline.
+- Subscribes ticker/trade/order-book/kline for BTCUSDT, waits up to 20s for one update,
+  asserts `State == Live`.
+
+**Docs**:
+- `docs/streaming.md`: IStreamClient, 4 methods, StreamHandlers<T>, IStreamSubscription.State,
+  auto-reconnect/resubscribe semantics, AddBinanceStreams DI setup, container-free path note,
+  design doc link.
+- `README.md`: streaming row added to documentation table.
+
+**Build**: 0W/0E (`dotnet build CryptoExchanges.Net.sln -c Release`).
+**Tests**: 517 unit tests pass (Category!=Integration); 3 new DI tests pass in Binance unit suite.
 
 ## Review Results
 

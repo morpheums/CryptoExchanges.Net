@@ -1,6 +1,6 @@
 ---
 id: TASK-046
-status: IMPLEMENTED
+status: DONE
 depends_on: [TASK-045]
 ---
 # TASK-046: Exchange-#1 streaming package (protocol + 4 decode closures + options + `Add…Streams`)

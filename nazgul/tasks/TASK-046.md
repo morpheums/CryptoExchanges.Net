@@ -1,6 +1,6 @@
 ---
 id: TASK-046
-status: PLANNED
+status: IN_PROGRESS
 depends_on: [TASK-045]
 ---
 # TASK-046: Exchange-#1 streaming package (protocol + 4 decode closures + options + `Add…Streams`)
@@ -15,7 +15,8 @@ depends_on: [TASK-045]
 - **Wave**: 5
 - **Traces to**: FEAT-005 spec §Architecture "Binance package"; design §"The seam" + §"Decode registry" + §"Adding exchange #2"; DECISION-STREAMING-SHARED §1 (per-exchange irreducible minimum), §2, §3
 - **Created at**: 2026-06-19T17:20:00Z
-- **Claimed at**:
+- **Claimed at**: 2026-06-19T20:00:00Z
+- **Base SHA**: 98b3808fb712ec62cfc7f5a6b103db54fedf3d71
 - **Implemented at**:
 - **Completed at**:
 - **Blocked at**:

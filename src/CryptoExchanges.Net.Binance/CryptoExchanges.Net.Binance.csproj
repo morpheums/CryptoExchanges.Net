@@ -5,7 +5,7 @@
     <Description>Binance exchange implementation for CryptoExchanges.Net.</Description>
     <PackageId>CryptoExchanges.Net.Binance</PackageId>
     <!-- Suppress analysis noise for HTTP client / JSON deserialization library -->
-    <NoWarn>$(NoWarn);CA1812;CA1056;CA1031;CA2000;CA1305;CA1032;CS1591</NoWarn>
+    <NoWarn>$(NoWarn);CA1812;CA1056;CA1031;CA2000;CA1305;CA1032;CS1591;CA1308</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
@@ -16,6 +16,9 @@
   <ItemGroup>
     <!-- Allow the test assembly to unit-test internal DTOs, mapping profiles, and signing types. -->
     <InternalsVisibleTo Include="CryptoExchanges.Net.Binance.Tests.Integration" />
+    <InternalsVisibleTo Include="CryptoExchanges.Net.Binance.Tests.Unit" />
+    <!-- NSubstitute generates proxy types at runtime. -->
+    <InternalsVisibleTo Include="DynamicProxyGenAssembly2" />
   </ItemGroup>
 
   <ItemGroup>

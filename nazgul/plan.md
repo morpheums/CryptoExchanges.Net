@@ -59,7 +59,7 @@ REUSE existing discovery — do NOT re-run.
 |----------|----------|------|--------------------------------------------------------------------|
 | TASK-036 | ✦ DONE   | 1    | Exchange brand SVG assets (7) under `docs/assets/exchanges/`       |
 | TASK-037 | ✦ DONE   | 1    | Core library docs (getting-started, library-usage, architecture, exchanges) |
-| TASK-038 | ◆ IN_PROGRESS | 1 | MCP docs (mcp-server.md + mcp-clients.md, major clients)        |
+| TASK-038 | ✦ IMPLEMENTED| 1    | MCP docs (mcp-server.md + mcp-clients.md, major clients)           |
 | TASK-039 | ◇ PLANNED| 2    | README rewrite (lean) — links into docs/, uses icons, status table |
 
 Tasks: 2/4 DONE

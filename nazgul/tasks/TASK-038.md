@@ -1,8 +1,8 @@
 ---
 id: TASK-038
-status: IN_PROGRESS
+status: IMPLEMENTED
 depends_on: []
-commit:
+commit: e588512
 claimed_at: 2026-06-19T14:00:00Z
 ---
 # TASK-038: MCP docs (mcp-server.md + mcp-clients.md, major clients)
@@ -10,7 +10,7 @@ claimed_at: 2026-06-19T14:00:00Z
 ## Metadata
 - **ID**: TASK-038
 - **Group**: 1
-- **Status**: IN_PROGRESS
+- **Status**: IMPLEMENTED
 - **Depends on**: none
 - **Delegates to**: none
 - **Files modified**: [docs/mcp-server.md, docs/mcp-clients.md]
@@ -18,7 +18,7 @@ claimed_at: 2026-06-19T14:00:00Z
 - **Traces to**: FEAT-003 spec §Scope-In "New public docs/ folder" (mcp-server.md, mcp-clients.md — major MCP clients)
 - **Created at**: 2026-06-19T13:10:00Z
 - **Claimed at**: 2026-06-19T14:00:00Z
-- **Implemented at**:
+- **Implemented at**: 2026-06-19T14:55:00Z
 - **Completed at**:
 - **Blocked at**:
 - **Retry count**: 0/3
@@ -91,6 +91,11 @@ No-dependency task (Wave 1); file-disjoint from TASK-036/TASK-037.
 
 - **Base SHA**: b2322b0f3263c4f1a4aa1a180edf063f3d7bf4ff
 - Claimed 2026-06-19T14:00:00Z on branch feat/FEAT-003-docs-overhaul
+- Implemented 2026-06-19T14:55:00Z — created docs/mcp-server.md + docs/mcp-clients.md; all checks green
+
+## Commits
+
+- `e588512` — feat(FEAT-003): MCP server + client setup docs (TASK-038)
 
 ## Review Results
 

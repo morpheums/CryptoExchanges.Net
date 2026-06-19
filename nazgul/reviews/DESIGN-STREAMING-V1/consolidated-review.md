@@ -122,13 +122,3 @@ coupling) PASS.
 1. Fix Finding 1 (routing-key contract) + add a real-Classify-through-engine routing test. (blocking)
 2. Address Finding 2 (liveness reset on any frame) or document why Binance's frame cadence makes it
    moot; add a watchdog-with-data-traffic test. (recommended; promote to blocking if streams can be quiet)
-
----
-
-## Final Verdict
-CHANGES_REQUESTED
-
-Blocking: Finding 1 (HIGH, confidence 92) — Binance Classify routing key never matches the
-engine's BuildRoutingKey subscription key, so all live Binance data frames are discarded.
-Must be fixed (single-source the routing keyspace + add a real-Classify-through-engine test)
-before merge. Finding 2 (MEDIUM, non-blocking) recommended. All other invariants PASS.

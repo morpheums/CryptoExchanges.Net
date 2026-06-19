@@ -1,8 +1,8 @@
 ---
 id: TASK-028
-status: IMPLEMENTED
+status: DONE
 depends_on: []
-commit: f56c61b
+commit: be9b09f
 claimed_at: 2026-06-19T05:00:00Z
 ---
 # TASK-028: Project scaffold + host wiring + env→options binder
@@ -20,7 +20,7 @@ claimed_at: 2026-06-19T05:00:00Z
 - **Claimed at**: 2026-06-19T05:00:00Z
 - **Base SHA**: 3c492b78ab3a4de3186c9ac41d28b184a1669fbd
 - **Implemented at**: 2026-06-19T05:30:00Z
-- **Completed at**:
+- **Completed at**: 2026-06-19T06:00:00Z
 - **Blocked at**:
 - **Retry count**: 0/3
 

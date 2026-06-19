@@ -67,13 +67,13 @@ REUSE existing discovery — do NOT re-run.
 
 | Task     | Status  | Wave | Description                                          |
 |----------|---------|------|------------------------------------------------------|
-| TASK-028 | ✦ IMPLEMENTED | 1    | Project scaffold + host wiring + env→options binder  |
+| TASK-028 | ✦ DONE | 1    | Project scaffold + host wiring + env→options binder  |
 | TASK-029 | ◇ PLANNED | 2  | Tool primitives (ToolResult, ToolInputs, ToolRunner) |
 | TASK-030 | ◇ PLANNED | 3  | Market-data tools (6, no keys)                       |
 | TASK-031 | ◇ PLANNED | 3  | Account tools (6, read-scoped keys)                  |
 | TASK-032 | ◇ PLANNED | 4  | Tool-roster guard test + README/packaging            |
 
-Tasks: 0/5 complete
+Tasks: 1/5 complete
 
 ## Wave Groups
 
@@ -113,13 +113,13 @@ unmapped; writes/WebSockets/hosted-transport are correctly absent.
 
 ## Recovery Pointer
 
-- **Current stage**: TASK-028 IMPLEMENTED — awaiting review gate.
-- **Next action**: Review Board reviews TASK-028; on approval, implementer claims TASK-029.
-- **Active task**: TASK-028 (IMPLEMENTED, commit f56c61b).
+- **Current stage**: TASK-028 DONE (commit be9b09f, review auto-fixed be9b09f).
+- **Next action**: Implementer claims TASK-029 (Tool primitives).
+- **Active task**: TASK-029 (PLANNED).
 - **Files are truth**: task manifests in `nazgul/tasks/TASK-028..032.md` carry full state;
   frontmatter `status:` is canonical.
 
 ─── ◈ NEXT ─────────────────────────────────────────────
-  TASK-028: Project scaffold + host wiring + env→options binder
+  TASK-029: Tool primitives (ToolResult, ToolInputs, ToolRunner)
   /nazgul:start to continue
 ────────────────────────────────────────────────────────

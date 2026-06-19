@@ -1,8 +1,8 @@
 ---
 id: TASK-031
-status: IMPLEMENTED
+status: DONE
 depends_on: [TASK-029]
-commit: c27e976
+commit: 2de728c
 claimed_at: 2026-06-19T07:00:00Z
 ---
 # TASK-031: Account tools (read-scoped credentials)
@@ -19,9 +19,10 @@ claimed_at: 2026-06-19T07:00:00Z
 - **Created at**: 2026-06-19T04:00:00Z
 - **Claimed at**: 2026-06-19T07:00:00Z
 - **Implemented at**: 2026-06-19T07:05:00Z
-- **Completed at**:
+- **Completed at**: 2026-06-19T09:00:00Z
 - **Blocked at**:
 - **Retry count**: 1/3
+- **Test failures**: 0
 
 ## Status
 
@@ -108,3 +109,15 @@ NOTE (from plan): confirm the `AssetBalance` constructor arg order
 ## Review Results
 
 ### Attempt 1
+- architect-reviewer: CHANGES_REQUESTED (74/100) — missing happy-path tests for GetBalance/GetOrder/GetOrderHistory (LR-005 REJECT)
+- code-reviewer: CHANGES_REQUESTED (68/100) — GetOrder/GetOrderHistory zero coverage (LR-005 REJECT) + GetBalance asset guard (LR-001 REJECT)
+- security-reviewer: APPROVED (96/100) — no blocking findings
+- api-reviewer: CHANGES_REQUESTED (74/100) — wrong error category for bad-asset (REJECT) + missing GetOrder/GetOrderHistory tests (REJECT)
+
+### Attempt 2 (cycle 2 — re-review)
+- architect-reviewer: APPROVED (97/100) — LR-005 RESOLVED (all 3 happy-path tests added); no new findings
+- code-reviewer: APPROVED (97/100) — LR-005 RESOLVED; LR-001 RESOLVED (comment + ToolResult.Failure direct return); no new findings
+- security-reviewer: APPROVED (98/100) — all security properties confirmed; BadRequest direct-return does not bypass security-relevant ToolRunner logic
+- api-reviewer: APPROVED (95/100) — WRONG-CATEGORY-FOR-BAD-ASSET RESOLVED; test coverage RESOLVED; BAD-ASSET-CATEGORY-ASSERTION RESOLVED
+- **Board verdict: ALL APPROVED — PASS**
+- Build: 0W/0E. Tests: 41 MCP unit tests, full suite green. Pre-checks: PASS.

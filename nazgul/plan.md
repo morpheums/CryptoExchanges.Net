@@ -70,10 +70,10 @@ REUSE existing discovery — do NOT re-run.
 | TASK-028 | ✦ DONE | 1    | Project scaffold + host wiring + env→options binder  |
 | TASK-029 | ✦ DONE | 2    | Tool primitives (ToolResult, ToolInputs, ToolRunner) |
 | TASK-030 | ✦ DONE | 3  | Market-data tools (6, no keys)                    |
-| TASK-031 | ✦ IMPLEMENTED | 3  | Account tools (6, read-scoped keys)                  |
+| TASK-031 | ✦ DONE | 3  | Account tools (6, read-scoped keys)                  |
 | TASK-032 | ◇ PLANNED | 4  | Tool-roster guard test + README/packaging            |
 
-Tasks: 3/5 complete (TASK-030 DONE — review board PASS, fix-first applied)
+Tasks: 4/5 complete
 
 ## Wave Groups
 
@@ -116,16 +116,17 @@ unmapped; writes/WebSockets/hosted-transport are correctly absent.
 - TASK-028 (Wave 1) — scaffold + host wiring. DONE.
 - TASK-029 (Wave 2) — tool primitives (ToolResult/ToolInputs/ToolRunner). DONE. Completion SHA: 66039b1.
 - TASK-030 (Wave 3) — 6 read-only market-data tools. DONE (review board PASS; fix-first added 8h/3d intervals). Completion SHA: 290869b.
+- TASK-031 (Wave 3) — 6 read-only account tools. DONE (review board PASS, cycle 2 — all 4 reviewers APPROVED). Completion SHA: 2de728c.
 
 ## Recovery Pointer
 
-- **Current stage**: TASK-031 IMPLEMENTED (commit 2de728c, retry 1 — all blocking findings resolved). Awaiting re-review gate.
-- **Next action**: Review board must re-approve TASK-031; then proceed to TASK-032 (tool-roster guard + README).
-- **Active task**: TASK-031 — awaiting review.
+- **Current stage**: TASK-031 DONE (cycle 2 review board ALL APPROVED, SHA 2de728c). Proceeding to TASK-032.
+- **Next action**: Implement TASK-032 — tool-roster guard test + README/packaging.
+- **Active task**: TASK-032 — PLANNED.
 - **Files are truth**: task manifests in `nazgul/tasks/TASK-028..032.md` carry full state;
   frontmatter `status:` is canonical.
 
 ─── ◈ NEXT ─────────────────────────────────────────────
-  Wave 3: TASK-031 (account tools) — TASK-030 DONE
+  Wave 4: TASK-032 (tool-roster guard + README) — TASK-031 DONE
   /nazgul:start to continue
 ────────────────────────────────────────────────────────

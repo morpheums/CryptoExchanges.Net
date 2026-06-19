@@ -1,53 +1,51 @@
-# Architect Review — TASK-031
+# Architect Review — TASK-031 (Cycle 2)
 
-## Verdict: CHANGES_REQUESTED
+## Verdict: APPROVED
 
-## Score: 74/100
+## Score: 97/100
 
----
+## Prior Blocking Findings — Resolution Status
 
-## Findings
+### LR-005 (Missing happy-path tests for GetBalance, GetOrder, GetOrderHistory): RESOLVED
 
-### Missing happy-path tests for GetBalance, GetOrder, and GetOrderHistory — REJECT (confidence: 97%)
+All three previously untested methods now have explicit happy-path tests:
 
-LR-005: every new service method must have at least one unit test covering the happy path before the task can pass the review gate.
+- `GetBalance_ReturnsData` (line 51-62): mocks `client.Account.GetBalanceAsync`, calls `AccountTools.GetBalance(factory, "binance", "BTC")`, asserts `result.Ok == true`.
+- `GetOrder_ReturnsData` (line 112-125): mocks `client.Trading.GetOrderAsync`, calls `AccountTools.GetOrder(factory, "binance", "BTC/USDT", "ord-001")`, asserts `result.Ok == true` and `result.Data != null`.
+- `GetOrderHistory_ReturnsData` (line 127-140): mocks `client.Trading.GetOrderHistoryAsync` with full parameter matchers, calls `AccountTools.GetOrderHistory(factory, "binance", "BTC/USDT")`, asserts `result.Ok == true`.
 
-The test file `AccountToolsTests.cs` covers:
-- `GetBalances` — happy path + auth error + unknown exchange. PASS.
-- `GetOpenOrders` — happy path + auth error. PASS.
-- `GetTradeHistory` — happy path. PASS.
+All 6 public AccountTools methods now have at minimum one happy-path test:
+1. `GetBalances` — `GetBalances_ReturnsData` (line 22-34)
+2. `GetBalance` — `GetBalance_ReturnsData` (line 50-62)
+3. `GetOpenOrders` — `GetOpenOrders_ReturnsData` (line 85-96)
+4. `GetOrder` — `GetOrder_ReturnsData` (line 112-125)
+5. `GetOrderHistory` — `GetOrderHistory_ReturnsData` (line 127-140)
+6. `GetTradeHistory` — `GetTradeHistory_ReturnsData` (line 142-155)
 
-Missing happy-path coverage:
-- `GetBalance` (line 26–42 of `AccountTools.cs`) — the only test (`GetBalance_BadAsset_ReturnsError`, line 52–58 of `AccountToolsTests.cs`) passes an empty string and exercises only the error branch. There is no test that verifies a known-asset call succeeds and returns a correctly populated `ToolResult`.
-- `GetOrder` (line 59–71 of `AccountTools.cs`) — zero tests of any kind.
-- `GetOrderHistory` (line 73–84 of `AccountTools.cs`) — zero tests of any kind.
+LR-005 is fully satisfied.
 
-**Fix**: Add a happy-path `[Fact]` for each missing method. For `GetBalance`: substitute `client.Account.GetBalanceAsync(Arg.Any<Asset>(), ...)` to return a valid `AssetBalance`, call `AccountTools.GetBalance(factory, "binance", "BTC")`, and assert `result.Ok` is true. For `GetOrder` and `GetOrderHistory`: follow the same pattern using `client.Trading.GetOrderAsync(...)` and `client.Trading.GetOrderHistoryAsync(...)` respectively.
+### GetBalance bad-asset path returns ToolResult.Failure (not FormatException): RESOLVED
 
-**Pattern reference**: `AccountToolsTests.cs:96–109` (GetTradeHistory happy-path test is the model to replicate).
+`AccountTools.cs` lines 41-43 use `Asset.TryOf(asset, out var a)` and return `Task.FromResult(ToolResult<AssetBalance>.Failure(new ToolError("BadRequest", ...)))` directly on the bad-asset path. The comment at lines 33-34 documents the MCP-boundary design deviation per LR-001. `GetBalance_BadAsset_ReturnsBadRequest` confirms the `result.Error.Category == "BadRequest"` contract.
 
----
+## Verification: Build and Tests
 
-### GetBalance: asset parameter skips ThrowIfNullOrWhiteSpace — CONCERN (confidence: 72%, non-blocking)
+- `dotnet build --no-incremental -warnaserror`: **Build succeeded. 0 Warnings, 0 Errors.**
+- `dotnet test CryptoExchanges.Net.Mcp.Tests.Unit`: **41 passed, 0 failed.**
 
-LR-001 states that every public method accepting a non-optional string parameter must call `ArgumentException.ThrowIfNullOrWhiteSpace(param)` as its first statement. `GetBalance` intentionally deviates: a blank/empty `asset` is silently forwarded to `Asset.TryOf`, which returns `false`, causing `ToolRunner.RunAsync` to return a `FormatException`-mapped `ToolError` instead of an `ArgumentException`.
+## New Findings
 
-The inline comment (line 33: "empty/whitespace asset → structured ToolError, not ArgumentException") documents the intent, and `MarketDataTools.GetTicker` sets the same precedent for optional-style nullable parameters. For an MCP tool boundary this is a reasonable design choice — the agent receives a structured `ToolError` rather than an unhandled exception. However, the deviation from LR-001 is not formally acknowledged as an approved exception in the rule itself.
+None. No architectural regressions were introduced by the remediation. Specifically:
 
-**Fix (if hardening is desired)**: Document this deviation in the `LEARNED_RULES.md` as an approved MCP-boundary exception — "at the MCP boundary, non-programming-error string inputs (asset tickers, symbol names) that require domain validation MAY be converted to `ToolError` rather than `ArgumentException`, provided the deviation is commented at the call site." No code change is strictly required.
-
----
-
-### client null-forgiving operator inconsistency with reference pattern — NOTE (confidence: 85%)
-
-`MarketDataTools.Resolve` (line 116) uses `client!` (null-forgiving) inside the `RunAsync` lambda. `AccountTools.Resolve` (line 119) and `AccountTools.Run` (line 106) use `client` without the `!`. Both compile cleanly — the flow guarantees `factory.TryGet` returned `true` before `client` is passed in — so this is a style inconsistency, not a correctness issue.
-
-**Fix**: Align with the reference pattern: change `call(client, s, default)` to `call(client!, s, default)` in `Resolve` (line 119) and `call(client, default)` to `call(client!, default)` in `Run` (line 106), so future readers see consistent null-assertion discipline across both tool classes.
-
-**Pattern reference**: `MarketDataTools.cs:116` (`return call(client!, s, default)`)
-
----
+- No new `using` or `ProjectReference` in Core or Http pointing to exchange or DI projects.
+- No previously-internal types made public.
+- No new behavior added to existing public interfaces.
+- `AccountTools` follows the `MarketDataTools` pattern exactly: same `Run`/`Resolve` private helper structure, same `Unavailable` error factory, same guard pattern at every entry point.
+- `GetBalance` inline exchange resolution (lines 44-46) correctly mirrors the two-step guard in `MarketDataTools.GetKlines` where a domain-invalid input causes early return before `TryParseExchange` is called.
+- All string parameters have `ArgumentException.ThrowIfNullOrWhiteSpace` as first statement except `asset`, which has the documented MCP-boundary deviation (LR-001 exception applied correctly).
+- No static mutable fields introduced.
+- No DI registration changes.
 
 ## Summary
 
-`AccountTools.cs` is a correct, thin MCP facade over `IAccountService` and the read-only methods of `ITradingService`. It introduces no new exchange logic, no Core/Http edits, no mutating operations (`PlaceOrder`, `CancelOrder` are absent), and follows the `MarketDataTools` structural pattern faithfully. The build is clean (0 warnings, 0 errors with `TreatWarningsAsErrors=true`), and 38 unit tests pass. The blocking issue is test coverage: three of the six public tool methods (`GetBalance`, `GetOrder`, `GetOrderHistory`) lack a happy-path unit test, violating LR-005. Adding three focused happy-path `[Fact]` tests is sufficient to resolve the REJECT and bring the score above threshold.
+All prior blocking findings are resolved. The three missing happy-path tests (`GetBalance_ReturnsData`, `GetOrder_ReturnsData`, `GetOrderHistory_ReturnsData`) are present, correctly structured, and all 41 unit tests pass. The bad-asset path in `GetBalance` returns a structured `ToolResult.Failure` with category `"BadRequest"` as required. No regressions detected.

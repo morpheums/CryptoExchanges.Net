@@ -1,51 +1,44 @@
-# Security Review — TASK-031
+# Security Review — TASK-031 (Cycle 2)
 
 ## Verdict: APPROVED
 
-## Score: 96/100
+## Score: 98/100
 
-## Findings
+## Prior Non-Blocking Concerns — Status
 
-### Read-Only Scope Enforced — PASS (confidence: 100%)
+### FormatException category mismatch for asset errors: RESOLVED
+The remediation replaced the `FormatException` throw in `GetBalance` with a direct `Task.FromResult(ToolResult<AssetBalance>.Failure(new ToolError("BadRequest", ...)))` at `AccountTools.cs:41-43`. The bad-asset path no longer reaches `ToolRunner` at all. The error category is now explicitly `"BadRequest"`, which is semantically correct and precisely tested by `GetBalance_BadAsset_ReturnsBadRequest` asserting `result.Error!.Category.Should().Be("BadRequest")`. The prior mismatch is fully eliminated.
 
-All six tool methods exclusively call read methods: `GetBalancesAsync`, `GetBalanceAsync`, `GetOpenOrdersAsync`, `GetOrderAsync`, `GetOrderHistoryAsync`, `GetTradeHistoryAsync`. A full scan of the diff and the AccountTools.cs source found zero references to `PlaceOrder`, `CancelOrder`, `CancelAllOrders`, `CancelOrderByClientId`, or any other mutating method on `ITradingService` or `IAccountService`. The constraint holds cleanly.
+### `limit` parameter not validated: STILL PRESENT (non-blocking, unchanged)
+`GetOrderHistory` and `GetTradeHistory` still pass `limit` unbounded to the exchange service layer. The remediation did not address this, and it was not a blocking concern. No regression introduced — the exchange service layer continues to be responsible for range enforcement.
 
-### AuthenticationException Maps to AuthRequired — PASS (confidence: 100%)
+## Core Security Properties
 
-Traced the full chain: `AccountTools → ToolRunner.RunAsync → Categorize(ex)`. The switch expression at `ToolRunner.cs:32` places `AuthenticationException` before `ExchangeApiException` (its base class), so it always routes to `"AuthRequired"`. Two unit tests (`GetBalances_MissingCredentials_MapsToAuthRequired`, `GetOpenOrders_MissingCredentials_MapsToAuthRequired`) assert this mapping. The mapping is correct and tested.
+### Read-only scope still enforced: PASS
+All six tool methods call exclusively read methods. The diff introduces no new tool methods and no references to `PlaceOrder`, `CancelOrder`, `Withdraw`, `Transfer`, or any mutating interface method. Full grep of `AccountTools.cs` for write-method names returns empty.
 
-### No Credential Exposure in Error Messages — PASS (confidence: 98%)
+### AuthenticationException still maps to AuthRequired: PASS
+`ToolRunner.Categorize` is unchanged. The `AuthenticationException => "AuthRequired"` arm at `ToolRunner.cs:32` precedes the `ExchangeApiException` base-class arm. Tests `GetBalances_MissingCredentials_MapsToAuthRequired` and `GetOpenOrders_MissingCredentials_MapsToAuthRequired` continue to assert this mapping. No regression.
 
-`ToolRunner.RunAsync` surfaces `ex.Message`, not `ex.RawBody`. The exception messages constructed by the exchange error translators (e.g., `BinanceErrorTranslator.cs:17`: `"Binance error {code}: {msg}"`) are built from the exchange's own response fields, not from locally stored API key or secret key values. No exchange error translator in the codebase includes an API key or secret in exception message text. `ex.RawBody` is a separate property on `ExchangeApiException` that is not forwarded to `ToolError`.
+### No credential exposure in error messages: PASS
+The new `ToolError("BadRequest", $"Unknown or empty asset '{asset}'.")` message at `AccountTools.cs:43` reflects only the caller-supplied asset string, which is the user's own input. It does not incorporate `ApiKey`, `SecretKey`, or any exchange-internal secret. `ToolRunner` is bypassed for this path, so `ex.Message` forwarding is not relevant here. All other paths continue to use `ToolRunner.RunAsync` which surfaces `ex.Message` with the same guarantees as cycle 1.
 
-### No Key Leak Through Exception Messages — PASS (confidence: 98%)
+### No key leak through exception messages: PASS
+No changes to exception construction paths in the diff. `AuthenticationException` messages remain exchange-supplied signature-validation text, not reflections of locally held key material.
 
-Reviewed all `AuthenticationException` construction sites. Messages take the form `"Binance error -1022: Signature for this request is not valid"` or similar — exchange-supplied text about the signature check outcome, never a reflection of locally held key material. `ToolRunner` does not sanitize exception messages, but the underlying SDK guarantees keys never enter exception message strings.
+### IExchangeClientFactory usage still correct: PASS
+The factory lookup order in `GetBalance` was adjusted: `Asset.TryOf` is now checked before `TryParseExchange` / `factory.TryGet`. This is a valid short-circuit optimization — the factory is accessed only after the local domain validation passes. `TryGet` remains the only factory access method used throughout `AccountTools`. No direct credential store access introduced.
 
-### IExchangeClientFactory Usage Correct — PASS (confidence: 100%)
+### No static credential state: PASS
+`AccountTools` remains a static class with only two `private const string` description fields. The new `GetBalance_ReturnsData`, `GetOrder_ReturnsData`, and `GetOrderHistory_ReturnsData` tests operate on per-test substitutes. No static mutable state introduced.
 
-`AccountTools` receives `IExchangeClientFactory` via DI injection at the tool method boundary. It uses `factory.TryGet(id, out var client)` exclusively — no direct credential store access, no keyed DI bypass, no `BinanceOptions`/`BybitOptions` etc. referenced. This is the correct factory-mediated access pattern, consistent with `MarketDataTools`.
+### Direct ToolResult.Failure return for bad-asset does not bypass security-relevant ToolRunner processing: PASS
+`ToolRunner.RunAsync` is an exception-to-ToolError translator, not a security gate. It performs no authentication check, no credential validation, no rate-limit enforcement, and no signing. The only processing it provides is: (a) wrapping the result in a success envelope, and (b) catching exceptions and categorizing them. For the bad-asset early-exit path, there is nothing to sign or authenticate — no exchange call is made. Bypassing `ToolRunner` here is correct by design and introduces zero security concern. The direct `ToolResult.Failure` return is structurally identical to the already-established `Unavailable(exchange)` early-exit pattern used throughout the same method.
 
-### No Static Credential State — PASS (confidence: 100%)
+## New Findings
 
-`AccountTools` is a `static class` with only two `private const string` fields (`ExchangeParam`, `SymbolParam`) used as parameter description strings. No static fields holding exchange clients, credentials, or mutable state exist. The helper methods `Run<T>` and `Resolve<T>` are stateless dispatch wrappers. There is no per-call state that could leak between requests.
-
-### ToolRunner.ex.Message and RawBody Boundary — NOTE (confidence: 85%, non-blocking)
-
-`ToolRunner.RunAsync` (line 24) constructs `ToolError` with `ex.Message`. For `ExchangeApiException` subclasses (including `AuthenticationException`), `ex.RawBody` contains the raw HTTP response body, which could contain exchange-internal details (order IDs, account identifiers). `RawBody` is correctly excluded from `ToolError`. However, there is no explicit sanitization of `ex.Message` for cases where an exchange might theoretically echo back a credential fragment in its own error response. This is a theoretical risk dependent on exchange behavior, not on SDK code — and the current exception message format from all four translators does not include raw request content.
-
-This is a note for future hardening, not a blocking concern.
-
-### FormatException Category Mismatch for Asset Errors — CONCERN (confidence: 70%, non-blocking)
-
-In `GetBalance` (line 45), a bad asset ticker throws `FormatException("Unknown asset '{asset}'.")`. `ToolRunner.Categorize` maps `FormatException` to `"SymbolNotSupported"`. This is semantically imprecise: a bad asset is not the same as a bad symbol pair. The test `GetBalance_BadAsset_ReturnsError` verifies `Ok == false` but does not assert the error category, so a consumer agent would receive `Category = "SymbolNotSupported"` for bad assets, which is mildly misleading. This does not represent a security issue — no credentials are involved — but it is a minor usability concern at the MCP boundary. Confidence is below 80, so this is non-blocking.
-
-Fix suggestion: introduce a dedicated `AssetNotSupported` category arm in `ToolRunner.Categorize` (alongside a corresponding exception type or a dedicated check), or handle the bad-asset path before entering `ToolRunner` with an early `ToolResult.Failure` return (matching the pattern already used for unknown exchange names and the factory lookup shortcut).
-
-### `limit` Parameter Not Validated — NOTE (confidence: 60%, non-blocking)
-
-`GetOrderHistory` and `GetTradeHistory` accept an unbounded `int limit` with a default of 500. Negative values or extreme values (e.g., `int.MaxValue`) are passed directly to the exchange service layer without clamping. This is not a credential or signing concern; individual exchange services are expected to enforce their own limits and return an `InvalidOrderException` or `ExchangeApiException`, which ToolRunner will catch. Mentioning for completeness as a defensive hardening opportunity.
+None. The remediation is narrowly scoped to the bad-asset path refactor and three happy-path test additions. No new security surface was introduced. The dead mock removal and `client!` alignment are cosmetic. Full grep for `SecretKey`, `ApiKey`, `ToString`, `JsonSerializer`, `log`, and `RawBody` in `AccountTools.cs` returns empty.
 
 ## Summary
 
-TASK-031 adds six read-only account MCP tools. The security surface is clean: no write methods are exposed, credentials are accessed exclusively through the `IExchangeClientFactory` DI interface, `AuthenticationException` correctly maps to the `"AuthRequired"` error category, and `ToolRunner` never forwards `RawBody` to the agent. No static credential state exists in the `AccountTools` class. The two non-blocking concerns (FormatException category precision for asset errors, and the lack of limit clamping) are below the 80% confidence threshold for rejection and do not affect the security of credentials or the read-only guarantee.
+The remediation resolves the prior cycle 1 concern cleanly: the bad-asset path in `GetBalance` now returns a correctly categorized `"BadRequest"` `ToolError` directly at the MCP boundary, which is architecturally sound and fully tested. All seven core security properties hold without regression. No new findings. The score increases from 96 to 98 reflecting the resolved concern; the remaining 2-point gap is the still-present `limit` non-validation noted in both cycles.

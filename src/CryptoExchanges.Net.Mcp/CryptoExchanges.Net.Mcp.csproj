@@ -1,6 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
+    <PackageId>CryptoExchanges.Net.Mcp</PackageId>
+    <Description>Model Context Protocol (MCP) stdio server for CryptoExchanges.Net — exposes crypto exchange read-only operations as MCP tools.</Description>
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
     <PackAsTool>true</PackAsTool>
     <ToolCommandName>crypto-mcp</ToolCommandName>
@@ -16,7 +18,7 @@
     <ProjectReference Include="../CryptoExchanges.Net.DependencyInjection/CryptoExchanges.Net.DependencyInjection.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.9" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.*" />
     <PackageReference Include="ModelContextProtocol" Version="1.4.0" />
   </ItemGroup>
 </Project>

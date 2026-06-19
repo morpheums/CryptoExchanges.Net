@@ -9,8 +9,6 @@
     
     <!-- Package metadata -->
     <Authors>Morpheums</Authors>
-    <!-- Default for the consumer libraries (Core/Http/exchanges/DI). The MCP server tool
-         overrides this to AGPL-3.0-or-later in its own csproj (split licensing). -->
     <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
     <PackageProjectUrl>https://github.com/morpheums/CryptoExchanges.Net</PackageProjectUrl>
     <RepositoryUrl>https://github.com/morpheums/CryptoExchanges.Net</RepositoryUrl>

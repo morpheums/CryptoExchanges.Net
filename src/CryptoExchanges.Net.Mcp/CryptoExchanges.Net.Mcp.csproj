@@ -7,9 +7,6 @@
     <PackAsTool>true</PackAsTool>
     <ToolCommandName>crypto-mcp</ToolCommandName>
     <IsPackable>true</IsPackable>
-    <!-- Split licensing: the consumer libraries are Apache-2.0 (Directory.Build.props); this
-         server tool is AGPL-3.0-or-later to protect the hosted/SaaS use case. -->
-    <PackageLicenseExpression>AGPL-3.0-or-later</PackageLicenseExpression>
     <!-- CA1515: types are public so the test project (a separate assembly) can reference them -->
     <NoWarn>$(NoWarn);CA1515</NoWarn>
   </PropertyGroup>

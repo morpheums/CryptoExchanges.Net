@@ -247,15 +247,8 @@ Requires .NET 10.0 SDK.
 
 ## License
 
-Split licensing:
-
-- **The client libraries** (`Core`, `Http`, the exchange packages, `DependencyInjection`) are
-  **Apache-2.0** — see [LICENSE](LICENSE). Embed them in proprietary apps freely.
-- **The MCP server tool** (`CryptoExchanges.Net.Mcp`) is **GNU AGPL-3.0-or-later** — see
-  [src/CryptoExchanges.Net.Mcp/LICENSE](src/CryptoExchanges.Net.Mcp/LICENSE). It is open and
-  auditable, but running a modified version as a network service requires sharing your changes.
-  For commercial terms that differ from the AGPL, contact the maintainer.
+Apache-2.0 — see [LICENSE](LICENSE).
 
 ---
 
-Built by [Morpheums](https://github.com/morpheums). Star the [Binance API client](https://github.com/morpheums/Binance.API.Csharp.Client) that started it all.
+Built by [Morpheums](https://github.com/morpheums).

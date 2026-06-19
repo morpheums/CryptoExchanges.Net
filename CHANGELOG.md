@@ -24,7 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- **Split licensing**: the client libraries (`Core`, `Http`, exchange packages, `DependencyInjection`) remain **Apache-2.0**; the `CryptoExchanges.Net.Mcp` server tool is **AGPL-3.0-or-later** (protects the hosted/SaaS use case while keeping the libraries permissive for embedding)
+- (No breaking changes in this release)
 
 ### Fixed
 

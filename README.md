@@ -4,7 +4,7 @@
 >
 > Built for .NET 10 with Clean Architecture, SOLID principles, and modern C# features.
 
-[![NuGet](https://img.shields.io/badge/nuget-v0.1.0--preview.1-blue)](https://www.nuget.org/)
+[![NuGet](https://img.shields.io/badge/nuget-v0.2.0--preview.1-blue)](https://www.nuget.org/)
 [![License](https://img.shields.io/badge/license-Apache%202.0-green)](LICENSE)
 [![.NET](https://img.shields.io/badge/.NET-10.0-512BD4)](https://dotnet.microsoft.com/)
 
@@ -217,6 +217,25 @@ CryptoExchanges.Net/
 - [ ] Caching layer
 - [ ] Audit trail (Vigilex DNA)
 
+## MCP Server (AI-Agent-Native Access)
+
+`CryptoExchanges.Net.Mcp` is a **read-only** [Model Context Protocol](https://modelcontextprotocol.io)
+stdio server — install it as a global .NET tool and point any MCP-capable agent at it:
+
+```bash
+dotnet tool install -g CryptoExchanges.Net.Mcp
+```
+
+One server, four exchanges (Binance, Bybit, OKX, Bitget), 12 read-only tools:
+six market-data tools (no credentials) and six account tools (read-scoped keys).
+All tools return the same canonical models regardless of exchange — one agent
+vocabulary works identically across all venues.
+
+**Read-only — no order placement.** No write or trading tools exist.
+
+See [`src/CryptoExchanges.Net.Mcp/README.md`](src/CryptoExchanges.Net.Mcp/README.md)
+for the MCP client config block, environment variables, and full tool reference.
+
 ## Building
 
 ```bash
@@ -228,8 +247,8 @@ Requires .NET 10.0 SDK.
 
 ## License
 
-Apache 2.0 — see [LICENSE](LICENSE).
+Apache-2.0 — see [LICENSE](LICENSE).
 
 ---
 
-Built by [Morpheums](https://github.com/morpheums). Star the [Binance API client](https://github.com/morpheums/Binance.API.Csharp.Client) that started it all.
+Built by [Morpheums](https://github.com/morpheums).

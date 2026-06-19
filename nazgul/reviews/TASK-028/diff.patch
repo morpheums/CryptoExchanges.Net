@@ -1,0 +1,265 @@
+diff --git a/CryptoExchanges.Net.sln b/CryptoExchanges.Net.sln
+index e0d3dfe..72f276f 100644
+--- a/CryptoExchanges.Net.sln
++++ b/CryptoExchanges.Net.sln
+@@ -43,6 +43,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CryptoExchanges.Net.Bitget.
+ EndProject
+ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CryptoExchanges.Net.Bitget.Tests.Integration", "tests\CryptoExchanges.Net.Bitget.Tests.Integration\CryptoExchanges.Net.Bitget.Tests.Integration.csproj", "{B14807A0-7583-47E5-B14E-C5D20C2ADFDF}"
+ EndProject
++Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CryptoExchanges.Net.Mcp", "src\CryptoExchanges.Net.Mcp\CryptoExchanges.Net.Mcp.csproj", "{4FEE0B63-0BF4-4E66-B924-DB1BD936D93D}"
++EndProject
++Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CryptoExchanges.Net.Mcp.Tests.Unit", "tests\CryptoExchanges.Net.Mcp.Tests.Unit\CryptoExchanges.Net.Mcp.Tests.Unit.csproj", "{8E1EA724-F7D2-4B9A-BBBB-1C53974C1DA2}"
++EndProject
+ Global
+ 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+ 		Debug|Any CPU = Debug|Any CPU
+@@ -269,6 +273,30 @@ Global
+ 		{B14807A0-7583-47E5-B14E-C5D20C2ADFDF}.Release|x64.Build.0 = Release|Any CPU
+ 		{B14807A0-7583-47E5-B14E-C5D20C2ADFDF}.Release|x86.ActiveCfg = Release|Any CPU
+ 		{B14807A0-7583-47E5-B14E-C5D20C2ADFDF}.Release|x86.Build.0 = Release|Any CPU
++		{4FEE0B63-0BF4-4E66-B924-DB1BD936D93D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
++		{4FEE0B63-0BF4-4E66-B924-DB1BD936D93D}.Debug|Any CPU.Build.0 = Debug|Any CPU
++		{4FEE0B63-0BF4-4E66-B924-DB1BD936D93D}.Debug|x64.ActiveCfg = Debug|Any CPU
++		{4FEE0B63-0BF4-4E66-B924-DB1BD936D93D}.Debug|x64.Build.0 = Debug|Any CPU
++		{4FEE0B63-0BF4-4E66-B924-DB1BD936D93D}.Debug|x86.ActiveCfg = Debug|Any CPU
++		{4FEE0B63-0BF4-4E66-B924-DB1BD936D93D}.Debug|x86.Build.0 = Debug|Any CPU
++		{4FEE0B63-0BF4-4E66-B924-DB1BD936D93D}.Release|Any CPU.ActiveCfg = Release|Any CPU
++		{4FEE0B63-0BF4-4E66-B924-DB1BD936D93D}.Release|Any CPU.Build.0 = Release|Any CPU
++		{4FEE0B63-0BF4-4E66-B924-DB1BD936D93D}.Release|x64.ActiveCfg = Release|Any CPU
++		{4FEE0B63-0BF4-4E66-B924-DB1BD936D93D}.Release|x64.Build.0 = Release|Any CPU
++		{4FEE0B63-0BF4-4E66-B924-DB1BD936D93D}.Release|x86.ActiveCfg = Release|Any CPU
++		{4FEE0B63-0BF4-4E66-B924-DB1BD936D93D}.Release|x86.Build.0 = Release|Any CPU
++		{8E1EA724-F7D2-4B9A-BBBB-1C53974C1DA2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
++		{8E1EA724-F7D2-4B9A-BBBB-1C53974C1DA2}.Debug|Any CPU.Build.0 = Debug|Any CPU
++		{8E1EA724-F7D2-4B9A-BBBB-1C53974C1DA2}.Debug|x64.ActiveCfg = Debug|Any CPU
++		{8E1EA724-F7D2-4B9A-BBBB-1C53974C1DA2}.Debug|x64.Build.0 = Debug|Any CPU
++		{8E1EA724-F7D2-4B9A-BBBB-1C53974C1DA2}.Debug|x86.ActiveCfg = Debug|Any CPU
++		{8E1EA724-F7D2-4B9A-BBBB-1C53974C1DA2}.Debug|x86.Build.0 = Debug|Any CPU
++		{8E1EA724-F7D2-4B9A-BBBB-1C53974C1DA2}.Release|Any CPU.ActiveCfg = Release|Any CPU
++		{8E1EA724-F7D2-4B9A-BBBB-1C53974C1DA2}.Release|Any CPU.Build.0 = Release|Any CPU
++		{8E1EA724-F7D2-4B9A-BBBB-1C53974C1DA2}.Release|x64.ActiveCfg = Release|Any CPU
++		{8E1EA724-F7D2-4B9A-BBBB-1C53974C1DA2}.Release|x64.Build.0 = Release|Any CPU
++		{8E1EA724-F7D2-4B9A-BBBB-1C53974C1DA2}.Release|x86.ActiveCfg = Release|Any CPU
++		{8E1EA724-F7D2-4B9A-BBBB-1C53974C1DA2}.Release|x86.Build.0 = Release|Any CPU
+ 	EndGlobalSection
+ 	GlobalSection(SolutionProperties) = preSolution
+ 		HideSolutionNode = FALSE
+@@ -285,5 +313,7 @@ Global
+ 		{975387A7-B48B-4FD2-96F0-238BA8580CBC} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
+ 		{F576E841-7626-42CC-A075-33A5A202630F} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
+ 		{B14807A0-7583-47E5-B14E-C5D20C2ADFDF} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
++		{4FEE0B63-0BF4-4E66-B924-DB1BD936D93D} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
++		{8E1EA724-F7D2-4B9A-BBBB-1C53974C1DA2} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
+ 	EndGlobalSection
+ EndGlobal
+diff --git a/nazgul/plan.md b/nazgul/plan.md
+index a4e38c8..e20fb1b 100644
+--- a/nazgul/plan.md
++++ b/nazgul/plan.md
+@@ -67,7 +67,7 @@ REUSE existing discovery — do NOT re-run.
+ 
+ | Task     | Status  | Wave | Description                                          |
+ |----------|---------|------|------------------------------------------------------|
+-| TASK-028 | ◆ READY | 1    | Project scaffold + host wiring + env→options binder  |
++| TASK-028 | ◆ IN_PROGRESS | 1    | Project scaffold + host wiring + env→options binder  |
+ | TASK-029 | ◇ PLANNED | 2  | Tool primitives (ToolResult, ToolInputs, ToolRunner) |
+ | TASK-030 | ◇ PLANNED | 3  | Market-data tools (6, no keys)                       |
+ | TASK-031 | ◇ PLANNED | 3  | Account tools (6, read-scoped keys)                  |
+@@ -113,11 +113,9 @@ unmapped; writes/WebSockets/hosted-transport are correctly absent.
+ 
+ ## Recovery Pointer
+ 
+-- **Current stage**: PLANNING COMPLETE → ready for IMPLEMENTING.
+-- **Next action**: Implementer claims **TASK-028** (READY). First step is SDK package-version
+-  verification (`--prerelease`) before pinning, then scaffold both projects + host wiring +
+-  env binder following the TDD steps in plan Task 1.
+-- **Active task**: TASK-028.
++- **Current stage**: IMPLEMENTING — TASK-028 claimed, IN_PROGRESS.
++- **Next action**: Implement scaffold, env binder + tests per plan Task 1 TDD steps.
++- **Active task**: TASK-028 (IN_PROGRESS).
+ - **Files are truth**: task manifests in `nazgul/tasks/TASK-028..032.md` carry full state;
+   frontmatter `status:` is canonical.
+ 
+diff --git a/nazgul/tasks/TASK-028.md b/nazgul/tasks/TASK-028.md
+index 0bc9854..a5e1212 100644
+--- a/nazgul/tasks/TASK-028.md
++++ b/nazgul/tasks/TASK-028.md
+@@ -1,9 +1,9 @@
+ ---
+ id: TASK-028
+-status: READY
++status: IN_PROGRESS
+ depends_on: []
+ commit:
+-claimed_at:
++claimed_at: 2026-06-19T05:00:00Z
+ ---
+ # TASK-028: Project scaffold + host wiring + env→options binder
+ 
+@@ -17,7 +17,8 @@ claimed_at:
+ - **Wave**: 1
+ - **Traces to**: Approved design §Architecture + §Credentials & configuration; Approved plan **Task 1**
+ - **Created at**: 2026-06-19T04:00:00Z
+-- **Claimed at**:
++- **Claimed at**: 2026-06-19T05:00:00Z
++- **Base SHA**: 3c492b78ab3a4de3186c9ac41d28b184a1669fbd
+ - **Implemented at**:
+ - **Completed at**:
+ - **Blocked at**:
+diff --git a/src/CryptoExchanges.Net.Mcp/CryptoExchanges.Net.Mcp.csproj b/src/CryptoExchanges.Net.Mcp/CryptoExchanges.Net.Mcp.csproj
+new file mode 100644
+index 0000000..45cb664
+--- /dev/null
++++ b/src/CryptoExchanges.Net.Mcp/CryptoExchanges.Net.Mcp.csproj
+@@ -0,0 +1,22 @@
++<Project Sdk="Microsoft.NET.Sdk">
++  <PropertyGroup>
++    <OutputType>Exe</OutputType>
++    <GenerateDocumentationFile>false</GenerateDocumentationFile>
++    <PackAsTool>true</PackAsTool>
++    <ToolCommandName>crypto-mcp</ToolCommandName>
++    <IsPackable>true</IsPackable>
++    <!-- CA1515: types are public so the test project (a separate assembly) can reference them -->
++    <NoWarn>$(NoWarn);CA1515</NoWarn>
++  </PropertyGroup>
++  <ItemGroup>
++    <ProjectReference Include="../CryptoExchanges.Net.Binance/CryptoExchanges.Net.Binance.csproj" />
++    <ProjectReference Include="../CryptoExchanges.Net.Bybit/CryptoExchanges.Net.Bybit.csproj" />
++    <ProjectReference Include="../CryptoExchanges.Net.Okx/CryptoExchanges.Net.Okx.csproj" />
++    <ProjectReference Include="../CryptoExchanges.Net.Bitget/CryptoExchanges.Net.Bitget.csproj" />
++    <ProjectReference Include="../CryptoExchanges.Net.DependencyInjection/CryptoExchanges.Net.DependencyInjection.csproj" />
++  </ItemGroup>
++  <ItemGroup>
++    <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.9" />
++    <PackageReference Include="ModelContextProtocol" Version="1.4.0" />
++  </ItemGroup>
++</Project>
+diff --git a/src/CryptoExchanges.Net.Mcp/EnvCredentialBinder.cs b/src/CryptoExchanges.Net.Mcp/EnvCredentialBinder.cs
+new file mode 100644
+index 0000000..b236158
+--- /dev/null
++++ b/src/CryptoExchanges.Net.Mcp/EnvCredentialBinder.cs
+@@ -0,0 +1,25 @@
++using CryptoExchanges.Net.DependencyInjection;
++
++namespace CryptoExchanges.Net.Mcp;
++
++/// <summary>Populates <see cref="CryptoExchangesOptions"/> from environment variables.</summary>
++public static class EnvCredentialBinder
++{
++    /// <summary>Applies known per-exchange env vars to <paramref name="options"/> using <paramref name="getEnv"/>.</summary>
++    public static void Apply(CryptoExchangesOptions options, Func<string, string?> getEnv)
++    {
++        ArgumentNullException.ThrowIfNull(options);
++        ArgumentNullException.ThrowIfNull(getEnv);
++
++        options.BinanceApiKey = getEnv("BINANCE_API_KEY");
++        options.BinanceSecretKey = getEnv("BINANCE_SECRET_KEY");
++        options.BybitApiKey = getEnv("BYBIT_API_KEY");
++        options.BybitSecretKey = getEnv("BYBIT_SECRET_KEY");
++        options.OkxApiKey = getEnv("OKX_API_KEY");
++        options.OkxSecretKey = getEnv("OKX_SECRET_KEY");
++        options.OkxPassphrase = getEnv("OKX_PASSPHRASE");
++        options.BitgetApiKey = getEnv("BITGET_API_KEY");
++        options.BitgetSecretKey = getEnv("BITGET_SECRET_KEY");
++        options.BitgetPassphrase = getEnv("BITGET_PASSPHRASE");
++    }
++}
+diff --git a/src/CryptoExchanges.Net.Mcp/Program.cs b/src/CryptoExchanges.Net.Mcp/Program.cs
+new file mode 100644
+index 0000000..2bbd222
+--- /dev/null
++++ b/src/CryptoExchanges.Net.Mcp/Program.cs
+@@ -0,0 +1,20 @@
++using CryptoExchanges.Net.DependencyInjection;
++using CryptoExchanges.Net.Mcp;
++using Microsoft.Extensions.DependencyInjection;
++using Microsoft.Extensions.Hosting;
++using Microsoft.Extensions.Logging;
++
++var builder = Host.CreateApplicationBuilder(args);
++
++// stdout is the MCP transport channel; all logs must go to stderr.
++builder.Logging.AddConsole(o => o.LogToStandardErrorThreshold = LogLevel.Trace);
++
++builder.Services.AddCryptoExchanges(options =>
++    EnvCredentialBinder.Apply(options, Environment.GetEnvironmentVariable));
++
++builder.Services
++    .AddMcpServer()
++    .WithStdioServerTransport()
++    .WithToolsFromAssembly();
++
++await builder.Build().RunAsync().ConfigureAwait(false);
+diff --git a/tests/CryptoExchanges.Net.Mcp.Tests.Unit/CryptoExchanges.Net.Mcp.Tests.Unit.csproj b/tests/CryptoExchanges.Net.Mcp.Tests.Unit/CryptoExchanges.Net.Mcp.Tests.Unit.csproj
+new file mode 100644
+index 0000000..4078eaf
+--- /dev/null
++++ b/tests/CryptoExchanges.Net.Mcp.Tests.Unit/CryptoExchanges.Net.Mcp.Tests.Unit.csproj
+@@ -0,0 +1,20 @@
++<Project Sdk="Microsoft.NET.Sdk">
++  <PropertyGroup>
++    <OutputType>Exe</OutputType>
++    <IsPackable>false</IsPackable>
++    <IsTestProject>true</IsTestProject>
++    <GenerateDocumentationFile>false</GenerateDocumentationFile>
++    <NoWarn>$(NoWarn);CA1707;CA2007;CA1515;CS1591;xUnit1051</NoWarn>
++  </PropertyGroup>
++  <ItemGroup>
++    <ProjectReference Include="../../src/CryptoExchanges.Net.Mcp/CryptoExchanges.Net.Mcp.csproj" />
++    <ProjectReference Include="../../src/CryptoExchanges.Net.DependencyInjection/CryptoExchanges.Net.DependencyInjection.csproj" />
++  </ItemGroup>
++  <ItemGroup>
++    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.6.0" />
++    <PackageReference Include="xunit.v3" Version="3.2.2" />
++    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5" />
++    <PackageReference Include="NSubstitute" Version="5.3.0" />
++    <PackageReference Include="FluentAssertions" Version="6.12.2" />
++  </ItemGroup>
++</Project>
+diff --git a/tests/CryptoExchanges.Net.Mcp.Tests.Unit/EnvCredentialBinderTests.cs b/tests/CryptoExchanges.Net.Mcp.Tests.Unit/EnvCredentialBinderTests.cs
+new file mode 100644
+index 0000000..9db5dcc
+--- /dev/null
++++ b/tests/CryptoExchanges.Net.Mcp.Tests.Unit/EnvCredentialBinderTests.cs
+@@ -0,0 +1,40 @@
++using Xunit;
++using FluentAssertions;
++using CryptoExchanges.Net.DependencyInjection;
++using CryptoExchanges.Net.Mcp;
++
++namespace CryptoExchanges.Net.Mcp.Tests.Unit;
++
++public class EnvCredentialBinderTests
++{
++    [Fact]
++    public void Apply_PopulatesAllFourExchanges_FromEnv()
++    {
++        var env = new Dictionary<string, string?>
++        {
++            ["BINANCE_API_KEY"] = "bk", ["BINANCE_SECRET_KEY"] = "bs",
++            ["BYBIT_API_KEY"] = "yk", ["BYBIT_SECRET_KEY"] = "ys",
++            ["OKX_API_KEY"] = "ok", ["OKX_SECRET_KEY"] = "os", ["OKX_PASSPHRASE"] = "op",
++            ["BITGET_API_KEY"] = "gk", ["BITGET_SECRET_KEY"] = "gs", ["BITGET_PASSPHRASE"] = "gp",
++        };
++        var options = new CryptoExchangesOptions();
++
++        EnvCredentialBinder.Apply(options, k => env.GetValueOrDefault(k));
++
++        options.BinanceApiKey.Should().Be("bk");
++        options.BinanceSecretKey.Should().Be("bs");
++        options.BybitApiKey.Should().Be("yk");
++        options.OkxPassphrase.Should().Be("op");
++        options.BitgetSecretKey.Should().Be("gs");
++        options.BitgetPassphrase.Should().Be("gp");
++    }
++
++    [Fact]
++    public void Apply_LeavesNullsForUnsetVars()
++    {
++        var options = new CryptoExchangesOptions();
++        EnvCredentialBinder.Apply(options, _ => null);
++        options.BinanceApiKey.Should().BeNull();
++        options.OkxPassphrase.Should().BeNull();
++    }
++}

@@ -1,5 +1,5 @@
 {
-  "schema_version": 11,
+  "schema_version": 10,
   "install_mode": "shared",
   "mode": "afk",
   "objective": "Implement the read-only MCP server (CryptoExchanges.Net.Mcp): a local stdio MCP server exposing the existing REST library to LLM agents as read-only tools (6 market-data + 6 read-scoped account) across Binance/Bybit/OKX/Bitget, per docs/superpowers/specs/2026-06-19-mcp-server-readonly-v1-design.md and docs/superpowers/plans/2026-06-19-mcp-server-readonly-v1.md.",
@@ -221,6 +221,5 @@
     "min_recurrence": 2,
     "max_active_rules": 50,
     "auto_distill_post_loop": true
-  },
-  "default_mode": null
+  }
 }

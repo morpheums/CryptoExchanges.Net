@@ -1,9 +1,9 @@
 ---
 id: TASK-028
-status: READY
+status: IN_PROGRESS
 depends_on: []
 commit:
-claimed_at:
+claimed_at: 2026-06-19T05:00:00Z
 ---
 # TASK-028: Project scaffold + host wiring + env→options binder
 
@@ -17,7 +17,8 @@ claimed_at:
 - **Wave**: 1
 - **Traces to**: Approved design §Architecture + §Credentials & configuration; Approved plan **Task 1**
 - **Created at**: 2026-06-19T04:00:00Z
-- **Claimed at**:
+- **Claimed at**: 2026-06-19T05:00:00Z
+- **Base SHA**: 3c492b78ab3a4de3186c9ac41d28b184a1669fbd
 - **Implemented at**:
 - **Completed at**:
 - **Blocked at**:

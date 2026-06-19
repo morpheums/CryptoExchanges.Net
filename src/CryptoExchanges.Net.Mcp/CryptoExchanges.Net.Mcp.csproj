@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>crypto-mcp</ToolCommandName>
+    <IsPackable>true</IsPackable>
+    <!-- CA1515: types are public so the test project (a separate assembly) can reference them -->
+    <NoWarn>$(NoWarn);CA1515</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../CryptoExchanges.Net.Binance/CryptoExchanges.Net.Binance.csproj" />
+    <ProjectReference Include="../CryptoExchanges.Net.Bybit/CryptoExchanges.Net.Bybit.csproj" />
+    <ProjectReference Include="../CryptoExchanges.Net.Okx/CryptoExchanges.Net.Okx.csproj" />
+    <ProjectReference Include="../CryptoExchanges.Net.Bitget/CryptoExchanges.Net.Bitget.csproj" />
+    <ProjectReference Include="../CryptoExchanges.Net.DependencyInjection/CryptoExchanges.Net.DependencyInjection.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.9" />
+    <PackageReference Include="ModelContextProtocol" Version="1.4.0" />
+  </ItemGroup>
+</Project>

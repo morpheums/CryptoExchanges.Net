@@ -1,6 +1,7 @@
 ---
 id: TASK-044
-status: IN_PROGRESS
+status: IMPLEMENTED
+commit: 2fb3895
 depends_on: [TASK-043]
 ---
 # TASK-044: Http reconnecting byte-engine (pump / route / backoff / replay / heartbeat / channels)

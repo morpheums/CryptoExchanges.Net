@@ -126,13 +126,15 @@ docs-site generator, WebSockets) is planned.
 
 ## Recovery Pointer
 
-- **Current stage**: ALL TASKS DONE — post-loop phase (documentation + release-manager agents pending).
-- **Next action**: Post-loop agents → PR to main.
+- **Current stage**: NAZGUL_COMPLETE — all tasks DONE, post-loop done, PR open & green.
+- **Next action**: Human merge of PR #21 into `main` (protected branch).
 - **Active task**: none (all complete).
+- **Post-loop**: CHANGELOG `[Unreleased]` entry added (commit eb4dc4b); no version bump
+  needed for docs-only objective. PR #21 open, MERGEABLE, CI Build & Test SUCCESS,
+  CodeRabbit SUCCESS. All internal doc links verified resolving; 7 exchange icons present.
 - **Files are truth**: task manifests in `nazgul/tasks/TASK-036..039.md` carry full state;
   frontmatter `status:` is canonical.
 
 ─── ◈ NEXT ─────────────────────────────────────────────
-  Post-loop phase: documentation + release-manager agents → PR to main
-  /nazgul:start to continue
+  NAZGUL_COMPLETE. PR #21 → main is open and green. Awaiting human merge.
 ────────────────────────────────────────────────────────

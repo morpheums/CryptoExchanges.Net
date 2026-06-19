@@ -71,9 +71,9 @@ REUSE existing discovery — do NOT re-run.
 | TASK-029 | ✦ DONE | 2    | Tool primitives (ToolResult, ToolInputs, ToolRunner) |
 | TASK-030 | ✦ DONE | 3  | Market-data tools (6, no keys)                    |
 | TASK-031 | ✦ DONE | 3  | Account tools (6, read-scoped keys)                  |
-| TASK-032 | ◇ PLANNED | 4  | Tool-roster guard test + README/packaging            |
+| TASK-032 | ✦ IMPLEMENTED | 4  | Tool-roster guard test + README/packaging            |
 
-Tasks: 4/5 complete
+Tasks: 5/5 IMPLEMENTED (awaiting review)
 
 ## Wave Groups
 
@@ -120,9 +120,9 @@ unmapped; writes/WebSockets/hosted-transport are correctly absent.
 
 ## Recovery Pointer
 
-- **Current stage**: TASK-031 DONE (cycle 2 review board ALL APPROVED, SHA 2de728c). Proceeding to TASK-032.
-- **Next action**: Implement TASK-032 — tool-roster guard test + README/packaging.
-- **Active task**: TASK-032 — PLANNED.
+- **Current stage**: TASK-032 IMPLEMENTED (SHA 3432f08). All 5 tasks implemented. Awaiting review.
+- **Next action**: Review board for TASK-032.
+- **Active task**: TASK-032 — IMPLEMENTED.
 - **Files are truth**: task manifests in `nazgul/tasks/TASK-028..032.md` carry full state;
   frontmatter `status:` is canonical.
 

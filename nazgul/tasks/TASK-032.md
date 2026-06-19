@@ -1,9 +1,9 @@
 ---
 id: TASK-032
-status: PLANNED
+status: IMPLEMENTED
 depends_on: [TASK-030, TASK-031]
-commit:
-claimed_at:
+commit: 3432f08
+claimed_at: 2026-06-19T06:00:00Z
 ---
 # TASK-032: Tool-roster guard test + README/packaging
 
@@ -17,8 +17,9 @@ claimed_at:
 - **Wave**: 4
 - **Traces to**: Approved design §Non-Goals (read-only structural) + §Packaging/adoption; Approved plan **Task 5**
 - **Created at**: 2026-06-19T04:00:00Z
-- **Claimed at**:
-- **Implemented at**:
+- **Claimed at**: 2026-06-19T06:00:00Z
+- **Base SHA**: fade890
+- **Implemented at**: 2026-06-19T06:30:00Z
 - **Completed at**:
 - **Blocked at**:
 - **Retry count**: 0/3
@@ -76,9 +77,22 @@ Verify packaging with `dotnet pack` (produces a `.nupkg`, 0W/0E).
 - **TRD Component**: n/a — `ToolRosterTests` (structural guard) + package/repo README
 - **ADR Reference**: ADR-001 (read-only structural enforcement; no write surface)
 
+## Commits
+
+- `3432f08` — feat(FEAT-002): tool-roster guard test + README/packaging (TASK-032)
+
 ## Implementation Log
 
 ### Attempt 1
+
+- Wrote `ToolRosterTests.cs` per plan Task 5, Step 1 — 3 tests: count=12, all have [Description], no write verbs.
+- Confirmed all 3 roster tests pass immediately (tools already correctly implemented by TASK-030/031).
+- `McpServerToolAttribute` type name confirmed correct for ModelContextProtocol 1.4.0.
+- Created `src/CryptoExchanges.Net.Mcp/README.md` with install, env vars, MCP client config block, 12-tool reference table, read-only statement.
+- Added ~15-line "MCP server" section to repo-root `README.md`.
+- Fixed `dotnet pack` NU5039 error: Directory.Build.props sets `<PackageReadmeFile>README.md</PackageReadmeFile>` globally; added `<None Include="README.md" Pack="true" PackagePath="\">` to csproj.
+- All acceptance criteria met: build 0W/0E, 44 MCP tests pass (incl. 3 roster), pack produces `CryptoExchanges.Net.Mcp.0.1.0-preview.1.nupkg`.
+- Roster test actual tool count: **12** (6 MarketDataTools + 6 AccountTools).
 
 ## Review Results
 

@@ -1,9 +1,9 @@
 ---
 id: TASK-029
-status: PLANNED
+status: IMPLEMENTED
 depends_on: [TASK-028]
-commit:
-claimed_at:
+commit: 73cc77e
+claimed_at: 2026-06-19T00:00:00Z
 ---
 # TASK-029: Tool primitives — ToolResult envelope, input parsing, error mapping
 
@@ -17,7 +17,9 @@ claimed_at:
 - **Wave**: 2
 - **Traces to**: Approved design §Tool surface (symbol normalization) + §Error handling; Approved plan **Task 2**
 - **Created at**: 2026-06-19T04:00:00Z
-- **Claimed at**:
+- **Claimed at**: 2026-06-19T00:00:00Z
+- **Implemented at**: 2026-06-19T00:00:00Z
+- **Base SHA**: 7ba548c
 - **Implemented at**:
 - **Completed at**:
 - **Blocked at**:
@@ -80,6 +82,24 @@ adjust the test's `CreateException` helper to match; the asserted **categories a
 ## Implementation Log
 
 ### Attempt 1
+
+- Created `ToolResult.cs`: `record ToolError(string Category, string Message)` and
+  `record ToolResult<T>` with `Success`/`Failure` factory methods. Suppressed CA1000
+  (static members on generic types) — intentional factory pattern.
+- Created `ToolInputs.cs`: `TryParseExchange`, `ParseSymbol` (LR-001: guard via
+  `ArgumentException.ThrowIfNullOrWhiteSpace`), `TryParseInterval`. Fixed plan defect:
+  `Intervals` dict uses `StringComparer.Ordinal` (not OrdinalIgnoreCase) to preserve
+  the `"1m"` (OneMinute) vs `"1M"` (OneMonth) case-sensitive distinction.
+- Created `ToolRunner.cs`: `RunAsync<T>` with ordered exception arms; specific subtypes
+  precede `ExchangeApiException` base arm. Suppressed CA1031 (broad catch intentional
+  at MCP boundary).
+- Deviated from plan's `CreateException` helper: `ExchangeNotRegisteredException` takes
+  `ExchangeId` enum (not string) per its real public ctor — used `ExchangeId.Binance`.
+- Build: 0W/0E (TreatWarningsAsErrors). All 24 MCP unit tests pass; 462 total tests green.
+
+## Commits
+
+- `73cc77e` — feat(FEAT-002): tool result envelope, input parsing, error mapping (TASK-029)
 
 ## Review Results
 

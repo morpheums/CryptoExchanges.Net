@@ -1,6 +1,6 @@
 ---
 id: TASK-029
-status: IMPLEMENTED
+status: IN_PROGRESS
 depends_on: [TASK-028]
 commit: 73cc77e
 claimed_at: 2026-06-19T00:00:00Z

@@ -73,6 +73,7 @@ public class ToolPrimitivesTests
     [InlineData(typeof(ExchangeConnectivityException), "Connectivity")]
     [InlineData(typeof(FormatException), "SymbolNotSupported")]
     [InlineData(typeof(ExchangeNotRegisteredException), "ExchangeUnavailable")]
+    [InlineData(typeof(ExchangeApiException), "ExchangeError")]
     [InlineData(typeof(InvalidOperationException), "Unknown")]
     public async Task RunAsync_MapsExceptionsToCategories(Type exType, string expectedCategory)
     {
@@ -90,6 +91,7 @@ public class ToolPrimitivesTests
         _ when t == typeof(ExchangeConnectivityException) => new ExchangeConnectivityException("conn"),
         _ when t == typeof(FormatException) => new FormatException("sym"),
         _ when t == typeof(ExchangeNotRegisteredException) => new ExchangeNotRegisteredException(ExchangeId.Binance),
+        _ when t == typeof(ExchangeApiException) => new ExchangeApiException("api err"),
         _ => new InvalidOperationException("boom"),
     };
 }

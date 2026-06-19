@@ -1,240 +1,82 @@
 # CryptoExchanges.Net
 
 > **A unified .NET SDK for cryptocurrency exchanges — one interface, every exchange.**
->
-> Built for .NET 10 with Clean Architecture, SOLID principles, and modern C# features.
 
 [![NuGet](https://img.shields.io/badge/nuget-v0.2.0--preview.1-blue)](https://www.nuget.org/)
-[![License](https://img.shields.io/badge/license-Apache%202.0-green)](LICENSE)
+[![License](https://img.shields.io/badge/license-Apache--2.0-green)](LICENSE)
 [![.NET](https://img.shields.io/badge/.NET-10.0-512BD4)](https://dotnet.microsoft.com/)
 
 ---
 
-## Philosophy
+## Supported Exchanges
 
-Every crypto exchange has a different API. CryptoExchanges.Net gives you **one unified interface** across Binance, Coinbase, Bybit, and more. Write your trading logic once — run it anywhere.
+| Exchange | Status | Package |
+|----------|--------|---------|
+| <img src="docs/assets/exchanges/binance.svg" width="20"> Binance | ✅ Supported | `CryptoExchanges.Net.Binance` |
+| <img src="docs/assets/exchanges/bybit.svg" width="20"> Bybit | ✅ Supported | `CryptoExchanges.Net.Bybit` |
+| <img src="docs/assets/exchanges/okx.svg" width="20"> OKX | ✅ Supported | `CryptoExchanges.Net.Okx` |
+| <img src="docs/assets/exchanges/bitget.svg" width="20"> Bitget | ✅ Supported | `CryptoExchanges.Net.Bitget` |
+| <img src="docs/assets/exchanges/coinbase.svg" width="20"> Coinbase | 🔝 Coming soon | — |
+| <img src="docs/assets/exchanges/kraken.svg" width="20"> Kraken | 🔝 Coming soon | — |
+| <img src="docs/assets/exchanges/kucoin.svg" width="20"> KuCoin | 🔝 Coming soon | — |
 
-```csharp
-// Same code works on any exchange
-IExchangeClient exchange = BinanceExchangeClient.Create(new BinanceOptions
-{
-    ApiKey = apiKey,
-    SecretKey = secretKey
-});
-var btcusdt = new Symbol(Asset.Btc, Asset.Usdt);
-var price = await exchange.MarketData.GetPriceAsync(btcusdt);
-var order = await exchange.Trading.PlaceOrderAsync(new PlaceOrderRequest
-{
-    Symbol = btcusdt, Side = OrderSide.Buy, Type = OrderType.Limit,
-    Quantity = 0.001m, Price = price * 0.99m
-});
-```
+REST, spot market data and account — read and write.
 
-## Architecture
+---
 
-```
-┌──────────────────────────────────────────────────┐
-│                  Your Application                 │
-├──────────────────────────────────────────────────┤
-│  IExchangeClient  (unified interface)             │
-│  ├── IMarketDataService  (tickers, candles, OB)  │
-│  ├── ITradingService     (orders, positions)     │
-│  └── IAccountService     (balances, history)     │
-├──────────────────────────────────────────────────┤
-│  Binance  │  Coinbase  │  Bybit  │  ...          │  ← exchange implementations
-└──────────────────────────────────────────────────┘
-```
+## 60-Second Quick Start
 
-### Design Principles
-
-- **SOLID** — Interface segregation: market data, trading, and account are separate contracts
-- **Clean Architecture** — Core abstractions have zero dependencies on exchange implementations
-- **Modern .NET** — Primary constructors, required properties, records, `Span<T>`, collection expressions
-- **Testable** — Every service behind an interface, `IHttpClientFactory` for mockable HTTP
-- **DI-first** — First-class `IServiceCollection` integration with keyed services for multi-exchange
-
-## Quick Start
-
-### 1. Install
+### Library
 
 ```bash
 dotnet add package CryptoExchanges.Net.Binance
 ```
 
-### 2. Use directly
-
 ```csharp
 await using var exchange = BinanceExchangeClient.Create(new BinanceOptions
 {
-    ApiKey = "your-api-key",
-    SecretKey = "your-secret-key"
+    ApiKey    = "your-api-key",
+    SecretKey = "your-secret-key",
 });
 
-var btcPrice = await exchange.MarketData.GetPriceAsync(new Symbol(Asset.Btc, Asset.Usdt));
-Console.WriteLine($"BTC: ${btcPrice}");
+var price = await exchange.MarketData.GetPriceAsync(new Symbol(Asset.Btc, Asset.Usdt));
+Console.WriteLine($"BTC/USDT: ${price}");
 ```
 
-### 3. Use with ASP.NET Core DI
-
-```csharp
-// Program.cs
-builder.Services.AddCryptoExchanges(cfg =>
-{
-    cfg.BinanceApiKey = builder.Configuration["Binance:ApiKey"];
-    cfg.BinanceSecretKey = builder.Configuration["Binance:SecretKey"];
-});
-
-// appsettings.json
-{
-  "CryptoExchanges": {
-    "Binance": {
-      "ApiKey": "your-api-key",
-      "SecretKey": "your-secret-key"
-    }
-  }
-}
-
-// Inject the exchange-agnostic factory and resolve by ExchangeId
-app.MapGet("/btc", async (IExchangeClientFactory factory) =>
-{
-    var ex = factory.GetClient(ExchangeId.Binance);
-    return await ex.MarketData.GetPriceAsync(new Symbol(Asset.Btc, Asset.Usdt));
-});
-
-// ...or inject a specific exchange directly via its key
-app.MapGet("/eth", async ([FromKeyedServices(ExchangeId.Binance)] IExchangeClient ex) =>
-    await ex.MarketData.GetPriceAsync(new Symbol(Asset.Eth, Asset.Usdt)));
-```
-
-## Supported Operations
-
-### Symbols and Assets
-
-Symbols are typed — `new Symbol(Asset.Btc, Asset.Usdt)` rather than the string `"BTCUSDT"`.
-Use the built-in constants for common assets, or `Asset.Of("...")` for long-tail tickers:
-
-```csharp
-var btcusdt = new Symbol(Asset.Btc, Asset.Usdt);
-var pepeusdt = new Symbol(Asset.Of("PEPE"), Asset.Usdt); // long-tail asset
-
-// Opt-in exchange validation (lazily fetches + caches exchangeInfo)
-bool ok = await exchange.MarketData.IsSupportedAsync(btcusdt);
-Symbol? canonical = await exchange.MarketData.ResolveSymbolAsync(btcusdt);
-```
-
-### Market Data
-```csharp
-var ethusdt = new Symbol(Asset.Eth, Asset.Usdt);
-var btcusdt = new Symbol(Asset.Btc, Asset.Usdt);
-
-// Tickers
-var tickers = await exchange.MarketData.GetTickersAsync(ethusdt);
-
-// Order book
-var ob = await exchange.MarketData.GetOrderBookAsync(btcusdt, depth: 50);
-
-// Candles
-var candles = await exchange.MarketData.GetCandlesticksAsync(
-    btcusdt, KlineInterval.OneHour, limit: 24);
-
-// Latest price
-var price = await exchange.MarketData.GetPriceAsync(btcusdt);
-
-// Exchange info (trading rules, symbol details)
-var info = await exchange.MarketData.GetExchangeInfoAsync();
-```
-
-### Trading
-```csharp
-// Place order
-var btcusdt = new Symbol(Asset.Btc, Asset.Usdt);
-var order = await exchange.Trading.PlaceOrderAsync(new PlaceOrderRequest
-{
-    Symbol = btcusdt, Side = OrderSide.Buy, Type = OrderType.Limit,
-    Quantity = 0.001m, Price = 50000m
-});
-
-// Cancel order
-await exchange.Trading.CancelOrderAsync(btcusdt, order.OrderId);
-
-// Get open orders
-var open = await exchange.Trading.GetOpenOrdersAsync();
-```
-
-### Account
-```csharp
-// Balances — balance.Asset is a typed Asset (e.g. Asset.Btc)
-var balances = await exchange.Account.GetBalancesAsync();
-foreach (var balance in balances)
-    Console.WriteLine($"{balance.Asset}: {balance.Total}");
-
-// Balance for a single asset
-var btc = await exchange.Account.GetBalanceAsync(Asset.Btc);
-
-// Trade history
-var trades = await exchange.Account.GetTradeHistoryAsync(
-    new Symbol(Asset.Btc, Asset.Usdt), limit: 100);
-```
-
-## Supported Exchanges
-
-| Exchange  | Status      | Package                           |
-|-----------|-------------|-----------------------------------|
-| Binance   | ✅ Complete | `CryptoExchanges.Net.Binance`    |
-| Coinbase  | 🔜 Planned  | `CryptoExchanges.Net.Coinbase`   |
-| Bybit     | 🔜 Planned  | `CryptoExchanges.Net.Bybit`      |
-| Kraken    | 🔜 Planned  | `CryptoExchanges.Net.Kraken`     |
-| OKX       | 🔜 Planned  | `CryptoExchanges.Net.Okx`        |
-
-## Project Structure
-
-```
-CryptoExchanges.Net/
-├── src/
-│   ├── CryptoExchanges.Net.Core/              # Interfaces, models, enums
-│   ├── CryptoExchanges.Net.Binance/           # Binance implementation
-│   ├── CryptoExchanges.Net.Coinbase/          # [planned]
-│   ├── CryptoExchanges.Net.Bybit/             # [planned]
-│   └── CryptoExchanges.Net.DependencyInjection/  # DI extensions
-├── tests/
-│   └── CryptoExchanges.Net.Core.Tests/
-├── samples/
-│   └── BasicUsage/
-└── docs/                                      # [planned]
-```
-
-## Roadmap
-
-- [x] Core abstractions (interfaces, models, enums)
-- [x] Binance REST implementation
-- [x] Dependency injection integration
-- [x] Keyed services for multi-exchange
-- [ ] Coinbase implementation
-- [ ] Bybit implementation
-- [ ] WebSocket streaming support
-- [ ] MCP server wrapper
-- [ ] Rate limiting middleware
-- [ ] Caching layer
-- [ ] Audit trail (Vigilex DNA)
-
-## MCP Server (AI-Agent-Native Access)
-
-`CryptoExchanges.Net.Mcp` is a **read-only** [Model Context Protocol](https://modelcontextprotocol.io)
-stdio server — install it as a global .NET tool and point any MCP-capable agent at it:
+### MCP Server (AI agents)
 
 ```bash
 dotnet tool install -g CryptoExchanges.Net.Mcp
+claude mcp add crypto -- crypto-mcp
 ```
 
-One server, four exchanges (Binance, Bybit, OKX, Bitget), 12 read-only tools:
-six market-data tools (no credentials) and six account tools (read-scoped keys).
-All tools return the same canonical models regardless of exchange — one agent
-vocabulary works identically across all venues.
+Your MCP-capable agent can now query live prices, order books, candles, and account balances across all four exchanges.
 
-**Read-only — no order placement.** No write or trading tools exist.
+---
 
-See [`src/CryptoExchanges.Net.Mcp/README.md`](src/CryptoExchanges.Net.Mcp/README.md)
-for the MCP client config block, environment variables, and full tool reference.
+## MCP Server
+
+`CryptoExchanges.Net.Mcp` is a **read-only** [Model Context Protocol](https://modelcontextprotocol.io) stdio server.
+It exposes **12 tools** — six market-data tools (no credentials required) and six account tools (read-scoped API keys).
+All four supported exchanges share the same tool vocabulary; no agent-side changes needed when switching exchanges.
+
+- [MCP server reference](docs/mcp-server.md) — tools, environment variables, error handling
+- [MCP client setup guides](docs/mcp-clients.md) — Claude Desktop, Claude Code, Cursor, Windsurf, and more
+
+---
+
+## Documentation
+
+| Doc | Description |
+|-----|-------------|
+| [Getting started](docs/getting-started.md) | Install, credentials, first call |
+| [Library usage](docs/library-usage.md) | Full API reference with examples |
+| [Architecture](docs/architecture.md) | Project structure, layers, design principles |
+| [Exchanges](docs/exchanges.md) | Per-exchange notes, credentials, supported operations |
+| [MCP server](docs/mcp-server.md) | MCP tool reference, env vars, error categories |
+| [MCP client setup](docs/mcp-clients.md) | Per-client config (Claude, Cursor, Windsurf, VS Code…) |
+
+---
 
 ## Building
 
@@ -244,6 +86,8 @@ dotnet test
 ```
 
 Requires .NET 10.0 SDK.
+
+---
 
 ## License
 

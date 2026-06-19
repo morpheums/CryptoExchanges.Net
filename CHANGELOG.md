@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Documentation & MCP onboarding overhaul** — Comprehensive guides for library usage and MCP server integration
+  - 7 exchange SVG icons under `docs/assets/exchanges/` for visual brand consistency
+  - 4 core library docs: getting started guide, library usage patterns, architecture deep dive, per-exchange details
+  - 2 MCP integration docs: MCP server setup and configuration, MCP client integration guide
+  - Lean, navigator-friendly README rewrite (97 lines) with exchange icon table and docs index
+
 ## [0.2.0-preview.1] - 2026-06-19
 
 ### Added

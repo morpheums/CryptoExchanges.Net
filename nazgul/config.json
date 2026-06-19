@@ -2,9 +2,9 @@
   "schema_version": 11,
   "install_mode": "shared",
   "mode": "afk",
-  "objective": "Implement the read-only MCP server (CryptoExchanges.Net.Mcp): a local stdio MCP server exposing the existing REST library to LLM agents as read-only tools (6 market-data + 6 read-scoped account) across Binance/Bybit/OKX/Bitget, per docs/superpowers/specs/2026-06-19-mcp-server-readonly-v1-design.md and docs/superpowers/plans/2026-06-19-mcp-server-readonly-v1.md.",
-  "feat_id": "FEAT-002",
-  "feat_display_id": "FEAT-002",
+  "objective": "Documentation & MCP-onboarding overhaul: a lean, polished README (exchange-icon status table, 60-second quick start, links out) + a public docs/ folder (getting-started, library usage with more examples, MCP server, per-client MCP setup for major clients, exchanges, architecture) + committed exchange SVG icons. No feature roadmap in public docs (opsec).",
+  "feat_id": "FEAT-003",
+  "feat_display_id": "FEAT-003",
   "objectives_history": [
     {
       "objective": "Add three new exchange integrations to CryptoExchanges.Net in strict priority order — (1) Bybit, (2) OKX, (3) Bitget — for a global (non-US) audience. Each exchange clones the verified Binance pattern (Core → Http → Exchange → DI, DeltaMapper DTO→model, bespoke ISymbolMapper, retry-only-on-GET, per-attempt re-signing). The signing/credential abstraction is generalized after Bybit, against OKX, and Bitget then reuses that abstraction.",
@@ -19,6 +19,11 @@
       "feat_id": "FEAT-002",
       "display_id": "FEAT-002",
       "set_at": "2026-06-19T02:39:04Z"
+    },
+    {
+      "feat_id": "FEAT-003",
+      "objective": "Documentation & MCP-onboarding overhaul: a lean, polished README (exchange-icon status table, 60-second quick start, links out) + a public docs/ folder (getting-started, library usage with more examples, MCP server, per-client MCP setup for major clients, exchanges, architecture) + committed exchange SVG icons. No feature roadmap in public docs (opsec).",
+      "started_at": "2026-06-19T13:02:25Z"
     }
   ],
   "max_iterations": 40,
@@ -148,7 +153,7 @@
     }
   },
   "branch": {
-    "feature": "feat/FEAT-002-mcp-server-readonly",
+    "feature": "feat/FEAT-003-docs-overhaul",
     "base": "main",
     "main_worktree_path": "/Users/josemejia/ai-platform/personal/workspace/repos/CryptoExchanges.Net",
     "worktree_dir": null,
@@ -164,7 +169,7 @@
     "timeout_minutes": 90,
     "checkpoint_every_n_iterations": 5,
     "auto_commit": true,
-    "commit_prefix": "feat(FEAT-002):"
+    "commit_prefix": "feat(FEAT-003):"
   },
   "context": {
     "budget_strategy": "aggressive",

@@ -1,23 +1,22 @@
-# Nazgul Plan — FEAT-002
+# Nazgul Plan — FEAT-003
 
 ─── ◈ NAZGUL ▸ PLANNING ────────────────────────────────
 
 ## Objective
 
-Ship **`CryptoExchanges.Net.Mcp`** — a local (stdio) MCP server that exposes the
-existing REST library to LLM agents as **read-only** tools (6 market-data + 6
-read-scoped account) across Binance / Bybit / OKX / Bitget, using the canonical
-`Core.Models` so one agent vocabulary works identically across all venues.
+**Documentation & MCP-onboarding overhaul.** Turn the project's public-facing docs into
+a polished, pro-level experience: a lean, scannable README that links out to a new public
+`docs/` folder, a supported-exchanges status table with committed brand icons, multi-client
+MCP setup guides, and fuller usage examples.
 
-This is sub-project A of the AI-agent-native roadmap. It is a faithful execution of
-the APPROVED design + plan — no re-design:
-- Approved design: `docs/superpowers/specs/2026-06-19-mcp-server-readonly-v1-design.md`
-- Approved plan (5 tasks, exact code + TDD steps): `docs/superpowers/plans/2026-06-19-mcp-server-readonly-v1.md`
+**Objective type**: Documentation / polish — **NO production source or behavior changes.**
+
+Authoritative spec: `nazgul/context/objectives/FEAT-003-spec.md` (read it fully before any task).
 
 ## Branch
 
 - **Base**: `main`
-- **Feature**: `feat/FEAT-002-mcp-server-readonly` (already created)
+- **Feature**: `feat/FEAT-003-docs-overhaul` (to be created)
 - Ship as one squash-merge PR to protected `main`.
 
 ## Discovery Status
@@ -26,108 +25,116 @@ REUSE existing discovery — do NOT re-run.
 - Discovery last run: 2026-06-17 (`nazgul/context/`, 83 files scanned).
 - Reviewers (4, existing — do NOT regenerate): `architect-reviewer`, `code-reviewer`,
   `security-reviewer`, `api-reviewer`.
-- Classification: BROWNFIELD (HIGH confidence). This adds a new console-host project
-  on top of the verified Core → Http → Exchange → DI architecture; no Core changes.
+- Classification: BROWNFIELD (HIGH confidence). This objective is docs-only on top of the
+  shipped Core → Http → Exchange → DI library + the read-only MCP server.
+
+## Shipped State (docs MUST stay accurate to this)
+
+- **4 supported exchanges**: Binance, Bybit, OKX, Bitget (REST-only).
+- **3 coming-soon exchanges** (in the `ExchangeId` enum, not yet implemented): Coinbase, Kraken, KuCoin.
+- **MCP**: read-only stdio server, tool command `crypto-mcp`, **12 tools** (6 market-data + 6 account).
+- **License**: Apache-2.0. **Version**: v0.2.0-preview.1.
 
 ## Hard Constraints (recorded for implementer + reviewers)
 
-- **Target**: `net10.0` single-target (inherited from `Directory.Build.props`).
-- **Build hygiene (inherited)**: `TreatWarningsAsErrors=true`, `AnalysisLevel=latest-all`,
-  `Nullable=enable`, `ImplicitUsings=enable`. Build MUST stay **0 warnings / 0 errors**.
-- **Doc-gen**: the MCP project sets `<GenerateDocumentationFile>false</GenerateDocumentationFile>`
-  (it is an app/tool, not a documented library API — avoids CS1591 on public tool types
-  under warnings-as-errors). Tool/param docs are carried by `[Description]` attributes.
-- **READ-ONLY is structural**: only market-data + read-scoped account tools exist. **No**
-  order-placement/cancel tool is written anywhere. TASK-032 adds a reflection guard test
-  asserting **exactly 12 tools** and **zero write-named tools**.
-- **Reuse existing libraries** via `IExchangeClientFactory` + `AddCryptoExchanges`. **No new
-  exchange logic, no Core changes** — the MCP layer is a thin facade over existing
-  `IExchangeClient` reads.
-- **Tools are static methods** taking `IExchangeClientFactory` as a **method parameter**
-  (SDK service injection) and returning `Task<ToolResult<T>>`.
-- **Nothing throws across the MCP boundary**: every tool returns `ToolResult<T>`; failures
-  become structured `ToolError` (categories: AuthRequired, RateLimited, ExchangeUnavailable,
-  Connectivity, SymbolNotSupported, ExchangeError, BadInterval, Unknown).
-- **Keys are local only**: read from env vars in `Program.cs`; never logged. Logging goes to
-  **stderr** (stdout is the MCP channel).
-- **Existing suite stays green**: the current **455 tests** must still pass; new tests are
-  added in `tests/CryptoExchanges.Net.Mcp.Tests.Unit`.
-- **SDK version verification (TASK-028 FIRST step)**: confirm the latest `ModelContextProtocol`
-  package version with `dotnet add ... package ModelContextProtocol --prerelease` and pin
-  whatever it resolves to before writing tool code (the plan's `0.4.0-preview.1` is a
-  placeholder to reconcile). Same for `Microsoft.Extensions.Hosting` (latest stable resolved).
-- **Out of scope**: writes, WebSockets, hosted/HTTP transport, multi-tenant key custody,
-  commercial gateway, and the **AGPL relicense** (that is a SEPARATE PR — do not change
-  license metadata here).
-- **Build / test commands** (repo root):
-  - `dotnet build CryptoExchanges.Net.sln -c Release`
-  - `dotnet test tests/CryptoExchanges.Net.Mcp.Tests.Unit/CryptoExchanges.Net.Mcp.Tests.Unit.csproj -c Release`
+- **Docs-only.** No `.cs`/`.csproj`/source edits anywhere. `dotnet build` / `dotnet test`
+  must remain green and **unchanged** (nothing in `src/` or `tests/` is touched, except the
+  existing `src/CryptoExchanges.Net.Mcp/README.md` may be linked/reused but NOT rewritten — reuse, don't duplicate).
+- **No feature-roadmap / strategy leakage** (opsec). Do NOT mention WebSockets, a gateway,
+  AI/agent positioning, monetization, or competitive analysis in ANY public artifact.
+  "Coming soon" applies to **exchanges only** (Coinbase/Kraken/KuCoin).
+- **Public `docs/`** is distinct from the gitignored `docs/superpowers/`. New files go directly
+  under `docs/` and `docs/assets/exchanges/`.
+- **Reuse, don't duplicate** the existing `src/CryptoExchanges.Net.Mcp/README.md` (already documents
+  the 12 tools, env vars, error categories) — link to / mirror it, don't fork its content.
+- **Verify per-client MCP config formats** against each client's CURRENT docs before publishing
+  (formats differ per client and change over time).
+- **Curated SVG icon set required**: simple-icons lacks Bybit/Bitget/Kraken, so a committed,
+  consistent, small SVG set for all 7 exchanges is mandatory, with a short attribution note.
+- **Renders cleanly on GitHub**: all internal links resolve; icons display.
 
 ## Status Summary
 
-| Task     | Status  | Wave | Description                                          |
-|----------|---------|------|------------------------------------------------------|
-| TASK-028 | ✦ DONE | 1    | Project scaffold + host wiring + env→options binder  |
-| TASK-029 | ✦ DONE | 2    | Tool primitives (ToolResult, ToolInputs, ToolRunner) |
-| TASK-030 | ✦ DONE | 3  | Market-data tools (6, no keys)                    |
-| TASK-031 | ✦ DONE | 3  | Account tools (6, read-scoped keys)                  |
-| TASK-032 | ✦ DONE | 4  | Tool-roster guard test + README/packaging            |
+| Task     | Status   | Wave | Description                                                        |
+|----------|----------|------|--------------------------------------------------------------------|
+| TASK-036 | ✦ DONE   | 1    | Exchange brand SVG assets (7) under `docs/assets/exchanges/`       |
+| TASK-037 | ✦ DONE   | 1    | Core library docs (getting-started, library-usage, architecture, exchanges) |
+| TASK-038 | ✦ DONE   | 1    | MCP docs (mcp-server.md + mcp-clients.md, major clients)           |
+| TASK-039 | ✦ DONE   | 2    | README rewrite (lean) — links into docs/, uses icons, status table |
 
-Tasks: 5/5 DONE
+Tasks: 4/4 DONE
 
 ## Wave Groups
 
 The loop orchestrator reads this section to determine parallel execution order.
 
 ### Wave 1
-- TASK-028 (no dependencies — creates the MCP + test projects and host wiring)
+- **TASK-036**, **TASK-037**, **TASK-038** — all independent (no dependencies) and file-disjoint:
+  - TASK-036 → only `docs/assets/exchanges/*.svg` (+ attribution note). ✦ DONE
+  - TASK-037 → only `docs/getting-started.md`, `docs/library-usage.md`, `docs/architecture.md`, `docs/exchanges.md`. ✦ DONE
+  - TASK-038 → only `docs/mcp-server.md`, `docs/mcp-clients.md`. ✦ DONE
+  - No shared files → safe to run in parallel.
 
 ### Wave 2
-- TASK-029 (depends on TASK-028; adds tool primitives to `src/CryptoExchanges.Net.Mcp/`)
-
-### Wave 3
-- TASK-030, TASK-031 (both depend on TASK-029; independent of each other — disjoint files:
-  TASK-030 touches `Tools/MarketDataTools.cs` + its test, TASK-031 touches
-  `Tools/AccountTools.cs` + its test; no overlap, so they run in parallel)
-
-### Wave 4
-- TASK-032 (depends on TASK-030 AND TASK-031 — the roster guard test asserts the 12-tool
-  surface produced by both, plus README/packaging)
+- **TASK-039** — README rewrite. Depends on TASK-036 (icons), TASK-037 (core docs to link),
+  and TASK-038 (MCP docs to link). Modifies only repo-root `README.md`. ✦ DONE
 
 ## Dependency Order
 
 ```
-TASK-028  ──►  TASK-029  ──►  TASK-030  ──┐
-                          └─►  TASK-031  ──┴──►  TASK-032
+TASK-036 ──┐
+TASK-037 ──┼──►  TASK-039
+TASK-038 ──┘
 ```
 
 ## PRD Traceability
 
-No formal PRD/TRD/ADR document set was generated for FEAT-002. The authoritative
-acceptance source is the APPROVED design + plan. Each task's `Traces to` field points to
-the specific section of those documents it fulfills. Coverage check (from the plan author's
-self-review, re-verified): host/scaffold → TASK-028; tool primitives + error mapping →
-TASK-029; 6 market-data tools → TASK-030; 6 account tools + AuthRequired → TASK-031;
-read-only-structural guard + packaging/README → TASK-032. No design requirement is left
-unmapped; writes/WebSockets/hosted-transport are correctly absent.
+No formal PRD/TRD/ADR document set was generated for FEAT-003. The authoritative acceptance
+source is the spec (`nazgul/context/objectives/FEAT-003-spec.md`). Each task's `Traces to`
+field points to the specific spec section it fulfills. Coverage check:
+
+- Spec §Scope-In "Assets" / curated SVG set → **TASK-036** ✦ DONE.
+- Spec §Scope-In "New public docs/ folder" (getting-started, library-usage, architecture, exchanges) → **TASK-037** ✦ DONE.
+- Spec §Scope-In "mcp-server.md" + "mcp-clients.md" (major clients) → **TASK-038** ✦ DONE.
+- Spec §Scope-In "Lean README" (tagline+badges, 60s quick-start, exchange status table, MCP blurb, links into docs/) → **TASK-039** ✦ DONE.
+
+Objective-level acceptance (verified across the task set):
+- Renders cleanly on GitHub; all internal links resolve; exchange icons display for all 7 → TASK-036 (icons) + TASK-039 (table) + TASK-037/038 (link targets). ✦ DONE
+- README visibly leaner; accurate to shipped state; **no roadmap/strategy leakage** → TASK-039 (+ all tasks bound by the opsec constraint). ✦ DONE
+- Per-client MCP configs correct and copy-pasteable → TASK-038. ✦ DONE
+- Docs-only: build/test still green; no source edits → all tasks (Blast radius: docs only). ✦ DONE
+
+Every spec scope item maps to at least one task; nothing in Scope-Out (roadmap, source changes,
+docs-site generator, WebSockets) is planned.
 
 ## Completed
 
-- TASK-028 (Wave 1) — scaffold + host wiring. DONE.
-- TASK-029 (Wave 2) — tool primitives (ToolResult/ToolInputs/ToolRunner). DONE. Completion SHA: 66039b1.
-- TASK-030 (Wave 3) — 6 read-only market-data tools. DONE (review board PASS; fix-first added 8h/3d intervals). Completion SHA: 290869b.
-- TASK-031 (Wave 3) — 6 read-only account tools. DONE (review board PASS, cycle 2 — all 4 reviewers APPROVED). Completion SHA: 2de728c.
-- TASK-032 (Wave 4) — tool-roster guard test + README/packaging. DONE (review board PASS, cycle 1 — all 4 reviewers APPROVED). Implementation SHA: 3432f08.
+- **TASK-036** — Exchange brand SVG assets. All 4 reviewers APPROVED. Auto-fix applied (path
+  letterforms for GitHub-safe placeholder monograms; Bitget letter corrected; B/B disambiguation
+  by background shade). Commit: c8a4335 + review-gate commit.
+- **TASK-037** — Core library docs. All 4 reviewers ran; CHANGES_REQUESTED for 6 auto-fixable
+  doc text errors (wrong field names, CS0128 duplicate var, broken link, layer diagram). Auto-fix
+  applied by review-gate. Commit: 7deb9c0 + review-gate fix commit.
+- **TASK-038** — MCP docs (mcp-server.md + mcp-clients.md, 8 clients). All 4 reviewers APPROVED
+  (architect 9, code 10, security 10, api 9). Simplifier ran (prose-only, 9a2f291). Review-gate
+  auto-fixed 3 trivial doc errors: "24 h"→"24h", Claude Code `--env` moved before `--` separator
+  (verified vs `claude mcp add --help`), added .NET SDK prerequisite cross-link. Build green.
+  Commits: e588512 + 9a2f291 + review-gate auto-fix/DONE commit.
+- **TASK-039** — README rewrite (lean). All 4 reviewers APPROVED (architect 9.5, code 10,
+  security 10, api 9.5). Simplifier removed 3 redundant phrases. No blocking findings.
+  Build green (0 errors). Tests: 50/50. Commits: 6030fa2 + c976e7d + review-gate DONE commit.
 
 ## Recovery Pointer
 
-- **Current stage**: ALL 5 TASKS DONE. Post-loop phase next (post-loop simplify → PR).
-- **Next action**: Post-loop simplify pass + create PR for feat/FEAT-002-mcp-server-readonly → main.
-- **Active task**: none — all tasks DONE.
-- **Files are truth**: task manifests in `nazgul/tasks/TASK-028..032.md` carry full state;
+- **Current stage**: NAZGUL_COMPLETE — all tasks DONE, post-loop done, PR open & green.
+- **Next action**: Human merge of PR #21 into `main` (protected branch).
+- **Active task**: none (all complete).
+- **Post-loop**: CHANGELOG `[Unreleased]` entry added (commit eb4dc4b); no version bump
+  needed for docs-only objective. PR #21 open, MERGEABLE, CI Build & Test SUCCESS,
+  CodeRabbit SUCCESS. All internal doc links verified resolving; 7 exchange icons present.
+- **Files are truth**: task manifests in `nazgul/tasks/TASK-036..039.md` carry full state;
   frontmatter `status:` is canonical.
 
 ─── ◈ NEXT ─────────────────────────────────────────────
-  All 5 tasks DONE — post-loop phase (simplify + PR)
-  /nazgul:start to trigger post-loop
+  NAZGUL_COMPLETE. PR #21 → main is open and green. Awaiting human merge.
 ────────────────────────────────────────────────────────

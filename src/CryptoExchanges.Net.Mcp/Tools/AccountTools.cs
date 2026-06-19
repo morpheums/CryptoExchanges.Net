@@ -79,6 +79,8 @@ public static class AccountTools
         ArgumentNullException.ThrowIfNull(factory);
         ArgumentException.ThrowIfNullOrWhiteSpace(exchange);
         ArgumentException.ThrowIfNullOrWhiteSpace(symbol);
+        if (limit < 1)
+            return Task.FromResult(ToolResult<IReadOnlyList<Order>>.Failure(BadCount("limit")));
         return Resolve(factory, exchange, symbol, (c, s, ct) => c.Trading.GetOrderHistoryAsync(s, limit, null, null, ct));
     }
 
@@ -92,6 +94,8 @@ public static class AccountTools
         ArgumentNullException.ThrowIfNull(factory);
         ArgumentException.ThrowIfNullOrWhiteSpace(exchange);
         ArgumentException.ThrowIfNullOrWhiteSpace(symbol);
+        if (limit < 1)
+            return Task.FromResult(ToolResult<IReadOnlyList<Trade>>.Failure(BadCount("limit")));
         return Resolve(factory, exchange, symbol, (c, s, ct) => c.Account.GetTradeHistoryAsync(s, limit, null, null, ct));
     }
 
@@ -121,4 +125,7 @@ public static class AccountTools
 
     private static ToolError Unavailable(string exchange) =>
         new("ExchangeUnavailable", $"Exchange '{exchange}' is not one of: binance, bybit, okx, bitget.");
+
+    private static ToolError BadCount(string name) =>
+        new("BadRequest", $"{name} must be >= 1.");
 }

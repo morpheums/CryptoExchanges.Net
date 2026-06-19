@@ -153,4 +153,22 @@ public class AccountToolsTests
 
         result.Ok.Should().BeTrue();
     }
+
+    [Fact]
+    public async Task GetOrderHistory_NonPositiveLimit_ReturnsBadRequest()
+    {
+        var factory = Substitute.For<IExchangeClientFactory>();
+        var result = await AccountTools.GetOrderHistory(factory, "binance", "BTC/USDT", 0);
+        result.Ok.Should().BeFalse();
+        result.Error!.Category.Should().Be("BadRequest");
+    }
+
+    [Fact]
+    public async Task GetTradeHistory_NonPositiveLimit_ReturnsBadRequest()
+    {
+        var factory = Substitute.For<IExchangeClientFactory>();
+        var result = await AccountTools.GetTradeHistory(factory, "binance", "BTC/USDT", -1);
+        result.Ok.Should().BeFalse();
+        result.Error!.Category.Should().Be("BadRequest");
+    }
 }

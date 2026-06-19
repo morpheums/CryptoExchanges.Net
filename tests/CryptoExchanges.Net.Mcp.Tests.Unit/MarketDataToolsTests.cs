@@ -62,6 +62,35 @@ public class MarketDataToolsTests
     }
 
     [Theory]
+    [InlineData(0)]
+    [InlineData(-5)]
+    public async Task GetOrderBook_NonPositiveDepth_ReturnsBadRequest(int depth)
+    {
+        var factory = Substitute.For<IExchangeClientFactory>();
+        var result = await MarketDataTools.GetOrderBook(factory, "binance", "BTC/USDT", depth);
+        result.Ok.Should().BeFalse();
+        result.Error!.Category.Should().Be("BadRequest");
+    }
+
+    [Fact]
+    public async Task GetRecentTrades_NonPositiveLimit_ReturnsBadRequest()
+    {
+        var factory = Substitute.For<IExchangeClientFactory>();
+        var result = await MarketDataTools.GetRecentTrades(factory, "binance", "BTC/USDT", 0);
+        result.Ok.Should().BeFalse();
+        result.Error!.Category.Should().Be("BadRequest");
+    }
+
+    [Fact]
+    public async Task GetKlines_NonPositiveLimit_ReturnsBadRequest()
+    {
+        var factory = Substitute.For<IExchangeClientFactory>();
+        var result = await MarketDataTools.GetKlines(factory, "binance", "BTC/USDT", "1h", 0);
+        result.Ok.Should().BeFalse();
+        result.Error!.Category.Should().Be("BadRequest");
+    }
+
+    [Theory]
     [InlineData("8h", KlineInterval.EightHours)]
     [InlineData("3d", KlineInterval.ThreeDays)]
     public async Task GetKlines_SupportsAllCoreIntervals(string interval, KlineInterval expected)

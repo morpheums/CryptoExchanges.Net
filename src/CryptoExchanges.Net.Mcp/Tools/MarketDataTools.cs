@@ -51,6 +51,8 @@ public static class MarketDataTools
         ArgumentNullException.ThrowIfNull(factory);
         ArgumentException.ThrowIfNullOrWhiteSpace(exchange);
         ArgumentException.ThrowIfNullOrWhiteSpace(symbol);
+        if (depth < 1)
+            return Task.FromResult(ToolResult<OrderBook>.Failure(BadCount("depth")));
         return Resolve(factory, exchange, symbol, (c, s, ct) => c.MarketData.GetOrderBookAsync(s, depth, ct));
     }
 
@@ -66,6 +68,8 @@ public static class MarketDataTools
         ArgumentException.ThrowIfNullOrWhiteSpace(exchange);
         ArgumentException.ThrowIfNullOrWhiteSpace(symbol);
         ArgumentException.ThrowIfNullOrWhiteSpace(interval);
+        if (limit < 1)
+            return Task.FromResult(ToolResult<IReadOnlyList<Candlestick>>.Failure(BadCount("limit")));
         if (!ToolInputs.TryParseExchange(exchange, out var id) || !factory.TryGet(id, out var client))
             return Task.FromResult(ToolResult<IReadOnlyList<Candlestick>>.Failure(Unavailable(exchange)));
         if (!ToolInputs.TryParseInterval(interval, out var iv))
@@ -88,6 +92,8 @@ public static class MarketDataTools
         ArgumentNullException.ThrowIfNull(factory);
         ArgumentException.ThrowIfNullOrWhiteSpace(exchange);
         ArgumentException.ThrowIfNullOrWhiteSpace(symbol);
+        if (limit < 1)
+            return Task.FromResult(ToolResult<IReadOnlyList<Trade>>.Failure(BadCount("limit")));
         return Resolve(factory, exchange, symbol, (c, s, ct) => c.MarketData.GetRecentTradesAsync(s, limit, ct));
     }
 
@@ -119,4 +125,7 @@ public static class MarketDataTools
 
     private static ToolError Unavailable(string exchange) =>
         new("ExchangeUnavailable", $"Exchange '{exchange}' is not one of: binance, bybit, okx, bitget.");
+
+    private static ToolError BadCount(string name) =>
+        new("BadRequest", $"{name} must be >= 1.");
 }

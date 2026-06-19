@@ -30,15 +30,14 @@ public static class AccountTools
     {
         ArgumentNullException.ThrowIfNull(factory);
         ArgumentException.ThrowIfNullOrWhiteSpace(exchange);
-        // asset is intentionally NOT guarded here — an empty/whitespace asset is a valid
-        // user error that we surface as a structured ToolError rather than an ArgumentException.
+        // empty/whitespace asset → structured ToolError, not ArgumentException.
         if (!ToolInputs.TryParseExchange(exchange, out var id) || !factory.TryGet(id, out var client))
             return Task.FromResult(ToolResult<AssetBalance>.Failure(Unavailable(exchange)));
         return ToolRunner.RunAsync(() =>
         {
             if (!Asset.TryOf(asset, out var a))
                 throw new FormatException($"Unknown asset '{asset}'.");
-            return client!.Account.GetBalanceAsync(a, default);
+            return client.Account.GetBalanceAsync(a, default);
         });
     }
 
@@ -50,12 +49,10 @@ public static class AccountTools
     {
         ArgumentNullException.ThrowIfNull(factory);
         ArgumentException.ThrowIfNullOrWhiteSpace(exchange);
-        if (!ToolInputs.TryParseExchange(exchange, out var id) || !factory.TryGet(id, out var client))
-            return Task.FromResult(ToolResult<IReadOnlyList<Order>>.Failure(Unavailable(exchange)));
-        return ToolRunner.RunAsync(() =>
+        return Run(factory, exchange, (c, ct) =>
         {
             Symbol? s = symbol is null ? null : ToolInputs.ParseSymbol(symbol);
-            return client!.Trading.GetOpenOrdersAsync(s, default);
+            return c.Trading.GetOpenOrdersAsync(s, ct);
         });
     }
 
@@ -70,13 +67,7 @@ public static class AccountTools
         ArgumentException.ThrowIfNullOrWhiteSpace(exchange);
         ArgumentException.ThrowIfNullOrWhiteSpace(symbol);
         ArgumentException.ThrowIfNullOrWhiteSpace(orderId);
-        if (!ToolInputs.TryParseExchange(exchange, out var id) || !factory.TryGet(id, out var client))
-            return Task.FromResult(ToolResult<Order>.Failure(Unavailable(exchange)));
-        return ToolRunner.RunAsync(() =>
-        {
-            var s = ToolInputs.ParseSymbol(symbol);
-            return client!.Trading.GetOrderAsync(s, orderId, default);
-        });
+        return Resolve(factory, exchange, symbol, (c, s, ct) => c.Trading.GetOrderAsync(s, orderId, ct));
     }
 
     [McpServerTool, Description("Historical orders for a pair. Requires API credentials.")]
@@ -89,13 +80,7 @@ public static class AccountTools
         ArgumentNullException.ThrowIfNull(factory);
         ArgumentException.ThrowIfNullOrWhiteSpace(exchange);
         ArgumentException.ThrowIfNullOrWhiteSpace(symbol);
-        if (!ToolInputs.TryParseExchange(exchange, out var id) || !factory.TryGet(id, out var client))
-            return Task.FromResult(ToolResult<IReadOnlyList<Order>>.Failure(Unavailable(exchange)));
-        return ToolRunner.RunAsync(() =>
-        {
-            var s = ToolInputs.ParseSymbol(symbol);
-            return client!.Trading.GetOrderHistoryAsync(s, limit, null, null, default);
-        });
+        return Resolve(factory, exchange, symbol, (c, s, ct) => c.Trading.GetOrderHistoryAsync(s, limit, null, null, ct));
     }
 
     [McpServerTool, Description("The account's own executed trades for a pair. Requires API credentials.")]
@@ -108,13 +93,7 @@ public static class AccountTools
         ArgumentNullException.ThrowIfNull(factory);
         ArgumentException.ThrowIfNullOrWhiteSpace(exchange);
         ArgumentException.ThrowIfNullOrWhiteSpace(symbol);
-        if (!ToolInputs.TryParseExchange(exchange, out var id) || !factory.TryGet(id, out var client))
-            return Task.FromResult(ToolResult<IReadOnlyList<Trade>>.Failure(Unavailable(exchange)));
-        return ToolRunner.RunAsync(() =>
-        {
-            var s = ToolInputs.ParseSymbol(symbol);
-            return client!.Account.GetTradeHistoryAsync(s, limit, null, null, default);
-        });
+        return Resolve(factory, exchange, symbol, (c, s, ct) => c.Account.GetTradeHistoryAsync(s, limit, null, null, ct));
     }
 
     // Shared path for tools that only need exchange resolution (no symbol parsing).
@@ -124,7 +103,21 @@ public static class AccountTools
     {
         if (!ToolInputs.TryParseExchange(exchange, out var id) || !factory.TryGet(id, out var client))
             return Task.FromResult(ToolResult<T>.Failure(Unavailable(exchange)));
-        return ToolRunner.RunAsync(() => call(client!, default));
+        return ToolRunner.RunAsync(() => call(client, default));
+    }
+
+    // Shared path for tools that require symbol parsing.
+    private static Task<ToolResult<T>> Resolve<T>(
+        IExchangeClientFactory factory, string exchange, string symbol,
+        Func<IExchangeClient, Symbol, CancellationToken, Task<T>> call)
+    {
+        if (!ToolInputs.TryParseExchange(exchange, out var id) || !factory.TryGet(id, out var client))
+            return Task.FromResult(ToolResult<T>.Failure(Unavailable(exchange)));
+        return ToolRunner.RunAsync(() =>
+        {
+            var s = ToolInputs.ParseSymbol(symbol);
+            return call(client, s, default);
+        });
     }
 
     private static ToolError Unavailable(string exchange) =>

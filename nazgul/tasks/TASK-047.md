@@ -1,6 +1,6 @@
 ---
 id: TASK-047
-status: PLANNED
+status: IN_PROGRESS
 depends_on: [TASK-046]
 ---
 # TASK-047: Wire the 4 public subscribe methods end-to-end + live integration smoke + docs note
@@ -15,7 +15,8 @@ depends_on: [TASK-046]
 - **Wave**: 6
 - **Traces to**: FEAT-005 spec §Success criteria (live delivery + reconnect/resubscribe verified); design §"Build approach" + §"Testing" (live smoke self-skips); DECISION-STREAMING-SHARED §1 (optional thin `CreateStreams` glue)
 - **Created at**: 2026-06-19T17:20:00Z
-- **Claimed at**:
+- **Claimed at**: 2026-06-19T00:00:00Z
+- **Base SHA**: 358a8d8
 - **Implemented at**:
 - **Completed at**:
 - **Blocked at**:

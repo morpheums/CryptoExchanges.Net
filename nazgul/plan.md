@@ -82,7 +82,7 @@ REUSE existing discovery — do NOT re-run.
 | TASK-044 | ✦ DONE    | 3    | Http reconnecting byte-engine (pump/route/backoff/replay/heartbeat/channels)|
 | TASK-045 | ◆ IMPL    | 4    | Generic `StreamClient` + `StreamClientFactory` + `AddStreams<TOptions>`      |
 | TASK-046 | ✦ IMPL    | 5    | Exchange-#1 package: protocol + 4 decode closures + options + `Add…Streams` |
-| TASK-047 | ◇ PLANNED | 6    | Wire 4 public subscribe methods end-to-end + live integration smoke + docs  |
+| TASK-047 | ◆ IN_PROG | 6    | Wire 4 public subscribe methods end-to-end + live integration smoke + docs  |
 
 Tasks: 3/6 DONE — TASK-042 DONE, TASK-043 DONE, TASK-044 DONE, TASK-045 IMPLEMENTED (906c568), TASK-046 IMPLEMENTED (27169ea), TASK-047 PLANNED.
 
@@ -162,9 +162,9 @@ other exchanges, `IAsyncEnumerable`, System.Reactive) is planned.
 
 ## Recovery Pointer
 
-- **Current stage**: TASK-045 IMPLEMENTED (906c568) — awaiting review gate.
-- **Next action**: Review gate for TASK-045; if APPROVED claim TASK-046.
-- **Active task**: TASK-045 (IMPLEMENTED — commit 906c568)
+- **Current stage**: TASK-047 IN_PROGRESS — implementing DI test + integration smoke + docs.
+- **Next action**: Implement, run tests, build 0W/0E, set IMPLEMENTED.
+- **Active task**: TASK-047 (IN_PROGRESS — base 358a8d8)
 - **Files are truth**: task manifests in `nazgul/tasks/TASK-042..047.md` carry full state;
   frontmatter `status:` is canonical.
 

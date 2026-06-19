@@ -71,6 +71,7 @@ All four supported exchanges share the same tool vocabulary; no agent-side chang
 |-----|-------------|
 | [Getting started](docs/getting-started.md) | Install, credentials, first call |
 | [Library usage](docs/library-usage.md) | Full API reference with examples |
+| [Streaming](docs/streaming.md) | WebSocket market-data streams, `IStreamClient`, auto-reconnect |
 | [Architecture](docs/architecture.md) | Project structure, layers, design principles |
 | [Exchanges](docs/exchanges.md) | Per-exchange notes, credentials, supported operations |
 | [MCP server](docs/mcp-server.md) | MCP tool reference, env vars, error categories |

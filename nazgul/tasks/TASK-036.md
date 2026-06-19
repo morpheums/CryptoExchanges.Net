@@ -1,8 +1,8 @@
 ---
 id: TASK-036
-status: IN_PROGRESS
+status: IMPLEMENTED
 depends_on: []
-commit:
+commit: c8a4335
 claimed_at: 2026-06-19T14:00:00Z
 ---
 # TASK-036: Exchange brand SVG assets (7) under docs/assets/exchanges/
@@ -18,7 +18,7 @@ claimed_at: 2026-06-19T14:00:00Z
 - **Traces to**: FEAT-003 spec §Scope-In "Assets" (`docs/assets/exchanges/*.svg`, curated set for all 7, kept small + consistent)
 - **Created at**: 2026-06-19T13:10:00Z
 - **Claimed at**: 2026-06-19T14:00:00Z
-- **Implemented at**:
+- **Implemented at**: 2026-06-19T14:20:00Z
 - **Completed at**:
 - **Blocked at**:
 - **Retry count**: 0/3
@@ -93,6 +93,10 @@ This is a no-dependency task (Wave 1) and is file-disjoint from TASK-037/TASK-03
 - Created `ATTRIBUTION.md` distinguishing official (CC0 from Simple Icons) vs placeholder files.
 - All 7 SVGs validated as well-formed XML (python3 xml.etree.ElementTree).
 - No source files touched; build/test unaffected.
+
+## Commits
+
+- `c8a4335` — feat(FEAT-003): add exchange SVG icon set (TASK-036)
 
 ## Review Results
 

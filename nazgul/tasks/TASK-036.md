@@ -1,6 +1,6 @@
 ---
 id: TASK-036
-status: IMPLEMENTED
+status: DONE
 depends_on: []
 commit: c8a4335
 claimed_at: 2026-06-19T14:00:00Z
@@ -19,7 +19,7 @@ claimed_at: 2026-06-19T14:00:00Z
 - **Created at**: 2026-06-19T13:10:00Z
 - **Claimed at**: 2026-06-19T14:00:00Z
 - **Implemented at**: 2026-06-19T14:20:00Z
-- **Completed at**:
+- **Completed at**: 2026-06-19T15:30:00Z
 - **Blocked at**:
 - **Retry count**: 0/3
 - **Test failures**: 0
@@ -51,9 +51,9 @@ These icons back the README supported-exchanges status table (TASK-039) and the 
 This is a no-dependency task (Wave 1) and is file-disjoint from TASK-037/TASK-038.
 
 ## Acceptance Criteria
-- [ ] All 7 SVGs exist at `docs/assets/exchanges/{binance,bybit,okx,bitget,coinbase,kraken,kucoin}.svg`, each small/optimized (no rasters/scripts) and visually consistent (comparable sizing).
-- [ ] `docs/assets/exchanges/ATTRIBUTION.md` records each logo's source + trademark/usage basis.
-- [ ] All 7 SVGs render correctly on GitHub at table-icon size (no broken/oversized renders); docs-only — `dotnet build`/`dotnet test` unaffected.
+- [x] All 7 SVGs exist at `docs/assets/exchanges/{binance,bybit,okx,bitget,coinbase,kraken,kucoin}.svg`, each small/optimized (no rasters/scripts) and visually consistent (comparable sizing).
+- [x] `docs/assets/exchanges/ATTRIBUTION.md` records each logo's source + trademark/usage basis.
+- [x] All 7 SVGs render correctly on GitHub at table-icon size (no broken/oversized renders); docs-only — `dotnet build`/`dotnet test` unaffected.
 
 ## Pattern Reference
 - No existing in-repo asset pattern (first asset set). Match the file-naming convention to the
@@ -94,6 +94,16 @@ This is a no-dependency task (Wave 1) and is file-disjoint from TASK-037/TASK-03
 - All 7 SVGs validated as well-formed XML (python3 xml.etree.ElementTree).
 - No source files touched; build/test unaffected.
 
+### Auto-fix (review gate)
+
+- Replaced `<text>` elements in bybit/bitget/kraken with `<path>` geometry letterforms (GitHub
+  SVG sanitizer strips `<text>` — renders as identical black squares without the fix).
+- Fixed bitget.svg: letter corrected from `G` to `B` (first initial of "Bitget").
+- Differentiated Bybit vs Bitget by background fill: Bybit `#1a1a1a` (near-black), Bitget `#444444` (dark grey).
+- Updated `ATTRIBUTION.md` to document path-vs-text rationale and B/B shade disambiguation.
+- Re-validated: all 7 SVGs pass XML parse, no `<text>` elements remain, `viewBox="0 0 24 24"` and
+  `xmlns` preserved. Build 0 errors, 354+ unit tests pass.
+
 ## Commits
 
 - `c8a4335` — feat(FEAT-003): add exchange SVG icon set (TASK-036)
@@ -101,3 +111,10 @@ This is a no-dependency task (Wave 1) and is file-disjoint from TASK-037/TASK-03
 ## Review Results
 
 ### Attempt 1
+
+| Reviewer           | Verdict  | Notes                                                         |
+|--------------------|----------|---------------------------------------------------------------|
+| architect-reviewer | APPROVED | All structural/naming checks pass; 2 LOW non-blocking concerns |
+| code-reviewer      | APPROVED | Blocking findings (text elements, wrong letter) fixed by auto-fix |
+| security-reviewer  | APPROVED | No scripts/external refs/event handlers/foreignObject; CC0 verified |
+| api-reviewer       | APPROVED | No public API surface changes; file scope matches manifest    |

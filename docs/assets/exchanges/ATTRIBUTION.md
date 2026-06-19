@@ -31,6 +31,11 @@ is committed here to keep the icon table visually consistent.
 | `bitget.svg` | Bitget | Not in Simple Icons | Official SVG from Bitget brand kit once license confirmed |
 | `kraken.svg` | Kraken | Not in Simple Icons | Official SVG from Kraken brand kit once license confirmed |
 
+Each monogram uses the first initial of the exchange name rendered as an SVG
+`<path>` (no `<text>` elements — those are stripped by GitHub's SVG sanitizer).
+Bybit and Bitget both have the initial `B`; they are distinguished by background
+shade (Bybit: near-black `#1a1a1a`, Bitget: dark-grey `#444444`).
+
 These placeholder files do **not** reproduce or approximate any registered
 trademark. They are geometric monograms created from scratch. Replace them
 with official brand assets before any production publishing that requires

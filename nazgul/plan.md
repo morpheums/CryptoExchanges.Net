@@ -57,12 +57,12 @@ REUSE existing discovery — do NOT re-run.
 
 | Task     | Status   | Wave | Description                                                        |
 |----------|----------|------|--------------------------------------------------------------------|
-| TASK-036 | ✦ IMPLEMENTED | 1 | Exchange brand SVG assets (7) under `docs/assets/exchanges/`    |
+| TASK-036 | ✦ DONE   | 1    | Exchange brand SVG assets (7) under `docs/assets/exchanges/`       |
 | TASK-037 | ◇ READY  | 1    | Core library docs (getting-started, library-usage, architecture, exchanges) |
 | TASK-038 | ◇ READY  | 1    | MCP docs (mcp-server.md + mcp-clients.md, major clients)           |
 | TASK-039 | ◇ PLANNED| 2    | README rewrite (lean) — links into docs/, uses icons, status table |
 
-Tasks: 0/4 DONE
+Tasks: 1/4 DONE
 
 ## Wave Groups
 
@@ -70,7 +70,7 @@ The loop orchestrator reads this section to determine parallel execution order.
 
 ### Wave 1
 - **TASK-036**, **TASK-037**, **TASK-038** — all independent (no dependencies) and file-disjoint:
-  - TASK-036 → only `docs/assets/exchanges/*.svg` (+ attribution note).
+  - TASK-036 → only `docs/assets/exchanges/*.svg` (+ attribution note). ✦ DONE
   - TASK-037 → only `docs/getting-started.md`, `docs/library-usage.md`, `docs/architecture.md`, `docs/exchanges.md`.
   - TASK-038 → only `docs/mcp-server.md`, `docs/mcp-clients.md`.
   - No shared files → safe to run in parallel.
@@ -93,7 +93,7 @@ No formal PRD/TRD/ADR document set was generated for FEAT-003. The authoritative
 source is the spec (`nazgul/context/objectives/FEAT-003-spec.md`). Each task's `Traces to`
 field points to the specific spec section it fulfills. Coverage check:
 
-- Spec §Scope-In "Assets" / curated SVG set → **TASK-036**.
+- Spec §Scope-In "Assets" / curated SVG set → **TASK-036** ✦ DONE.
 - Spec §Scope-In "New public docs/ folder" (getting-started, library-usage, architecture, exchanges) → **TASK-037**.
 - Spec §Scope-In "mcp-server.md" + "mcp-clients.md" (major clients) → **TASK-038**.
 - Spec §Scope-In "Lean README" (tagline+badges, 60s quick-start, exchange status table, MCP blurb, links into docs/) → **TASK-039**.
@@ -107,15 +107,21 @@ Objective-level acceptance (verified across the task set):
 Every spec scope item maps to at least one task; nothing in Scope-Out (roadmap, source changes,
 docs-site generator, WebSockets) is planned.
 
+## Completed
+
+- **TASK-036** — Exchange brand SVG assets. All 4 reviewers APPROVED. Auto-fix applied (path
+  letterforms for GitHub-safe placeholder monograms; Bitget letter corrected; B/B disambiguation
+  by background shade). Commit: c8a4335 + review-gate commit.
+
 ## Recovery Pointer
 
-- **Current stage**: Wave 1 — TASK-036 IMPLEMENTED (commit c8a4335), awaiting review.
-- **Next action**: Review gate for TASK-036; continue Wave 1 with TASK-037 and TASK-038 (file-disjoint, can run in parallel).
-- **Active task**: none currently active.
+- **Current stage**: Wave 1 — TASK-036 DONE. TASK-037 and TASK-038 ready (parallel, file-disjoint).
+- **Next action**: Implement TASK-037 (core library docs) and TASK-038 (MCP docs) in parallel.
+- **Active task**: none.
 - **Files are truth**: task manifests in `nazgul/tasks/TASK-036..039.md` carry full state;
   frontmatter `status:` is canonical.
 
 ─── ◈ NEXT ─────────────────────────────────────────────
-  Wave 1 ready — TASK-036, TASK-037, TASK-038 (parallel, docs-only)
-  /nazgul:start to begin implementation
+  Wave 1 — TASK-037 + TASK-038 (parallel, docs-only, file-disjoint)
+  /nazgul:start to continue
 ────────────────────────────────────────────────────────

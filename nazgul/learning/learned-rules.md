@@ -8,7 +8,7 @@
 - **Status**: active
 - **Scope-Agents**: implementer, code-reviewer
 - **Scope-Globs**: src/**/*.cs
-- **Hits**: 0
+- **Hits**: 1
 - **Added**: 2026-06-18
 - **Evidence**: TASK-002 (code-reviewer REJECT@85 — BuildGetSignString/BuildPostSignString missing guards), TASK-005 (code-reviewer REJECT@97 — BybitHttpClient.GetAsync/PostAsync/DeleteAsync missing endpoint guard), TASK-003 (api-reviewer non-blocking concern on ctor params)
 

@@ -1,9 +1,9 @@
 ---
 id: TASK-030
-status: PLANNED
+status: IMPLEMENTED
 depends_on: [TASK-029]
-commit:
-claimed_at:
+commit: 91ced11
+claimed_at: 2026-06-19T05:00:00Z
 ---
 # TASK-030: Market-data tools (no credentials)
 
@@ -17,8 +17,9 @@ claimed_at:
 - **Wave**: 3
 - **Traces to**: Approved design §Tool surface (Market data — no credentials); Approved plan **Task 3**
 - **Created at**: 2026-06-19T04:00:00Z
-- **Claimed at**:
-- **Implemented at**:
+- **Claimed at**: 2026-06-19T05:00:00Z
+- **Base SHA**: 2c20c0e
+- **Implemented at**: 2026-06-19T05:30:00Z
 - **Completed at**:
 - **Blocked at**:
 - **Retry count**: 0/3
@@ -77,6 +78,25 @@ symbol-required tools, per the plan. **No write tools.**
 ## Implementation Log
 
 ### Attempt 1
+
+- Claimed 2026-06-19T05:00:00Z; base SHA 2c20c0e.
+- Created `src/CryptoExchanges.Net.Mcp/Tools/MarketDataTools.cs` with 6 `[McpServerTool]` static
+  methods: GetPrice, GetTicker, GetOrderBook, GetKlines, GetRecentTrades, GetExchangeInfo.
+  All take `IExchangeClientFactory factory` as first parameter (SDK injection) and return
+  `Task<ToolResult<T>>`.
+- Applied LR-001: `ArgumentException.ThrowIfNullOrWhiteSpace` guards on all non-optional
+  string parameters (exchange, symbol, interval); `ArgumentNullException.ThrowIfNull` on factory.
+- Created `tests/CryptoExchanges.Net.Mcp.Tests.Unit/MarketDataToolsTests.cs` with 4 tests
+  (routing→price, unknown-exchange→ExchangeUnavailable, bad-symbol→SymbolNotSupported,
+  bad-interval→BadInterval). TDD: verified compile failure before implementation.
+- Build: 0W/0E (`dotnet build CryptoExchanges.Net.sln -c Release`).
+- Tests: 29/29 MCP tests pass; 455 existing unit tests green.
+- Commit SHA: 91ced11.
+- Diff captured to `nazgul/reviews/TASK-030/diff.patch` (197 lines).
+
+## Commits
+
+- `91ced11` feat(FEAT-002): TASK-030 — read-only market-data tools
 
 ## Review Results
 

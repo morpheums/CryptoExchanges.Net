@@ -1,13 +1,13 @@
 ---
 id: TASK-027
-status: IMPLEMENTED
-commit: PENDING
+status: DONE
+commit: 8821088
 claimed_at: 2026-06-19
 ---
 
 # TASK-027: Document code conventions (file-per-type, DTO naming house rule) in CLAUDE.md
 
-**Status**: IN_PROGRESS
+**Status**: DONE (committed 8821088 on main)
 
 **Blast radius**: NONE — documentation only (CLAUDE.md). No code, no tests.
 

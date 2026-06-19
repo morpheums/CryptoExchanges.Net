@@ -80,11 +80,11 @@ REUSE existing discovery — do NOT re-run.
 | TASK-042 | ✦ DONE    | 1    | Core streaming abstractions (`IStreamClient` family) — no transport         |
 | TASK-043 | ✦ DONE    | 2    | Http engine contracts + fake-transport test seam                            |
 | TASK-044 | ✦ DONE    | 3    | Http reconnecting byte-engine (pump/route/backoff/replay/heartbeat/channels)|
-| TASK-045 | ◇ PLANNED | 4    | Generic `StreamClient` + `StreamClientFactory` + `AddStreams<TOptions>`      |
+| TASK-045 | ◆ IMPL    | 4    | Generic `StreamClient` + `StreamClientFactory` + `AddStreams<TOptions>`      |
 | TASK-046 | ◇ PLANNED | 5    | Exchange-#1 package: protocol + 4 decode closures + options + `Add…Streams` |
 | TASK-047 | ◇ PLANNED | 6    | Wire 4 public subscribe methods end-to-end + live integration smoke + docs  |
 
-Tasks: 3/6 DONE — TASK-042 DONE, TASK-043 DONE, TASK-044 DONE, TASK-045 READY (dep satisfied), TASK-046..047 PLANNED.
+Tasks: 3/6 DONE — TASK-042 DONE, TASK-043 DONE, TASK-044 DONE, TASK-045 IMPLEMENTED (906c568), TASK-046..047 PLANNED.
 
 ## Wave Groups
 
@@ -162,9 +162,9 @@ other exchanges, `IAsyncEnumerable`, System.Reactive) is planned.
 
 ## Recovery Pointer
 
-- **Current stage**: TASK-045 IN_PROGRESS — implementing Generic StreamClient + factory + AddStreams.
-- **Next action**: Implement StreamClient.cs, StreamClientFactory.cs, StreamServiceRegistration.cs, StreamClientTests.cs.
-- **Active task**: TASK-045 (IN_PROGRESS — claimed 2026-06-19T18:00:00Z)
+- **Current stage**: TASK-045 IMPLEMENTED (906c568) — awaiting review gate.
+- **Next action**: Review gate for TASK-045; if APPROVED claim TASK-046.
+- **Active task**: TASK-045 (IMPLEMENTED — commit 906c568)
 - **Files are truth**: task manifests in `nazgul/tasks/TASK-042..047.md` carry full state;
   frontmatter `status:` is canonical.
 
@@ -172,7 +172,7 @@ other exchanges, `IAsyncEnumerable`, System.Reactive) is planned.
   ✦ TASK-042 — Core streaming abstractions. DONE.
   ✦ TASK-043 — Http engine contracts + fake-transport seam. DONE.
   ✦ TASK-044 — Http reconnecting byte-engine. DONE.
-  ◆ TASK-045 — Generic StreamClient + factory + AddStreams<TOptions>. IN_PROGRESS.
-  ◇ TASK-046 — Exchange-#1 streaming package. PLANNED.
+  ✦ TASK-045 — Generic StreamClient + factory + AddStreams<TOptions>. IMPLEMENTED (906c568).
+  ◇ TASK-046 — Exchange-#1 streaming package. PLANNED (dep: TASK-045).
   ◇ TASK-047 — Wire 4 subscribe methods end-to-end + integration smoke. PLANNED.
 ────────────────────────────────────────────────────────

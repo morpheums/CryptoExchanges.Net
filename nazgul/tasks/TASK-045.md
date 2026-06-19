@@ -1,6 +1,6 @@
 ---
 id: TASK-045
-status: IN_PROGRESS
+status: IMPLEMENTED
 depends_on: [TASK-044]
 ---
 # TASK-045: Generic `StreamClient` + `StreamClientFactory` + `AddStreams<TOptions>` + decode-registry
@@ -17,7 +17,7 @@ depends_on: [TASK-044]
 - **Created at**: 2026-06-19T17:20:00Z
 - **Claimed at**: 2026-06-19T18:00:00Z
 - **Base SHA**: 797ac0a
-- **Implemented at**:
+- **Implemented at**: 2026-06-19T19:30:00Z
 - **Completed at**:
 - **Blocked at**:
 - **Retry count**: 0/3
@@ -106,6 +106,10 @@ honors `ValidateOnStart`.
 **K1 status:** `using CryptoExchanges.Net.Core.Models` appears ONLY in `StreamClient.cs` for interface compliance (method parameter types `Symbol`, `Ticker`, `Trade`, `OrderBook`, `Candlestick`). No DeltaMapper reference. No model construction or decode logic in Http.
 
 **Test counts:** 92 Http unit tests (72 pre-existing + 20 new), all pass. Full suite (524 non-integration) green. Build 0W/0E.
+
+## Commits
+
+- `906c568` — feat(FEAT-005): TASK-045 — generic StreamClient + factory + AddStreams<TOptions>
 
 ## Review Results
 

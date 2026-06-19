@@ -78,7 +78,7 @@ REUSE existing discovery — do NOT re-run.
 | Task     | Status    | Wave | Description                                                                 |
 |----------|-----------|------|-----------------------------------------------------------------------------|
 | TASK-042 | ✦ DONE    | 1    | Core streaming abstractions (`IStreamClient` family) — no transport         |
-| TASK-043 | ◆ IN_PROGRESS | 2    | Http engine contracts + fake-transport test seam                            |
+| TASK-043 | ✦ IMPLEMENTED | 2    | Http engine contracts + fake-transport test seam                            |
 | TASK-044 | ◇ PLANNED | 3    | Http reconnecting byte-engine (pump/route/backoff/replay/heartbeat/channels)|
 | TASK-045 | ◇ PLANNED | 4    | Generic `StreamClient` + `StreamClientFactory` + `AddStreams<TOptions>`      |
 | TASK-046 | ◇ PLANNED | 5    | Exchange-#1 package: protocol + 4 decode closures + options + `Add…Streams` |

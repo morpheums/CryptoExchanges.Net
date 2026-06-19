@@ -1,6 +1,6 @@
 ---
 id: TASK-043
-status: IN_PROGRESS
+status: IMPLEMENTED
 depends_on: [TASK-042]
 ---
 # TASK-043: Http engine contracts + fake-transport test seam
@@ -17,7 +17,7 @@ depends_on: [TASK-042]
 - **Created at**: 2026-06-19T17:20:00Z
 - **Claimed at**: 2026-06-19T17:30:00Z
 - **Base SHA**: 1a16f66
-- **Implemented at**:
+- **Implemented at**: 2026-06-19T17:55:00Z
 - **Completed at**:
 - **Blocked at**:
 - **Retry count**: 0/3
@@ -97,10 +97,39 @@ Test seam (in the Http unit-test project):
 - **TRD Component**: Http engine contracts + transport seam (design §"The seam", §"Testing")
 - **ADR Reference**: DECISION-STREAMING-SHARED §2 (`IStreamProtocol` finalized) + §6 (C1 protocol-describes-heartbeat, K1 no-Core.Models-in-Http, Inv 11 injected-internal-not-static)
 
+## Commits
+
+- `547f2f8` — feat(FEAT-005): Http streaming contracts + fake-transport seam (TASK-043)
+
 ## Implementation Log
 
 ### Attempt 1
-<!-- implementer fills this in -->
+
+**Status**: IMPLEMENTED
+**Commit**: `547f2f8`
+
+**Files created** (all under `src/CryptoExchanges.Net.Http/Streaming/`):
+- `FrameKind.cs` — enum: Data, Ack, Pong, Error
+- `StreamFrame.cs` — `readonly record struct StreamFrame(FrameKind Kind, string? RoutingKey)`
+- `HeartbeatDirection.cs` — enum: ServerPingClientPong, ClientPing
+- `PingFormat.cs` — enum: ControlFrame, Text, Json
+- `HeartbeatPolicy.cs` — sealed record with Direction, Interval, Timeout, ClientPingPayload (default), PingFormat (default ControlFrame)
+- `StreamKind.cs` — enum: Ticker, Trade, OrderBook, Kline
+- `StreamRequest.cs` — sealed record with Kind, WireSymbol, optional Depth, optional Interval
+- `IStreamProtocol.cs` — internal interface: Endpoint, BuildSubscribe, BuildUnsubscribe, Classify, Heartbeat
+- `IWebSocketConnection.cs` — internal interface: State, IsOpen, ConnectAsync, SendTextAsync, SendPongAsync, ReceiveAsync, CloseAsync, IAsyncDisposable
+- `StreamDecoderRegistry.cs` — sealed class: Register/Resolve/Contains keyed by StreamKind → Func<ReadOnlyMemory<byte>, object>
+
+**Test seam** (`tests/CryptoExchanges.Net.Http.Tests.Unit/Streaming/`):
+- `FakeWebSocketConnection.cs` — controllable IWebSocketConnection test double
+- `StreamContractTests.cs` — 20 unit tests covering value semantics + fake behaviour
+
+**Modified** (doc comment only, K1 hygiene):
+- `src/CryptoExchanges.Net.Http/ExchangeServiceRegistration.cs` — removed "DeltaMapper" from TMapper XML doc comment
+
+**K1 result**: `grep -rn "Core.Models\|DeltaMapper" src/CryptoExchanges.Net.Http/ --include="*.cs"` → empty
+**Build**: 0 warnings, 0 errors (TreatWarningsAsErrors)
+**Tests**: 519 total pass (499 prior + 20 new streaming contract tests)
 
 ## Review Results
 

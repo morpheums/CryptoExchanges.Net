@@ -1,8 +1,8 @@
 ---
 id: TASK-028
-status: IN_PROGRESS
+status: IMPLEMENTED
 depends_on: []
-commit:
+commit: f56c61b
 claimed_at: 2026-06-19T05:00:00Z
 ---
 # TASK-028: Project scaffold + host wiring + env→options binder
@@ -19,7 +19,7 @@ claimed_at: 2026-06-19T05:00:00Z
 - **Created at**: 2026-06-19T04:00:00Z
 - **Claimed at**: 2026-06-19T05:00:00Z
 - **Base SHA**: 3c492b78ab3a4de3186c9ac41d28b184a1669fbd
-- **Implemented at**:
+- **Implemented at**: 2026-06-19T05:30:00Z
 - **Completed at**:
 - **Blocked at**:
 - **Retry count**: 0/3
@@ -83,6 +83,24 @@ Add both projects to `CryptoExchanges.Net.sln`.
 ## Implementation Log
 
 ### Attempt 1
+
+Implemented per plan Task 1, all TDD steps followed.
+
+**SDK version deviations from plan placeholders:**
+- `ModelContextProtocol` resolved to **1.4.0** (plan placeholder: `0.4.0-preview.1`)
+- `Microsoft.Extensions.Hosting` resolved to **10.0.9** (plan placeholder: `9.0.0`)
+- Both SDK APIs match the plan's code exactly (attributes, method names, namespaces all confirmed via XML docs)
+
+**CA1515 suppression:** `EnvCredentialBinder` is `public` so the test project (separate assembly) can reference it. CA1515 suppressed with `<NoWarn>CA1515</NoWarn>` in the MCP csproj.
+
+**Results:**
+- `dotnet build CryptoExchanges.Net.sln -c Release` → 0W/0E
+- `EnvCredentialBinderTests` → 2/2 pass
+- Full suite → 457 tests (455 existing + 2 new), all pass, 0 failures
+
+## Commits
+
+- `f56c61b` — feat(FEAT-002): scaffold read-only MCP server host + env credential binder (TASK-028)
 
 ## Review Results
 

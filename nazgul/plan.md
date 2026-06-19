@@ -67,7 +67,7 @@ REUSE existing discovery — do NOT re-run.
 
 | Task     | Status  | Wave | Description                                          |
 |----------|---------|------|------------------------------------------------------|
-| TASK-028 | ◆ IN_PROGRESS | 1    | Project scaffold + host wiring + env→options binder  |
+| TASK-028 | ✦ IMPLEMENTED | 1    | Project scaffold + host wiring + env→options binder  |
 | TASK-029 | ◇ PLANNED | 2  | Tool primitives (ToolResult, ToolInputs, ToolRunner) |
 | TASK-030 | ◇ PLANNED | 3  | Market-data tools (6, no keys)                       |
 | TASK-031 | ◇ PLANNED | 3  | Account tools (6, read-scoped keys)                  |
@@ -113,9 +113,9 @@ unmapped; writes/WebSockets/hosted-transport are correctly absent.
 
 ## Recovery Pointer
 
-- **Current stage**: IMPLEMENTING — TASK-028 claimed, IN_PROGRESS.
-- **Next action**: Implement scaffold, env binder + tests per plan Task 1 TDD steps.
-- **Active task**: TASK-028 (IN_PROGRESS).
+- **Current stage**: TASK-028 IMPLEMENTED — awaiting review gate.
+- **Next action**: Review Board reviews TASK-028; on approval, implementer claims TASK-029.
+- **Active task**: TASK-028 (IMPLEMENTED, commit f56c61b).
 - **Files are truth**: task manifests in `nazgul/tasks/TASK-028..032.md` carry full state;
   frontmatter `status:` is canonical.
 

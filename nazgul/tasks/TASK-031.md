@@ -1,8 +1,8 @@
 ---
 id: TASK-031
-status: IN_PROGRESS
+status: IMPLEMENTED
 depends_on: [TASK-029]
-commit:
+commit: c27e976
 claimed_at: 2026-06-19T07:00:00Z
 ---
 # TASK-031: Account tools (read-scoped credentials)
@@ -18,7 +18,7 @@ claimed_at: 2026-06-19T07:00:00Z
 - **Traces to**: Approved design §Tool surface (Account — read-scoped) + §Credentials (AuthRequired); Approved plan **Task 4**
 - **Created at**: 2026-06-19T04:00:00Z
 - **Claimed at**: 2026-06-19T07:00:00Z
-- **Implemented at**:
+- **Implemented at**: 2026-06-19T07:05:00Z
 - **Completed at**:
 - **Blocked at**:
 - **Retry count**: 0/3
@@ -50,9 +50,9 @@ NOTE (from plan): confirm the `AssetBalance` constructor arg order
 (`(Asset, decimal Free, decimal Locked)` per Core.Models) and adjust the test literal if needed.
 
 ## Acceptance Criteria
-- [ ] `dotnet build CryptoExchanges.Net.sln -c Release` succeeds with **0 warnings / 0 errors** (TreatWarningsAsErrors).
-- [ ] `AccountToolsTests` pass (balances→data, missing-credentials→AuthRequired, bad-asset→error); existing 455 tests stay green.
-- [ ] Exactly 6 `[McpServerTool]` methods exist on `AccountTools`, all read-only (no Place/Cancel/Create/Submit/Delete); each has a non-empty `[Description]`.
+- [x] `dotnet build CryptoExchanges.Net.sln -c Release` succeeds with **0 warnings / 0 errors** (TreatWarningsAsErrors).
+- [x] `AccountToolsTests` pass (balances→data, missing-credentials→AuthRequired, bad-asset→error); existing 455 tests stay green.
+- [x] Exactly 6 `[McpServerTool]` methods exist on `AccountTools`, all read-only (no Place/Cancel/Create/Submit/Delete); each has a non-empty `[Description]`.
 
 ## Pattern Reference
 - Read surfaces being called: `src/CryptoExchanges.Net.Core/Interfaces/IExchangeClient.cs`
@@ -82,6 +82,13 @@ NOTE (from plan): confirm the `AssetBalance` constructor arg order
 ### Attempt 1
 - **Base SHA**: 36704699930575d375bb5852dc09f928395be89b
 - Claimed at: 2026-06-19T07:00:00Z
+- Created `src/CryptoExchanges.Net.Mcp/Tools/AccountTools.cs` — 6 `[McpServerTool]` static methods following MarketDataTools pattern (LR-001 guards, `Run<T>` helper, `Unavailable()` error, `ToolRunner.RunAsync` wrapping)
+- Created `tests/CryptoExchanges.Net.Mcp.Tests.Unit/AccountToolsTests.cs` — 7 tests: GetBalances returns data, AuthRequired on missing creds (via mocked AuthenticationException), bad asset returns error, unknown exchange returns ExchangeUnavailable, GetOpenOrders returns data, GetOpenOrders AuthRequired, GetTradeHistory returns data
+- Build: 0W/0E. All 476 tests pass (full solution, Category!=Integration filter).
+- Commit: c27e976
+
+## Commits
+- c27e976: feat(FEAT-002): TASK-031 — read-only account tools (balances/orders/history)
 
 ## Review Results
 

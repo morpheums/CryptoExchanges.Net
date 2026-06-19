@@ -681,6 +681,42 @@ public sealed class StreamEngineTests
     }
 
     [Fact]
+    public async Task Engine_HeartbeatClientPing_ControlFrame_SendsPingNotPong()
+    {
+        // PingFormat.ControlFrame must send a genuine RFC 6455 Ping (SendPingAsync / opcode 0x09),
+        // NOT a Pong (SendPongAsync / opcode 0x0A). This test verifies the semantic fix.
+        var payload = Encoding.UTF8.GetBytes("ping");
+        var protocol = new FakeStreamProtocol
+        {
+            HeartbeatPolicy = new HeartbeatPolicy(
+                Direction: HeartbeatDirection.ClientPing,
+                Interval: TimeSpan.FromMilliseconds(100),
+                Timeout: TimeSpan.FromSeconds(10),
+                ClientPingPayload: payload,
+                PingFormat: PingFormat.ControlFrame),
+        };
+
+        var fake = new FakeWebSocketConnection();
+        var (engine, _) = BuildEngine(protocol: protocol, fake: fake);
+
+        await using (engine)
+        {
+            var request = new StreamRequest(StreamKind.Ticker, "BTCUSDT");
+            await using var sub = await engine.SubscribeAsync(request, MakeHandlers(), TestContext.Current.CancellationToken);
+
+            // Wait for at least 1 control-frame ping cycle.
+            var deadline = Task.Delay(3000, TestContext.Current.CancellationToken);
+            while (fake.SentPings.IsEmpty && !deadline.IsCompleted)
+                await Task.Delay(20, TestContext.Current.CancellationToken);
+
+            fake.SentPings.Should().NotBeEmpty(
+                "PingFormat.ControlFrame must send via SendPingAsync (RFC 6455 Ping, opcode 0x09).");
+            fake.SentPongs.Should().BeEmpty(
+                "PingFormat.ControlFrame must NOT call SendPongAsync — that is reserved for server-ping replies.");
+        }
+    }
+
+    [Fact]
     public async Task Engine_HeartbeatServerPingClientPong_SendsPong()
     {
         var protocol = new FakeStreamProtocol
@@ -768,42 +804,4 @@ public sealed class StreamEngineTests
                 "DisposeAsync must trigger an unsubscribe wire message.");
         }
     }
-}
-
-/// <summary>
-/// A controllable <see cref="IStreamProtocol"/> test double.
-/// By default classifies all frames as Data frames routed to <see cref="NextRoutingKey"/>
-/// (which defaults to <c>BTCUSDT@TICKER</c>, the default subscribe key used in tests).
-/// </summary>
-internal sealed class FakeStreamProtocol : IStreamProtocol
-{
-    /// <summary>Routing key returned for all Data frames. Defaults to BTCUSDT@TICKER.</summary>
-    public string NextRoutingKey { get; set; } = "BTCUSDT@TICKER";
-
-    /// <summary>The kind all frames are classified as. Defaults to <see cref="FrameKind.Data"/>.</summary>
-    public FrameKind DefaultKind { get; set; } = FrameKind.Data;
-
-    /// <summary>Heartbeat policy returned by <see cref="Heartbeat"/>. Defaults to a long ServerPingClientPong.</summary>
-    public HeartbeatPolicy HeartbeatPolicy { get; set; } = new HeartbeatPolicy(
-        Direction: HeartbeatDirection.ServerPingClientPong,
-        Interval: TimeSpan.FromSeconds(30),
-        Timeout: TimeSpan.FromSeconds(60));
-
-    /// <inheritdoc/>
-    public Uri Endpoint { get; } = new Uri("wss://fake.test/ws");
-
-    /// <inheritdoc/>
-    public string BuildSubscribe(StreamRequest request)
-        => $"SUBSCRIBE:{StreamEngine.BuildRoutingKey(request)}";
-
-    /// <inheritdoc/>
-    public string BuildUnsubscribe(StreamRequest request)
-        => $"UNSUBSCRIBE:{StreamEngine.BuildRoutingKey(request)}";
-
-    /// <inheritdoc/>
-    public StreamFrame Classify(ReadOnlySpan<byte> frame)
-        => new(DefaultKind, DefaultKind == FrameKind.Data ? NextRoutingKey : null);
-
-    /// <inheritdoc/>
-    public HeartbeatPolicy Heartbeat => HeartbeatPolicy;
 }

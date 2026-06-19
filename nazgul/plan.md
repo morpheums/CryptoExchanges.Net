@@ -158,8 +158,8 @@ other exchanges, `IAsyncEnumerable`, System.Reactive) is planned.
 
 ## Recovery Pointer
 
-- **Current stage**: TASK-044 IN_PROGRESS — Http reconnecting byte-engine implementation underway.
-- **Next action**: Implement StreamEngine, StreamSubscriptionChannel, BackoffSchedule, StreamEngineOptions; write StreamEngineTests; build + test; set IMPLEMENTED.
+- **Current stage**: TASK-044 IN_PROGRESS — Remediating CHANGES_REQUESTED review findings (PingFormat.ControlFrame fix, dead MaxSubscriptionsPerSocket removal, _idleCloseTask await, TimeSpan [Range] guards, FakeStreamProtocol extraction).
+- **Next action**: Fix all blocking + non-blocking findings, build + test, set IMPLEMENTED with new commit SHA.
 - **Active task**: TASK-044 (base SHA c18c48d0fdd53bd3f6934484ad028e9cff61637a)
 - **Files are truth**: task manifests in `nazgul/tasks/TASK-042..047.md` carry full state;
   frontmatter `status:` is canonical.

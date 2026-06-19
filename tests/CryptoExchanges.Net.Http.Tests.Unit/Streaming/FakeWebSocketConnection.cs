@@ -35,6 +35,9 @@ public sealed class FakeWebSocketConnection : IWebSocketConnection, IDisposable
     /// <summary>Messages sent via <see cref="SendTextAsync"/> in arrival order.</summary>
     public ConcurrentQueue<string> SentText { get; } = new();
 
+    /// <summary>Ping payloads sent via <see cref="SendPingAsync"/> in arrival order.</summary>
+    public ConcurrentQueue<ReadOnlyMemory<byte>> SentPings { get; } = new();
+
     /// <summary>Pong payloads sent via <see cref="SendPongAsync"/> in arrival order.</summary>
     public ConcurrentQueue<ReadOnlyMemory<byte>> SentPongs { get; } = new();
 
@@ -73,6 +76,13 @@ public sealed class FakeWebSocketConnection : IWebSocketConnection, IDisposable
     public Task SendTextAsync(string text, CancellationToken ct)
     {
         SentText.Enqueue(text);
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc/>
+    public Task SendPingAsync(ReadOnlyMemory<byte> payload, CancellationToken ct)
+    {
+        SentPings.Enqueue(payload);
         return Task.CompletedTask;
     }
 

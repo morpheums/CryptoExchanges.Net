@@ -629,7 +629,10 @@ internal sealed class StreamEngine : IAsyncDisposable
                         switch (policy.PingFormat)
                         {
                             case PingFormat.ControlFrame:
-                                await _socket.SendPongAsync(policy.ClientPingPayload, ct).ConfigureAwait(false);
+                                // RFC 6455 §5.5.2: client-initiated heartbeat sends a Ping control
+                                // frame (opcode 0x09). SendPingAsync carries the correct semantics;
+                                // SendPongAsync (opcode 0x0A) is reserved for replying to server pings.
+                                await _socket.SendPingAsync(policy.ClientPingPayload, ct).ConfigureAwait(false);
                                 break;
                             case PingFormat.Text:
                             case PingFormat.Json:
@@ -742,7 +745,15 @@ internal sealed class StreamEngine : IAsyncDisposable
         if (_isDisposed) return;
         _isDisposed = true;
 
+        var idleCloseTask = _idleCloseTask;
         CancelIdleClose();
+        if (idleCloseTask is not null)
+        {
+            try { await idleCloseTask.ConfigureAwait(false); }
+#pragma warning disable CA1031 // intentional: idle-close task exits on cancellation
+            catch (Exception) { /* swallow — exits via OperationCanceledException */ }
+#pragma warning restore CA1031
+        }
         await _disposeCts.CancelAsync().ConfigureAwait(false);
 
         // Dispose all subscription channels.

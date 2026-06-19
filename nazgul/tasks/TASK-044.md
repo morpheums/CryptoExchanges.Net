@@ -1,6 +1,6 @@
 ---
 id: TASK-044
-status: CHANGES_REQUESTED
+status: IN_PROGRESS
 commit: 75ec4e8
 depends_on: [TASK-043]
 ---

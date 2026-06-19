@@ -22,16 +22,19 @@ internal sealed class StreamEngineOptions
     /// closing the underlying socket. This avoids reconnect thrash when a consumer briefly
     /// has zero subscriptions (e.g., rotating symbols). Defaults to <c>30 seconds</c>.
     /// </summary>
+    [Range(typeof(TimeSpan), "00:00:00.001", "1.00:00:00")]
     public TimeSpan IdleCloseDelay { get; set; } = TimeSpan.FromSeconds(30);
 
     /// <summary>
     /// Initial backoff delay for the reconnect loop. Defaults to <c>1 second</c>.
     /// </summary>
+    [Range(typeof(TimeSpan), "00:00:00.001", "1.00:00:00")]
     public TimeSpan BackoffInitial { get; set; } = TimeSpan.FromSeconds(1);
 
     /// <summary>
     /// Maximum backoff delay cap for the reconnect loop. Defaults to <c>60 seconds</c>.
     /// </summary>
+    [Range(typeof(TimeSpan), "00:00:00.001", "1.00:00:00")]
     public TimeSpan BackoffMax { get; set; } = TimeSpan.FromSeconds(60);
 
     /// <summary>
@@ -44,15 +47,8 @@ internal sealed class StreamEngineOptions
     /// <summary>
     /// Maximum number of reconnect attempts before the engine gives up and transitions
     /// all subscriptions to <see cref="CryptoExchanges.Net.Core.Streaming.StreamConnectionState.Closed"/>.
-    /// Zero or negative means unlimited. Defaults to <c>0</c> (unlimited).
+    /// Zero means unlimited. Defaults to <c>0</c> (unlimited).
     /// </summary>
+    [Range(0, int.MaxValue)]
     public int MaxReconnectAttempts { get; set; }
-
-    /// <summary>
-    /// Maximum number of simultaneous active subscriptions per socket before the
-    /// engine opens a second socket (sharding). Defaults to <c>1024</c>; set to a
-    /// lower venue-imposed cap when applicable.
-    /// </summary>
-    [Range(1, int.MaxValue)]
-    public int MaxSubscriptionsPerSocket { get; set; } = 1024;
 }

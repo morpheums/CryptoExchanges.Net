@@ -46,6 +46,15 @@ internal interface IWebSocketConnection : IAsyncDisposable
     Task SendTextAsync(string text, CancellationToken ct);
 
     /// <summary>
+    /// Sends a binary payload as a WebSocket Ping control frame (RFC 6455 §5.5.2).
+    /// Used by the engine to initiate a client-side heartbeat ping when
+    /// <see cref="PingFormat.ControlFrame"/> is configured.
+    /// </summary>
+    /// <param name="payload">The ping payload bytes.</param>
+    /// <param name="ct">A token to cancel the send.</param>
+    Task SendPingAsync(ReadOnlyMemory<byte> payload, CancellationToken ct);
+
+    /// <summary>
     /// Sends a binary payload as a WebSocket Pong control frame (RFC 6455 §5.5.3).
     /// Used by the engine to respond to server-initiated Ping frames.
     /// </summary>

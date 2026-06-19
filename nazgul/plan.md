@@ -79,7 +79,7 @@ REUSE existing discovery — do NOT re-run.
 |----------|-----------|------|-----------------------------------------------------------------------------|
 | TASK-042 | ✦ DONE    | 1    | Core streaming abstractions (`IStreamClient` family) — no transport         |
 | TASK-043 | ✦ DONE    | 2    | Http engine contracts + fake-transport test seam                            |
-| TASK-044 | ◆ IN_PROGRESS | 3    | Http reconnecting byte-engine (pump/route/backoff/replay/heartbeat/channels)|
+| TASK-044 | ✦ IMPLEMENTED | 3    | Http reconnecting byte-engine (pump/route/backoff/replay/heartbeat/channels)|
 | TASK-045 | ◇ PLANNED | 4    | Generic `StreamClient` + `StreamClientFactory` + `AddStreams<TOptions>`      |
 | TASK-046 | ◇ PLANNED | 5    | Exchange-#1 package: protocol + 4 decode closures + options + `Add…Streams` |
 | TASK-047 | ◇ PLANNED | 6    | Wire 4 public subscribe methods end-to-end + live integration smoke + docs  |
@@ -158,9 +158,9 @@ other exchanges, `IAsyncEnumerable`, System.Reactive) is planned.
 
 ## Recovery Pointer
 
-- **Current stage**: TASK-044 IN_PROGRESS — Remediating CHANGES_REQUESTED review findings (PingFormat.ControlFrame fix, dead MaxSubscriptionsPerSocket removal, _idleCloseTask await, TimeSpan [Range] guards, FakeStreamProtocol extraction).
-- **Next action**: Fix all blocking + non-blocking findings, build + test, set IMPLEMENTED with new commit SHA.
-- **Active task**: TASK-044 (base SHA c18c48d0fdd53bd3f6934484ad028e9cff61637a)
+- **Current stage**: TASK-044 IMPLEMENTED (commit 501ad13) — awaiting re-review.
+- **Next action**: Review board re-reviews TASK-044; on APPROVED → DONE, proceed to TASK-045.
+- **Active task**: TASK-044 (commit 501ad13)
 - **Files are truth**: task manifests in `nazgul/tasks/TASK-042..047.md` carry full state;
   frontmatter `status:` is canonical.
 

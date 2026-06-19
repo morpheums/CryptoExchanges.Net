@@ -1,6 +1,6 @@
 ---
 id: TASK-031
-status: IN_PROGRESS
+status: IMPLEMENTED
 depends_on: [TASK-029]
 commit: c27e976
 claimed_at: 2026-06-19T07:00:00Z
@@ -89,6 +89,21 @@ NOTE (from plan): confirm the `AssetBalance` constructor arg order
 
 ## Commits
 - c27e976: feat(FEAT-002): TASK-031 — read-only account tools (balances/orders/history)
+- 2de728c: feat(FEAT-002): TASK-031 remediation — BadRequest bad-asset + GetOrder/GetOrderHistory happy-path tests
+
+### Attempt 2 (remediation)
+- **Base SHA**: 2abab6e
+- Claimed at: 2026-06-19T08:00:00Z
+- Fix 1 (blocking — api/code REJECT): `GetBalance` bad-asset path: replaced `FormatException` throw with `Task.FromResult(ToolResult<AssetBalance>.Failure(new ToolError("BadRequest", ...)))` directly. Asset.TryOf check now precedes exchange resolution, keeps structured-error-not-exception MCP boundary design.
+- Fix 2 (blocking — architect/code/api REJECT, LR-005): Added `GetBalance_ReturnsData` happy-path test (mocks `GetBalanceAsync`, asserts `Ok==true`).
+- Fix 3 (blocking — code/api REJECT, LR-005): Added `GetOrder_ReturnsData` happy-path test (mocks `GetOrderAsync` returning `new Order(...)`, asserts `Ok==true` and `Data` non-null).
+- Fix 4 (blocking — code/api REJECT, LR-005): Added `GetOrderHistory_ReturnsData` happy-path test (mocks `GetOrderHistoryAsync`, asserts `Ok==true`).
+- Fix 5 (blocking — api CONCERN + bad test): Updated `GetBalance_BadAsset` test to assert `Error!.Category == "BadRequest"`.
+- Addressed NOTE (trivial): Removed dead `factory.GetClient(id).Returns(client)` setup from `FactoryReturning`.
+- Addressed NOTE (trivial): Aligned `client!` null-forgiving in `Run<T>` and `Resolve<T>` to match `MarketDataTools` pattern.
+- Deferred: NO-LOWER-BOUND-ON-LIMIT-PARAM — left for follow-up per instructions.
+- Build: 0W/0E. Tests: 41 MCP unit tests pass; full suite green.
+- Commit: 2de728c
 
 ## Review Results
 

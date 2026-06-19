@@ -46,18 +46,34 @@ internal interface IWebSocketConnection : IAsyncDisposable
     Task SendTextAsync(string text, CancellationToken ct);
 
     /// <summary>
-    /// Sends a binary payload as a WebSocket Ping control frame (RFC 6455 §5.5.2).
-    /// Used by the engine to initiate a client-side heartbeat ping when
-    /// <see cref="PingFormat.ControlFrame"/> is configured.
+    /// Sends a ping payload over the connection.
     /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The production implementation (<c>ClientWebSocketConnection</c>) sends a binary
+    /// <em>data</em> frame (opcode 0x02) because <see cref="System.Net.WebSockets.ClientWebSocket"/>
+    /// cannot emit RFC 6455 Ping control frames (opcode 0x09). This is correct for venues
+    /// that use application-level heartbeat messages (<see cref="PingFormat.Text"/> /
+    /// <see cref="PingFormat.Json"/>). For <see cref="PingFormat.ControlFrame"/> the engine
+    /// must NOT call this method; framework keep-alive handles control-frame Ping/Pong automatically.
+    /// </para>
+    /// </remarks>
     /// <param name="payload">The ping payload bytes.</param>
     /// <param name="ct">A token to cancel the send.</param>
     Task SendPingAsync(ReadOnlyMemory<byte> payload, CancellationToken ct);
 
     /// <summary>
-    /// Sends a binary payload as a WebSocket Pong control frame (RFC 6455 §5.5.3).
-    /// Used by the engine to respond to server-initiated Ping frames.
+    /// Sends a pong payload over the connection.
     /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The production implementation (<c>ClientWebSocketConnection</c>) sends a binary
+    /// <em>data</em> frame (opcode 0x02) because <see cref="System.Net.WebSockets.ClientWebSocket"/>
+    /// cannot emit RFC 6455 Pong control frames (opcode 0x0A). Framework auto-pong (via
+    /// <see cref="System.Net.WebSockets.ClientWebSocketOptions.KeepAliveInterval"/>) handles
+    /// server-initiated Ping / Pong control frames automatically.
+    /// </para>
+    /// </remarks>
     /// <param name="payload">The pong payload bytes (typically echoes the ping payload).</param>
     /// <param name="ct">A token to cancel the send.</param>
     Task SendPongAsync(ReadOnlyMemory<byte> payload, CancellationToken ct);

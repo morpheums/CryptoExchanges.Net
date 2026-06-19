@@ -1,4 +1,5 @@
 using System.Net.WebSockets;
+using System.Reflection;
 using System.Text;
 using FluentAssertions;
 using Xunit;
@@ -48,7 +49,7 @@ public sealed class StreamContractTests
     [Fact]
     public async Task Fake_Connect_OpensAndCounts()
     {
-        await using var fake = new FakeWebSocketConnection();
+        using var fake = new FakeWebSocketConnection();
         await fake.ConnectAsync(new Uri("wss://example.com/ws"), TestContext.Current.CancellationToken);
 
         fake.IsOpen.Should().BeTrue();
@@ -59,7 +60,7 @@ public sealed class StreamContractTests
     [Fact]
     public async Task Fake_EnqueuedFrames_ReceivedInOrder()
     {
-        await using var fake = new FakeWebSocketConnection();
+        using var fake = new FakeWebSocketConnection();
         await fake.ConnectAsync(new Uri("wss://example.com/ws"), TestContext.Current.CancellationToken);
 
         fake.EnqueueFrame("frame-1");
@@ -72,7 +73,7 @@ public sealed class StreamContractTests
     [Fact]
     public async Task Fake_SendText_CapturesMessages()
     {
-        await using var fake = new FakeWebSocketConnection();
+        using var fake = new FakeWebSocketConnection();
         await fake.ConnectAsync(new Uri("wss://example.com/ws"), TestContext.Current.CancellationToken);
 
         await fake.SendTextAsync("{\"method\":\"SUBSCRIBE\"}", TestContext.Current.CancellationToken);
@@ -83,12 +84,66 @@ public sealed class StreamContractTests
     [Fact]
     public async Task Fake_Disconnect_ReceiveReturnsNull()
     {
-        await using var fake = new FakeWebSocketConnection();
+        using var fake = new FakeWebSocketConnection();
         await fake.ConnectAsync(new Uri("wss://example.com/ws"), TestContext.Current.CancellationToken);
 
         fake.SimulateDisconnect();
 
         (await fake.ReceiveAsync(TestContext.Current.CancellationToken)).Should().BeNull();
         fake.IsOpen.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task Fake_ConnectAsync_NullUri_Throws()
+    {
+        using var fake = new FakeWebSocketConnection();
+        var act = async () => await fake.ConnectAsync(null!, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ArgumentNullException>();
+    }
+
+    // ── ClientWebSocketConnection guards ──────────────────────────────────────
+
+    [Fact]
+    public async Task ClientWebSocketConnection_ConnectAsync_HttpScheme_Throws()
+    {
+        // The URI scheme guard fires before any I/O; no network required.
+        await using var conn = new ClientWebSocketConnection();
+        var act = async () => await conn.ConnectAsync(new Uri("http://example.com"), TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ArgumentException>()
+            .WithMessage("*ws*");
+    }
+
+    [Fact]
+    public async Task ClientWebSocketConnection_ConnectAsync_HttpsScheme_Throws()
+    {
+        await using var conn = new ClientWebSocketConnection();
+        var act = async () => await conn.ConnectAsync(new Uri("https://example.com"), TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ArgumentException>()
+            .WithMessage("*ws*");
+    }
+
+    [Fact]
+    public async Task ClientWebSocketConnection_ConnectAsync_WssScheme_DoesNotThrowArgumentException()
+    {
+        // Scheme check passes for wss (the underlying ConnectAsync will fail with a network
+        // error, but the guard must not throw ArgumentException for a valid scheme).
+        await using var conn = new ClientWebSocketConnection();
+        var act = async () => await conn.ConnectAsync(new Uri("wss://example.com"), TestContext.Current.CancellationToken);
+        // Must NOT throw ArgumentException (scheme guard rejects only non-ws/wss URIs).
+        // It will throw some WebSocketException / network exception — that is expected.
+        await act.Should().NotThrowAsync<ArgumentException>(
+            "wss URIs must pass the scheme guard; only network errors are expected here.");
+    }
+
+    [Fact]
+    public void ClientWebSocketConnection_MaxMessageBytes_Is4Mib()
+    {
+        // The const must be exactly 4 MiB so the guard matches the documented limit.
+        // Tested via reflection because the field is private.
+        var field = typeof(ClientWebSocketConnection)
+            .GetField("MaxMessageBytes", BindingFlags.NonPublic | BindingFlags.Static);
+        field.Should().NotBeNull("MaxMessageBytes const must exist on ClientWebSocketConnection");
+        ((int)field!.GetValue(null)!).Should().Be(4 * 1024 * 1024,
+            "MaxMessageBytes must be 4 MiB (4 * 1024 * 1024 bytes)");
     }
 }

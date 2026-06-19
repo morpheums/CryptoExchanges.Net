@@ -70,8 +70,10 @@ internal sealed class BinanceStreamProtocol : IStreamProtocol
         if (frame.IsEmpty)
             return new StreamFrame(FrameKind.Error, null);
 
-        // Parse via Utf8JsonReader (stack-friendly with ReadOnlySpan<byte>).
-        using var doc = JsonDocument.Parse(frame.ToArray());
+        // Parse via Utf8JsonReader directly from the span — no intermediate array allocation
+        // on the hot path (avoids the ToArray() alloc in the original implementation).
+        var reader = new Utf8JsonReader(frame);
+        using var doc = JsonDocument.ParseValue(ref reader);
         var root = doc.RootElement;
 
         // Combined-stream data frames carry a "stream" field + "data" field.

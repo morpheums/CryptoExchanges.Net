@@ -689,10 +689,13 @@ public sealed class StreamEngineTests
     }
 
     [Fact]
-    public async Task Engine_HeartbeatClientPing_ControlFrame_SendsPingNotPong()
+    public async Task Engine_HeartbeatClientPing_ControlFrame_NoManualSend()
     {
-        // PingFormat.ControlFrame must send a genuine RFC 6455 Ping (SendPingAsync / opcode 0x09),
-        // NOT a Pong (SendPongAsync / opcode 0x0A). This test verifies the semantic fix.
+        // PingFormat.ControlFrame: ClientWebSocket.SendAsync cannot emit RFC 6455 control frames.
+        // The engine must NOT attempt a manual Ping/Pong data-frame send; framework keep-alive
+        // (ClientWebSocketOptions.KeepAliveInterval on ClientWebSocketConnection) handles the
+        // control-frame handshake automatically. The engine loop still sets livenessFlag = 1
+        // on each heartbeat tick so the watchdog does not falsely trigger.
         var payload = Encoding.UTF8.GetBytes("ping");
         var protocol = new FakeStreamProtocol
         {
@@ -712,15 +715,16 @@ public sealed class StreamEngineTests
             var request = new StreamRequest(StreamKind.Ticker, "BTCUSDT");
             await using var sub = await engine.SubscribeAsync(request, MakeHandlers(), TestContext.Current.CancellationToken);
 
-            // Wait for at least 1 control-frame ping cycle.
-            var deadline = Task.Delay(3000, TestContext.Current.CancellationToken);
-            while (fake.SentPings.IsEmpty && !deadline.IsCompleted)
-                await Task.Delay(20, TestContext.Current.CancellationToken);
+            // Wait several heartbeat intervals to confirm no manual send occurs.
+            await Task.Delay(400, TestContext.Current.CancellationToken);
 
-            fake.SentPings.Should().NotBeEmpty(
-                "PingFormat.ControlFrame must send via SendPingAsync (RFC 6455 Ping, opcode 0x09).");
+            fake.SentPings.Should().BeEmpty(
+                "PingFormat.ControlFrame must NOT send a data-frame ping — framework keep-alive handles it.");
             fake.SentPongs.Should().BeEmpty(
-                "PingFormat.ControlFrame must NOT call SendPongAsync — that is reserved for server-ping replies.");
+                "PingFormat.ControlFrame must NOT send a data-frame pong.");
+            // Subscribe text was sent; no heartbeat data frames added.
+            fake.SentText.Should().ContainSingle(
+                "only the subscribe message should be in SentText; no heartbeat text frames.");
         }
     }
 

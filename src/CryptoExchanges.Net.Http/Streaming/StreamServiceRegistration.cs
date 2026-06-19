@@ -91,6 +91,8 @@ internal static class StreamServiceRegistration
 
         // The IStreamClient keyed singleton: owns the engine + transport (no captive dependency,
         // Inv 9 — the connection factory produces a fresh socket per connect attempt).
+        // Dispose guard: if StreamClient construction throws after the engine is created the
+        // engine is disposed to prevent a resource leak (mirrors StreamClientFactory.Create).
         services.AddKeyedSingleton<IStreamClient>(exchangeId, (sp, _) =>
         {
             var protocol = protocolFactory(sp);
@@ -107,8 +109,18 @@ internal static class StreamServiceRegistration
                 : Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance;
 
             var engine = new StreamEngine(protocol, decoders, engineOpts, connFactory, logger);
-            var symbolMapper = sp.GetRequiredKeyedService<ISymbolMapper>(exchangeId);
-            return new StreamClient(engine, symbolMapper, exchangeId);
+            try
+            {
+                var symbolMapper = sp.GetRequiredKeyedService<ISymbolMapper>(exchangeId);
+                return new StreamClient(engine, symbolMapper, exchangeId);
+            }
+            catch
+            {
+                // StreamClient construction failed; dispose the engine synchronously to
+                // avoid leaking background resources before the DI container ever owns it.
+                engine.DisposeAsync().AsTask().GetAwaiter().GetResult();
+                throw;
+            }
         });
 
         return services;

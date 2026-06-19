@@ -636,10 +636,13 @@ internal sealed class StreamEngine : IAsyncDisposable
                         switch (policy.PingFormat)
                         {
                             case PingFormat.ControlFrame:
-                                // RFC 6455 §5.5.2: client-initiated heartbeat sends a Ping control
-                                // frame (opcode 0x09). SendPingAsync carries the correct semantics;
-                                // SendPongAsync (opcode 0x0A) is reserved for replying to server pings.
-                                await _socket.SendPingAsync(policy.ClientPingPayload, ct).ConfigureAwait(false);
+                                // RFC 6455 §5.5.2 Ping control frames (opcode 0x09) cannot be
+                                // emitted by ClientWebSocket.SendAsync — it only sends data frames.
+                                // Framework keep-alive (ClientWebSocketOptions.KeepAliveInterval set
+                                // on ClientWebSocketConnection) handles the control-frame Ping/Pong
+                                // handshake automatically; the engine must not attempt a manual send.
+                                // Liveness is maintained by the existing liveness-on-any-frame reset
+                                // in PumpLoopAsync (every received frame resets the watchdog).
                                 break;
                             case PingFormat.Text:
                             case PingFormat.Json:

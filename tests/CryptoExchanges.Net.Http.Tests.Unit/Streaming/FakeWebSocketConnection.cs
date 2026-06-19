@@ -56,6 +56,7 @@ public sealed class FakeWebSocketConnection : IWebSocketConnection, IDisposable
     /// <inheritdoc/>
     public Task ConnectAsync(Uri uri, CancellationToken ct)
     {
+        ArgumentNullException.ThrowIfNull(uri);
         ConnectCount++;
         State = WebSocketState.Open;
 

@@ -1,6 +1,6 @@
 ---
 id: TASK-040
-status: IMPLEMENTED
+status: DONE
 commit: d281ea4
 claimed_at: 2026-06-19
 ---

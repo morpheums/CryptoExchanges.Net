@@ -1,7 +1,7 @@
 ---
 id: TASK-041
-status: IN_PROGRESS
-commit:
+status: DONE
+commit: bd15a22
 claimed_at: 2026-06-19
 ---
 

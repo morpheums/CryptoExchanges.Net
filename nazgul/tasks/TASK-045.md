@@ -1,6 +1,6 @@
 ---
 id: TASK-045
-status: PLANNED
+status: IN_PROGRESS
 depends_on: [TASK-044]
 ---
 # TASK-045: Generic `StreamClient` + `StreamClientFactory` + `AddStreams<TOptions>` + decode-registry
@@ -15,7 +15,8 @@ depends_on: [TASK-044]
 - **Wave**: 4
 - **Traces to**: FEAT-005 spec §Architecture "Http" (generic StreamClient/factory/registration); design §"Shared-generic client" + §"Decode registry" + §"DI / composition"; DECISION-STREAMING-SHARED §1/§3/§4
 - **Created at**: 2026-06-19T17:20:00Z
-- **Claimed at**:
+- **Claimed at**: 2026-06-19T18:00:00Z
+- **Base SHA**: 797ac0a
 - **Implemented at**:
 - **Completed at**:
 - **Blocked at**:
@@ -94,7 +95,17 @@ honors `ValidateOnStart`.
 ## Implementation Log
 
 ### Attempt 1
-<!-- implementer fills this in -->
+
+**Files created:**
+- `src/CryptoExchanges.Net.Http/Streaming/StreamClient.cs` — ONE generic `internal sealed StreamClient : IStreamClient`; wraps `StreamEngine`; implements 4 subscribe methods + 4 bare-Func convenience overloads; resolves wire symbol via injected `ISymbolMapper`; passes `KlineInterval.ToString()` as canonical interval token to `StreamRequest`.
+- `src/CryptoExchanges.Net.Http/Streaming/StreamClientFactory.cs` — `internal sealed StreamClientFactory : IStreamClientFactory`; resolves keyed `IStreamClient` by `ExchangeId`; mirrors `ExchangeClientFactory` line-for-line; includes container-free `static Create(...)` parity method.
+- `src/CryptoExchanges.Net.Http/Streaming/StreamServiceRegistration.cs` — `internal static StreamServiceRegistration`; `AddStreams<TOptions>` shared body; registers `IStreamClient` as keyed singleton; `TryAddKeyedSingleton` for `ISymbolMapper` (reuses mapper registered by `AddXxxExchange`); `TryAddSingleton` for `IStreamClientFactory`; `ValidateOnStart` on `TOptions`; no captive dependency (engine owns transport inside singleton).
+- `src/CryptoExchanges.Net.Http/Streaming/ClientWebSocketConnection.cs` — production `IWebSocketConnection` over `ClientWebSocket`.
+- `tests/CryptoExchanges.Net.Http.Tests.Unit/Streaming/StreamClientTests.cs` — 20 new unit tests (fake protocol + fake transport, no network): subscribe→route→decode→deliver for all 4 stream kinds; bare-Func overloads; State/IsConnected; dispose-unsubscribes; factory Available/GetClient/TryGet/throws-when-missing; DI keyed-singleton registration; singleton identity; options-configure; mapper reuse; container-free Create.
+
+**K1 status:** `using CryptoExchanges.Net.Core.Models` appears ONLY in `StreamClient.cs` for interface compliance (method parameter types `Symbol`, `Ticker`, `Trade`, `OrderBook`, `Candlestick`). No DeltaMapper reference. No model construction or decode logic in Http.
+
+**Test counts:** 92 Http unit tests (72 pre-existing + 20 new), all pass. Full suite (524 non-integration) green. Build 0W/0E.
 
 ## Review Results
 

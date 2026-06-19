@@ -162,9 +162,9 @@ other exchanges, `IAsyncEnumerable`, System.Reactive) is planned.
 
 ## Recovery Pointer
 
-- **Current stage**: TASK-044 DONE — proceed to TASK-045.
-- **Next action**: Claim TASK-045; implement Generic StreamClient + StreamClientFactory + AddStreams<TOptions>.
-- **Active task**: TASK-045 (READY — dep TASK-044 satisfied)
+- **Current stage**: TASK-045 IN_PROGRESS — implementing Generic StreamClient + factory + AddStreams.
+- **Next action**: Implement StreamClient.cs, StreamClientFactory.cs, StreamServiceRegistration.cs, StreamClientTests.cs.
+- **Active task**: TASK-045 (IN_PROGRESS — claimed 2026-06-19T18:00:00Z)
 - **Files are truth**: task manifests in `nazgul/tasks/TASK-042..047.md` carry full state;
   frontmatter `status:` is canonical.
 
@@ -172,5 +172,7 @@ other exchanges, `IAsyncEnumerable`, System.Reactive) is planned.
   ✦ TASK-042 — Core streaming abstractions. DONE.
   ✦ TASK-043 — Http engine contracts + fake-transport seam. DONE.
   ✦ TASK-044 — Http reconnecting byte-engine. DONE.
-  ◆ TASK-045 — Generic StreamClient + factory + AddStreams<TOptions>. READY (claim next).
+  ◆ TASK-045 — Generic StreamClient + factory + AddStreams<TOptions>. IN_PROGRESS.
+  ◇ TASK-046 — Exchange-#1 streaming package. PLANNED.
+  ◇ TASK-047 — Wire 4 subscribe methods end-to-end + integration smoke. PLANNED.
 ────────────────────────────────────────────────────────

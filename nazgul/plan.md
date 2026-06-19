@@ -68,7 +68,7 @@ REUSE existing discovery — do NOT re-run.
 | Task     | Status  | Wave | Description                                          |
 |----------|---------|------|------------------------------------------------------|
 | TASK-028 | ✦ DONE | 1    | Project scaffold + host wiring + env→options binder  |
-| TASK-029 | ◆ IN_PROGRESS | 2  | Tool primitives (ToolResult, ToolInputs, ToolRunner) |
+| TASK-029 | ✦ IMPLEMENTED | 2  | Tool primitives (ToolResult, ToolInputs, ToolRunner) |
 | TASK-030 | ◇ PLANNED | 3  | Market-data tools (6, no keys)                       |
 | TASK-031 | ◇ PLANNED | 3  | Account tools (6, read-scoped keys)                  |
 | TASK-032 | ◇ PLANNED | 4  | Tool-roster guard test + README/packaging            |
@@ -113,9 +113,9 @@ unmapped; writes/WebSockets/hosted-transport are correctly absent.
 
 ## Recovery Pointer
 
-- **Current stage**: TASK-029 IN_PROGRESS (applying review fixes — seal records + ExchangeApiException test arm).
-- **Next action**: Apply two mechanical fixes, rebuild, retest, commit, set IMPLEMENTED.
-- **Active task**: TASK-029 (IN_PROGRESS — review fixes).
+- **Current stage**: TASK-029 IMPLEMENTED (commit f784105 — review fixes applied). Awaiting review gate.
+- **Next action**: Review Board runs on TASK-029; on APPROVED → TASK-030/TASK-031 (Wave 3, parallel).
+- **Active task**: TASK-029 (IMPLEMENTED — pending review).
 - **Files are truth**: task manifests in `nazgul/tasks/TASK-028..032.md` carry full state;
   frontmatter `status:` is canonical.
 

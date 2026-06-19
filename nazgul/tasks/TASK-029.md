@@ -1,8 +1,8 @@
 ---
 id: TASK-029
-status: IN_PROGRESS
+status: IMPLEMENTED
 depends_on: [TASK-028]
-commit: 73cc77e
+commit: f784105
 claimed_at: 2026-06-19T00:00:00Z
 ---
 # TASK-029: Tool primitives — ToolResult envelope, input parsing, error mapping
@@ -100,6 +100,7 @@ adjust the test's `CreateException` helper to match; the asserted **categories a
 ## Commits
 
 - `73cc77e` — feat(FEAT-002): tool result envelope, input parsing, error mapping (TASK-029)
+- `f784105` — feat(FEAT-002): review fixes — seal ToolError/ToolResult<T>, add ExchangeApiException test arm (TASK-029)
 
 ## Review Results
 

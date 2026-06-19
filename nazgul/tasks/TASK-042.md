@@ -1,6 +1,6 @@
 ---
 id: TASK-042
-status: READY
+status: IN_PROGRESS
 depends_on: []
 ---
 # TASK-042: Core streaming abstractions (`IStreamClient` family)
@@ -15,7 +15,8 @@ depends_on: []
 - **Wave**: 1
 - **Traces to**: FEAT-005 spec §Architecture "Core"; design §"Public surface (Core)"; DESIGN-STREAMING-V1 R1/R2/R4; DECISION-STREAMING-SHARED §1 (public surface is `IStreamClient`/`IStreamSubscription` + records)
 - **Created at**: 2026-06-19T17:20:00Z
-- **Claimed at**:
+- **Claimed at**: 2026-06-19T17:30:00Z
+- **Base SHA**: aa6fe22e4b9c0ed480bcf2c898bd41b60386902d
 - **Implemented at**:
 - **Completed at**:
 - **Blocked at**:

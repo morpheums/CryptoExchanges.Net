@@ -20,10 +20,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Structured `ToolResult<T>` response envelope with error categories (InvalidSymbol, BadRequest, InsufficientBalance, etc.)
   - All tools return canonical models — one agent vocabulary works identically across all venues
   - **No trading/write operations** — read-only by design
+  - Count parameters (`depth`, `limit`) reject non-positive values with a `BadRequest` tool error instead of forwarding an opaque exchange error
 
 ### Changed
 
-- (No breaking changes in this release)
+- **Split licensing**: the client libraries (`Core`, `Http`, exchange packages, `DependencyInjection`) remain **Apache-2.0**; the `CryptoExchanges.Net.Mcp` server tool is **AGPL-3.0-or-later** (protects the hosted/SaaS use case while keeping the libraries permissive for embedding)
 
 ### Fixed
 

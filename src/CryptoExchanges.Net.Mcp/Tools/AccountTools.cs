@@ -30,15 +30,14 @@ public static class AccountTools
     {
         ArgumentNullException.ThrowIfNull(factory);
         ArgumentException.ThrowIfNullOrWhiteSpace(exchange);
-        // empty/whitespace asset → structured ToolError, not ArgumentException.
+        // null/empty/whitespace/unknown asset → structured BadRequest error, not ArgumentException.
+        // MCP-boundary design: domain-invalid inputs return ToolError, not throw (architect-endorsed).
+        if (!Asset.TryOf(asset, out var a))
+            return Task.FromResult(ToolResult<AssetBalance>.Failure(
+                new ToolError("BadRequest", $"Unknown or empty asset '{asset}'.")));
         if (!ToolInputs.TryParseExchange(exchange, out var id) || !factory.TryGet(id, out var client))
             return Task.FromResult(ToolResult<AssetBalance>.Failure(Unavailable(exchange)));
-        return ToolRunner.RunAsync(() =>
-        {
-            if (!Asset.TryOf(asset, out var a))
-                throw new FormatException($"Unknown asset '{asset}'.");
-            return client.Account.GetBalanceAsync(a, default);
-        });
+        return ToolRunner.RunAsync(() => client!.Account.GetBalanceAsync(a, default));
     }
 
     [McpServerTool, Description("Open orders, optionally filtered by pair. Requires API credentials.")]
@@ -103,7 +102,7 @@ public static class AccountTools
     {
         if (!ToolInputs.TryParseExchange(exchange, out var id) || !factory.TryGet(id, out var client))
             return Task.FromResult(ToolResult<T>.Failure(Unavailable(exchange)));
-        return ToolRunner.RunAsync(() => call(client, default));
+        return ToolRunner.RunAsync(() => call(client!, default));
     }
 
     // Shared path for tools that require symbol parsing.
@@ -116,7 +115,7 @@ public static class AccountTools
         return ToolRunner.RunAsync(() =>
         {
             var s = ToolInputs.ParseSymbol(symbol);
-            return call(client, s, default);
+            return call(client!, s, default);
         });
     }
 

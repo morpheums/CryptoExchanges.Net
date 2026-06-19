@@ -70,7 +70,7 @@ REUSE existing discovery — do NOT re-run.
 | TASK-028 | ✦ DONE | 1    | Project scaffold + host wiring + env→options binder  |
 | TASK-029 | ✦ DONE | 2    | Tool primitives (ToolResult, ToolInputs, ToolRunner) |
 | TASK-030 | ✦ DONE | 3  | Market-data tools (6, no keys)                    |
-| TASK-031 | ✦ IMPLEMENTED | 3  | Account tools (6, read-scoped keys)                  |
+| TASK-031 | ◆ IN_PROGRESS | 3  | Account tools (6, read-scoped keys) — CHANGES_REQUESTED retry 1 |
 | TASK-032 | ◇ PLANNED | 4  | Tool-roster guard test + README/packaging            |
 
 Tasks: 3/5 complete (TASK-030 DONE — review board PASS, fix-first applied)
@@ -119,9 +119,9 @@ unmapped; writes/WebSockets/hosted-transport are correctly absent.
 
 ## Recovery Pointer
 
-- **Current stage**: TASK-031 IMPLEMENTED (commit c27e976, 2026-06-19T07:05:00Z). Awaiting review gate.
-- **Next action**: Review board must approve TASK-031; then proceed to TASK-032 (tool-roster guard + README).
-- **Active task**: TASK-031 — review pending.
+- **Current stage**: TASK-031 IN_PROGRESS (retry 1 — remediating review board CHANGES_REQUESTED).
+- **Next action**: Fix blocking findings: (1) bad-asset → BadRequest early-return, (2) add GetOrder + GetOrderHistory happy-path tests.
+- **Active task**: TASK-031 — implementing review fixes.
 - **Files are truth**: task manifests in `nazgul/tasks/TASK-028..032.md` carry full state;
   frontmatter `status:` is canonical.
 

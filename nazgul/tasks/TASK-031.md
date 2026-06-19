@@ -1,6 +1,6 @@
 ---
 id: TASK-031
-status: CHANGES_REQUESTED
+status: IN_PROGRESS
 depends_on: [TASK-029]
 commit: c27e976
 claimed_at: 2026-06-19T07:00:00Z
@@ -21,7 +21,7 @@ claimed_at: 2026-06-19T07:00:00Z
 - **Implemented at**: 2026-06-19T07:05:00Z
 - **Completed at**:
 - **Blocked at**:
-- **Retry count**: 0/3
+- **Retry count**: 1/3
 
 ## Status
 

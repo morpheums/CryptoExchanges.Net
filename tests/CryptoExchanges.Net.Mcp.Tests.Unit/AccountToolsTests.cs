@@ -14,7 +14,6 @@ public class AccountToolsTests
     private static IExchangeClientFactory FactoryReturning(IExchangeClient client, ExchangeId id = ExchangeId.Binance)
     {
         var factory = Substitute.For<IExchangeClientFactory>();
-        factory.GetClient(id).Returns(client);
         factory.TryGet(id, out Arg.Any<IExchangeClient?>())
             .Returns(ci => { ci[1] = client; return true; });
         return factory;
@@ -49,12 +48,29 @@ public class AccountToolsTests
     }
 
     [Fact]
-    public async Task GetBalance_BadAsset_ReturnsError()
+    public async Task GetBalance_ReturnsData()
+    {
+        var client = Substitute.For<IExchangeClient>();
+        client.Account.GetBalanceAsync(Arg.Any<Asset>(), Arg.Any<CancellationToken>())
+            .Returns(new AssetBalance(Asset.Btc, 0.5m, 0m));
+        var factory = FactoryReturning(client);
+
+        var result = await AccountTools.GetBalance(factory, "binance", "BTC");
+
+        result.Ok.Should().BeTrue();
+        result.Data.Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task GetBalance_BadAsset_ReturnsBadRequest()
     {
         var client = Substitute.For<IExchangeClient>();
         var factory = FactoryReturning(client);
+
         var result = await AccountTools.GetBalance(factory, "binance", "");
+
         result.Ok.Should().BeFalse();
+        result.Error!.Category.Should().Be("BadRequest");
     }
 
     [Fact]
@@ -91,6 +107,36 @@ public class AccountToolsTests
 
         result.Ok.Should().BeFalse();
         result.Error!.Category.Should().Be("AuthRequired");
+    }
+
+    [Fact]
+    public async Task GetOrder_ReturnsData()
+    {
+        var order = new Order(new Symbol(Asset.Btc, Asset.Usdt), "ord-001");
+        var client = Substitute.For<IExchangeClient>();
+        client.Trading.GetOrderAsync(Arg.Any<Symbol>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(order);
+        var factory = FactoryReturning(client);
+
+        var result = await AccountTools.GetOrder(factory, "binance", "BTC/USDT", "ord-001");
+
+        result.Ok.Should().BeTrue();
+        result.Data.Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task GetOrderHistory_ReturnsData()
+    {
+        var client = Substitute.For<IExchangeClient>();
+        client.Trading.GetOrderHistoryAsync(
+                Arg.Any<Symbol>(), Arg.Any<int>(), Arg.Any<DateTimeOffset?>(),
+                Arg.Any<DateTimeOffset?>(), Arg.Any<CancellationToken>())
+            .Returns(Array.Empty<Order>());
+        var factory = FactoryReturning(client);
+
+        var result = await AccountTools.GetOrderHistory(factory, "binance", "BTC/USDT");
+
+        result.Ok.Should().BeTrue();
     }
 
     [Fact]

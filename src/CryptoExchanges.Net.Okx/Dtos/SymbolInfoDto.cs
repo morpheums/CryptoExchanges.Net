@@ -1,6 +1,6 @@
 namespace CryptoExchanges.Net.Okx.Services;
 
-internal sealed record InstrumentDto
+internal sealed record SymbolInfoDto
 {
     [JsonPropertyName("instId")]
     public string InstId { get; init; } = string.Empty;

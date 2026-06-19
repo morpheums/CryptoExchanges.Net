@@ -1,6 +1,6 @@
 namespace CryptoExchanges.Net.Bybit.Services;
 
-internal sealed record ExecutionDto
+internal sealed record FillDto
 {
     [JsonPropertyName("symbol")]
     public string Symbol { get; init; } = string.Empty;

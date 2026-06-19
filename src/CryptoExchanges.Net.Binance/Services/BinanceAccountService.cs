@@ -18,7 +18,7 @@ internal sealed class BinanceAccountService(IBinanceHttpClient http, ISymbolMapp
             ["omitZeroBalances"] = "true"
         };
 
-        var response = await http.GetAsync<AccountResponseDto>("/api/v3/account", parameters, true, ct).ConfigureAwait(false);
+        var response = await http.GetAsync<AccountDto>("/api/v3/account", parameters, true, ct).ConfigureAwait(false);
 
         return modelMapper.Map<BalanceDto, AssetBalance>(response.Balances);
     }
@@ -31,7 +31,7 @@ internal sealed class BinanceAccountService(IBinanceHttpClient http, ISymbolMapp
             ["omitZeroBalances"] = "true"
         };
 
-        var response = await http.GetAsync<AccountResponseDto>("/api/v3/account", parameters, true, ct).ConfigureAwait(false);
+        var response = await http.GetAsync<AccountDto>("/api/v3/account", parameters, true, ct).ConfigureAwait(false);
 
         var match = response.Balances
             .Select(modelMapper.Map<BalanceDto, AssetBalance>)
@@ -61,7 +61,7 @@ internal sealed class BinanceAccountService(IBinanceHttpClient http, ISymbolMapp
         if (endTime.HasValue)
             parameters["endTime"] = endTime.Value.ToUnixTimeMilliseconds().ToString();
 
-        var results = await http.GetAsync<List<TradeHistoryResponseDto>>("/api/v3/myTrades", parameters, true, ct).ConfigureAwait(false);
+        var results = await http.GetAsync<List<FillDto>>("/api/v3/myTrades", parameters, true, ct).ConfigureAwait(false);
 
         // Trade.Symbol is taken from the caller's typed argument (the caller already holds it),
         // not resolved from the wire string, so a cold mapper cache can never make this throw.

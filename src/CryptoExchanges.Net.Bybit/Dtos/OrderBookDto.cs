@@ -1,6 +1,6 @@
 namespace CryptoExchanges.Net.Bybit.Services;
 
-internal sealed record OrderBookResultDto
+internal sealed record OrderBookDto
 {
     [JsonPropertyName("s")]
     public string Symbol { get; init; } = string.Empty;

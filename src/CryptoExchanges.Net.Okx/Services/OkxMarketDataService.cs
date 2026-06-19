@@ -163,13 +163,13 @@ internal sealed class OkxMarketDataService(IOkxHttpClient http, ISymbolMapper ma
     public async Task<ExchangeInfo> GetExchangeInfoAsync(CancellationToken ct = default)
     {
         var parameters = new Dictionary<string, string> { ["instType"] = OkxRequestValidation.SpotInstType };
-        var response = await http.GetAsync<ResponseDto<InstrumentDto>>("/api/v5/public/instruments", parameters, false, ct).ConfigureAwait(false);
+        var response = await http.GetAsync<ResponseDto<SymbolInfoDto>>("/api/v5/public/instruments", parameters, false, ct).ConfigureAwait(false);
 
         // OKX instruments can include entries whose base/quote are not representable assets; skip
         // those rather than throw.
         var representable = response.Data
             .Where(s => Asset.TryOf(s.BaseCcy, out _) && Asset.TryOf(s.QuoteCcy, out _));
-        var symbols = modelMapper.Map<InstrumentDto, SymbolInfo>(representable);
+        var symbols = modelMapper.Map<SymbolInfoDto, SymbolInfo>(representable);
 
         // Populate the mapper's wire->Symbol lookup table from the freshly fetched symbols.
         mapper.UpdateSymbols(symbols);

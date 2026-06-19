@@ -16,7 +16,7 @@ internal sealed class OkxAccountService(IOkxHttpClient http, ISymbolMapper mappe
         // OKX returns the full currency list including zero balances; trim to non-zero to match the
         // venue-neutral "non-zero balances" contract other exchanges honour server-side.
         return details
-            .Select(modelMapper.Map<BalanceDetailDto, AssetBalance>)
+            .Select(modelMapper.Map<BalanceDto, AssetBalance>)
             .Where(b => b.Total != 0m)
             .ToList();
     }
@@ -27,7 +27,7 @@ internal sealed class OkxAccountService(IOkxHttpClient http, ISymbolMapper mappe
         var details = await FetchBalanceDetailsAsync(asset.Ticker, ct).ConfigureAwait(false);
 
         var match = details
-            .Select(modelMapper.Map<BalanceDetailDto, AssetBalance>)
+            .Select(modelMapper.Map<BalanceDto, AssetBalance>)
             .FirstOrDefault(b => b.Asset == asset);
 
         return match.Asset == asset ? match : new AssetBalance(asset, 0, 0);
@@ -74,13 +74,13 @@ internal sealed class OkxAccountService(IOkxHttpClient http, ISymbolMapper mappe
         )).ToList();
     }
 
-    private async Task<IReadOnlyList<BalanceDetailDto>> FetchBalanceDetailsAsync(string? ccy, CancellationToken ct)
+    private async Task<IReadOnlyList<BalanceDto>> FetchBalanceDetailsAsync(string? ccy, CancellationToken ct)
     {
         var parameters = new Dictionary<string, string>();
         if (!string.IsNullOrEmpty(ccy))
             parameters["ccy"] = ccy;
 
-        var response = await http.GetAsync<ResponseDto<BalanceAccountDto>>("/api/v5/account/balance", parameters, true, ct).ConfigureAwait(false);
+        var response = await http.GetAsync<ResponseDto<AccountDto>>("/api/v5/account/balance", parameters, true, ct).ConfigureAwait(false);
         return response.Data.SelectMany(a => a.Details).ToList();
     }
 

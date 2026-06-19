@@ -1,0 +1,2823 @@
+diff --git a/nazgul/config.json b/nazgul/config.json
+index f4e1da0..75447d1 100644
+--- a/nazgul/config.json
++++ b/nazgul/config.json
+@@ -140,7 +140,7 @@
+     }
+   },
+   "branch": {
+-    "feature": "feat/m4-bitget",
++    "feature": "chore/cleanup-file-per-type",
+     "base": "main",
+     "main_worktree_path": "/Users/josemejia/ai-platform/personal/workspace/repos/CryptoExchanges.Net",
+     "worktree_dir": null,
+@@ -156,7 +156,7 @@
+     "timeout_minutes": 90,
+     "checkpoint_every_n_iterations": 5,
+     "auto_commit": true,
+-    "commit_prefix": "feat(M2):"
++    "commit_prefix": "refactor(cleanup):"
+   },
+   "context": {
+     "budget_strategy": "aggressive",
+diff --git a/nazgul/tasks/TASK-025.md b/nazgul/tasks/TASK-025.md
+new file mode 100644
+index 0000000..ced5eb7
+--- /dev/null
++++ b/nazgul/tasks/TASK-025.md
+@@ -0,0 +1,33 @@
++---
++id: TASK-025
++status: IMPLEMENTED
++commit: 027d8f4
++claimed_at: 2026-06-19
++---
++
++# TASK-025: Rename per-exchange wire DTOs — drop redundant exchange prefix, add `Dto` suffix
++
++**Status**: IMPLEMENTED
++
++> **Implementation note (2026-06-19):** Build 0W/0E (Release). Full suite green: 455 tests (438 non-integration + 17 integration), 0 failed. 47 internal wire DTOs renamed across Binance (12), Bybit (13), OKX (11), Bitget (11) via `git mv` + type/reference updates; mapping-profile and symbol-format CLASS names left untouched. Commit 027d8f4.
++
++**Blast radius**: LOW — pure rename of `internal` wire DTO types within each exchange
++assembly. No public API change (DTOs are internal), no behavior change. The 455-test
++suite is the regression net and must stay green; build must remain 0W/0E.
++
++## Scope
++Folds into PR #17 (branch `chore/cleanup-file-per-type`) as a third commit. The exchange
++prefix on wire DTOs (`OkxTicker`, `BybitResponse`, …) is redundant with the namespace; the
++bare domain names (`Ticker`/`Order`/`Trade`/`OrderBook`/`RateLimit`/`SymbolInfo`) collide
++with the Core models they map into. Resolution: rename `<Exchange><Name>` → `<Name>Dto`
++(strip exchange prefix, append `Dto`; internal words like `Response`/`Result`/`Ack` left
++intact). Applied uniformly to all 47 DTOs across Binance/Bybit/Okx/Bitget, including their
++files (`git mv`), mapping profiles, and any test references.
++
++## Acceptance
++- Build 0W/0E (Release); all 455 tests pass.
++- No `internal` DTO type retains an exchange prefix; every wire DTO ends in `Dto`.
++- No collisions with `Core.Models.*`; no public API surface change.
++
++## Commits
++- 027d8f4 — refactor(cleanup): rename per-exchange wire DTOs to <Name>Dto (TASK-025)
+diff --git a/src/CryptoExchanges.Net.Binance/BinanceExchangeClient.cs b/src/CryptoExchanges.Net.Binance/BinanceExchangeClient.cs
+index 47aee5e..1bf0f1d 100644
+--- a/src/CryptoExchanges.Net.Binance/BinanceExchangeClient.cs
++++ b/src/CryptoExchanges.Net.Binance/BinanceExchangeClient.cs
+@@ -82,7 +82,7 @@ public sealed class BinanceExchangeClient : IExchangeClient, IAsyncDisposable
+     /// </summary>
+     public async Task SyncServerTimeAsync(CancellationToken ct = default)
+     {
+-        var resp = await _http.GetAsync<BinanceServerTimeResponse>("/api/v3/time", signed: false, ct: ct).ConfigureAwait(false);
++        var resp = await _http.GetAsync<ServerTimeResponseDto>("/api/v3/time", signed: false, ct: ct).ConfigureAwait(false);
+         // A missing/malformed /time payload (serverTime <= 0) is a degraded but non-fatal response:
+         // skip the offset update (keep the prior/local clock) rather than throw out of SyncServerTimeAsync.
+         if (resp.ServerTime > 0)
+@@ -96,7 +96,7 @@ public sealed class BinanceExchangeClient : IExchangeClient, IAsyncDisposable
+         try
+         {
+             // The resilience pipeline throws typed exceptions on failure, so reaching here is success.
+-            _ = await _http.GetAsync<BinanceServerTimeResponse>("/api/v3/time", signed: false, ct: ct).ConfigureAwait(false);
++            _ = await _http.GetAsync<ServerTimeResponseDto>("/api/v3/time", signed: false, ct: ct).ConfigureAwait(false);
+             return true;
+         }
+         catch (OperationCanceledException) when (ct.IsCancellationRequested)
+diff --git a/src/CryptoExchanges.Net.Binance/Dtos/AccountResponseDto.cs b/src/CryptoExchanges.Net.Binance/Dtos/AccountResponseDto.cs
+new file mode 100644
+index 0000000..6243767
+--- /dev/null
++++ b/src/CryptoExchanges.Net.Binance/Dtos/AccountResponseDto.cs
+@@ -0,0 +1,7 @@
++namespace CryptoExchanges.Net.Binance.Services;
++
++internal sealed record AccountResponseDto
++{
++    [JsonPropertyName("balances")]
++    public List<BalanceDto> Balances { get; init; } = [];
++}
+diff --git a/src/CryptoExchanges.Net.Binance/Dtos/BinanceBalance.cs b/src/CryptoExchanges.Net.Binance/Dtos/BalanceDto.cs
+similarity index 88%
+rename from src/CryptoExchanges.Net.Binance/Dtos/BinanceBalance.cs
+rename to src/CryptoExchanges.Net.Binance/Dtos/BalanceDto.cs
+index 42b6e8e..a850105 100644
+--- a/src/CryptoExchanges.Net.Binance/Dtos/BinanceBalance.cs
++++ b/src/CryptoExchanges.Net.Binance/Dtos/BalanceDto.cs
+@@ -1,6 +1,6 @@
+ namespace CryptoExchanges.Net.Binance.Services;
+ 
+-internal sealed record BinanceBalance
++internal sealed record BalanceDto
+ {
+     [JsonPropertyName("asset")]
+     public string Asset { get; init; } = string.Empty;
+diff --git a/src/CryptoExchanges.Net.Binance/Dtos/BinanceAccountResponse.cs b/src/CryptoExchanges.Net.Binance/Dtos/BinanceAccountResponse.cs
+deleted file mode 100644
+index 3bcf245..0000000
+--- a/src/CryptoExchanges.Net.Binance/Dtos/BinanceAccountResponse.cs
++++ /dev/null
+@@ -1,7 +0,0 @@
+-namespace CryptoExchanges.Net.Binance.Services;
+-
+-internal sealed record BinanceAccountResponse
+-{
+-    [JsonPropertyName("balances")]
+-    public List<BinanceBalance> Balances { get; init; } = [];
+-}
+diff --git a/src/CryptoExchanges.Net.Binance/Dtos/BinanceExchangeInfoResponse.cs b/src/CryptoExchanges.Net.Binance/Dtos/BinanceExchangeInfoResponse.cs
+deleted file mode 100644
+index 5bcbcf0..0000000
+--- a/src/CryptoExchanges.Net.Binance/Dtos/BinanceExchangeInfoResponse.cs
++++ /dev/null
+@@ -1,10 +0,0 @@
+-namespace CryptoExchanges.Net.Binance.Services;
+-
+-internal sealed record BinanceExchangeInfoResponse
+-{
+-    [JsonPropertyName("symbols")]
+-    public List<BinanceSymbolInfo> Symbols { get; init; } = [];
+-
+-    [JsonPropertyName("rateLimits")]
+-    public List<BinanceRateLimit> RateLimits { get; init; } = [];
+-}
+diff --git a/src/CryptoExchanges.Net.Binance/Dtos/ExchangeInfoResponseDto.cs b/src/CryptoExchanges.Net.Binance/Dtos/ExchangeInfoResponseDto.cs
+new file mode 100644
+index 0000000..5939869
+--- /dev/null
++++ b/src/CryptoExchanges.Net.Binance/Dtos/ExchangeInfoResponseDto.cs
+@@ -0,0 +1,10 @@
++namespace CryptoExchanges.Net.Binance.Services;
++
++internal sealed record ExchangeInfoResponseDto
++{
++    [JsonPropertyName("symbols")]
++    public List<SymbolInfoDto> Symbols { get; init; } = [];
++
++    [JsonPropertyName("rateLimits")]
++    public List<RateLimitDto> RateLimits { get; init; } = [];
++}
+diff --git a/src/CryptoExchanges.Net.Binance/Dtos/BinanceOrderBookResponse.cs b/src/CryptoExchanges.Net.Binance/Dtos/OrderBookResponseDto.cs
+similarity index 86%
+rename from src/CryptoExchanges.Net.Binance/Dtos/BinanceOrderBookResponse.cs
+rename to src/CryptoExchanges.Net.Binance/Dtos/OrderBookResponseDto.cs
+index 13fb8ee..569e570 100644
+--- a/src/CryptoExchanges.Net.Binance/Dtos/BinanceOrderBookResponse.cs
++++ b/src/CryptoExchanges.Net.Binance/Dtos/OrderBookResponseDto.cs
+@@ -1,6 +1,6 @@
+ namespace CryptoExchanges.Net.Binance.Services;
+ 
+-internal sealed record BinanceOrderBookResponse
++internal sealed record OrderBookResponseDto
+ {
+     [JsonPropertyName("lastUpdateId")]
+     public long LastUpdateId { get; init; }
+diff --git a/src/CryptoExchanges.Net.Binance/Dtos/BinanceOrderResponse.cs b/src/CryptoExchanges.Net.Binance/Dtos/OrderResponseDto.cs
+similarity index 97%
+rename from src/CryptoExchanges.Net.Binance/Dtos/BinanceOrderResponse.cs
+rename to src/CryptoExchanges.Net.Binance/Dtos/OrderResponseDto.cs
+index ab9798a..a777c8f 100644
+--- a/src/CryptoExchanges.Net.Binance/Dtos/BinanceOrderResponse.cs
++++ b/src/CryptoExchanges.Net.Binance/Dtos/OrderResponseDto.cs
+@@ -1,6 +1,6 @@
+ namespace CryptoExchanges.Net.Binance.Services;
+ 
+-internal sealed record BinanceOrderResponse
++internal sealed record OrderResponseDto
+ {
+     [JsonPropertyName("symbol")]
+     public string Symbol { get; init; } = string.Empty;
+diff --git a/src/CryptoExchanges.Net.Binance/Dtos/BinancePriceResponse.cs b/src/CryptoExchanges.Net.Binance/Dtos/PriceResponseDto.cs
+similarity index 83%
+rename from src/CryptoExchanges.Net.Binance/Dtos/BinancePriceResponse.cs
+rename to src/CryptoExchanges.Net.Binance/Dtos/PriceResponseDto.cs
+index 1a1f8ca..4b06e29 100644
+--- a/src/CryptoExchanges.Net.Binance/Dtos/BinancePriceResponse.cs
++++ b/src/CryptoExchanges.Net.Binance/Dtos/PriceResponseDto.cs
+@@ -1,6 +1,6 @@
+ namespace CryptoExchanges.Net.Binance.Services;
+ 
+-internal sealed record BinancePriceResponse
++internal sealed record PriceResponseDto
+ {
+     [JsonPropertyName("symbol")]
+     public string Symbol { get; init; } = string.Empty;
+diff --git a/src/CryptoExchanges.Net.Binance/Dtos/BinanceRateLimit.cs b/src/CryptoExchanges.Net.Binance/Dtos/RateLimitDto.cs
+similarity index 88%
+rename from src/CryptoExchanges.Net.Binance/Dtos/BinanceRateLimit.cs
+rename to src/CryptoExchanges.Net.Binance/Dtos/RateLimitDto.cs
+index 618409c..6fd4f67 100644
+--- a/src/CryptoExchanges.Net.Binance/Dtos/BinanceRateLimit.cs
++++ b/src/CryptoExchanges.Net.Binance/Dtos/RateLimitDto.cs
+@@ -1,6 +1,6 @@
+ namespace CryptoExchanges.Net.Binance.Services;
+ 
+-internal sealed record BinanceRateLimit
++internal sealed record RateLimitDto
+ {
+     [JsonPropertyName("rateLimitType")]
+     public string RateLimitType { get; init; } = string.Empty;
+diff --git a/src/CryptoExchanges.Net.Binance/Dtos/BinanceServerTimeResponse.cs b/src/CryptoExchanges.Net.Binance/Dtos/ServerTimeResponseDto.cs
+similarity index 81%
+rename from src/CryptoExchanges.Net.Binance/Dtos/BinanceServerTimeResponse.cs
+rename to src/CryptoExchanges.Net.Binance/Dtos/ServerTimeResponseDto.cs
+index 146997d..8d2f694 100644
+--- a/src/CryptoExchanges.Net.Binance/Dtos/BinanceServerTimeResponse.cs
++++ b/src/CryptoExchanges.Net.Binance/Dtos/ServerTimeResponseDto.cs
+@@ -3,7 +3,7 @@ namespace CryptoExchanges.Net.Binance;
+ /// <summary>
+ /// Simple DTO for the /api/v3/time response used by PingAsync.
+ /// </summary>
+-internal sealed record BinanceServerTimeResponse
++internal sealed record ServerTimeResponseDto
+ {
+     [JsonPropertyName("serverTime")]
+     public long ServerTime { get; init; }
+diff --git a/src/CryptoExchanges.Net.Binance/Dtos/BinanceSymbolInfo.cs b/src/CryptoExchanges.Net.Binance/Dtos/SymbolInfoDto.cs
+similarity index 92%
+rename from src/CryptoExchanges.Net.Binance/Dtos/BinanceSymbolInfo.cs
+rename to src/CryptoExchanges.Net.Binance/Dtos/SymbolInfoDto.cs
+index 6256021..4647fd6 100644
+--- a/src/CryptoExchanges.Net.Binance/Dtos/BinanceSymbolInfo.cs
++++ b/src/CryptoExchanges.Net.Binance/Dtos/SymbolInfoDto.cs
+@@ -1,6 +1,6 @@
+ namespace CryptoExchanges.Net.Binance.Services;
+ 
+-internal sealed record BinanceSymbolInfo
++internal sealed record SymbolInfoDto
+ {
+     [JsonPropertyName("symbol")]
+     public string Symbol { get; init; } = string.Empty;
+diff --git a/src/CryptoExchanges.Net.Binance/Dtos/BinanceTickerResponse.cs b/src/CryptoExchanges.Net.Binance/Dtos/TickerResponseDto.cs
+similarity index 95%
+rename from src/CryptoExchanges.Net.Binance/Dtos/BinanceTickerResponse.cs
+rename to src/CryptoExchanges.Net.Binance/Dtos/TickerResponseDto.cs
+index 9ca3e1c..7680576 100644
+--- a/src/CryptoExchanges.Net.Binance/Dtos/BinanceTickerResponse.cs
++++ b/src/CryptoExchanges.Net.Binance/Dtos/TickerResponseDto.cs
+@@ -1,6 +1,6 @@
+ namespace CryptoExchanges.Net.Binance.Services;
+ 
+-internal sealed record BinanceTickerResponse
++internal sealed record TickerResponseDto
+ {
+     [JsonPropertyName("symbol")]
+     public string Symbol { get; init; } = string.Empty;
+diff --git a/src/CryptoExchanges.Net.Binance/Dtos/BinanceTradeHistoryResponse.cs b/src/CryptoExchanges.Net.Binance/Dtos/TradeHistoryResponseDto.cs
+similarity index 92%
+rename from src/CryptoExchanges.Net.Binance/Dtos/BinanceTradeHistoryResponse.cs
+rename to src/CryptoExchanges.Net.Binance/Dtos/TradeHistoryResponseDto.cs
+index 6a2b598..cb032df 100644
+--- a/src/CryptoExchanges.Net.Binance/Dtos/BinanceTradeHistoryResponse.cs
++++ b/src/CryptoExchanges.Net.Binance/Dtos/TradeHistoryResponseDto.cs
+@@ -1,6 +1,6 @@
+ namespace CryptoExchanges.Net.Binance.Services;
+ 
+-internal sealed record BinanceTradeHistoryResponse
++internal sealed record TradeHistoryResponseDto
+ {
+     [JsonPropertyName("symbol")]
+     public string Symbol { get; init; } = string.Empty;
+diff --git a/src/CryptoExchanges.Net.Binance/Dtos/BinanceTradeResponse.cs b/src/CryptoExchanges.Net.Binance/Dtos/TradeResponseDto.cs
+similarity index 92%
+rename from src/CryptoExchanges.Net.Binance/Dtos/BinanceTradeResponse.cs
+rename to src/CryptoExchanges.Net.Binance/Dtos/TradeResponseDto.cs
+index e4bd29c..738cfd6 100644
+--- a/src/CryptoExchanges.Net.Binance/Dtos/BinanceTradeResponse.cs
++++ b/src/CryptoExchanges.Net.Binance/Dtos/TradeResponseDto.cs
+@@ -1,6 +1,6 @@
+ namespace CryptoExchanges.Net.Binance.Services;
+ 
+-internal sealed record BinanceTradeResponse
++internal sealed record TradeResponseDto
+ {
+     [JsonPropertyName("id")]
+     public long Id { get; init; }
+diff --git a/src/CryptoExchanges.Net.Binance/Mapping/BinanceMappingProfiles.cs b/src/CryptoExchanges.Net.Binance/Mapping/BinanceMappingProfiles.cs
+index b20e29c..7870c1c 100644
+--- a/src/CryptoExchanges.Net.Binance/Mapping/BinanceMappingProfiles.cs
++++ b/src/CryptoExchanges.Net.Binance/Mapping/BinanceMappingProfiles.cs
+@@ -21,7 +21,7 @@ internal sealed class BinanceResponseProfile : Profile
+     {
+         ArgumentNullException.ThrowIfNull(symbolMapper);
+ 
+-        CreateMap<BinanceOrderResponse, Order>()
++        CreateMap<OrderResponseDto, Order>()
+             .ForMember(d => d.Symbol, o => o.MapFrom(s => symbolMapper.FromWire(s.Symbol)))
+             .ForMember(d => d.OrderId, o => o.MapFrom(s => s.OrderId.ToString()))
+             .ForMember(d => d.ClientOrderId, o => o.MapFrom(s => string.IsNullOrEmpty(s.ClientOrderId) ? null : s.ClientOrderId))
+@@ -38,7 +38,7 @@ internal sealed class BinanceResponseProfile : Profile
+             .ForMember(d => d.UpdatedAt, o => o.MapFrom(s => s.UpdateTime > 0 ? DateTimeOffset.FromUnixTimeMilliseconds(s.UpdateTime) : (DateTimeOffset?)null))
+             .ForMember(d => d.CumulativeQuoteQuantity, o => o.MapFrom(s => BinanceValueParsers.ParseDecimal(s.CumulativeQuoteQty)));
+ 
+-        CreateMap<BinanceTickerResponse, Ticker>()
++        CreateMap<TickerResponseDto, Ticker>()
+             .ForMember(d => d.Symbol, o => o.MapFrom(s => symbolMapper.FromWire(s.Symbol)))
+             .ForMember(d => d.LastPrice, o => o.MapFrom(s => BinanceValueParsers.ParseDecimal(s.LastPrice)))
+             .ForMember(d => d.OpenPrice, o => o.MapFrom(s => BinanceValueParsers.ParseDecimal(s.OpenPrice)))
+@@ -50,14 +50,14 @@ internal sealed class BinanceResponseProfile : Profile
+             .ForMember(d => d.PriceChangePercent, o => o.MapFrom(s => BinanceValueParsers.ParseDecimal(s.PriceChangePercent)))
+             .ForMember(d => d.Timestamp, o => o.MapFrom(s => s.CloseTime > 0 ? DateTimeOffset.FromUnixTimeMilliseconds(s.CloseTime) : (DateTimeOffset?)null));
+ 
+-        // NOTE: BinanceTradeHistoryResponse -> Trade is intentionally NOT mapped here.
++        // NOTE: TradeHistoryResponseDto -> Trade is intentionally NOT mapped here.
+         // Trade.Symbol for account trade history comes from the caller's typed Symbol argument
+         // (which the caller already holds), not from resolving the wire string — resolving via
+         // FromWire could throw on a cold mapper cache for pairs outside the fallback-quote list.
+         // That projection stays hand-written in BinanceAccountService.GetTradeHistoryAsync.
+ 
+-        // BinanceSymbolInfo -> SymbolInfo (exchangeInfo symbol projection; explicit base/quote legs).
+-        CreateMap<BinanceSymbolInfo, SymbolInfo>()
++        // SymbolInfoDto -> SymbolInfo (exchangeInfo symbol projection; explicit base/quote legs).
++        CreateMap<SymbolInfoDto, SymbolInfo>()
+             .ForMember(d => d.Symbol, o => o.MapFrom(s => symbolMapper.FromComponents(s.BaseAsset, s.QuoteAsset)))
+             .ForMember(d => d.AllowedOrderTypes, o => o.MapFrom(s => s.OrderTypes.Select(BinanceValueParsers.ParseOrderType).ToArray()))
+             .ForMember(d => d.MinPrice, o => o.Ignore())
+@@ -70,7 +70,7 @@ internal sealed class BinanceResponseProfile : Profile
+ 
+         // Balances are where long-tail assets appear, so an unrepresentable ticker maps to
+         // Asset.None rather than throwing.
+-        CreateMap<BinanceBalance, AssetBalance>()
++        CreateMap<BalanceDto, AssetBalance>()
+             .ForMember(d => d.Asset, o => o.MapFrom(s => BinanceValueParsers.ParseAssetOrNone(s.Asset)))
+             .ForMember(d => d.Free, o => o.MapFrom(s => BinanceValueParsers.ParseDecimal(s.Free)))
+             .ForMember(d => d.Locked, o => o.MapFrom(s => BinanceValueParsers.ParseDecimal(s.Locked)));
+diff --git a/src/CryptoExchanges.Net.Binance/Services/BinanceAccountService.cs b/src/CryptoExchanges.Net.Binance/Services/BinanceAccountService.cs
+index 308ed83..980bc58 100644
+--- a/src/CryptoExchanges.Net.Binance/Services/BinanceAccountService.cs
++++ b/src/CryptoExchanges.Net.Binance/Services/BinanceAccountService.cs
+@@ -18,9 +18,9 @@ internal sealed class BinanceAccountService(IBinanceHttpClient http, ISymbolMapp
+             ["omitZeroBalances"] = "true"
+         };
+ 
+-        var response = await http.GetAsync<BinanceAccountResponse>("/api/v3/account", parameters, true, ct).ConfigureAwait(false);
++        var response = await http.GetAsync<AccountResponseDto>("/api/v3/account", parameters, true, ct).ConfigureAwait(false);
+ 
+-        return modelMapper.Map<BinanceBalance, AssetBalance>(response.Balances);
++        return modelMapper.Map<BalanceDto, AssetBalance>(response.Balances);
+     }
+ 
+     /// <inheritdoc />
+@@ -31,10 +31,10 @@ internal sealed class BinanceAccountService(IBinanceHttpClient http, ISymbolMapp
+             ["omitZeroBalances"] = "true"
+         };
+ 
+-        var response = await http.GetAsync<BinanceAccountResponse>("/api/v3/account", parameters, true, ct).ConfigureAwait(false);
++        var response = await http.GetAsync<AccountResponseDto>("/api/v3/account", parameters, true, ct).ConfigureAwait(false);
+ 
+         var match = response.Balances
+-            .Select(modelMapper.Map<BinanceBalance, AssetBalance>)
++            .Select(modelMapper.Map<BalanceDto, AssetBalance>)
+             .FirstOrDefault(b => b.Asset == asset);
+ 
+         return match.Asset == asset ? match : new AssetBalance(asset, 0, 0);
+@@ -61,7 +61,7 @@ internal sealed class BinanceAccountService(IBinanceHttpClient http, ISymbolMapp
+         if (endTime.HasValue)
+             parameters["endTime"] = endTime.Value.ToUnixTimeMilliseconds().ToString();
+ 
+-        var results = await http.GetAsync<List<BinanceTradeHistoryResponse>>("/api/v3/myTrades", parameters, true, ct).ConfigureAwait(false);
++        var results = await http.GetAsync<List<TradeHistoryResponseDto>>("/api/v3/myTrades", parameters, true, ct).ConfigureAwait(false);
+ 
+         // Trade.Symbol is taken from the caller's typed argument (the caller already holds it),
+         // not resolved from the wire string, so a cold mapper cache can never make this throw.
+diff --git a/src/CryptoExchanges.Net.Binance/Services/BinanceMarketDataService.cs b/src/CryptoExchanges.Net.Binance/Services/BinanceMarketDataService.cs
+index 1c0a2a3..9d2d01c 100644
+--- a/src/CryptoExchanges.Net.Binance/Services/BinanceMarketDataService.cs
++++ b/src/CryptoExchanges.Net.Binance/Services/BinanceMarketDataService.cs
+@@ -47,17 +47,17 @@ internal sealed class BinanceMarketDataService(IBinanceHttpClient http, ISymbolM
+         else
+             parameters["type"] = "FULL";
+ 
+-        List<BinanceTickerResponse>? results;
++        List<TickerResponseDto>? results;
+ 
+         if (symbol.HasValue)
+         {
+             // Single symbol returns an object, not an array. The caller asked for a specific
+             // symbol, so an unresolvable wire string is a genuine error — let MapTicker throw.
+-            var single = await http.GetAsync<BinanceTickerResponse>("/api/v3/ticker/24hr", parameters, false, ct).ConfigureAwait(false);
+-            return [modelMapper.Map<BinanceTickerResponse, Ticker>(single)];
++            var single = await http.GetAsync<TickerResponseDto>("/api/v3/ticker/24hr", parameters, false, ct).ConfigureAwait(false);
++            return [modelMapper.Map<TickerResponseDto, Ticker>(single)];
+         }
+ 
+-        results = await http.GetAsync<List<BinanceTickerResponse>>("/api/v3/ticker/24hr", parameters, false, ct).ConfigureAwait(false);
++        results = await http.GetAsync<List<TickerResponseDto>>("/api/v3/ticker/24hr", parameters, false, ct).ConfigureAwait(false);
+ 
+         // The full universe includes obscure/delisted pairs that may not resolve against a
+         // cold cache or any known quote suffix; skip those rather than failing the whole batch.
+@@ -75,7 +75,7 @@ internal sealed class BinanceMarketDataService(IBinanceHttpClient http, ISymbolM
+             ["limit"] = depth.ToString()
+         };
+ 
+-        var response = await http.GetAsync<BinanceOrderBookResponse>("/api/v3/depth", parameters, false, ct).ConfigureAwait(false);
++        var response = await http.GetAsync<OrderBookResponseDto>("/api/v3/depth", parameters, false, ct).ConfigureAwait(false);
+ 
+         var bids = response.Bids.Select(b => new OrderBookEntry(BinanceValueParsers.ParseDecimal(b[0]), BinanceValueParsers.ParseDecimal(b[1]))).ToList();
+         var asks = response.Asks.Select(a => new OrderBookEntry(BinanceValueParsers.ParseDecimal(a[0]), BinanceValueParsers.ParseDecimal(a[1]))).ToList();
+@@ -142,7 +142,7 @@ internal sealed class BinanceMarketDataService(IBinanceHttpClient http, ISymbolM
+             ["symbol"] = mapper.ToWire(symbol)
+         };
+ 
+-        var response = await http.GetAsync<BinancePriceResponse>("/api/v3/ticker/price", parameters, false, ct).ConfigureAwait(false);
++        var response = await http.GetAsync<PriceResponseDto>("/api/v3/ticker/price", parameters, false, ct).ConfigureAwait(false);
+         return BinanceValueParsers.ParseDecimal(response.Price);
+     }
+ 
+@@ -155,7 +155,7 @@ internal sealed class BinanceMarketDataService(IBinanceHttpClient http, ISymbolM
+             ["limit"] = limit.ToString()
+         };
+ 
+-        var results = await http.GetAsync<List<BinanceTradeResponse>>("/api/v3/trades", parameters, false, ct).ConfigureAwait(false);
++        var results = await http.GetAsync<List<TradeResponseDto>>("/api/v3/trades", parameters, false, ct).ConfigureAwait(false);
+ 
+         return results.Select(t => new Trade(
+             symbol,
+@@ -170,13 +170,13 @@ internal sealed class BinanceMarketDataService(IBinanceHttpClient http, ISymbolM
+     /// <inheritdoc />
+     public async Task<ExchangeInfo> GetExchangeInfoAsync(CancellationToken ct = default)
+     {
+-        var response = await http.GetAsync<BinanceExchangeInfoResponse>("/api/v3/exchangeInfo", null, false, ct).ConfigureAwait(false);
++        var response = await http.GetAsync<ExchangeInfoResponseDto>("/api/v3/exchangeInfo", null, false, ct).ConfigureAwait(false);
+ 
+         // Binance exchangeInfo can include non-standard entries whose base/quote are not
+         // representable assets (e.g. non-ASCII test symbols); skip those rather than throw.
+         var representable = response.Symbols
+             .Where(s => Asset.TryOf(s.BaseAsset, out _) && Asset.TryOf(s.QuoteAsset, out _));
+-        var symbols = modelMapper.Map<BinanceSymbolInfo, SymbolInfo>(representable);
++        var symbols = modelMapper.Map<SymbolInfoDto, SymbolInfo>(representable);
+ 
+         // Populate the mapper's wire->Symbol lookup table from the freshly fetched symbols.
+         mapper.UpdateSymbols(symbols);
+@@ -208,12 +208,12 @@ internal sealed class BinanceMarketDataService(IBinanceHttpClient http, ISymbolM
+     /// Maps a ticker, yielding nothing when its wire symbol cannot be resolved. Used for the
+     /// full-universe response where unknown/delisted pairs must not abort the whole batch.
+     /// </summary>
+-    private IEnumerable<Ticker> TryMapTicker(BinanceTickerResponse t)
++    private IEnumerable<Ticker> TryMapTicker(TickerResponseDto t)
+     {
+         Ticker ticker;
+         try
+         {
+-            ticker = modelMapper.Map<BinanceTickerResponse, Ticker>(t);
++            ticker = modelMapper.Map<TickerResponseDto, Ticker>(t);
+         }
+         catch (FormatException)
+         {
+diff --git a/src/CryptoExchanges.Net.Binance/Services/BinanceTradingService.cs b/src/CryptoExchanges.Net.Binance/Services/BinanceTradingService.cs
+index 31e86e9..812575b 100644
+--- a/src/CryptoExchanges.Net.Binance/Services/BinanceTradingService.cs
++++ b/src/CryptoExchanges.Net.Binance/Services/BinanceTradingService.cs
+@@ -44,8 +44,8 @@ internal sealed class BinanceTradingService(IBinanceHttpClient http, ISymbolMapp
+         if (request.IcebergQuantity.HasValue)
+             parameters["icebergQty"] = request.IcebergQuantity.Value.ToString(System.Globalization.CultureInfo.InvariantCulture);
+ 
+-        var response = await http.PostAsync<BinanceOrderResponse>("/api/v3/order", parameters, true, ct).ConfigureAwait(false);
+-        return modelMapper.Map<BinanceOrderResponse, Order>(response);
++        var response = await http.PostAsync<OrderResponseDto>("/api/v3/order", parameters, true, ct).ConfigureAwait(false);
++        return modelMapper.Map<OrderResponseDto, Order>(response);
+     }
+ 
+     /// <inheritdoc />
+@@ -57,8 +57,8 @@ internal sealed class BinanceTradingService(IBinanceHttpClient http, ISymbolMapp
+             ["orderId"] = orderId
+         };
+ 
+-        var response = await http.DeleteAsync<BinanceOrderResponse>("/api/v3/order", parameters, true, ct).ConfigureAwait(false);
+-        return modelMapper.Map<BinanceOrderResponse, Order>(response);
++        var response = await http.DeleteAsync<OrderResponseDto>("/api/v3/order", parameters, true, ct).ConfigureAwait(false);
++        return modelMapper.Map<OrderResponseDto, Order>(response);
+     }
+ 
+     /// <inheritdoc />
+@@ -70,8 +70,8 @@ internal sealed class BinanceTradingService(IBinanceHttpClient http, ISymbolMapp
+             ["origClientOrderId"] = clientOrderId
+         };
+ 
+-        var response = await http.DeleteAsync<BinanceOrderResponse>("/api/v3/order", parameters, true, ct).ConfigureAwait(false);
+-        return modelMapper.Map<BinanceOrderResponse, Order>(response);
++        var response = await http.DeleteAsync<OrderResponseDto>("/api/v3/order", parameters, true, ct).ConfigureAwait(false);
++        return modelMapper.Map<OrderResponseDto, Order>(response);
+     }
+ 
+     /// <inheritdoc />
+@@ -86,19 +86,19 @@ internal sealed class BinanceTradingService(IBinanceHttpClient http, ISymbolMapp
+         // objects or order-list wrappers (e.g. OCO) carrying nested orderReports.
+         var payload = await http.DeleteAsync<JsonElement[]>("/api/v3/openOrders", parameters, true, ct).ConfigureAwait(false);
+         var orders = payload.SelectMany(ExtractCanceledOrders).ToList();
+-        return modelMapper.Map<BinanceOrderResponse, Order>(orders);
++        return modelMapper.Map<OrderResponseDto, Order>(orders);
+     }
+ 
+     /// <summary>
+     /// Yields the canceled order(s) from a single cancel-all response item, unwrapping
+     /// order-list entries (e.g. OCO) that carry their orders under <c>orderReports</c>.
+     /// </summary>
+-    private static IEnumerable<BinanceOrderResponse> ExtractCanceledOrders(JsonElement item)
++    private static IEnumerable<OrderResponseDto> ExtractCanceledOrders(JsonElement item)
+     {
+         if (item.TryGetProperty("orderReports", out var reports) && reports.ValueKind == JsonValueKind.Array)
+-            return reports.Deserialize<List<BinanceOrderResponse>>() ?? [];
++            return reports.Deserialize<List<OrderResponseDto>>() ?? [];
+ 
+-        var order = item.Deserialize<BinanceOrderResponse>();
++        var order = item.Deserialize<OrderResponseDto>();
+         return order is null ? [] : [order];
+     }
+ 
+@@ -111,8 +111,8 @@ internal sealed class BinanceTradingService(IBinanceHttpClient http, ISymbolMapp
+             ["orderId"] = orderId
+         };
+ 
+-        var response = await http.GetAsync<BinanceOrderResponse>("/api/v3/order", parameters, true, ct).ConfigureAwait(false);
+-        return modelMapper.Map<BinanceOrderResponse, Order>(response);
++        var response = await http.GetAsync<OrderResponseDto>("/api/v3/order", parameters, true, ct).ConfigureAwait(false);
++        return modelMapper.Map<OrderResponseDto, Order>(response);
+     }
+ 
+     /// <inheritdoc />
+@@ -123,8 +123,8 @@ internal sealed class BinanceTradingService(IBinanceHttpClient http, ISymbolMapp
+         if (symbol.HasValue)
+             parameters["symbol"] = mapper.ToWire(symbol.Value);
+ 
+-        var results = await http.GetAsync<List<BinanceOrderResponse>>("/api/v3/openOrders", parameters, true, ct).ConfigureAwait(false);
+-        return modelMapper.Map<BinanceOrderResponse, Order>(results);
++        var results = await http.GetAsync<List<OrderResponseDto>>("/api/v3/openOrders", parameters, true, ct).ConfigureAwait(false);
++        return modelMapper.Map<OrderResponseDto, Order>(results);
+     }
+ 
+     /// <inheritdoc />
+@@ -148,8 +148,8 @@ internal sealed class BinanceTradingService(IBinanceHttpClient http, ISymbolMapp
+         if (endTime.HasValue)
+             parameters["endTime"] = endTime.Value.ToUnixTimeMilliseconds().ToString();
+ 
+-        var results = await http.GetAsync<List<BinanceOrderResponse>>("/api/v3/allOrders", parameters, true, ct).ConfigureAwait(false);
+-        return modelMapper.Map<BinanceOrderResponse, Order>(results);
++        var results = await http.GetAsync<List<OrderResponseDto>>("/api/v3/allOrders", parameters, true, ct).ConfigureAwait(false);
++        return modelMapper.Map<OrderResponseDto, Order>(results);
+     }
+ 
+     private static string MapOrderSide(OrderSide side) => side switch
+diff --git a/src/CryptoExchanges.Net.Bitget/BitgetExchangeClient.cs b/src/CryptoExchanges.Net.Bitget/BitgetExchangeClient.cs
+index 7c4965a..1304474 100644
+--- a/src/CryptoExchanges.Net.Bitget/BitgetExchangeClient.cs
++++ b/src/CryptoExchanges.Net.Bitget/BitgetExchangeClient.cs
+@@ -86,7 +86,7 @@ public sealed class BitgetExchangeClient : IExchangeClient, IAsyncDisposable
+     /// <param name="ct">Cancellation token.</param>
+     public async Task SyncServerTimeAsync(CancellationToken ct = default)
+     {
+-        var resp = await _http.GetAsync<BitgetObjectResponse<BitgetServerTime>>("/api/v2/public/time", signed: false, ct: ct).ConfigureAwait(false);
++        var resp = await _http.GetAsync<ObjectResponseDto<ServerTimeDto>>("/api/v2/public/time", signed: false, ct: ct).ConfigureAwait(false);
+         var serverTimeMs = ServerTimeMs(resp.Data);
+         // A missing/malformed /time payload (ServerTimeMs returns 0) is a degraded but non-fatal
+         // response: skip the offset update (keep the prior/local clock) rather than throw.
+@@ -100,7 +100,7 @@ public sealed class BitgetExchangeClient : IExchangeClient, IAsyncDisposable
+         try
+         {
+             // The resilience pipeline throws typed exceptions on failure, so reaching here is success.
+-            _ = await _http.GetAsync<BitgetObjectResponse<BitgetServerTime>>("/api/v2/public/time", signed: false, ct: ct).ConfigureAwait(false);
++            _ = await _http.GetAsync<ObjectResponseDto<ServerTimeDto>>("/api/v2/public/time", signed: false, ct: ct).ConfigureAwait(false);
+             return true;
+         }
+         catch (OperationCanceledException) when (ct.IsCancellationRequested)
+@@ -126,6 +126,6 @@ public sealed class BitgetExchangeClient : IExchangeClient, IAsyncDisposable
+     }
+ 
+     /// <summary>Resolves server time in unix milliseconds from the V2 time envelope (serverTime is ms as a string).</summary>
+-    private static long ServerTimeMs(BitgetServerTime? result)
++    private static long ServerTimeMs(ServerTimeDto? result)
+         => result is null ? 0L : BitgetValueParsers.ParseMs(result.ServerTime);
+ }
+diff --git a/src/CryptoExchanges.Net.Bitget/Dtos/BitgetBalance.cs b/src/CryptoExchanges.Net.Bitget/Dtos/BalanceDto.cs
+similarity index 94%
+rename from src/CryptoExchanges.Net.Bitget/Dtos/BitgetBalance.cs
+rename to src/CryptoExchanges.Net.Bitget/Dtos/BalanceDto.cs
+index 06e2286..6bc0c46 100644
+--- a/src/CryptoExchanges.Net.Bitget/Dtos/BitgetBalance.cs
++++ b/src/CryptoExchanges.Net.Bitget/Dtos/BalanceDto.cs
+@@ -1,6 +1,6 @@
+ namespace CryptoExchanges.Net.Bitget.Services;
+ 
+-internal sealed record BitgetBalance
++internal sealed record BalanceDto
+ {
+     [JsonPropertyName("coin")]
+     public string Coin { get; init; } = string.Empty;
+diff --git a/src/CryptoExchanges.Net.Bitget/Dtos/BitgetFill.cs b/src/CryptoExchanges.Net.Bitget/Dtos/FillDto.cs
+similarity index 96%
+rename from src/CryptoExchanges.Net.Bitget/Dtos/BitgetFill.cs
+rename to src/CryptoExchanges.Net.Bitget/Dtos/FillDto.cs
+index 4944a51..1559dd3 100644
+--- a/src/CryptoExchanges.Net.Bitget/Dtos/BitgetFill.cs
++++ b/src/CryptoExchanges.Net.Bitget/Dtos/FillDto.cs
+@@ -1,6 +1,6 @@
+ namespace CryptoExchanges.Net.Bitget.Services;
+ 
+-internal sealed record BitgetFill
++internal sealed record FillDto
+ {
+     [JsonPropertyName("symbol")]
+     public string Symbol { get; init; } = string.Empty;
+diff --git a/src/CryptoExchanges.Net.Bitget/Dtos/BitgetObjectResponse.cs b/src/CryptoExchanges.Net.Bitget/Dtos/ObjectResponseDto.cs
+similarity index 91%
+rename from src/CryptoExchanges.Net.Bitget/Dtos/BitgetObjectResponse.cs
+rename to src/CryptoExchanges.Net.Bitget/Dtos/ObjectResponseDto.cs
+index 1b13737..5797850 100644
+--- a/src/CryptoExchanges.Net.Bitget/Dtos/BitgetObjectResponse.cs
++++ b/src/CryptoExchanges.Net.Bitget/Dtos/ObjectResponseDto.cs
+@@ -3,7 +3,7 @@ namespace CryptoExchanges.Net.Bitget.Services;
+ /// <summary>Bitget V2 envelope for endpoints whose <c>data</c> is a single object, not an array
+ /// (e.g. <c>/api/v2/public/time</c>).</summary>
+ /// <typeparam name="T">The type of the <c>data</c> object.</typeparam>
+-internal sealed record BitgetObjectResponse<T>
++internal sealed record ObjectResponseDto<T>
+ {
+     [JsonPropertyName("code")]
+     public string Code { get; init; } = "00000";
+diff --git a/src/CryptoExchanges.Net.Bitget/Dtos/BitgetOrderAck.cs b/src/CryptoExchanges.Net.Bitget/Dtos/OrderAckDto.cs
+similarity index 92%
+rename from src/CryptoExchanges.Net.Bitget/Dtos/BitgetOrderAck.cs
+rename to src/CryptoExchanges.Net.Bitget/Dtos/OrderAckDto.cs
+index dec5991..3a2aba2 100644
+--- a/src/CryptoExchanges.Net.Bitget/Dtos/BitgetOrderAck.cs
++++ b/src/CryptoExchanges.Net.Bitget/Dtos/OrderAckDto.cs
+@@ -5,7 +5,7 @@ namespace CryptoExchanges.Net.Bitget.Services;
+ /// envelope never reaches the services because the resilience pipeline's error translator converts
+ /// it into a typed exception.
+ /// </summary>
+-internal sealed record BitgetOrderAck
++internal sealed record OrderAckDto
+ {
+     [JsonPropertyName("orderId")]
+     public string OrderId { get; init; } = string.Empty;
+diff --git a/src/CryptoExchanges.Net.Bitget/Dtos/BitgetOrderBook.cs b/src/CryptoExchanges.Net.Bitget/Dtos/OrderBookDto.cs
+similarity index 90%
+rename from src/CryptoExchanges.Net.Bitget/Dtos/BitgetOrderBook.cs
+rename to src/CryptoExchanges.Net.Bitget/Dtos/OrderBookDto.cs
+index 3c7da09..287d033 100644
+--- a/src/CryptoExchanges.Net.Bitget/Dtos/BitgetOrderBook.cs
++++ b/src/CryptoExchanges.Net.Bitget/Dtos/OrderBookDto.cs
+@@ -1,6 +1,6 @@
+ namespace CryptoExchanges.Net.Bitget.Services;
+ 
+-internal sealed record BitgetOrderBook
++internal sealed record OrderBookDto
+ {
+     [JsonPropertyName("asks")]
+     public List<List<string>> Asks { get; init; } = [];
+diff --git a/src/CryptoExchanges.Net.Bitget/Dtos/BitgetOrder.cs b/src/CryptoExchanges.Net.Bitget/Dtos/OrderDto.cs
+similarity index 98%
+rename from src/CryptoExchanges.Net.Bitget/Dtos/BitgetOrder.cs
+rename to src/CryptoExchanges.Net.Bitget/Dtos/OrderDto.cs
+index 9774eff..8cf35cc 100644
+--- a/src/CryptoExchanges.Net.Bitget/Dtos/BitgetOrder.cs
++++ b/src/CryptoExchanges.Net.Bitget/Dtos/OrderDto.cs
+@@ -1,7 +1,7 @@
+ namespace CryptoExchanges.Net.Bitget.Services;
+ 
+ /// <summary>A full Bitget V2 order record as returned by <c>/api/v2/spot/trade/orderInfo</c> and the order lists.</summary>
+-internal sealed record BitgetOrder
++internal sealed record OrderDto
+ {
+     [JsonPropertyName("symbol")]
+     public string Symbol { get; init; } = string.Empty;
+diff --git a/src/CryptoExchanges.Net.Bitget/Dtos/BitgetResponse.cs b/src/CryptoExchanges.Net.Bitget/Dtos/ResponseDto.cs
+similarity index 94%
+rename from src/CryptoExchanges.Net.Bitget/Dtos/BitgetResponse.cs
+rename to src/CryptoExchanges.Net.Bitget/Dtos/ResponseDto.cs
+index cc4bbe1..7d11b6f 100644
+--- a/src/CryptoExchanges.Net.Bitget/Dtos/BitgetResponse.cs
++++ b/src/CryptoExchanges.Net.Bitget/Dtos/ResponseDto.cs
+@@ -7,7 +7,7 @@ namespace CryptoExchanges.Net.Bitget.Services;
+ /// deserialized here is already a success.
+ /// </summary>
+ /// <typeparam name="T">The element type of the <c>data</c> array for the endpoint.</typeparam>
+-internal sealed record BitgetResponse<T>
++internal sealed record ResponseDto<T>
+ {
+     [JsonPropertyName("code")]
+     public string Code { get; init; } = "00000";
+diff --git a/src/CryptoExchanges.Net.Bitget/Dtos/BitgetServerTime.cs b/src/CryptoExchanges.Net.Bitget/Dtos/ServerTimeDto.cs
+similarity index 88%
+rename from src/CryptoExchanges.Net.Bitget/Dtos/BitgetServerTime.cs
+rename to src/CryptoExchanges.Net.Bitget/Dtos/ServerTimeDto.cs
+index 6c39133..52b30f3 100644
+--- a/src/CryptoExchanges.Net.Bitget/Dtos/BitgetServerTime.cs
++++ b/src/CryptoExchanges.Net.Bitget/Dtos/ServerTimeDto.cs
+@@ -1,7 +1,7 @@
+ namespace CryptoExchanges.Net.Bitget;
+ 
+ /// <summary>The <c>data</c> element of the Bitget V2 <c>/api/v2/public/time</c> response.</summary>
+-internal sealed record BitgetServerTime
++internal sealed record ServerTimeDto
+ {
+     /// <summary>Server time in unix milliseconds (string-encoded).</summary>
+     [JsonPropertyName("serverTime")]
+diff --git a/src/CryptoExchanges.Net.Bitget/Dtos/BitgetSymbol.cs b/src/CryptoExchanges.Net.Bitget/Dtos/SymbolDto.cs
+similarity index 90%
+rename from src/CryptoExchanges.Net.Bitget/Dtos/BitgetSymbol.cs
+rename to src/CryptoExchanges.Net.Bitget/Dtos/SymbolDto.cs
+index 4f2d1e9..f2f3c18 100644
+--- a/src/CryptoExchanges.Net.Bitget/Dtos/BitgetSymbol.cs
++++ b/src/CryptoExchanges.Net.Bitget/Dtos/SymbolDto.cs
+@@ -1,6 +1,6 @@
+ namespace CryptoExchanges.Net.Bitget.Services;
+ 
+-internal sealed record BitgetSymbol
++internal sealed record SymbolDto
+ {
+     [JsonPropertyName("symbol")]
+     public string Symbol { get; init; } = string.Empty;
+diff --git a/src/CryptoExchanges.Net.Bitget/Dtos/BitgetTicker.cs b/src/CryptoExchanges.Net.Bitget/Dtos/TickerDto.cs
+similarity index 97%
+rename from src/CryptoExchanges.Net.Bitget/Dtos/BitgetTicker.cs
+rename to src/CryptoExchanges.Net.Bitget/Dtos/TickerDto.cs
+index 06b8b27..eafe6d1 100644
+--- a/src/CryptoExchanges.Net.Bitget/Dtos/BitgetTicker.cs
++++ b/src/CryptoExchanges.Net.Bitget/Dtos/TickerDto.cs
+@@ -1,6 +1,6 @@
+ namespace CryptoExchanges.Net.Bitget.Services;
+ 
+-internal sealed record BitgetTicker
++internal sealed record TickerDto
+ {
+     [JsonPropertyName("symbol")]
+     public string Symbol { get; init; } = string.Empty;
+diff --git a/src/CryptoExchanges.Net.Bitget/Dtos/BitgetTrade.cs b/src/CryptoExchanges.Net.Bitget/Dtos/TradeDto.cs
+similarity index 94%
+rename from src/CryptoExchanges.Net.Bitget/Dtos/BitgetTrade.cs
+rename to src/CryptoExchanges.Net.Bitget/Dtos/TradeDto.cs
+index 244ac5a..7789ab9 100644
+--- a/src/CryptoExchanges.Net.Bitget/Dtos/BitgetTrade.cs
++++ b/src/CryptoExchanges.Net.Bitget/Dtos/TradeDto.cs
+@@ -1,6 +1,6 @@
+ namespace CryptoExchanges.Net.Bitget.Services;
+ 
+-internal sealed record BitgetTrade
++internal sealed record TradeDto
+ {
+     [JsonPropertyName("tradeId")]
+     public string TradeId { get; init; } = string.Empty;
+diff --git a/src/CryptoExchanges.Net.Bitget/Mapping/BitgetMappingProfiles.cs b/src/CryptoExchanges.Net.Bitget/Mapping/BitgetMappingProfiles.cs
+index 4c21842..1f3b7e2 100644
+--- a/src/CryptoExchanges.Net.Bitget/Mapping/BitgetMappingProfiles.cs
++++ b/src/CryptoExchanges.Net.Bitget/Mapping/BitgetMappingProfiles.cs
+@@ -21,9 +21,9 @@ internal sealed class BitgetResponseProfile : Profile
+     {
+         ArgumentNullException.ThrowIfNull(symbolMapper);
+ 
+-        // BitgetOrder -> Order. Bitget reports cumulative filled base (baseVolume) and cumulative
++        // OrderDto -> Order. Bitget reports cumulative filled base (baseVolume) and cumulative
+         // filled quote (quoteVolume) directly, so no avgPx multiplication is needed.
+-        CreateMap<BitgetOrder, Order>()
++        CreateMap<OrderDto, Order>()
+             .ForMember(d => d.Symbol, o => o.MapFrom(s => symbolMapper.FromWire(s.Symbol)))
+             .ForMember(d => d.OrderId, o => o.MapFrom(s => s.OrderId))
+             .ForMember(d => d.ClientOrderId, o => o.MapFrom(s => string.IsNullOrEmpty(s.ClientOid) ? null : s.ClientOid))
+@@ -40,9 +40,9 @@ internal sealed class BitgetResponseProfile : Profile
+             .ForMember(d => d.CreatedAt, o => o.MapFrom(s => ParseTimestamp(s.CTime)))
+             .ForMember(d => d.UpdatedAt, o => o.MapFrom(s => ParseTimestamp(s.UTime)));
+ 
+-        // BitgetTicker -> Ticker. Bitget reports the fractional 24h change (change24h) directly, so
++        // TickerDto -> Ticker. Bitget reports the fractional 24h change (change24h) directly, so
+         // the percent is change24h * 100 and the absolute change is last - open.
+-        CreateMap<BitgetTicker, Ticker>()
++        CreateMap<TickerDto, Ticker>()
+             .ForMember(d => d.Symbol, o => o.MapFrom(s => symbolMapper.FromWire(s.Symbol)))
+             .ForMember(d => d.LastPrice, o => o.MapFrom(s => BitgetValueParsers.ParseDecimal(s.LastPr)))
+             .ForMember(d => d.OpenPrice, o => o.MapFrom(s => BitgetValueParsers.ParseDecimal(s.Open)))
+@@ -54,9 +54,9 @@ internal sealed class BitgetResponseProfile : Profile
+             .ForMember(d => d.PriceChangePercent, o => o.MapFrom(s => BitgetValueParsers.ParseDecimal(s.Change24h) * 100m))
+             .ForMember(d => d.Timestamp, o => o.MapFrom(s => ParseTimestamp(s.Ts)));
+ 
+-        // BitgetSymbol -> SymbolInfo. Bitget exposes lot/tick precision under separate fields this SDK
++        // SymbolDto -> SymbolInfo. Bitget exposes lot/tick precision under separate fields this SDK
+         // does not yet surface; the numeric filter fields stay null pending a dedicated task.
+-        CreateMap<BitgetSymbol, SymbolInfo>()
++        CreateMap<SymbolDto, SymbolInfo>()
+             .ForMember(d => d.Symbol, o => o.MapFrom(s => symbolMapper.FromComponents(s.BaseCoin, s.QuoteCoin)))
+             .ForMember(d => d.AllowedOrderTypes, o => o.MapFrom(s => DefaultSpotOrderTypes))
+             .ForMember(d => d.MinPrice, o => o.Ignore())
+@@ -67,10 +67,10 @@ internal sealed class BitgetResponseProfile : Profile
+             .ForMember(d => d.StepSize, o => o.Ignore())
+             .ForMember(d => d.MinNotional, o => o.Ignore());
+ 
+-        // BitgetBalance -> AssetBalance. Bitget splits unavailable balance across frozen (open orders)
++        // BalanceDto -> AssetBalance. Bitget splits unavailable balance across frozen (open orders)
+         // and locked (other holds); both count toward the domain Locked. Long-tail coins map to
+         // Asset.None rather than throwing.
+-        CreateMap<BitgetBalance, AssetBalance>()
++        CreateMap<BalanceDto, AssetBalance>()
+             .ForMember(d => d.Asset, o => o.MapFrom(s => BitgetValueParsers.ParseAssetOrNone(s.Coin)))
+             .ForMember(d => d.Free, o => o.MapFrom(s => BitgetValueParsers.ParseDecimal(s.Available)))
+             .ForMember(d => d.Locked, o => o.MapFrom(s => BitgetValueParsers.ParseDecimal(s.Frozen) + BitgetValueParsers.ParseDecimal(s.Locked)));
+diff --git a/src/CryptoExchanges.Net.Bitget/Services/BitgetAccountService.cs b/src/CryptoExchanges.Net.Bitget/Services/BitgetAccountService.cs
+index a5061b6..8f576e9 100644
+--- a/src/CryptoExchanges.Net.Bitget/Services/BitgetAccountService.cs
++++ b/src/CryptoExchanges.Net.Bitget/Services/BitgetAccountService.cs
+@@ -16,7 +16,7 @@ internal sealed class BitgetAccountService(IBitgetHttpClient http, ISymbolMapper
+         // Bitget returns the full coin list including zero balances; trim to non-zero to match the
+         // venue-neutral "non-zero balances" contract other exchanges honour server-side.
+         return balances
+-            .Select(modelMapper.Map<BitgetBalance, AssetBalance>)
++            .Select(modelMapper.Map<BalanceDto, AssetBalance>)
+             .Where(b => b.Total != 0m)
+             .ToList();
+     }
+@@ -27,7 +27,7 @@ internal sealed class BitgetAccountService(IBitgetHttpClient http, ISymbolMapper
+         var balances = await FetchBalancesAsync(asset.Ticker, ct).ConfigureAwait(false);
+ 
+         var match = balances
+-            .Select(modelMapper.Map<BitgetBalance, AssetBalance>)
++            .Select(modelMapper.Map<BalanceDto, AssetBalance>)
+             .FirstOrDefault(b => b.Asset == asset);
+ 
+         return match.Asset == asset ? match : new AssetBalance(asset, 0, 0);
+@@ -57,7 +57,7 @@ internal sealed class BitgetAccountService(IBitgetHttpClient http, ISymbolMapper
+         if (endTime.HasValue)
+             parameters["endTime"] = endTime.Value.ToUnixTimeMilliseconds().ToString(System.Globalization.CultureInfo.InvariantCulture);
+ 
+-        var response = await http.GetAsync<BitgetResponse<BitgetFill>>("/api/v2/spot/trade/fills", parameters, true, ct).ConfigureAwait(false);
++        var response = await http.GetAsync<ResponseDto<FillDto>>("/api/v2/spot/trade/fills", parameters, true, ct).ConfigureAwait(false);
+ 
+         // Trade.Symbol is taken from the caller's typed argument (the caller already holds it), not
+         // resolved from the wire string, so a cold mapper cache can never make this throw.
+@@ -73,13 +73,13 @@ internal sealed class BitgetAccountService(IBitgetHttpClient http, ISymbolMapper
+         )).ToList();
+     }
+ 
+-    private async Task<IReadOnlyList<BitgetBalance>> FetchBalancesAsync(string? coin, CancellationToken ct)
++    private async Task<IReadOnlyList<BalanceDto>> FetchBalancesAsync(string? coin, CancellationToken ct)
+     {
+         var parameters = new Dictionary<string, string>();
+         if (!string.IsNullOrEmpty(coin))
+             parameters["coin"] = coin;
+ 
+-        var response = await http.GetAsync<BitgetResponse<BitgetBalance>>("/api/v2/spot/account/assets", parameters, true, ct).ConfigureAwait(false);
++        var response = await http.GetAsync<ResponseDto<BalanceDto>>("/api/v2/spot/account/assets", parameters, true, ct).ConfigureAwait(false);
+         return response.Data;
+     }
+ }
+diff --git a/src/CryptoExchanges.Net.Bitget/Services/BitgetMarketDataService.cs b/src/CryptoExchanges.Net.Bitget/Services/BitgetMarketDataService.cs
+index 7b13213..0eafc11 100644
+--- a/src/CryptoExchanges.Net.Bitget/Services/BitgetMarketDataService.cs
++++ b/src/CryptoExchanges.Net.Bitget/Services/BitgetMarketDataService.cs
+@@ -41,11 +41,11 @@ internal sealed class BitgetMarketDataService(IBitgetHttpClient http, ISymbolMap
+             // Single-symbol path: /api/v2/spot/market/tickers?symbol=... . The caller asked for a
+             // specific symbol, so an unresolvable wire string is a genuine error — let the mapper throw.
+             var single = new Dictionary<string, string> { ["symbol"] = mapper.ToWire(symbol.Value) };
+-            var oneResp = await http.GetAsync<BitgetResponse<BitgetTicker>>("/api/v2/spot/market/tickers", single, false, ct).ConfigureAwait(false);
+-            return oneResp.Data.Select(modelMapper.Map<BitgetTicker, Ticker>).ToList();
++            var oneResp = await http.GetAsync<ResponseDto<TickerDto>>("/api/v2/spot/market/tickers", single, false, ct).ConfigureAwait(false);
++            return oneResp.Data.Select(modelMapper.Map<TickerDto, Ticker>).ToList();
+         }
+ 
+-        var response = await http.GetAsync<BitgetResponse<BitgetTicker>>("/api/v2/spot/market/tickers", null, false, ct).ConfigureAwait(false);
++        var response = await http.GetAsync<ResponseDto<TickerDto>>("/api/v2/spot/market/tickers", null, false, ct).ConfigureAwait(false);
+ 
+         // The full universe includes obscure/transitional pairs that may not resolve against a cold
+         // cache or any known quote suffix; skip those rather than failing the whole batch. Callers
+@@ -63,8 +63,8 @@ internal sealed class BitgetMarketDataService(IBitgetHttpClient http, ISymbolMap
+             ["limit"] = Math.Clamp(depth, 1, 150).ToString(System.Globalization.CultureInfo.InvariantCulture)
+         };
+ 
+-        var response = await http.GetAsync<BitgetResponse<BitgetOrderBook>>("/api/v2/spot/market/orderbook", parameters, false, ct).ConfigureAwait(false);
+-        var book = response.Data.FirstOrDefault() ?? new BitgetOrderBook();
++        var response = await http.GetAsync<ResponseDto<OrderBookDto>>("/api/v2/spot/market/orderbook", parameters, false, ct).ConfigureAwait(false);
++        var book = response.Data.FirstOrDefault() ?? new OrderBookDto();
+ 
+         // Bitget book levels are [price, size]; only price+size are used. Skip short/malformed rows
+         // (fewer than 2 fields) rather than index out of range — mirrors the candle parser's guard.
+@@ -101,7 +101,7 @@ internal sealed class BitgetMarketDataService(IBitgetHttpClient http, ISymbolMap
+ 
+         // Bitget returns candles as a data array of string arrays:
+         // [ts, open, high, low, close, baseVolume, quoteVolume, usdtVolume].
+-        var response = await http.GetAsync<BitgetResponse<List<string>>>("/api/v2/spot/market/candles", parameters, false, ct).ConfigureAwait(false);
++        var response = await http.GetAsync<ResponseDto<List<string>>>("/api/v2/spot/market/candles", parameters, false, ct).ConfigureAwait(false);
+ 
+         var candles = new List<Candlestick>();
+         foreach (var arr in response.Data)
+@@ -130,7 +130,7 @@ internal sealed class BitgetMarketDataService(IBitgetHttpClient http, ISymbolMap
+     public async Task<decimal> GetPriceAsync(Symbol symbol, CancellationToken ct = default)
+     {
+         var parameters = new Dictionary<string, string> { ["symbol"] = mapper.ToWire(symbol) };
+-        var response = await http.GetAsync<BitgetResponse<BitgetTicker>>("/api/v2/spot/market/tickers", parameters, false, ct).ConfigureAwait(false);
++        var response = await http.GetAsync<ResponseDto<TickerDto>>("/api/v2/spot/market/tickers", parameters, false, ct).ConfigureAwait(false);
+         var ticker = response.Data.FirstOrDefault();
+         return ticker is null ? 0m : BitgetValueParsers.ParseDecimal(ticker.LastPr);
+     }
+@@ -145,7 +145,7 @@ internal sealed class BitgetMarketDataService(IBitgetHttpClient http, ISymbolMap
+             ["limit"] = Math.Clamp(limit, 1, 500).ToString(System.Globalization.CultureInfo.InvariantCulture)
+         };
+ 
+-        var response = await http.GetAsync<BitgetResponse<BitgetTrade>>("/api/v2/spot/market/fills", parameters, false, ct).ConfigureAwait(false);
++        var response = await http.GetAsync<ResponseDto<TradeDto>>("/api/v2/spot/market/fills", parameters, false, ct).ConfigureAwait(false);
+ 
+         // Trade.Symbol is the caller's typed argument (already held), not resolved from the wire
+         // string, so a cold mapper cache can never make this throw. IsBuyerMaker = taker sold.
+@@ -162,13 +162,13 @@ internal sealed class BitgetMarketDataService(IBitgetHttpClient http, ISymbolMap
+     /// <inheritdoc />
+     public async Task<ExchangeInfo> GetExchangeInfoAsync(CancellationToken ct = default)
+     {
+-        var response = await http.GetAsync<BitgetResponse<BitgetSymbol>>("/api/v2/spot/public/symbols", null, false, ct).ConfigureAwait(false);
++        var response = await http.GetAsync<ResponseDto<SymbolDto>>("/api/v2/spot/public/symbols", null, false, ct).ConfigureAwait(false);
+ 
+         // Bitget symbols can include entries whose base/quote are not representable assets; skip
+         // those rather than throw.
+         var representable = response.Data
+             .Where(s => Asset.TryOf(s.BaseCoin, out _) && Asset.TryOf(s.QuoteCoin, out _));
+-        var symbols = modelMapper.Map<BitgetSymbol, SymbolInfo>(representable);
++        var symbols = modelMapper.Map<SymbolDto, SymbolInfo>(representable);
+ 
+         // Populate the mapper's wire->Symbol lookup table from the freshly fetched symbols.
+         mapper.UpdateSymbols(symbols);
+@@ -198,12 +198,12 @@ internal sealed class BitgetMarketDataService(IBitgetHttpClient http, ISymbolMap
+     /// Maps a ticker, yielding nothing when its wire symbol cannot be resolved. Used for the
+     /// full-universe response where unknown/delisted pairs must not abort the whole batch.
+     /// </summary>
+-    private IEnumerable<Ticker> TryMapTicker(BitgetTicker t)
++    private IEnumerable<Ticker> TryMapTicker(TickerDto t)
+     {
+         Ticker ticker;
+         try
+         {
+-            ticker = modelMapper.Map<BitgetTicker, Ticker>(t);
++            ticker = modelMapper.Map<TickerDto, Ticker>(t);
+         }
+         catch (FormatException)
+         {
+diff --git a/src/CryptoExchanges.Net.Bitget/Services/BitgetTradingService.cs b/src/CryptoExchanges.Net.Bitget/Services/BitgetTradingService.cs
+index ad9b6b1..e9ef755 100644
+--- a/src/CryptoExchanges.Net.Bitget/Services/BitgetTradingService.cs
++++ b/src/CryptoExchanges.Net.Bitget/Services/BitgetTradingService.cs
+@@ -37,7 +37,7 @@ internal sealed class BitgetTradingService(IBitgetHttpClient http, ISymbolMapper
+         if (request.ClientOrderId is not null)
+             parameters["clientOid"] = request.ClientOrderId;
+ 
+-        var response = await http.PostAsync<BitgetResponse<BitgetOrderAck>>("/api/v2/spot/trade/place-order", parameters, true, ct).ConfigureAwait(false);
++        var response = await http.PostAsync<ResponseDto<OrderAckDto>>("/api/v2/spot/trade/place-order", parameters, true, ct).ConfigureAwait(false);
+         var ack = response.Data.FirstOrDefault();
+         return await FetchOrderAsync(wireSymbol, ack?.OrderId ?? string.Empty, ct, clientOrderId: request.ClientOrderId).ConfigureAwait(false);
+     }
+@@ -52,7 +52,7 @@ internal sealed class BitgetTradingService(IBitgetHttpClient http, ISymbolMapper
+             ["orderId"] = orderId
+         };
+ 
+-        var response = await http.PostAsync<BitgetResponse<BitgetOrderAck>>("/api/v2/spot/trade/cancel-order", parameters, true, ct).ConfigureAwait(false);
++        var response = await http.PostAsync<ResponseDto<OrderAckDto>>("/api/v2/spot/trade/cancel-order", parameters, true, ct).ConfigureAwait(false);
+         var canceledId = response.Data.FirstOrDefault()?.OrderId ?? orderId;
+         return await FetchOrderAsync(wireSymbol, canceledId, ct).ConfigureAwait(false);
+     }
+@@ -67,7 +67,7 @@ internal sealed class BitgetTradingService(IBitgetHttpClient http, ISymbolMapper
+             ["clientOid"] = clientOrderId
+         };
+ 
+-        var response = await http.PostAsync<BitgetResponse<BitgetOrderAck>>("/api/v2/spot/trade/cancel-order", parameters, true, ct).ConfigureAwait(false);
++        var response = await http.PostAsync<ResponseDto<OrderAckDto>>("/api/v2/spot/trade/cancel-order", parameters, true, ct).ConfigureAwait(false);
+         var canceledId = response.Data.FirstOrDefault()?.OrderId ?? string.Empty;
+         return await FetchOrderAsync(wireSymbol, canceledId, ct, clientOrderId: clientOrderId).ConfigureAwait(false);
+     }
+@@ -90,7 +90,7 @@ internal sealed class BitgetTradingService(IBitgetHttpClient http, ISymbolMapper
+         if (cancels.Count == 0)
+             return [];
+ 
+-        var response = await http.PostAsync<BitgetResponse<BitgetOrderAck>>("/api/v2/spot/trade/batch-cancel-order", cancels, true, ct).ConfigureAwait(false);
++        var response = await http.PostAsync<ResponseDto<OrderAckDto>>("/api/v2/spot/trade/batch-cancel-order", cancels, true, ct).ConfigureAwait(false);
+         var canceledIds = response.Data.Select(a => a.OrderId).Where(id => !string.IsNullOrEmpty(id)).ToHashSet(StringComparer.Ordinal);
+         if (canceledIds.Count == 0)
+             return [];
+@@ -110,8 +110,8 @@ internal sealed class BitgetTradingService(IBitgetHttpClient http, ISymbolMapper
+         if (symbol.HasValue)
+             parameters["symbol"] = mapper.ToWire(symbol.Value);
+ 
+-        var response = await http.GetAsync<BitgetResponse<BitgetOrder>>("/api/v2/spot/trade/unfilled-orders", parameters, true, ct).ConfigureAwait(false);
+-        return modelMapper.Map<BitgetOrder, Order>(response.Data);
++        var response = await http.GetAsync<ResponseDto<OrderDto>>("/api/v2/spot/trade/unfilled-orders", parameters, true, ct).ConfigureAwait(false);
++        return modelMapper.Map<OrderDto, Order>(response.Data);
+     }
+ 
+     /// <inheritdoc />
+@@ -138,8 +138,8 @@ internal sealed class BitgetTradingService(IBitgetHttpClient http, ISymbolMapper
+         if (endTime.HasValue)
+             parameters["endTime"] = endTime.Value.ToUnixTimeMilliseconds().ToString(System.Globalization.CultureInfo.InvariantCulture);
+ 
+-        var response = await http.GetAsync<BitgetResponse<BitgetOrder>>("/api/v2/spot/trade/history-orders", parameters, true, ct).ConfigureAwait(false);
+-        return modelMapper.Map<BitgetOrder, Order>(response.Data);
++        var response = await http.GetAsync<ResponseDto<OrderDto>>("/api/v2/spot/trade/history-orders", parameters, true, ct).ConfigureAwait(false);
++        return modelMapper.Map<OrderDto, Order>(response.Data);
+     }
+ 
+     /// <summary>
+@@ -158,10 +158,10 @@ internal sealed class BitgetTradingService(IBitgetHttpClient http, ISymbolMapper
+         else if (!string.IsNullOrEmpty(clientOrderId))
+             parameters["clientOid"] = clientOrderId;
+ 
+-        var response = await http.GetAsync<BitgetResponse<BitgetOrder>>("/api/v2/spot/trade/orderInfo", parameters, true, ct).ConfigureAwait(false);
++        var response = await http.GetAsync<ResponseDto<OrderDto>>("/api/v2/spot/trade/orderInfo", parameters, true, ct).ConfigureAwait(false);
+         var match = response.Data.FirstOrDefault();
+         if (match is not null)
+-            return modelMapper.Map<BitgetOrder, Order>(match);
++            return modelMapper.Map<OrderDto, Order>(match);
+ 
+         // The order did not surface; return a minimal record carrying whichever identifier we have
+         // (never empty) so callers still get an id to poll later rather than a null/throw.
+diff --git a/src/CryptoExchanges.Net.Bybit/BybitExchangeClient.cs b/src/CryptoExchanges.Net.Bybit/BybitExchangeClient.cs
+index 814dea3..fed391b 100644
+--- a/src/CryptoExchanges.Net.Bybit/BybitExchangeClient.cs
++++ b/src/CryptoExchanges.Net.Bybit/BybitExchangeClient.cs
+@@ -85,7 +85,7 @@ public sealed class BybitExchangeClient : IExchangeClient, IAsyncDisposable
+     /// <param name="ct">Cancellation token.</param>
+     public async Task SyncServerTimeAsync(CancellationToken ct = default)
+     {
+-        var resp = await _http.GetAsync<BybitResponse<BybitServerTimeResult>>("/v5/market/time", signed: false, ct: ct).ConfigureAwait(false);
++        var resp = await _http.GetAsync<ResponseDto<ServerTimeResultDto>>("/v5/market/time", signed: false, ct: ct).ConfigureAwait(false);
+         var serverTimeMs = ServerTimeMs(resp.Result);
+         // A missing/malformed /time payload (ServerTimeMs returns 0) is a degraded but non-fatal
+         // response: skip the offset update (keep the prior/local clock) rather than throw.
+@@ -99,7 +99,7 @@ public sealed class BybitExchangeClient : IExchangeClient, IAsyncDisposable
+         try
+         {
+             // The resilience pipeline throws typed exceptions on failure, so reaching here is success.
+-            _ = await _http.GetAsync<BybitResponse<BybitServerTimeResult>>("/v5/market/time", signed: false, ct: ct).ConfigureAwait(false);
++            _ = await _http.GetAsync<ResponseDto<ServerTimeResultDto>>("/v5/market/time", signed: false, ct: ct).ConfigureAwait(false);
+             return true;
+         }
+         catch (OperationCanceledException) when (ct.IsCancellationRequested)
+@@ -128,7 +128,7 @@ public sealed class BybitExchangeClient : IExchangeClient, IAsyncDisposable
+     /// Resolves server time in unix milliseconds from the V5 time envelope, preferring the
+     /// nanosecond field (truncated to ms) and falling back to the second field.
+     /// </summary>
+-    private static long ServerTimeMs(BybitServerTimeResult? result)
++    private static long ServerTimeMs(ServerTimeResultDto? result)
+     {
+         if (result is null)
+             return 0L;
+diff --git a/src/CryptoExchanges.Net.Bybit/Dtos/BybitTickerResult.cs b/src/CryptoExchanges.Net.Bybit/Dtos/BybitTickerResult.cs
+deleted file mode 100644
+index 73a7771..0000000
+--- a/src/CryptoExchanges.Net.Bybit/Dtos/BybitTickerResult.cs
++++ /dev/null
+@@ -1,7 +0,0 @@
+-namespace CryptoExchanges.Net.Bybit.Services;
+-
+-internal sealed record BybitTickerResult
+-{
+-    [JsonPropertyName("list")]
+-    public List<BybitTicker> List { get; init; } = [];
+-}
+diff --git a/src/CryptoExchanges.Net.Bybit/Dtos/BybitCoinBalance.cs b/src/CryptoExchanges.Net.Bybit/Dtos/CoinBalanceDto.cs
+similarity index 92%
+rename from src/CryptoExchanges.Net.Bybit/Dtos/BybitCoinBalance.cs
+rename to src/CryptoExchanges.Net.Bybit/Dtos/CoinBalanceDto.cs
+index fa23102..bca4517 100644
+--- a/src/CryptoExchanges.Net.Bybit/Dtos/BybitCoinBalance.cs
++++ b/src/CryptoExchanges.Net.Bybit/Dtos/CoinBalanceDto.cs
+@@ -1,6 +1,6 @@
+ namespace CryptoExchanges.Net.Bybit.Services;
+ 
+-internal sealed record BybitCoinBalance
++internal sealed record CoinBalanceDto
+ {
+     [JsonPropertyName("coin")]
+     public string Coin { get; init; } = string.Empty;
+diff --git a/src/CryptoExchanges.Net.Bybit/Dtos/BybitExecution.cs b/src/CryptoExchanges.Net.Bybit/Dtos/ExecutionDto.cs
+similarity index 95%
+rename from src/CryptoExchanges.Net.Bybit/Dtos/BybitExecution.cs
+rename to src/CryptoExchanges.Net.Bybit/Dtos/ExecutionDto.cs
+index 9375eda..1ef45e4 100644
+--- a/src/CryptoExchanges.Net.Bybit/Dtos/BybitExecution.cs
++++ b/src/CryptoExchanges.Net.Bybit/Dtos/ExecutionDto.cs
+@@ -1,6 +1,6 @@
+ namespace CryptoExchanges.Net.Bybit.Services;
+ 
+-internal sealed record BybitExecution
++internal sealed record ExecutionDto
+ {
+     [JsonPropertyName("symbol")]
+     public string Symbol { get; init; } = string.Empty;
+diff --git a/src/CryptoExchanges.Net.Bybit/Dtos/BybitInstrument.cs b/src/CryptoExchanges.Net.Bybit/Dtos/InstrumentDto.cs
+similarity index 89%
+rename from src/CryptoExchanges.Net.Bybit/Dtos/BybitInstrument.cs
+rename to src/CryptoExchanges.Net.Bybit/Dtos/InstrumentDto.cs
+index 5dc5be8..8431a89 100644
+--- a/src/CryptoExchanges.Net.Bybit/Dtos/BybitInstrument.cs
++++ b/src/CryptoExchanges.Net.Bybit/Dtos/InstrumentDto.cs
+@@ -1,6 +1,6 @@
+ namespace CryptoExchanges.Net.Bybit.Services;
+ 
+-internal sealed record BybitInstrument
++internal sealed record InstrumentDto
+ {
+     [JsonPropertyName("symbol")]
+     public string Symbol { get; init; } = string.Empty;
+diff --git a/src/CryptoExchanges.Net.Bybit/Dtos/BybitListResult.cs b/src/CryptoExchanges.Net.Bybit/Dtos/ListResultDto.cs
+similarity index 87%
+rename from src/CryptoExchanges.Net.Bybit/Dtos/BybitListResult.cs
+rename to src/CryptoExchanges.Net.Bybit/Dtos/ListResultDto.cs
+index dcf5062..468af76 100644
+--- a/src/CryptoExchanges.Net.Bybit/Dtos/BybitListResult.cs
++++ b/src/CryptoExchanges.Net.Bybit/Dtos/ListResultDto.cs
+@@ -2,7 +2,7 @@ namespace CryptoExchanges.Net.Bybit.Services;
+ 
+ /// <summary>A V5 <c>result.list</c> wrapper, used by the many list-returning endpoints.</summary>
+ /// <typeparam name="T">The element type of the list.</typeparam>
+-internal sealed record BybitListResult<T>
++internal sealed record ListResultDto<T>
+ {
+     [JsonPropertyName("list")]
+     public List<T> List { get; init; } = [];
+diff --git a/src/CryptoExchanges.Net.Bybit/Dtos/BybitOrderAck.cs b/src/CryptoExchanges.Net.Bybit/Dtos/OrderAckDto.cs
+similarity index 90%
+rename from src/CryptoExchanges.Net.Bybit/Dtos/BybitOrderAck.cs
+rename to src/CryptoExchanges.Net.Bybit/Dtos/OrderAckDto.cs
+index b033142..4e44b98 100644
+--- a/src/CryptoExchanges.Net.Bybit/Dtos/BybitOrderAck.cs
++++ b/src/CryptoExchanges.Net.Bybit/Dtos/OrderAckDto.cs
+@@ -1,7 +1,7 @@
+ namespace CryptoExchanges.Net.Bybit.Services;
+ 
+ /// <summary>The thin acknowledgement Bybit V5 returns from create/cancel: ids only, not a full order.</summary>
+-internal sealed record BybitOrderAck
++internal sealed record OrderAckDto
+ {
+     [JsonPropertyName("orderId")]
+     public string OrderId { get; init; } = string.Empty;
+diff --git a/src/CryptoExchanges.Net.Bybit/Dtos/BybitOrderBookResult.cs b/src/CryptoExchanges.Net.Bybit/Dtos/OrderBookResultDto.cs
+similarity index 93%
+rename from src/CryptoExchanges.Net.Bybit/Dtos/BybitOrderBookResult.cs
+rename to src/CryptoExchanges.Net.Bybit/Dtos/OrderBookResultDto.cs
+index d55d9ce..ae91d2c 100644
+--- a/src/CryptoExchanges.Net.Bybit/Dtos/BybitOrderBookResult.cs
++++ b/src/CryptoExchanges.Net.Bybit/Dtos/OrderBookResultDto.cs
+@@ -1,6 +1,6 @@
+ namespace CryptoExchanges.Net.Bybit.Services;
+ 
+-internal sealed record BybitOrderBookResult
++internal sealed record OrderBookResultDto
+ {
+     [JsonPropertyName("s")]
+     public string Symbol { get; init; } = string.Empty;
+diff --git a/src/CryptoExchanges.Net.Bybit/Dtos/BybitOrder.cs b/src/CryptoExchanges.Net.Bybit/Dtos/OrderDto.cs
+similarity index 97%
+rename from src/CryptoExchanges.Net.Bybit/Dtos/BybitOrder.cs
+rename to src/CryptoExchanges.Net.Bybit/Dtos/OrderDto.cs
+index c5d12d7..34054cc 100644
+--- a/src/CryptoExchanges.Net.Bybit/Dtos/BybitOrder.cs
++++ b/src/CryptoExchanges.Net.Bybit/Dtos/OrderDto.cs
+@@ -1,7 +1,7 @@
+ namespace CryptoExchanges.Net.Bybit.Services;
+ 
+ /// <summary>A full Bybit V5 order record as returned by <c>/v5/order/realtime</c> and <c>/v5/order/history</c>.</summary>
+-internal sealed record BybitOrder
++internal sealed record OrderDto
+ {
+     [JsonPropertyName("symbol")]
+     public string Symbol { get; init; } = string.Empty;
+diff --git a/src/CryptoExchanges.Net.Bybit/Dtos/BybitResponse.cs b/src/CryptoExchanges.Net.Bybit/Dtos/ResponseDto.cs
+similarity index 94%
+rename from src/CryptoExchanges.Net.Bybit/Dtos/BybitResponse.cs
+rename to src/CryptoExchanges.Net.Bybit/Dtos/ResponseDto.cs
+index c27801c..818fc50 100644
+--- a/src/CryptoExchanges.Net.Bybit/Dtos/BybitResponse.cs
++++ b/src/CryptoExchanges.Net.Bybit/Dtos/ResponseDto.cs
+@@ -6,7 +6,7 @@ namespace CryptoExchanges.Net.Bybit.Services;
+ /// such envelopes into typed exceptions — so any envelope deserialized here is already a success.
+ /// </summary>
+ /// <typeparam name="T">The shape of the <c>result</c> object for the endpoint.</typeparam>
+-internal sealed record BybitResponse<T>
++internal sealed record ResponseDto<T>
+ {
+     [JsonPropertyName("retCode")]
+     public int RetCode { get; init; }
+diff --git a/src/CryptoExchanges.Net.Bybit/Dtos/BybitServerTimeResult.cs b/src/CryptoExchanges.Net.Bybit/Dtos/ServerTimeResultDto.cs
+similarity index 91%
+rename from src/CryptoExchanges.Net.Bybit/Dtos/BybitServerTimeResult.cs
+rename to src/CryptoExchanges.Net.Bybit/Dtos/ServerTimeResultDto.cs
+index 719c1c0..bf4fb88 100644
+--- a/src/CryptoExchanges.Net.Bybit/Dtos/BybitServerTimeResult.cs
++++ b/src/CryptoExchanges.Net.Bybit/Dtos/ServerTimeResultDto.cs
+@@ -1,7 +1,7 @@
+ namespace CryptoExchanges.Net.Bybit;
+ 
+ /// <summary>The <c>result</c> shape of the Bybit V5 <c>/v5/market/time</c> response.</summary>
+-internal sealed record BybitServerTimeResult
++internal sealed record ServerTimeResultDto
+ {
+     /// <summary>Server time in unix seconds (string-encoded).</summary>
+     [JsonPropertyName("timeSecond")]
+diff --git a/src/CryptoExchanges.Net.Bybit/Dtos/BybitTicker.cs b/src/CryptoExchanges.Net.Bybit/Dtos/TickerDto.cs
+similarity index 96%
+rename from src/CryptoExchanges.Net.Bybit/Dtos/BybitTicker.cs
+rename to src/CryptoExchanges.Net.Bybit/Dtos/TickerDto.cs
+index db9ac64..e216a86 100644
+--- a/src/CryptoExchanges.Net.Bybit/Dtos/BybitTicker.cs
++++ b/src/CryptoExchanges.Net.Bybit/Dtos/TickerDto.cs
+@@ -1,6 +1,6 @@
+ namespace CryptoExchanges.Net.Bybit.Services;
+ 
+-internal sealed record BybitTicker
++internal sealed record TickerDto
+ {
+     [JsonPropertyName("symbol")]
+     public string Symbol { get; init; } = string.Empty;
+diff --git a/src/CryptoExchanges.Net.Bybit/Dtos/TickerResultDto.cs b/src/CryptoExchanges.Net.Bybit/Dtos/TickerResultDto.cs
+new file mode 100644
+index 0000000..b95a330
+--- /dev/null
++++ b/src/CryptoExchanges.Net.Bybit/Dtos/TickerResultDto.cs
+@@ -0,0 +1,7 @@
++namespace CryptoExchanges.Net.Bybit.Services;
++
++internal sealed record TickerResultDto
++{
++    [JsonPropertyName("list")]
++    public List<TickerDto> List { get; init; } = [];
++}
+diff --git a/src/CryptoExchanges.Net.Bybit/Dtos/BybitTrade.cs b/src/CryptoExchanges.Net.Bybit/Dtos/TradeDto.cs
+similarity index 94%
+rename from src/CryptoExchanges.Net.Bybit/Dtos/BybitTrade.cs
+rename to src/CryptoExchanges.Net.Bybit/Dtos/TradeDto.cs
+index e9737b1..6b8a163 100644
+--- a/src/CryptoExchanges.Net.Bybit/Dtos/BybitTrade.cs
++++ b/src/CryptoExchanges.Net.Bybit/Dtos/TradeDto.cs
+@@ -1,6 +1,6 @@
+ namespace CryptoExchanges.Net.Bybit.Services;
+ 
+-internal sealed record BybitTrade
++internal sealed record TradeDto
+ {
+     [JsonPropertyName("execId")]
+     public string ExecId { get; init; } = string.Empty;
+diff --git a/src/CryptoExchanges.Net.Bybit/Dtos/BybitWalletAccount.cs b/src/CryptoExchanges.Net.Bybit/Dtos/WalletAccountDto.cs
+similarity index 63%
+rename from src/CryptoExchanges.Net.Bybit/Dtos/BybitWalletAccount.cs
+rename to src/CryptoExchanges.Net.Bybit/Dtos/WalletAccountDto.cs
+index a92f784..6521a53 100644
+--- a/src/CryptoExchanges.Net.Bybit/Dtos/BybitWalletAccount.cs
++++ b/src/CryptoExchanges.Net.Bybit/Dtos/WalletAccountDto.cs
+@@ -1,8 +1,8 @@
+ namespace CryptoExchanges.Net.Bybit.Services;
+ 
+ /// <summary>A single wallet account (e.g. UNIFIED) carrying its per-coin balances.</summary>
+-internal sealed record BybitWalletAccount
++internal sealed record WalletAccountDto
+ {
+     [JsonPropertyName("coin")]
+-    public List<BybitCoinBalance> Coin { get; init; } = [];
++    public List<CoinBalanceDto> Coin { get; init; } = [];
+ }
+diff --git a/src/CryptoExchanges.Net.Bybit/Mapping/BybitMappingProfiles.cs b/src/CryptoExchanges.Net.Bybit/Mapping/BybitMappingProfiles.cs
+index e87e529..99553c9 100644
+--- a/src/CryptoExchanges.Net.Bybit/Mapping/BybitMappingProfiles.cs
++++ b/src/CryptoExchanges.Net.Bybit/Mapping/BybitMappingProfiles.cs
+@@ -21,7 +21,7 @@ internal sealed class BybitResponseProfile : Profile
+     {
+         ArgumentNullException.ThrowIfNull(symbolMapper);
+ 
+-        CreateMap<BybitOrder, Order>()
++        CreateMap<OrderDto, Order>()
+             .ForMember(d => d.Symbol, o => o.MapFrom(s => symbolMapper.FromWire(s.Symbol)))
+             .ForMember(d => d.OrderId, o => o.MapFrom(s => s.OrderId))
+             .ForMember(d => d.ClientOrderId, o => o.MapFrom(s => string.IsNullOrEmpty(s.OrderLinkId) ? null : s.OrderLinkId))
+@@ -38,8 +38,8 @@ internal sealed class BybitResponseProfile : Profile
+             .ForMember(d => d.UpdatedAt, o => o.MapFrom(s => ParseTimestamp(s.UpdatedTime)))
+             .ForMember(d => d.CumulativeQuoteQuantity, o => o.MapFrom(s => BybitValueParsers.ParseDecimal(s.CumExecValue)));
+ 
+-        // BybitTicker -> Ticker. price24hPcnt is a fraction (0.01 = +1%); scale to a percent.
+-        CreateMap<BybitTicker, Ticker>()
++        // TickerDto -> Ticker. price24hPcnt is a fraction (0.01 = +1%); scale to a percent.
++        CreateMap<TickerDto, Ticker>()
+             .ForMember(d => d.Symbol, o => o.MapFrom(s => symbolMapper.FromWire(s.Symbol)))
+             .ForMember(d => d.LastPrice, o => o.MapFrom(s => BybitValueParsers.ParseDecimal(s.LastPrice)))
+             .ForMember(d => d.OpenPrice, o => o.MapFrom(s => BybitValueParsers.ParseDecimal(s.PrevPrice24h)))
+@@ -51,10 +51,10 @@ internal sealed class BybitResponseProfile : Profile
+             .ForMember(d => d.PriceChangePercent, o => o.MapFrom(s => BybitValueParsers.ParseDecimal(s.Price24hPcnt) * 100m))
+             .ForMember(d => d.Timestamp, o => o.Ignore());
+ 
+-        // BybitInstrument -> SymbolInfo (instruments-info symbol projection; explicit base/quote legs).
++        // InstrumentDto -> SymbolInfo (instruments-info symbol projection; explicit base/quote legs).
+         // Bybit V5 instruments-info exposes lot/price filters under nested objects that this SDK does
+         // not yet surface; the numeric filter fields stay null pending a dedicated filters task.
+-        CreateMap<BybitInstrument, SymbolInfo>()
++        CreateMap<InstrumentDto, SymbolInfo>()
+             .ForMember(d => d.Symbol, o => o.MapFrom(s => symbolMapper.FromComponents(s.BaseCoin, s.QuoteCoin)))
+             .ForMember(d => d.AllowedOrderTypes, o => o.MapFrom(s => DefaultSpotOrderTypes))
+             .ForMember(d => d.MinPrice, o => o.Ignore())
+@@ -65,9 +65,9 @@ internal sealed class BybitResponseProfile : Profile
+             .ForMember(d => d.StepSize, o => o.Ignore())
+             .ForMember(d => d.MinNotional, o => o.Ignore());
+ 
+-        // BybitCoinBalance -> AssetBalance. Bybit reports total walletBalance + locked; the free
++        // CoinBalanceDto -> AssetBalance. Bybit reports total walletBalance + locked; the free
+         // portion is the difference. Long-tail coins map to Asset.None rather than throwing.
+-        CreateMap<BybitCoinBalance, AssetBalance>()
++        CreateMap<CoinBalanceDto, AssetBalance>()
+             .ForMember(d => d.Asset, o => o.MapFrom(s => BybitValueParsers.ParseAssetOrNone(s.Coin)))
+             .ForMember(d => d.Free, o => o.MapFrom(s => BybitValueParsers.ParseDecimal(s.WalletBalance) - BybitValueParsers.ParseDecimal(s.Locked)))
+             .ForMember(d => d.Locked, o => o.MapFrom(s => BybitValueParsers.ParseDecimal(s.Locked)));
+diff --git a/src/CryptoExchanges.Net.Bybit/Services/BybitAccountService.cs b/src/CryptoExchanges.Net.Bybit/Services/BybitAccountService.cs
+index c3a3fed..cf70677 100644
+--- a/src/CryptoExchanges.Net.Bybit/Services/BybitAccountService.cs
++++ b/src/CryptoExchanges.Net.Bybit/Services/BybitAccountService.cs
+@@ -20,7 +20,7 @@ internal sealed class BybitAccountService(IBybitHttpClient http, ISymbolMapper m
+         // Bybit returns the full coin list including zero balances; trim to non-zero to match the
+         // venue-neutral "non-zero balances" contract other exchanges honour server-side.
+         return coins
+-            .Select(modelMapper.Map<BybitCoinBalance, AssetBalance>)
++            .Select(modelMapper.Map<CoinBalanceDto, AssetBalance>)
+             .Where(b => b.Total != 0m)
+             .ToList();
+     }
+@@ -34,11 +34,11 @@ internal sealed class BybitAccountService(IBybitHttpClient http, ISymbolMapper m
+             ["coin"] = asset.Ticker
+         };
+ 
+-        var response = await http.GetAsync<BybitResponse<BybitListResult<BybitWalletAccount>>>("/v5/account/wallet-balance", parameters, true, ct).ConfigureAwait(false);
++        var response = await http.GetAsync<ResponseDto<ListResultDto<WalletAccountDto>>>("/v5/account/wallet-balance", parameters, true, ct).ConfigureAwait(false);
+         var coins = response.Result?.List.SelectMany(a => a.Coin) ?? [];
+ 
+         var match = coins
+-            .Select(modelMapper.Map<BybitCoinBalance, AssetBalance>)
++            .Select(modelMapper.Map<CoinBalanceDto, AssetBalance>)
+             .FirstOrDefault(b => b.Asset == asset);
+ 
+         return match.Asset == asset ? match : new AssetBalance(asset, 0, 0);
+@@ -69,7 +69,7 @@ internal sealed class BybitAccountService(IBybitHttpClient http, ISymbolMapper m
+         if (endTime.HasValue)
+             parameters["endTime"] = endTime.Value.ToUnixTimeMilliseconds().ToString();
+ 
+-        var response = await http.GetAsync<BybitResponse<BybitListResult<BybitExecution>>>("/v5/execution/list", parameters, true, ct).ConfigureAwait(false);
++        var response = await http.GetAsync<ResponseDto<ListResultDto<ExecutionDto>>>("/v5/execution/list", parameters, true, ct).ConfigureAwait(false);
+         var executions = response.Result?.List ?? [];
+ 
+         // Trade.Symbol is taken from the caller's typed argument (the caller already holds it),
+@@ -86,10 +86,10 @@ internal sealed class BybitAccountService(IBybitHttpClient http, ISymbolMapper m
+         )).ToList();
+     }
+ 
+-    private async Task<IReadOnlyList<BybitCoinBalance>> FetchCoinBalancesAsync(CancellationToken ct)
++    private async Task<IReadOnlyList<CoinBalanceDto>> FetchCoinBalancesAsync(CancellationToken ct)
+     {
+         var parameters = new Dictionary<string, string> { ["accountType"] = UnifiedAccount };
+-        var response = await http.GetAsync<BybitResponse<BybitListResult<BybitWalletAccount>>>("/v5/account/wallet-balance", parameters, true, ct).ConfigureAwait(false);
++        var response = await http.GetAsync<ResponseDto<ListResultDto<WalletAccountDto>>>("/v5/account/wallet-balance", parameters, true, ct).ConfigureAwait(false);
+         return response.Result?.List.SelectMany(a => a.Coin).ToList() ?? [];
+     }
+ }
+diff --git a/src/CryptoExchanges.Net.Bybit/Services/BybitMarketDataService.cs b/src/CryptoExchanges.Net.Bybit/Services/BybitMarketDataService.cs
+index b97e4fa..0ea3177 100644
+--- a/src/CryptoExchanges.Net.Bybit/Services/BybitMarketDataService.cs
++++ b/src/CryptoExchanges.Net.Bybit/Services/BybitMarketDataService.cs
+@@ -46,14 +46,14 @@ internal sealed class BybitMarketDataService(IBybitHttpClient http, ISymbolMappe
+         if (symbol.HasValue)
+             parameters["symbol"] = mapper.ToWire(symbol.Value);
+ 
+-        var response = await http.GetAsync<BybitResponse<BybitTickerResult>>("/v5/market/tickers", parameters, false, ct).ConfigureAwait(false);
++        var response = await http.GetAsync<ResponseDto<TickerResultDto>>("/v5/market/tickers", parameters, false, ct).ConfigureAwait(false);
+         var list = response.Result?.List ?? [];
+ 
+         if (symbol.HasValue)
+         {
+             // The caller asked for a specific symbol, so an unresolvable wire string is a genuine
+             // error — let the mapper throw rather than silently dropping it.
+-            return list.Select(modelMapper.Map<BybitTicker, Ticker>).ToList();
++            return list.Select(modelMapper.Map<TickerDto, Ticker>).ToList();
+         }
+ 
+         // The full universe includes obscure/transitional pairs that may not resolve against a
+@@ -72,8 +72,8 @@ internal sealed class BybitMarketDataService(IBybitHttpClient http, ISymbolMappe
+             ["limit"] = depth.ToString()
+         };
+ 
+-        var response = await http.GetAsync<BybitResponse<BybitOrderBookResult>>("/v5/market/orderbook", parameters, false, ct).ConfigureAwait(false);
+-        var result = response.Result ?? new BybitOrderBookResult();
++        var response = await http.GetAsync<ResponseDto<OrderBookResultDto>>("/v5/market/orderbook", parameters, false, ct).ConfigureAwait(false);
++        var result = response.Result ?? new OrderBookResultDto();
+ 
+         var bids = result.Bids.Select(b => new OrderBookEntry(BybitValueParsers.ParseDecimal(b[0]), BybitValueParsers.ParseDecimal(b[1]))).ToList();
+         var asks = result.Asks.Select(a => new OrderBookEntry(BybitValueParsers.ParseDecimal(a[0]), BybitValueParsers.ParseDecimal(a[1]))).ToList();
+@@ -106,7 +106,7 @@ internal sealed class BybitMarketDataService(IBybitHttpClient http, ISymbolMappe
+ 
+         // Bybit returns klines as result.list of string arrays:
+         // [startTime, open, high, low, close, volume, turnover], newest-first.
+-        var response = await http.GetAsync<BybitResponse<BybitListResult<List<string>>>>("/v5/market/kline", parameters, false, ct).ConfigureAwait(false);
++        var response = await http.GetAsync<ResponseDto<ListResultDto<List<string>>>>("/v5/market/kline", parameters, false, ct).ConfigureAwait(false);
+         var rows = response.Result?.List ?? [];
+ 
+         var candles = new List<Candlestick>();
+@@ -142,7 +142,7 @@ internal sealed class BybitMarketDataService(IBybitHttpClient http, ISymbolMappe
+             ["symbol"] = mapper.ToWire(symbol)
+         };
+ 
+-        var response = await http.GetAsync<BybitResponse<BybitTickerResult>>("/v5/market/tickers", parameters, false, ct).ConfigureAwait(false);
++        var response = await http.GetAsync<ResponseDto<TickerResultDto>>("/v5/market/tickers", parameters, false, ct).ConfigureAwait(false);
+         var ticker = response.Result?.List.FirstOrDefault();
+         return ticker is null ? 0m : BybitValueParsers.ParseDecimal(ticker.LastPrice);
+     }
+@@ -157,7 +157,7 @@ internal sealed class BybitMarketDataService(IBybitHttpClient http, ISymbolMappe
+             ["limit"] = limit.ToString()
+         };
+ 
+-        var response = await http.GetAsync<BybitResponse<BybitListResult<BybitTrade>>>("/v5/market/recent-trade", parameters, false, ct).ConfigureAwait(false);
++        var response = await http.GetAsync<ResponseDto<ListResultDto<TradeDto>>>("/v5/market/recent-trade", parameters, false, ct).ConfigureAwait(false);
+         var trades = response.Result?.List ?? [];
+ 
+         // Trade.Symbol is the caller's typed argument (already held), not resolved from the wire
+@@ -176,14 +176,14 @@ internal sealed class BybitMarketDataService(IBybitHttpClient http, ISymbolMappe
+     public async Task<ExchangeInfo> GetExchangeInfoAsync(CancellationToken ct = default)
+     {
+         var parameters = new Dictionary<string, string> { ["category"] = SpotCategory };
+-        var response = await http.GetAsync<BybitResponse<BybitListResult<BybitInstrument>>>("/v5/market/instruments-info", parameters, false, ct).ConfigureAwait(false);
++        var response = await http.GetAsync<ResponseDto<ListResultDto<InstrumentDto>>>("/v5/market/instruments-info", parameters, false, ct).ConfigureAwait(false);
+         var instruments = response.Result?.List ?? [];
+ 
+         // Bybit instruments can include entries whose base/quote are not representable assets;
+         // skip those rather than throw.
+         var representable = instruments
+             .Where(s => Asset.TryOf(s.BaseCoin, out _) && Asset.TryOf(s.QuoteCoin, out _));
+-        var symbols = modelMapper.Map<BybitInstrument, SymbolInfo>(representable);
++        var symbols = modelMapper.Map<InstrumentDto, SymbolInfo>(representable);
+ 
+         // Populate the mapper's wire->Symbol lookup table from the freshly fetched symbols.
+         mapper.UpdateSymbols(symbols);
+@@ -213,12 +213,12 @@ internal sealed class BybitMarketDataService(IBybitHttpClient http, ISymbolMappe
+     /// Maps a ticker, yielding nothing when its wire symbol cannot be resolved. Used for the
+     /// full-universe response where unknown/delisted pairs must not abort the whole batch.
+     /// </summary>
+-    private IEnumerable<Ticker> TryMapTicker(BybitTicker t)
++    private IEnumerable<Ticker> TryMapTicker(TickerDto t)
+     {
+         Ticker ticker;
+         try
+         {
+-            ticker = modelMapper.Map<BybitTicker, Ticker>(t);
++            ticker = modelMapper.Map<TickerDto, Ticker>(t);
+         }
+         catch (FormatException)
+         {
+diff --git a/src/CryptoExchanges.Net.Bybit/Services/BybitTradingService.cs b/src/CryptoExchanges.Net.Bybit/Services/BybitTradingService.cs
+index 057a01a..a062c47 100644
+--- a/src/CryptoExchanges.Net.Bybit/Services/BybitTradingService.cs
++++ b/src/CryptoExchanges.Net.Bybit/Services/BybitTradingService.cs
+@@ -52,7 +52,7 @@ internal sealed class BybitTradingService(IBybitHttpClient http, ISymbolMapper m
+         if (request.ClientOrderId is not null)
+             parameters["orderLinkId"] = request.ClientOrderId;
+ 
+-        var response = await http.PostAsync<BybitResponse<BybitOrderAck>>("/v5/order/create", parameters, true, ct).ConfigureAwait(false);
++        var response = await http.PostAsync<ResponseDto<OrderAckDto>>("/v5/order/create", parameters, true, ct).ConfigureAwait(false);
+         var orderId = response.Result?.OrderId ?? string.Empty;
+         return await FetchOrderAsync(wireSymbol, orderId, ct, orderLinkId: request.ClientOrderId).ConfigureAwait(false);
+     }
+@@ -68,7 +68,7 @@ internal sealed class BybitTradingService(IBybitHttpClient http, ISymbolMapper m
+             ["orderId"] = orderId
+         };
+ 
+-        var response = await http.PostAsync<BybitResponse<BybitOrderAck>>("/v5/order/cancel", parameters, true, ct).ConfigureAwait(false);
++        var response = await http.PostAsync<ResponseDto<OrderAckDto>>("/v5/order/cancel", parameters, true, ct).ConfigureAwait(false);
+         var canceledId = response.Result?.OrderId ?? orderId;
+         return await FetchOrderAsync(wireSymbol, canceledId, ct).ConfigureAwait(false);
+     }
+@@ -84,7 +84,7 @@ internal sealed class BybitTradingService(IBybitHttpClient http, ISymbolMapper m
+             ["orderLinkId"] = clientOrderId
+         };
+ 
+-        var response = await http.PostAsync<BybitResponse<BybitOrderAck>>("/v5/order/cancel", parameters, true, ct).ConfigureAwait(false);
++        var response = await http.PostAsync<ResponseDto<OrderAckDto>>("/v5/order/cancel", parameters, true, ct).ConfigureAwait(false);
+         var canceledId = response.Result?.OrderId ?? string.Empty;
+         return await FetchOrderAsync(wireSymbol, canceledId, ct, orderLinkId: clientOrderId).ConfigureAwait(false);
+     }
+@@ -100,7 +100,7 @@ internal sealed class BybitTradingService(IBybitHttpClient http, ISymbolMapper m
+ 
+         // cancel-all returns only ids; re-fetch the full picture via order history so the canceled
+         // orders are returned with their full state.
+-        var response = await http.PostAsync<BybitResponse<BybitListResult<BybitOrderAck>>>("/v5/order/cancel-all", parameters, true, ct).ConfigureAwait(false);
++        var response = await http.PostAsync<ResponseDto<ListResultDto<OrderAckDto>>>("/v5/order/cancel-all", parameters, true, ct).ConfigureAwait(false);
+         var acks = response.Result?.List ?? [];
+         if (acks.Count == 0)
+             return [];
+@@ -121,9 +121,9 @@ internal sealed class BybitTradingService(IBybitHttpClient http, ISymbolMapper m
+         if (symbol.HasValue)
+             parameters["symbol"] = mapper.ToWire(symbol.Value);
+ 
+-        var response = await http.GetAsync<BybitResponse<BybitListResult<BybitOrder>>>("/v5/order/realtime", parameters, true, ct).ConfigureAwait(false);
++        var response = await http.GetAsync<ResponseDto<ListResultDto<OrderDto>>>("/v5/order/realtime", parameters, true, ct).ConfigureAwait(false);
+         var orders = response.Result?.List ?? [];
+-        return modelMapper.Map<BybitOrder, Order>(orders);
++        return modelMapper.Map<OrderDto, Order>(orders);
+     }
+ 
+     /// <inheritdoc />
+@@ -151,9 +151,9 @@ internal sealed class BybitTradingService(IBybitHttpClient http, ISymbolMapper m
+         if (endTime.HasValue)
+             parameters["endTime"] = endTime.Value.ToUnixTimeMilliseconds().ToString();
+ 
+-        var response = await http.GetAsync<BybitResponse<BybitListResult<BybitOrder>>>("/v5/order/history", parameters, true, ct).ConfigureAwait(false);
++        var response = await http.GetAsync<ResponseDto<ListResultDto<OrderDto>>>("/v5/order/history", parameters, true, ct).ConfigureAwait(false);
+         var orders = response.Result?.List ?? [];
+-        return modelMapper.Map<BybitOrder, Order>(orders);
++        return modelMapper.Map<OrderDto, Order>(orders);
+     }
+ 
+     /// <summary>
+@@ -176,15 +176,15 @@ internal sealed class BybitTradingService(IBybitHttpClient http, ISymbolMapper m
+         else if (!string.IsNullOrEmpty(orderLinkId))
+             parameters["orderLinkId"] = orderLinkId;
+ 
+-        var realtime = await http.GetAsync<BybitResponse<BybitListResult<BybitOrder>>>("/v5/order/realtime", parameters, true, ct).ConfigureAwait(false);
++        var realtime = await http.GetAsync<ResponseDto<ListResultDto<OrderDto>>>("/v5/order/realtime", parameters, true, ct).ConfigureAwait(false);
+         var match = realtime.Result?.List.FirstOrDefault();
+         if (match is not null)
+-            return modelMapper.Map<BybitOrder, Order>(match);
++            return modelMapper.Map<OrderDto, Order>(match);
+ 
+-        var history = await http.GetAsync<BybitResponse<BybitListResult<BybitOrder>>>("/v5/order/history", parameters, true, ct).ConfigureAwait(false);
++        var history = await http.GetAsync<ResponseDto<ListResultDto<OrderDto>>>("/v5/order/history", parameters, true, ct).ConfigureAwait(false);
+         match = history.Result?.List.FirstOrDefault();
+         if (match is not null)
+-            return modelMapper.Map<BybitOrder, Order>(match);
++            return modelMapper.Map<OrderDto, Order>(match);
+ 
+         // Neither endpoint surfaced the order; return a minimal record carrying whichever identifier
+         // we have (never empty) so callers still get an id to poll later rather than a null/throw.
+diff --git a/src/CryptoExchanges.Net.Okx/Dtos/OkxBalanceAccount.cs b/src/CryptoExchanges.Net.Okx/Dtos/BalanceAccountDto.cs
+similarity index 62%
+rename from src/CryptoExchanges.Net.Okx/Dtos/OkxBalanceAccount.cs
+rename to src/CryptoExchanges.Net.Okx/Dtos/BalanceAccountDto.cs
+index b1a5459..712cc14 100644
+--- a/src/CryptoExchanges.Net.Okx/Dtos/OkxBalanceAccount.cs
++++ b/src/CryptoExchanges.Net.Okx/Dtos/BalanceAccountDto.cs
+@@ -1,8 +1,8 @@
+ namespace CryptoExchanges.Net.Okx.Services;
+ 
+ /// <summary>A single account snapshot carrying its per-currency balance details.</summary>
+-internal sealed record OkxBalanceAccount
++internal sealed record BalanceAccountDto
+ {
+     [JsonPropertyName("details")]
+-    public List<OkxBalanceDetail> Details { get; init; } = [];
++    public List<BalanceDetailDto> Details { get; init; } = [];
+ }
+diff --git a/src/CryptoExchanges.Net.Okx/Dtos/OkxBalanceDetail.cs b/src/CryptoExchanges.Net.Okx/Dtos/BalanceDetailDto.cs
+similarity index 92%
+rename from src/CryptoExchanges.Net.Okx/Dtos/OkxBalanceDetail.cs
+rename to src/CryptoExchanges.Net.Okx/Dtos/BalanceDetailDto.cs
+index c53a09b..2a3f665 100644
+--- a/src/CryptoExchanges.Net.Okx/Dtos/OkxBalanceDetail.cs
++++ b/src/CryptoExchanges.Net.Okx/Dtos/BalanceDetailDto.cs
+@@ -1,6 +1,6 @@
+ namespace CryptoExchanges.Net.Okx.Services;
+ 
+-internal sealed record OkxBalanceDetail
++internal sealed record BalanceDetailDto
+ {
+     [JsonPropertyName("ccy")]
+     public string Ccy { get; init; } = string.Empty;
+diff --git a/src/CryptoExchanges.Net.Okx/Dtos/OkxFill.cs b/src/CryptoExchanges.Net.Okx/Dtos/FillDto.cs
+similarity index 96%
+rename from src/CryptoExchanges.Net.Okx/Dtos/OkxFill.cs
+rename to src/CryptoExchanges.Net.Okx/Dtos/FillDto.cs
+index 05ee951..ef4887d 100644
+--- a/src/CryptoExchanges.Net.Okx/Dtos/OkxFill.cs
++++ b/src/CryptoExchanges.Net.Okx/Dtos/FillDto.cs
+@@ -1,6 +1,6 @@
+ namespace CryptoExchanges.Net.Okx.Services;
+ 
+-internal sealed record OkxFill
++internal sealed record FillDto
+ {
+     [JsonPropertyName("instId")]
+     public string InstId { get; init; } = string.Empty;
+diff --git a/src/CryptoExchanges.Net.Okx/Dtos/OkxInstrument.cs b/src/CryptoExchanges.Net.Okx/Dtos/InstrumentDto.cs
+similarity index 89%
+rename from src/CryptoExchanges.Net.Okx/Dtos/OkxInstrument.cs
+rename to src/CryptoExchanges.Net.Okx/Dtos/InstrumentDto.cs
+index 3c0eb71..20b6b74 100644
+--- a/src/CryptoExchanges.Net.Okx/Dtos/OkxInstrument.cs
++++ b/src/CryptoExchanges.Net.Okx/Dtos/InstrumentDto.cs
+@@ -1,6 +1,6 @@
+ namespace CryptoExchanges.Net.Okx.Services;
+ 
+-internal sealed record OkxInstrument
++internal sealed record InstrumentDto
+ {
+     [JsonPropertyName("instId")]
+     public string InstId { get; init; } = string.Empty;
+diff --git a/src/CryptoExchanges.Net.Okx/Dtos/OkxOrderAck.cs b/src/CryptoExchanges.Net.Okx/Dtos/OrderAckDto.cs
+similarity index 96%
+rename from src/CryptoExchanges.Net.Okx/Dtos/OkxOrderAck.cs
+rename to src/CryptoExchanges.Net.Okx/Dtos/OrderAckDto.cs
+index d087e7f..b1fe0cd 100644
+--- a/src/CryptoExchanges.Net.Okx/Dtos/OkxOrderAck.cs
++++ b/src/CryptoExchanges.Net.Okx/Dtos/OrderAckDto.cs
+@@ -6,7 +6,7 @@ namespace CryptoExchanges.Net.Okx.Services;
+ /// top-level <c>code</c> is "0"; a non-zero <c>sCode</c> never reaches the services because the
+ /// resilience pipeline's error translator converts it into a typed exception.
+ /// </summary>
+-internal sealed record OkxOrderAck
++internal sealed record OrderAckDto
+ {
+     [JsonPropertyName("ordId")]
+     public string OrdId { get; init; } = string.Empty;
+diff --git a/src/CryptoExchanges.Net.Okx/Dtos/OkxOrderBook.cs b/src/CryptoExchanges.Net.Okx/Dtos/OrderBookDto.cs
+similarity index 91%
+rename from src/CryptoExchanges.Net.Okx/Dtos/OkxOrderBook.cs
+rename to src/CryptoExchanges.Net.Okx/Dtos/OrderBookDto.cs
+index c1d9264..320e845 100644
+--- a/src/CryptoExchanges.Net.Okx/Dtos/OkxOrderBook.cs
++++ b/src/CryptoExchanges.Net.Okx/Dtos/OrderBookDto.cs
+@@ -1,6 +1,6 @@
+ namespace CryptoExchanges.Net.Okx.Services;
+ 
+-internal sealed record OkxOrderBook
++internal sealed record OrderBookDto
+ {
+     [JsonPropertyName("asks")]
+     public List<List<string>> Asks { get; init; } = [];
+diff --git a/src/CryptoExchanges.Net.Okx/Dtos/OkxOrder.cs b/src/CryptoExchanges.Net.Okx/Dtos/OrderDto.cs
+similarity index 98%
+rename from src/CryptoExchanges.Net.Okx/Dtos/OkxOrder.cs
+rename to src/CryptoExchanges.Net.Okx/Dtos/OrderDto.cs
+index 38a328e..5645e72 100644
+--- a/src/CryptoExchanges.Net.Okx/Dtos/OkxOrder.cs
++++ b/src/CryptoExchanges.Net.Okx/Dtos/OrderDto.cs
+@@ -1,7 +1,7 @@
+ namespace CryptoExchanges.Net.Okx.Services;
+ 
+ /// <summary>A full OKX V5 order record as returned by <c>/api/v5/trade/order</c> and the order lists.</summary>
+-internal sealed record OkxOrder
++internal sealed record OrderDto
+ {
+     [JsonPropertyName("instId")]
+     public string InstId { get; init; } = string.Empty;
+diff --git a/src/CryptoExchanges.Net.Okx/Dtos/OkxResponse.cs b/src/CryptoExchanges.Net.Okx/Dtos/ResponseDto.cs
+similarity index 95%
+rename from src/CryptoExchanges.Net.Okx/Dtos/OkxResponse.cs
+rename to src/CryptoExchanges.Net.Okx/Dtos/ResponseDto.cs
+index 8acfa30..24eea60 100644
+--- a/src/CryptoExchanges.Net.Okx/Dtos/OkxResponse.cs
++++ b/src/CryptoExchanges.Net.Okx/Dtos/ResponseDto.cs
+@@ -6,7 +6,7 @@ namespace CryptoExchanges.Net.Okx.Services;
+ /// into typed exceptions — so any envelope deserialized here is already a success (<c>code == "0"</c>).
+ /// </summary>
+ /// <typeparam name="T">The element type of the <c>data</c> array for the endpoint.</typeparam>
+-internal sealed record OkxResponse<T>
++internal sealed record ResponseDto<T>
+ {
+     [JsonPropertyName("code")]
+     public string Code { get; init; } = "0";
+diff --git a/src/CryptoExchanges.Net.Okx/Dtos/OkxServerTime.cs b/src/CryptoExchanges.Net.Okx/Dtos/ServerTimeDto.cs
+similarity index 88%
+rename from src/CryptoExchanges.Net.Okx/Dtos/OkxServerTime.cs
+rename to src/CryptoExchanges.Net.Okx/Dtos/ServerTimeDto.cs
+index 5d7cc6f..e59e549 100644
+--- a/src/CryptoExchanges.Net.Okx/Dtos/OkxServerTime.cs
++++ b/src/CryptoExchanges.Net.Okx/Dtos/ServerTimeDto.cs
+@@ -1,7 +1,7 @@
+ namespace CryptoExchanges.Net.Okx;
+ 
+ /// <summary>The <c>data</c> element of the OKX V5 <c>/api/v5/public/time</c> response.</summary>
+-internal sealed record OkxServerTime
++internal sealed record ServerTimeDto
+ {
+     /// <summary>Server time in unix milliseconds (string-encoded).</summary>
+     [JsonPropertyName("ts")]
+diff --git a/src/CryptoExchanges.Net.Okx/Dtos/OkxTicker.cs b/src/CryptoExchanges.Net.Okx/Dtos/TickerDto.cs
+similarity index 96%
+rename from src/CryptoExchanges.Net.Okx/Dtos/OkxTicker.cs
+rename to src/CryptoExchanges.Net.Okx/Dtos/TickerDto.cs
+index 137e0ef..58586d1 100644
+--- a/src/CryptoExchanges.Net.Okx/Dtos/OkxTicker.cs
++++ b/src/CryptoExchanges.Net.Okx/Dtos/TickerDto.cs
+@@ -1,6 +1,6 @@
+ namespace CryptoExchanges.Net.Okx.Services;
+ 
+-internal sealed record OkxTicker
++internal sealed record TickerDto
+ {
+     [JsonPropertyName("instId")]
+     public string InstId { get; init; } = string.Empty;
+diff --git a/src/CryptoExchanges.Net.Okx/Dtos/OkxTrade.cs b/src/CryptoExchanges.Net.Okx/Dtos/TradeDto.cs
+similarity index 95%
+rename from src/CryptoExchanges.Net.Okx/Dtos/OkxTrade.cs
+rename to src/CryptoExchanges.Net.Okx/Dtos/TradeDto.cs
+index 54888e6..102aa31 100644
+--- a/src/CryptoExchanges.Net.Okx/Dtos/OkxTrade.cs
++++ b/src/CryptoExchanges.Net.Okx/Dtos/TradeDto.cs
+@@ -1,6 +1,6 @@
+ namespace CryptoExchanges.Net.Okx.Services;
+ 
+-internal sealed record OkxTrade
++internal sealed record TradeDto
+ {
+     [JsonPropertyName("tradeId")]
+     public string TradeId { get; init; } = string.Empty;
+diff --git a/src/CryptoExchanges.Net.Okx/Mapping/OkxMappingProfiles.cs b/src/CryptoExchanges.Net.Okx/Mapping/OkxMappingProfiles.cs
+index 701b42f..f14d431 100644
+--- a/src/CryptoExchanges.Net.Okx/Mapping/OkxMappingProfiles.cs
++++ b/src/CryptoExchanges.Net.Okx/Mapping/OkxMappingProfiles.cs
+@@ -21,7 +21,7 @@ internal sealed class OkxResponseProfile : Profile
+     {
+         ArgumentNullException.ThrowIfNull(symbolMapper);
+ 
+-        CreateMap<OkxOrder, Order>()
++        CreateMap<OrderDto, Order>()
+             .ForMember(d => d.Symbol, o => o.MapFrom(s => symbolMapper.FromWire(s.InstId)))
+             .ForMember(d => d.OrderId, o => o.MapFrom(s => s.OrdId))
+             .ForMember(d => d.ClientOrderId, o => o.MapFrom(s => string.IsNullOrEmpty(s.ClOrdId) ? null : s.ClOrdId))
+@@ -41,9 +41,9 @@ internal sealed class OkxResponseProfile : Profile
+             .ForMember(d => d.CumulativeQuoteQuantity, o => o.MapFrom(s =>
+                 OkxValueParsers.ParseDecimal(s.AccFillSz) * OkxValueParsers.ParseDecimal(s.AvgPx)));
+ 
+-        // OkxTicker -> Ticker. OKX reports open24h (the price 24h ago); price change is last - open24h,
++        // TickerDto -> Ticker. OKX reports open24h (the price 24h ago); price change is last - open24h,
+         // and the percent is that change over open24h * 100 (OKX exposes no fractional-change field).
+-        CreateMap<OkxTicker, Ticker>()
++        CreateMap<TickerDto, Ticker>()
+             .ForMember(d => d.Symbol, o => o.MapFrom(s => symbolMapper.FromWire(s.InstId)))
+             .ForMember(d => d.LastPrice, o => o.MapFrom(s => OkxValueParsers.ParseDecimal(s.Last)))
+             .ForMember(d => d.OpenPrice, o => o.MapFrom(s => OkxValueParsers.ParseDecimal(s.Open24h)))
+@@ -58,9 +58,9 @@ internal sealed class OkxResponseProfile : Profile
+                     : (OkxValueParsers.ParseDecimal(s.Last) - OkxValueParsers.ParseDecimal(s.Open24h)) / OkxValueParsers.ParseDecimal(s.Open24h) * 100m))
+             .ForMember(d => d.Timestamp, o => o.MapFrom(s => ParseTimestamp(s.Ts)));
+ 
+-        // OkxInstrument -> SymbolInfo. OKX instruments expose lot/tick filters under separate fields
++        // InstrumentDto -> SymbolInfo. OKX instruments expose lot/tick filters under separate fields
+         // this SDK does not yet surface; the numeric filter fields stay null pending a dedicated task.
+-        CreateMap<OkxInstrument, SymbolInfo>()
++        CreateMap<InstrumentDto, SymbolInfo>()
+             .ForMember(d => d.Symbol, o => o.MapFrom(s => symbolMapper.FromComponents(s.BaseCcy, s.QuoteCcy)))
+             .ForMember(d => d.AllowedOrderTypes, o => o.MapFrom(s => DefaultSpotOrderTypes))
+             .ForMember(d => d.MinPrice, o => o.Ignore())
+@@ -71,9 +71,9 @@ internal sealed class OkxResponseProfile : Profile
+             .ForMember(d => d.StepSize, o => o.Ignore())
+             .ForMember(d => d.MinNotional, o => o.Ignore());
+ 
+-        // OkxBalanceDetail -> AssetBalance. OKX reports availBal (free) + frozenBal (locked) directly.
++        // BalanceDetailDto -> AssetBalance. OKX reports availBal (free) + frozenBal (locked) directly.
+         // Long-tail coins map to Asset.None rather than throwing.
+-        CreateMap<OkxBalanceDetail, AssetBalance>()
++        CreateMap<BalanceDetailDto, AssetBalance>()
+             .ForMember(d => d.Asset, o => o.MapFrom(s => OkxValueParsers.ParseAssetOrNone(s.Ccy)))
+             .ForMember(d => d.Free, o => o.MapFrom(s => OkxValueParsers.ParseDecimal(s.AvailBal)))
+             .ForMember(d => d.Locked, o => o.MapFrom(s => OkxValueParsers.ParseDecimal(s.FrozenBal)));
+diff --git a/src/CryptoExchanges.Net.Okx/OkxExchangeClient.cs b/src/CryptoExchanges.Net.Okx/OkxExchangeClient.cs
+index abd2a18..c4278a5 100644
+--- a/src/CryptoExchanges.Net.Okx/OkxExchangeClient.cs
++++ b/src/CryptoExchanges.Net.Okx/OkxExchangeClient.cs
+@@ -86,7 +86,7 @@ public sealed class OkxExchangeClient : IExchangeClient, IAsyncDisposable
+     /// <param name="ct">Cancellation token.</param>
+     public async Task SyncServerTimeAsync(CancellationToken ct = default)
+     {
+-        var resp = await _http.GetAsync<OkxResponse<OkxServerTime>>("/api/v5/public/time", signed: false, ct: ct).ConfigureAwait(false);
++        var resp = await _http.GetAsync<ResponseDto<ServerTimeDto>>("/api/v5/public/time", signed: false, ct: ct).ConfigureAwait(false);
+         var serverTimeMs = ServerTimeMs(resp.Data.FirstOrDefault());
+         // A missing/malformed /time payload (ServerTimeMs returns 0) is a degraded but non-fatal
+         // response: skip the offset update (keep the prior/local clock) rather than throw.
+@@ -100,7 +100,7 @@ public sealed class OkxExchangeClient : IExchangeClient, IAsyncDisposable
+         try
+         {
+             // The resilience pipeline throws typed exceptions on failure, so reaching here is success.
+-            _ = await _http.GetAsync<OkxResponse<OkxServerTime>>("/api/v5/public/time", signed: false, ct: ct).ConfigureAwait(false);
++            _ = await _http.GetAsync<ResponseDto<ServerTimeDto>>("/api/v5/public/time", signed: false, ct: ct).ConfigureAwait(false);
+             return true;
+         }
+         catch (OperationCanceledException) when (ct.IsCancellationRequested)
+@@ -126,7 +126,7 @@ public sealed class OkxExchangeClient : IExchangeClient, IAsyncDisposable
+     }
+ 
+     /// <summary>Resolves server time in unix milliseconds from the V5 time envelope (ts is ms as a string).</summary>
+-    private static long ServerTimeMs(OkxServerTime? result)
++    private static long ServerTimeMs(ServerTimeDto? result)
+     {
+         if (result is null || string.IsNullOrEmpty(result.Ts))
+             return 0L;
+diff --git a/src/CryptoExchanges.Net.Okx/Services/OkxAccountService.cs b/src/CryptoExchanges.Net.Okx/Services/OkxAccountService.cs
+index b51681c..b045a16 100644
+--- a/src/CryptoExchanges.Net.Okx/Services/OkxAccountService.cs
++++ b/src/CryptoExchanges.Net.Okx/Services/OkxAccountService.cs
+@@ -16,7 +16,7 @@ internal sealed class OkxAccountService(IOkxHttpClient http, ISymbolMapper mappe
+         // OKX returns the full currency list including zero balances; trim to non-zero to match the
+         // venue-neutral "non-zero balances" contract other exchanges honour server-side.
+         return details
+-            .Select(modelMapper.Map<OkxBalanceDetail, AssetBalance>)
++            .Select(modelMapper.Map<BalanceDetailDto, AssetBalance>)
+             .Where(b => b.Total != 0m)
+             .ToList();
+     }
+@@ -27,7 +27,7 @@ internal sealed class OkxAccountService(IOkxHttpClient http, ISymbolMapper mappe
+         var details = await FetchBalanceDetailsAsync(asset.Ticker, ct).ConfigureAwait(false);
+ 
+         var match = details
+-            .Select(modelMapper.Map<OkxBalanceDetail, AssetBalance>)
++            .Select(modelMapper.Map<BalanceDetailDto, AssetBalance>)
+             .FirstOrDefault(b => b.Asset == asset);
+ 
+         return match.Asset == asset ? match : new AssetBalance(asset, 0, 0);
+@@ -58,7 +58,7 @@ internal sealed class OkxAccountService(IOkxHttpClient http, ISymbolMapper mappe
+         if (endTime.HasValue)
+             parameters["end"] = endTime.Value.ToUnixTimeMilliseconds().ToString(System.Globalization.CultureInfo.InvariantCulture);
+ 
+-        var response = await http.GetAsync<OkxResponse<OkxFill>>("/api/v5/trade/fills", parameters, true, ct).ConfigureAwait(false);
++        var response = await http.GetAsync<ResponseDto<FillDto>>("/api/v5/trade/fills", parameters, true, ct).ConfigureAwait(false);
+ 
+         // Trade.Symbol is taken from the caller's typed argument (the caller already holds it), not
+         // resolved from the wire string, so a cold mapper cache can never make this throw.
+@@ -74,13 +74,13 @@ internal sealed class OkxAccountService(IOkxHttpClient http, ISymbolMapper mappe
+         )).ToList();
+     }
+ 
+-    private async Task<IReadOnlyList<OkxBalanceDetail>> FetchBalanceDetailsAsync(string? ccy, CancellationToken ct)
++    private async Task<IReadOnlyList<BalanceDetailDto>> FetchBalanceDetailsAsync(string? ccy, CancellationToken ct)
+     {
+         var parameters = new Dictionary<string, string>();
+         if (!string.IsNullOrEmpty(ccy))
+             parameters["ccy"] = ccy;
+ 
+-        var response = await http.GetAsync<OkxResponse<OkxBalanceAccount>>("/api/v5/account/balance", parameters, true, ct).ConfigureAwait(false);
++        var response = await http.GetAsync<ResponseDto<BalanceAccountDto>>("/api/v5/account/balance", parameters, true, ct).ConfigureAwait(false);
+         return response.Data.SelectMany(a => a.Details).ToList();
+     }
+ 
+diff --git a/src/CryptoExchanges.Net.Okx/Services/OkxMarketDataService.cs b/src/CryptoExchanges.Net.Okx/Services/OkxMarketDataService.cs
+index fc1b736..7f917fc 100644
+--- a/src/CryptoExchanges.Net.Okx/Services/OkxMarketDataService.cs
++++ b/src/CryptoExchanges.Net.Okx/Services/OkxMarketDataService.cs
+@@ -41,12 +41,12 @@ internal sealed class OkxMarketDataService(IOkxHttpClient http, ISymbolMapper ma
+             // Single-symbol path: /api/v5/market/ticker?instId=... . The caller asked for a specific
+             // symbol, so an unresolvable wire string is a genuine error — let the mapper throw.
+             var single = new Dictionary<string, string> { ["instId"] = mapper.ToWire(symbol.Value) };
+-            var oneResp = await http.GetAsync<OkxResponse<OkxTicker>>("/api/v5/market/ticker", single, false, ct).ConfigureAwait(false);
+-            return oneResp.Data.Select(modelMapper.Map<OkxTicker, Ticker>).ToList();
++            var oneResp = await http.GetAsync<ResponseDto<TickerDto>>("/api/v5/market/ticker", single, false, ct).ConfigureAwait(false);
++            return oneResp.Data.Select(modelMapper.Map<TickerDto, Ticker>).ToList();
+         }
+ 
+         var parameters = new Dictionary<string, string> { ["instType"] = OkxRequestValidation.SpotInstType };
+-        var response = await http.GetAsync<OkxResponse<OkxTicker>>("/api/v5/market/tickers", parameters, false, ct).ConfigureAwait(false);
++        var response = await http.GetAsync<ResponseDto<TickerDto>>("/api/v5/market/tickers", parameters, false, ct).ConfigureAwait(false);
+ 
+         // The full universe includes obscure/transitional pairs that may not resolve against a cold
+         // cache or any known quote suffix; skip those rather than failing the whole batch. Callers
+@@ -64,8 +64,8 @@ internal sealed class OkxMarketDataService(IOkxHttpClient http, ISymbolMapper ma
+             ["sz"] = Math.Clamp(depth, 1, 400).ToString(System.Globalization.CultureInfo.InvariantCulture)
+         };
+ 
+-        var response = await http.GetAsync<OkxResponse<OkxOrderBook>>("/api/v5/market/books", parameters, false, ct).ConfigureAwait(false);
+-        var book = response.Data.FirstOrDefault() ?? new OkxOrderBook();
++        var response = await http.GetAsync<ResponseDto<OrderBookDto>>("/api/v5/market/books", parameters, false, ct).ConfigureAwait(false);
++        var book = response.Data.FirstOrDefault() ?? new OrderBookDto();
+ 
+         // OKX book levels are [price, size, deprecatedField, numOrders]; only price+size are used.
+         var bids = book.Bids.Select(b => new OrderBookEntry(OkxValueParsers.ParseDecimal(b[0]), OkxValueParsers.ParseDecimal(b[1]))).ToList();
+@@ -101,7 +101,7 @@ internal sealed class OkxMarketDataService(IOkxHttpClient http, ISymbolMapper ma
+ 
+         // OKX returns candles as a data array of string arrays:
+         // [ts, open, high, low, close, vol, volCcy, volCcyQuote, confirm], newest-first.
+-        var response = await http.GetAsync<OkxResponse<List<string>>>("/api/v5/market/candles", parameters, false, ct).ConfigureAwait(false);
++        var response = await http.GetAsync<ResponseDto<List<string>>>("/api/v5/market/candles", parameters, false, ct).ConfigureAwait(false);
+ 
+         var candles = new List<Candlestick>();
+         foreach (var arr in response.Data)
+@@ -130,7 +130,7 @@ internal sealed class OkxMarketDataService(IOkxHttpClient http, ISymbolMapper ma
+     public async Task<decimal> GetPriceAsync(Symbol symbol, CancellationToken ct = default)
+     {
+         var parameters = new Dictionary<string, string> { ["instId"] = mapper.ToWire(symbol) };
+-        var response = await http.GetAsync<OkxResponse<OkxTicker>>("/api/v5/market/ticker", parameters, false, ct).ConfigureAwait(false);
++        var response = await http.GetAsync<ResponseDto<TickerDto>>("/api/v5/market/ticker", parameters, false, ct).ConfigureAwait(false);
+         var ticker = response.Data.FirstOrDefault();
+         return ticker is null ? 0m : OkxValueParsers.ParseDecimal(ticker.Last);
+     }
+@@ -145,7 +145,7 @@ internal sealed class OkxMarketDataService(IOkxHttpClient http, ISymbolMapper ma
+             ["limit"] = Math.Clamp(limit, 1, 500).ToString(System.Globalization.CultureInfo.InvariantCulture)
+         };
+ 
+-        var response = await http.GetAsync<OkxResponse<OkxTrade>>("/api/v5/market/trades", parameters, false, ct).ConfigureAwait(false);
++        var response = await http.GetAsync<ResponseDto<TradeDto>>("/api/v5/market/trades", parameters, false, ct).ConfigureAwait(false);
+ 
+         // Trade.Symbol is the caller's typed argument (already held), not resolved from the wire
+         // string, so a cold mapper cache can never make this throw. IsBuyerMaker = taker sold.
+@@ -163,13 +163,13 @@ internal sealed class OkxMarketDataService(IOkxHttpClient http, ISymbolMapper ma
+     public async Task<ExchangeInfo> GetExchangeInfoAsync(CancellationToken ct = default)
+     {
+         var parameters = new Dictionary<string, string> { ["instType"] = OkxRequestValidation.SpotInstType };
+-        var response = await http.GetAsync<OkxResponse<OkxInstrument>>("/api/v5/public/instruments", parameters, false, ct).ConfigureAwait(false);
++        var response = await http.GetAsync<ResponseDto<InstrumentDto>>("/api/v5/public/instruments", parameters, false, ct).ConfigureAwait(false);
+ 
+         // OKX instruments can include entries whose base/quote are not representable assets; skip
+         // those rather than throw.
+         var representable = response.Data
+             .Where(s => Asset.TryOf(s.BaseCcy, out _) && Asset.TryOf(s.QuoteCcy, out _));
+-        var symbols = modelMapper.Map<OkxInstrument, SymbolInfo>(representable);
++        var symbols = modelMapper.Map<InstrumentDto, SymbolInfo>(representable);
+ 
+         // Populate the mapper's wire->Symbol lookup table from the freshly fetched symbols.
+         mapper.UpdateSymbols(symbols);
+@@ -199,12 +199,12 @@ internal sealed class OkxMarketDataService(IOkxHttpClient http, ISymbolMapper ma
+     /// Maps a ticker, yielding nothing when its wire symbol cannot be resolved. Used for the
+     /// full-universe response where unknown/delisted pairs must not abort the whole batch.
+     /// </summary>
+-    private IEnumerable<Ticker> TryMapTicker(OkxTicker t)
++    private IEnumerable<Ticker> TryMapTicker(TickerDto t)
+     {
+         Ticker ticker;
+         try
+         {
+-            ticker = modelMapper.Map<OkxTicker, Ticker>(t);
++            ticker = modelMapper.Map<TickerDto, Ticker>(t);
+         }
+         catch (FormatException)
+         {
+diff --git a/src/CryptoExchanges.Net.Okx/Services/OkxTradingService.cs b/src/CryptoExchanges.Net.Okx/Services/OkxTradingService.cs
+index 3826e5d..ec62c95 100644
+--- a/src/CryptoExchanges.Net.Okx/Services/OkxTradingService.cs
++++ b/src/CryptoExchanges.Net.Okx/Services/OkxTradingService.cs
+@@ -55,7 +55,7 @@ internal sealed class OkxTradingService(IOkxHttpClient http, ISymbolMapper mappe
+         if (request.ClientOrderId is not null)
+             parameters["clOrdId"] = request.ClientOrderId;
+ 
+-        var response = await http.PostAsync<OkxResponse<OkxOrderAck>>("/api/v5/trade/order", parameters, true, ct).ConfigureAwait(false);
++        var response = await http.PostAsync<ResponseDto<OrderAckDto>>("/api/v5/trade/order", parameters, true, ct).ConfigureAwait(false);
+         var ack = response.Data.FirstOrDefault();
+         return await FetchOrderAsync(wireSymbol, ack?.OrdId ?? string.Empty, ct, clientOrderId: request.ClientOrderId).ConfigureAwait(false);
+     }
+@@ -70,7 +70,7 @@ internal sealed class OkxTradingService(IOkxHttpClient http, ISymbolMapper mappe
+             ["ordId"] = orderId
+         };
+ 
+-        var response = await http.PostAsync<OkxResponse<OkxOrderAck>>("/api/v5/trade/cancel-order", parameters, true, ct).ConfigureAwait(false);
++        var response = await http.PostAsync<ResponseDto<OrderAckDto>>("/api/v5/trade/cancel-order", parameters, true, ct).ConfigureAwait(false);
+         var canceledId = response.Data.FirstOrDefault()?.OrdId ?? orderId;
+         return await FetchOrderAsync(wireSymbol, canceledId, ct).ConfigureAwait(false);
+     }
+@@ -85,7 +85,7 @@ internal sealed class OkxTradingService(IOkxHttpClient http, ISymbolMapper mappe
+             ["clOrdId"] = clientOrderId
+         };
+ 
+-        var response = await http.PostAsync<OkxResponse<OkxOrderAck>>("/api/v5/trade/cancel-order", parameters, true, ct).ConfigureAwait(false);
++        var response = await http.PostAsync<ResponseDto<OrderAckDto>>("/api/v5/trade/cancel-order", parameters, true, ct).ConfigureAwait(false);
+         var canceledId = response.Data.FirstOrDefault()?.OrdId ?? string.Empty;
+         return await FetchOrderAsync(wireSymbol, canceledId, ct, clientOrderId: clientOrderId).ConfigureAwait(false);
+     }
+@@ -109,7 +109,7 @@ internal sealed class OkxTradingService(IOkxHttpClient http, ISymbolMapper mappe
+         if (cancels.Count == 0)
+             return [];
+ 
+-        var response = await http.PostAsync<OkxResponse<OkxOrderAck>>("/api/v5/trade/cancel-batch-orders", cancels, true, ct).ConfigureAwait(false);
++        var response = await http.PostAsync<ResponseDto<OrderAckDto>>("/api/v5/trade/cancel-batch-orders", cancels, true, ct).ConfigureAwait(false);
+         var canceledIds = response.Data.Select(a => a.OrdId).Where(id => !string.IsNullOrEmpty(id)).ToHashSet(StringComparer.Ordinal);
+         if (canceledIds.Count == 0)
+             return [];
+@@ -129,8 +129,8 @@ internal sealed class OkxTradingService(IOkxHttpClient http, ISymbolMapper mappe
+         if (symbol.HasValue)
+             parameters["instId"] = mapper.ToWire(symbol.Value);
+ 
+-        var response = await http.GetAsync<OkxResponse<OkxOrder>>("/api/v5/trade/orders-pending", parameters, true, ct).ConfigureAwait(false);
+-        return modelMapper.Map<OkxOrder, Order>(response.Data);
++        var response = await http.GetAsync<ResponseDto<OrderDto>>("/api/v5/trade/orders-pending", parameters, true, ct).ConfigureAwait(false);
++        return modelMapper.Map<OrderDto, Order>(response.Data);
+     }
+ 
+     /// <inheritdoc />
+@@ -159,8 +159,8 @@ internal sealed class OkxTradingService(IOkxHttpClient http, ISymbolMapper mappe
+         if (endTime.HasValue)
+             parameters["before"] = endTime.Value.ToUnixTimeMilliseconds().ToString(System.Globalization.CultureInfo.InvariantCulture);
+ 
+-        var response = await http.GetAsync<OkxResponse<OkxOrder>>("/api/v5/trade/orders-history", parameters, true, ct).ConfigureAwait(false);
+-        return modelMapper.Map<OkxOrder, Order>(response.Data);
++        var response = await http.GetAsync<ResponseDto<OrderDto>>("/api/v5/trade/orders-history", parameters, true, ct).ConfigureAwait(false);
++        return modelMapper.Map<OrderDto, Order>(response.Data);
+     }
+ 
+     /// <summary>
+@@ -178,10 +178,10 @@ internal sealed class OkxTradingService(IOkxHttpClient http, ISymbolMapper mappe
+         else if (!string.IsNullOrEmpty(clientOrderId))
+             parameters["clOrdId"] = clientOrderId;
+ 
+-        var response = await http.GetAsync<OkxResponse<OkxOrder>>("/api/v5/trade/order", parameters, true, ct).ConfigureAwait(false);
++        var response = await http.GetAsync<ResponseDto<OrderDto>>("/api/v5/trade/order", parameters, true, ct).ConfigureAwait(false);
+         var match = response.Data.FirstOrDefault();
+         if (match is not null)
+-            return modelMapper.Map<OkxOrder, Order>(match);
++            return modelMapper.Map<OrderDto, Order>(match);
+ 
+         // The order did not surface; return a minimal record carrying whichever identifier we have
+         // (never empty) so callers still get an id to poll later rather than a null/throw.
+diff --git a/tests/CryptoExchanges.Net.Binance.Tests.Integration/BinanceResponseProfileTests.cs b/tests/CryptoExchanges.Net.Binance.Tests.Integration/BinanceResponseProfileTests.cs
+index bfbdd96..e0dedc6 100644
+--- a/tests/CryptoExchanges.Net.Binance.Tests.Integration/BinanceResponseProfileTests.cs
++++ b/tests/CryptoExchanges.Net.Binance.Tests.Integration/BinanceResponseProfileTests.cs
+@@ -35,7 +35,7 @@ public class BinanceResponseProfileTests
+     {
+         var mapper = BuildMapper(out var btcusdt);
+ 
+-        var dto = new BinanceOrderResponse
++        var dto = new OrderResponseDto
+         {
+             Symbol = "BTCUSDT",
+             OrderId = 12345,
+@@ -52,7 +52,7 @@ public class BinanceResponseProfileTests
+             UpdateTime = 1700000001000
+         };
+ 
+-        var order = mapper.Map<BinanceOrderResponse, Order>(dto);
++        var order = mapper.Map<OrderResponseDto, Order>(dto);
+ 
+         order.Symbol.Should().Be(btcusdt);
+         order.OrderId.Should().Be("12345");
+@@ -74,14 +74,14 @@ public class BinanceResponseProfileTests
+     {
+         var mapper = BuildMapper(out _);
+ 
+-        var dto = new BinanceOrderResponse
++        var dto = new OrderResponseDto
+         {
+             Symbol = "BTCUSDT",
+             OrderId = 1,
+             Status = "SOME_FUTURE_STATUS"
+         };
+ 
+-        var order = mapper.Map<BinanceOrderResponse, Order>(dto);
++        var order = mapper.Map<OrderResponseDto, Order>(dto);
+ 
+         order.Status.Should().Be(OrderStatus.Unknown);
+     }
+@@ -91,7 +91,7 @@ public class BinanceResponseProfileTests
+     {
+         var mapper = BuildMapper(out _);
+ 
+-        var dto = new BinanceOrderResponse
++        var dto = new OrderResponseDto
+         {
+             Symbol = "BTCUSDT",
+             OrderId = 1,
+@@ -99,7 +99,7 @@ public class BinanceResponseProfileTests
+             UpdateTime = 0
+         };
+ 
+-        var order = mapper.Map<BinanceOrderResponse, Order>(dto);
++        var order = mapper.Map<OrderResponseDto, Order>(dto);
+ 
+         order.CreatedAt.Should().BeNull();
+         order.UpdatedAt.Should().BeNull();
+@@ -110,7 +110,7 @@ public class BinanceResponseProfileTests
+     {
+         var mapper = BuildMapper(out var btcusdt);
+ 
+-        var dto = new BinanceTickerResponse
++        var dto = new TickerResponseDto
+         {
+             Symbol = "BTCUSDT",
+             LastPrice = "42000.1",
+@@ -124,7 +124,7 @@ public class BinanceResponseProfileTests
+             CloseTime = 1700000000000
+         };
+ 
+-        var ticker = mapper.Map<BinanceTickerResponse, Ticker>(dto);
++        var ticker = mapper.Map<TickerResponseDto, Ticker>(dto);
+ 
+         ticker.Symbol.Should().Be(btcusdt);
+         ticker.LastPrice.Should().Be(42000.1m);
+@@ -138,14 +138,14 @@ public class BinanceResponseProfileTests
+     {
+         var mapper = BuildMapper(out _);
+ 
+-        var dto = new BinanceTickerResponse
++        var dto = new TickerResponseDto
+         {
+             Symbol = "BTCUSDT",
+             LastPrice = "42000",
+             CloseTime = 0
+         };
+ 
+-        var ticker = mapper.Map<BinanceTickerResponse, Ticker>(dto);
++        var ticker = mapper.Map<TickerResponseDto, Ticker>(dto);
+ 
+         ticker.Timestamp.Should().BeNull();
+     }
+@@ -155,9 +155,9 @@ public class BinanceResponseProfileTests
+     {
+         var mapper = BuildMapper(out _);
+ 
+-        var dto = new BinanceBalance { Asset = "BTC", Free = "1.5", Locked = "0.25" };
++        var dto = new BalanceDto { Asset = "BTC", Free = "1.5", Locked = "0.25" };
+ 
+-        var balance = mapper.Map<BinanceBalance, AssetBalance>(dto);
++        var balance = mapper.Map<BalanceDto, AssetBalance>(dto);
+ 
+         balance.Asset.Should().Be(Asset.Btc);
+         balance.Free.Should().Be(1.5m);
+@@ -172,9 +172,9 @@ public class BinanceResponseProfileTests
+ 
+         // A ticker with characters outside A-Z/0-9 is not representable as an Asset; it must
+         // map to Asset.None rather than throwing (balances are where long-tail assets appear).
+-        var dto = new BinanceBalance { Asset = "bad-ticker!", Free = "3", Locked = "0" };
++        var dto = new BalanceDto { Asset = "bad-ticker!", Free = "3", Locked = "0" };
+ 
+-        var balance = mapper.Map<BinanceBalance, AssetBalance>(dto);
++        var balance = mapper.Map<BalanceDto, AssetBalance>(dto);
+ 
+         balance.Asset.Should().Be(Asset.None);
+         balance.Asset.IsNone.Should().BeTrue();
+diff --git a/tests/CryptoExchanges.Net.Bitget.Tests.Unit/BitgetMappingAndServiceTests.cs b/tests/CryptoExchanges.Net.Bitget.Tests.Unit/BitgetMappingAndServiceTests.cs
+index 8d90f57..bf99233 100644
+--- a/tests/CryptoExchanges.Net.Bitget.Tests.Unit/BitgetMappingAndServiceTests.cs
++++ b/tests/CryptoExchanges.Net.Bitget.Tests.Unit/BitgetMappingAndServiceTests.cs
+@@ -49,7 +49,7 @@ public class BitgetMappingAndServiceTests
+     public void OrderProfile_MapsAllScalarsAndResolvesSymbol()
+     {
+         var (_, mapper) = BuildMappers();
+-        var dto = new BitgetOrder
++        var dto = new OrderDto
+         {
+             Symbol = "BTCUSDT",
+             OrderId = "111",
+@@ -67,7 +67,7 @@ public class BitgetMappingAndServiceTests
+             UTime = "1700000001000"
+         };
+ 
+-        var order = mapper.Map<BitgetOrder, Order>(dto);
++        var order = mapper.Map<OrderDto, Order>(dto);
+ 
+         order.Symbol.Should().Be(BtcUsdt);
+         order.OrderId.Should().Be("111");
+@@ -91,7 +91,7 @@ public class BitgetMappingAndServiceTests
+     public void OrderProfile_MarketOrder_MapsCleanly()
+     {
+         var (_, mapper) = BuildMappers();
+-        var dto = new BitgetOrder
++        var dto = new OrderDto
+         {
+             Symbol = "BTCUSDT",
+             OrderId = "222",
+@@ -106,10 +106,10 @@ public class BitgetMappingAndServiceTests
+             UTime = "1700000000500"
+         };
+ 
+-        var act = () => mapper.Map<BitgetOrder, Order>(dto);
++        var act = () => mapper.Map<OrderDto, Order>(dto);
+         act.Should().NotThrow();
+ 
+-        var order = mapper.Map<BitgetOrder, Order>(dto);
++        var order = mapper.Map<OrderDto, Order>(dto);
+         order.Type.Should().Be(OrderType.Market);
+         order.Status.Should().Be(OrderStatus.Filled);
+         order.CumulativeQuoteQuantity.Should().Be(21000m);
+@@ -119,7 +119,7 @@ public class BitgetMappingAndServiceTests
+     public void TickerProfile_ComputesChangeFromChange24h()
+     {
+         var (_, mapper) = BuildMappers();
+-        var dto = new BitgetTicker
++        var dto = new TickerDto
+         {
+             Symbol = "BTCUSDT",
+             LastPr = "42000",
+@@ -132,7 +132,7 @@ public class BitgetMappingAndServiceTests
+             Ts = "1700000000000"
+         };
+ 
+-        var ticker = mapper.Map<BitgetTicker, Ticker>(dto);
++        var ticker = mapper.Map<TickerDto, Ticker>(dto);
+ 
+         ticker.Symbol.Should().Be(BtcUsdt);
+         ticker.LastPrice.Should().Be(42000m);
+@@ -147,9 +147,9 @@ public class BitgetMappingAndServiceTests
+     public void SymbolProfile_MapsBaseQuoteToSymbol()
+     {
+         var (_, mapper) = BuildMappers();
+-        var dto = new BitgetSymbol { Symbol = "BTCUSDT", BaseCoin = "BTC", QuoteCoin = "USDT" };
++        var dto = new SymbolDto { Symbol = "BTCUSDT", BaseCoin = "BTC", QuoteCoin = "USDT" };
+ 
+-        var info = mapper.Map<BitgetSymbol, SymbolInfo>(dto);
++        var info = mapper.Map<SymbolDto, SymbolInfo>(dto);
+ 
+         info.Symbol.Should().Be(BtcUsdt);
+         info.AllowedOrderTypes.Should().Contain(OrderType.Limit).And.Contain(OrderType.Market);
+@@ -159,9 +159,9 @@ public class BitgetMappingAndServiceTests
+     public void BalanceProfile_MapsAvailableAndCombinesFrozenLocked()
+     {
+         var (_, mapper) = BuildMappers();
+-        var dto = new BitgetBalance { Coin = "BTC", Available = "1.5", Frozen = "0.25", Locked = "0.1" };
++        var dto = new BalanceDto { Coin = "BTC", Available = "1.5", Frozen = "0.25", Locked = "0.1" };
+ 
+-        var balance = mapper.Map<BitgetBalance, AssetBalance>(dto);
++        var balance = mapper.Map<BalanceDto, AssetBalance>(dto);
+ 
+         balance.Asset.Should().Be(Asset.Btc);
+         balance.Free.Should().Be(1.5m);
+@@ -177,11 +177,11 @@ public class BitgetMappingAndServiceTests
+     {
+         var (symbolMapper, mapper) = BuildMappers();
+         var http = Substitute.For<IBitgetHttpClient>();
+-        http.GetAsync<BitgetResponse<BitgetTicker>>(
++        http.GetAsync<ResponseDto<TickerDto>>(
+                 "/api/v2/spot/market/tickers", Arg.Any<Dictionary<string, string>>(), false, Arg.Any<CancellationToken>())
+-            .Returns(new BitgetResponse<BitgetTicker>
++            .Returns(new ResponseDto<TickerDto>
+             {
+-                Data = [new BitgetTicker { Symbol = "BTCUSDT", LastPr = "42000", Open = "40000", Change24h = "0.05" }]
++                Data = [new TickerDto { Symbol = "BTCUSDT", LastPr = "42000", Open = "40000", Change24h = "0.05" }]
+             });
+ 
+         var service = new BitgetMarketDataService(http, symbolMapper, mapper);
+@@ -199,9 +199,9 @@ public class BitgetMappingAndServiceTests
+         // arr[3]=low, arr[4]=close, arr[5]=baseVolume, arr[6]=quoteVolume.
+         var (symbolMapper, mapper) = BuildMappers();
+         var http = Substitute.For<IBitgetHttpClient>();
+-        http.GetAsync<BitgetResponse<List<string>>>(
++        http.GetAsync<ResponseDto<List<string>>>(
+                 "/api/v2/spot/market/candles", Arg.Any<Dictionary<string, string>>(), false, Arg.Any<CancellationToken>())
+-            .Returns(new BitgetResponse<List<string>>
++            .Returns(new ResponseDto<List<string>>
+             {
+                 Data = [["1700000000000", "42000", "43000", "41000", "42500", "10", "420000"]]
+             });
+@@ -221,9 +221,9 @@ public class BitgetMappingAndServiceTests
+         // BitgetValueParsers.ParseMs("") returns 0L (safe TryParse); long.Parse would have thrown.
+         var (symbolMapper, mapper) = BuildMappers();
+         var http = Substitute.For<IBitgetHttpClient>();
+-        http.GetAsync<BitgetResponse<List<string>>>(
++        http.GetAsync<ResponseDto<List<string>>>(
+                 "/api/v2/spot/market/candles", Arg.Any<Dictionary<string, string>>(), false, Arg.Any<CancellationToken>())
+-            .Returns(new BitgetResponse<List<string>>
++            .Returns(new ResponseDto<List<string>>
+             {
+                 Data = [["", "42000", "43000", "41000", "42500", "10", "420000"]]
+             });
+@@ -240,9 +240,9 @@ public class BitgetMappingAndServiceTests
+         var (symbolMapper, mapper) = BuildMappers();
+         var http = Substitute.For<IBitgetHttpClient>();
+         Dictionary<string, string>? captured = null;
+-        http.GetAsync<BitgetResponse<List<string>>>(
++        http.GetAsync<ResponseDto<List<string>>>(
+                 "/api/v2/spot/market/candles", Arg.Do<Dictionary<string, string>>(p => captured = p), false, Arg.Any<CancellationToken>())
+-            .Returns(new BitgetResponse<List<string>>());
++            .Returns(new ResponseDto<List<string>>());
+ 
+         var service = new BitgetMarketDataService(http, symbolMapper, mapper);
+         var act = async () => await service.GetCandlesticksAsync(BtcUsdt, KlineInterval.OneHour, limit: 5000, ct: TestContext.Current.CancellationToken);
+@@ -269,13 +269,13 @@ public class BitgetMappingAndServiceTests
+     {
+         var (symbolMapper, mapper) = BuildMappers();
+         var http = Substitute.For<IBitgetHttpClient>();
+-        http.GetAsync<BitgetResponse<BitgetOrderBook>>(
++        http.GetAsync<ResponseDto<OrderBookDto>>(
+                 "/api/v2/spot/market/orderbook", Arg.Any<Dictionary<string, string>>(), false, Arg.Any<CancellationToken>())
+-            .Returns(new BitgetResponse<BitgetOrderBook>
++            .Returns(new ResponseDto<OrderBookDto>
+             {
+                 Data =
+                 [
+-                    new BitgetOrderBook
++                    new OrderBookDto
+                     {
+                         Bids = [["100", "2"]],
+                         Asks = [["101", "3"]],
+@@ -296,13 +296,13 @@ public class BitgetMappingAndServiceTests
+     {
+         var (symbolMapper, mapper) = BuildMappers();
+         var http = Substitute.For<IBitgetHttpClient>();
+-        http.GetAsync<BitgetResponse<BitgetOrderBook>>(
++        http.GetAsync<ResponseDto<OrderBookDto>>(
+                 "/api/v2/spot/market/orderbook", Arg.Any<Dictionary<string, string>>(), false, Arg.Any<CancellationToken>())
+-            .Returns(new BitgetResponse<BitgetOrderBook>
++            .Returns(new ResponseDto<OrderBookDto>
+             {
+                 Data =
+                 [
+-                    new BitgetOrderBook
++                    new OrderBookDto
+                     {
+                         // Malformed/short rows (fewer than [price, size]) must be skipped, not throw.
+                         Bids = [["100", "2"], [], ["99"]],
+@@ -326,14 +326,14 @@ public class BitgetMappingAndServiceTests
+     {
+         var (symbolMapper, mapper) = BuildMappers();
+         var http = Substitute.For<IBitgetHttpClient>();
+-        http.GetAsync<BitgetResponse<BitgetBalance>>(
++        http.GetAsync<ResponseDto<BalanceDto>>(
+                 "/api/v2/spot/account/assets", Arg.Any<Dictionary<string, string>>(), true, Arg.Any<CancellationToken>())
+-            .Returns(new BitgetResponse<BitgetBalance>
++            .Returns(new ResponseDto<BalanceDto>
+             {
+                 Data =
+                 [
+-                    new BitgetBalance { Coin = "BTC", Available = "1.5", Frozen = "0", Locked = "0" },
+-                    new BitgetBalance { Coin = "ZZZ", Available = "0", Frozen = "0", Locked = "0" }
++                    new BalanceDto { Coin = "BTC", Available = "1.5", Frozen = "0", Locked = "0" },
++                    new BalanceDto { Coin = "ZZZ", Available = "0", Frozen = "0", Locked = "0" }
+                 ]
+             });
+ 
+@@ -351,9 +351,9 @@ public class BitgetMappingAndServiceTests
+         var (symbolMapper, mapper) = BuildMappers();
+         var http = Substitute.For<IBitgetHttpClient>();
+         Dictionary<string, string>? captured = null;
+-        http.GetAsync<BitgetResponse<BitgetFill>>(
++        http.GetAsync<ResponseDto<FillDto>>(
+                 "/api/v2/spot/trade/fills", Arg.Do<Dictionary<string, string>>(p => captured = p), true, Arg.Any<CancellationToken>())
+-            .Returns(new BitgetResponse<BitgetFill>());
++            .Returns(new ResponseDto<FillDto>());
+ 
+         var service = new BitgetAccountService(http, symbolMapper, mapper);
+ 
+@@ -372,11 +372,11 @@ public class BitgetMappingAndServiceTests
+     {
+         var (symbolMapper, mapper) = BuildMappers();
+         var http = Substitute.For<IBitgetHttpClient>();
+-        http.GetAsync<BitgetResponse<BitgetOrder>>(
++        http.GetAsync<ResponseDto<OrderDto>>(
+                 "/api/v2/spot/trade/unfilled-orders", Arg.Any<Dictionary<string, string>>(), true, Arg.Any<CancellationToken>())
+-            .Returns(new BitgetResponse<BitgetOrder>
++            .Returns(new ResponseDto<OrderDto>
+             {
+-                Data = [new BitgetOrder { Symbol = "BTCUSDT", OrderId = "9", Size = "1", Price = "5" }]
++                Data = [new OrderDto { Symbol = "BTCUSDT", OrderId = "9", Size = "1", Price = "5" }]
+             });
+ 
+         var service = new BitgetTradingService(http, symbolMapper, mapper);
+@@ -393,9 +393,9 @@ public class BitgetMappingAndServiceTests
+         var (symbolMapper, mapper) = BuildMappers();
+         var http = Substitute.For<IBitgetHttpClient>();
+         Dictionary<string, string>? captured = null;
+-        http.GetAsync<BitgetResponse<BitgetOrder>>(
++        http.GetAsync<ResponseDto<OrderDto>>(
+                 "/api/v2/spot/trade/history-orders", Arg.Do<Dictionary<string, string>>(p => captured = p), true, Arg.Any<CancellationToken>())
+-            .Returns(new BitgetResponse<BitgetOrder>());
++            .Returns(new ResponseDto<OrderDto>());
+ 
+         var service = new BitgetTradingService(http, symbolMapper, mapper);
+ 
+@@ -413,15 +413,15 @@ public class BitgetMappingAndServiceTests
+         var http = Substitute.For<IBitgetHttpClient>();
+ 
+         Dictionary<string, string>? placed = null;
+-        http.PostAsync<BitgetResponse<BitgetOrderAck>>(
++        http.PostAsync<ResponseDto<OrderAckDto>>(
+                 "/api/v2/spot/trade/place-order", Arg.Do<Dictionary<string, string>>(p => placed = p), true, Arg.Any<CancellationToken>())
+-            .Returns(new BitgetResponse<BitgetOrderAck> { Data = [new BitgetOrderAck { OrderId = "ord-1" }] });
++            .Returns(new ResponseDto<OrderAckDto> { Data = [new OrderAckDto { OrderId = "ord-1" }] });
+ 
+-        http.GetAsync<BitgetResponse<BitgetOrder>>(
++        http.GetAsync<ResponseDto<OrderDto>>(
+                 "/api/v2/spot/trade/orderInfo", Arg.Any<Dictionary<string, string>>(), true, Arg.Any<CancellationToken>())
+-            .Returns(new BitgetResponse<BitgetOrder>
++            .Returns(new ResponseDto<OrderDto>
+             {
+-                Data = [new BitgetOrder { Symbol = "BTCUSDT", OrderId = "ord-1", Size = "0.5", OrderType = "market", Status = "filled", Side = "buy" }]
++                Data = [new OrderDto { Symbol = "BTCUSDT", OrderId = "ord-1", Size = "0.5", OrderType = "market", Status = "filled", Side = "buy" }]
+             });
+ 
+         var service = new BitgetTradingService(http, symbolMapper, mapper);
+@@ -443,16 +443,16 @@ public class BitgetMappingAndServiceTests
+         var http = Substitute.For<IBitgetHttpClient>();
+ 
+         // The cancel ack omits orderId (only clientOid is echoed).
+-        http.PostAsync<BitgetResponse<BitgetOrderAck>>(
++        http.PostAsync<ResponseDto<OrderAckDto>>(
+                 "/api/v2/spot/trade/cancel-order", Arg.Any<Dictionary<string, string>>(), true, Arg.Any<CancellationToken>())
+-            .Returns(new BitgetResponse<BitgetOrderAck> { Data = [new BitgetOrderAck { OrderId = string.Empty, ClientOid = "cli-77" }] });
++            .Returns(new ResponseDto<OrderAckDto> { Data = [new OrderAckDto { OrderId = string.Empty, ClientOid = "cli-77" }] });
+ 
+         Dictionary<string, string>? refetchParams = null;
+-        http.GetAsync<BitgetResponse<BitgetOrder>>(
++        http.GetAsync<ResponseDto<OrderDto>>(
+                 "/api/v2/spot/trade/orderInfo", Arg.Do<Dictionary<string, string>>(p => refetchParams = p), true, Arg.Any<CancellationToken>())
+-            .Returns(new BitgetResponse<BitgetOrder>
++            .Returns(new ResponseDto<OrderDto>
+             {
+-                Data = [new BitgetOrder { Symbol = "BTCUSDT", OrderId = "real-99", ClientOid = "cli-77", Status = "cancelled" }]
++                Data = [new OrderDto { Symbol = "BTCUSDT", OrderId = "real-99", ClientOid = "cli-77", Status = "cancelled" }]
+             });
+ 
+         var service = new BitgetTradingService(http, symbolMapper, mapper);
+diff --git a/tests/CryptoExchanges.Net.Bybit.Tests.Unit/BybitMappingAndServiceTests.cs b/tests/CryptoExchanges.Net.Bybit.Tests.Unit/BybitMappingAndServiceTests.cs
+index 2c023ce..8fbe053 100644
+--- a/tests/CryptoExchanges.Net.Bybit.Tests.Unit/BybitMappingAndServiceTests.cs
++++ b/tests/CryptoExchanges.Net.Bybit.Tests.Unit/BybitMappingAndServiceTests.cs
+@@ -39,7 +39,7 @@ public class BybitMappingAndServiceTests
+     public void OrderProfile_MapsAllScalarsAndResolvesSymbol()
+     {
+         var (_, mapper) = BuildMappers();
+-        var dto = new BybitOrder
++        var dto = new OrderDto
+         {
+             Symbol = "BTCUSDT",
+             OrderId = "111",
+@@ -57,7 +57,7 @@ public class BybitMappingAndServiceTests
+             UpdatedTime = "1700000001000"
+         };
+ 
+-        var order = mapper.Map<BybitOrder, Order>(dto);
++        var order = mapper.Map<OrderDto, Order>(dto);
+ 
+         order.Symbol.Should().Be(BtcUsdt);
+         order.OrderId.Should().Be("111");
+@@ -79,7 +79,7 @@ public class BybitMappingAndServiceTests
+     public void TickerProfile_ScalesPercentAndComputesChange()
+     {
+         var (_, mapper) = BuildMappers();
+-        var dto = new BybitTicker
++        var dto = new TickerDto
+         {
+             Symbol = "BTCUSDT",
+             LastPrice = "42000",
+@@ -91,7 +91,7 @@ public class BybitMappingAndServiceTests
+             Price24hPcnt = "0.025"
+         };
+ 
+-        var ticker = mapper.Map<BybitTicker, Ticker>(dto);
++        var ticker = mapper.Map<TickerDto, Ticker>(dto);
+ 
+         ticker.Symbol.Should().Be(BtcUsdt);
+         ticker.LastPrice.Should().Be(42000m);
+@@ -105,9 +105,9 @@ public class BybitMappingAndServiceTests
+     public void InstrumentProfile_MapsBaseQuoteToSymbol()
+     {
+         var (_, mapper) = BuildMappers();
+-        var dto = new BybitInstrument { Symbol = "BTCUSDT", BaseCoin = "BTC", QuoteCoin = "USDT" };
++        var dto = new InstrumentDto { Symbol = "BTCUSDT", BaseCoin = "BTC", QuoteCoin = "USDT" };
+ 
+-        var info = mapper.Map<BybitInstrument, SymbolInfo>(dto);
++        var info = mapper.Map<InstrumentDto, SymbolInfo>(dto);
+ 
+         info.Symbol.Should().Be(BtcUsdt);
+         info.AllowedOrderTypes.Should().Contain(OrderType.Limit).And.Contain(OrderType.Market);
+@@ -117,9 +117,9 @@ public class BybitMappingAndServiceTests
+     public void BalanceProfile_FreeIsWalletMinusLocked()
+     {
+         var (_, mapper) = BuildMappers();
+-        var dto = new BybitCoinBalance { Coin = "BTC", WalletBalance = "1.75", Locked = "0.25" };
++        var dto = new CoinBalanceDto { Coin = "BTC", WalletBalance = "1.75", Locked = "0.25" };
+ 
+-        var balance = mapper.Map<BybitCoinBalance, AssetBalance>(dto);
++        var balance = mapper.Map<CoinBalanceDto, AssetBalance>(dto);
+ 
+         balance.Asset.Should().Be(Asset.Btc);
+         balance.Free.Should().Be(1.5m);
+@@ -134,11 +134,11 @@ public class BybitMappingAndServiceTests
+     {
+         var (symbolMapper, mapper) = BuildMappers();
+         var http = Substitute.For<IBybitHttpClient>();
+-        http.GetAsync<BybitResponse<BybitTickerResult>>(
++        http.GetAsync<ResponseDto<TickerResultDto>>(
+                 "/v5/market/tickers", Arg.Any<Dictionary<string, string>>(), false, Arg.Any<CancellationToken>())
+-            .Returns(new BybitResponse<BybitTickerResult>
++            .Returns(new ResponseDto<TickerResultDto>
+             {
+-                Result = new BybitTickerResult { List = [new BybitTicker { Symbol = "BTCUSDT", LastPrice = "42000", PrevPrice24h = "41000" }] }
++                Result = new TickerResultDto { List = [new TickerDto { Symbol = "BTCUSDT", LastPrice = "42000", PrevPrice24h = "41000" }] }
+             });
+ 
+         var service = new BybitMarketDataService(http, symbolMapper, mapper);
+@@ -156,20 +156,20 @@ public class BybitMappingAndServiceTests
+     {
+         var (symbolMapper, mapper) = BuildMappers();
+         var http = Substitute.For<IBybitHttpClient>();
+-        http.GetAsync<BybitResponse<BybitListResult<BybitWalletAccount>>>(
++        http.GetAsync<ResponseDto<ListResultDto<WalletAccountDto>>>(
+                 "/v5/account/wallet-balance", Arg.Any<Dictionary<string, string>>(), true, Arg.Any<CancellationToken>())
+-            .Returns(new BybitResponse<BybitListResult<BybitWalletAccount>>
++            .Returns(new ResponseDto<ListResultDto<WalletAccountDto>>
+             {
+-                Result = new BybitListResult<BybitWalletAccount>
++                Result = new ListResultDto<WalletAccountDto>
+                 {
+                     List =
+                     [
+-                        new BybitWalletAccount
++                        new WalletAccountDto
+                         {
+                             Coin =
+                             [
+-                                new BybitCoinBalance { Coin = "BTC", WalletBalance = "1.5", Locked = "0" },
+-                                new BybitCoinBalance { Coin = "ZZZ", WalletBalance = "0", Locked = "0" }
++                                new CoinBalanceDto { Coin = "BTC", WalletBalance = "1.5", Locked = "0" },
++                                new CoinBalanceDto { Coin = "ZZZ", WalletBalance = "0", Locked = "0" }
+                             ]
+                         }
+                     ]
+@@ -191,13 +191,13 @@ public class BybitMappingAndServiceTests
+     {
+         var (symbolMapper, mapper) = BuildMappers();
+         var http = Substitute.For<IBybitHttpClient>();
+-        http.GetAsync<BybitResponse<BybitListResult<BybitOrder>>>(
++        http.GetAsync<ResponseDto<ListResultDto<OrderDto>>>(
+                 "/v5/order/realtime", Arg.Any<Dictionary<string, string>>(), true, Arg.Any<CancellationToken>())
+-            .Returns(new BybitResponse<BybitListResult<BybitOrder>>
++            .Returns(new ResponseDto<ListResultDto<OrderDto>>
+             {
+-                Result = new BybitListResult<BybitOrder>
++                Result = new ListResultDto<OrderDto>
+                 {
+-                    List = [new BybitOrder { Symbol = "BTCUSDT", OrderId = "9", Qty = "1", Price = "5" }]
++                    List = [new OrderDto { Symbol = "BTCUSDT", OrderId = "9", Qty = "1", Price = "5" }]
+                 }
+             });
+ 
+@@ -217,9 +217,9 @@ public class BybitMappingAndServiceTests
+         var (symbolMapper, mapper) = BuildMappers();
+         var http = Substitute.For<IBybitHttpClient>();
+         Dictionary<string, string>? captured = null;
+-        http.GetAsync<BybitResponse<BybitListResult<BybitOrder>>>(
++        http.GetAsync<ResponseDto<ListResultDto<OrderDto>>>(
+                 "/v5/order/history", Arg.Do<Dictionary<string, string>>(p => captured = p), true, Arg.Any<CancellationToken>())
+-            .Returns(new BybitResponse<BybitListResult<BybitOrder>> { Result = new BybitListResult<BybitOrder>() });
++            .Returns(new ResponseDto<ListResultDto<OrderDto>> { Result = new ListResultDto<OrderDto>() });
+ 
+         var service = new BybitTradingService(http, symbolMapper, mapper);
+ 
+@@ -237,9 +237,9 @@ public class BybitMappingAndServiceTests
+         var (symbolMapper, mapper) = BuildMappers();
+         var http = Substitute.For<IBybitHttpClient>();
+         Dictionary<string, string>? captured = null;
+-        http.GetAsync<BybitResponse<BybitListResult<BybitExecution>>>(
++        http.GetAsync<ResponseDto<ListResultDto<ExecutionDto>>>(
+                 "/v5/execution/list", Arg.Do<Dictionary<string, string>>(p => captured = p), true, Arg.Any<CancellationToken>())
+-            .Returns(new BybitResponse<BybitListResult<BybitExecution>> { Result = new BybitListResult<BybitExecution>() });
++            .Returns(new ResponseDto<ListResultDto<ExecutionDto>> { Result = new ListResultDto<ExecutionDto>() });
+ 
+         var service = new BybitAccountService(http, symbolMapper, mapper);
+ 
+@@ -259,19 +259,19 @@ public class BybitMappingAndServiceTests
+         var http = Substitute.For<IBybitHttpClient>();
+ 
+         // The cancel ACK omits orderId (only orderLinkId is echoed).
+-        http.PostAsync<BybitResponse<BybitOrderAck>>(
++        http.PostAsync<ResponseDto<OrderAckDto>>(
+                 "/v5/order/cancel", Arg.Any<Dictionary<string, string>>(), true, Arg.Any<CancellationToken>())
+-            .Returns(new BybitResponse<BybitOrderAck> { Result = new BybitOrderAck { OrderId = string.Empty, OrderLinkId = "cli-77" } });
++            .Returns(new ResponseDto<OrderAckDto> { Result = new OrderAckDto { OrderId = string.Empty, OrderLinkId = "cli-77" } });
+ 
+         // The re-fetch must query by orderLinkId (orderId is empty) and resolve the real order.
+         Dictionary<string, string>? refetchParams = null;
+-        http.GetAsync<BybitResponse<BybitListResult<BybitOrder>>>(
++        http.GetAsync<ResponseDto<ListResultDto<OrderDto>>>(
+                 "/v5/order/realtime", Arg.Do<Dictionary<string, string>>(p => refetchParams = p), true, Arg.Any<CancellationToken>())
+-            .Returns(new BybitResponse<BybitListResult<BybitOrder>>
++            .Returns(new ResponseDto<ListResultDto<OrderDto>>
+             {
+-                Result = new BybitListResult<BybitOrder>
++                Result = new ListResultDto<OrderDto>
+                 {
+-                    List = [new BybitOrder { Symbol = "BTCUSDT", OrderId = "real-99", OrderLinkId = "cli-77", OrderStatus = "Cancelled" }]
++                    List = [new OrderDto { Symbol = "BTCUSDT", OrderId = "real-99", OrderLinkId = "cli-77", OrderStatus = "Cancelled" }]
+                 }
+             });
+ 
+diff --git a/tests/CryptoExchanges.Net.Okx.Tests.Unit/OkxMappingAndServiceTests.cs b/tests/CryptoExchanges.Net.Okx.Tests.Unit/OkxMappingAndServiceTests.cs
+index c62719a..7b86bd8 100644
+--- a/tests/CryptoExchanges.Net.Okx.Tests.Unit/OkxMappingAndServiceTests.cs
++++ b/tests/CryptoExchanges.Net.Okx.Tests.Unit/OkxMappingAndServiceTests.cs
+@@ -48,7 +48,7 @@ public class OkxMappingAndServiceTests
+     public void OrderProfile_MapsAllScalarsAndResolvesSymbol()
+     {
+         var (_, mapper) = BuildMappers();
+-        var dto = new OkxOrder
++        var dto = new OrderDto
+         {
+             InstId = "BTC-USDT",
+             OrdId = "111",
+@@ -64,7 +64,7 @@ public class OkxMappingAndServiceTests
+             UTime = "1700000001000"
+         };
+ 
+-        var order = mapper.Map<OkxOrder, Order>(dto);
++        var order = mapper.Map<OrderDto, Order>(dto);
+ 
+         order.Symbol.Should().Be(BtcUsdt);
+         order.OrderId.Should().Be("111");
+@@ -88,7 +88,7 @@ public class OkxMappingAndServiceTests
+     public void OrderProfile_MarketOrder_MapsCleanly()
+     {
+         var (_, mapper) = BuildMappers();
+-        var dto = new OkxOrder
++        var dto = new OrderDto
+         {
+             InstId = "BTC-USDT",
+             OrdId = "222",
+@@ -103,10 +103,10 @@ public class OkxMappingAndServiceTests
+         };
+ 
+         // ParseOrderType("market") -> Market and ParseTimeInForce("market") -> Ioc must both succeed.
+-        var act = () => mapper.Map<OkxOrder, Order>(dto);
++        var act = () => mapper.Map<OrderDto, Order>(dto);
+         act.Should().NotThrow();
+ 
+-        var order = mapper.Map<OkxOrder, Order>(dto);
++        var order = mapper.Map<OrderDto, Order>(dto);
+         order.Type.Should().Be(OrderType.Market);
+         order.TimeInForce.Should().Be(TimeInForce.Ioc);
+         order.Status.Should().Be(OrderStatus.Filled);
+@@ -117,7 +117,7 @@ public class OkxMappingAndServiceTests
+     public void TickerProfile_ComputesChangeFromOpen24h()
+     {
+         var (_, mapper) = BuildMappers();
+-        var dto = new OkxTicker
++        var dto = new TickerDto
+         {
+             InstId = "BTC-USDT",
+             Last = "42000",
+@@ -129,7 +129,7 @@ public class OkxMappingAndServiceTests
+             Ts = "1700000000000"
+         };
+ 
+-        var ticker = mapper.Map<OkxTicker, Ticker>(dto);
++        var ticker = mapper.Map<TickerDto, Ticker>(dto);
+ 
+         ticker.Symbol.Should().Be(BtcUsdt);
+         ticker.LastPrice.Should().Be(42000m);
+@@ -144,9 +144,9 @@ public class OkxMappingAndServiceTests
+     public void InstrumentProfile_MapsBaseQuoteToSymbol()
+     {
+         var (_, mapper) = BuildMappers();
+-        var dto = new OkxInstrument { InstId = "BTC-USDT", BaseCcy = "BTC", QuoteCcy = "USDT" };
++        var dto = new InstrumentDto { InstId = "BTC-USDT", BaseCcy = "BTC", QuoteCcy = "USDT" };
+ 
+-        var info = mapper.Map<OkxInstrument, SymbolInfo>(dto);
++        var info = mapper.Map<InstrumentDto, SymbolInfo>(dto);
+ 
+         info.Symbol.Should().Be(BtcUsdt);
+         info.AllowedOrderTypes.Should().Contain(OrderType.Limit).And.Contain(OrderType.Market);
+@@ -156,9 +156,9 @@ public class OkxMappingAndServiceTests
+     public void BalanceProfile_MapsAvailAndFrozen()
+     {
+         var (_, mapper) = BuildMappers();
+-        var dto = new OkxBalanceDetail { Ccy = "BTC", AvailBal = "1.5", FrozenBal = "0.25" };
++        var dto = new BalanceDetailDto { Ccy = "BTC", AvailBal = "1.5", FrozenBal = "0.25" };
+ 
+-        var balance = mapper.Map<OkxBalanceDetail, AssetBalance>(dto);
++        var balance = mapper.Map<BalanceDetailDto, AssetBalance>(dto);
+ 
+         balance.Asset.Should().Be(Asset.Btc);
+         balance.Free.Should().Be(1.5m);
+@@ -173,11 +173,11 @@ public class OkxMappingAndServiceTests
+     {
+         var (symbolMapper, mapper) = BuildMappers();
+         var http = Substitute.For<IOkxHttpClient>();
+-        http.GetAsync<OkxResponse<OkxTicker>>(
++        http.GetAsync<ResponseDto<TickerDto>>(
+                 "/api/v5/market/ticker", Arg.Any<Dictionary<string, string>>(), false, Arg.Any<CancellationToken>())
+-            .Returns(new OkxResponse<OkxTicker>
++            .Returns(new ResponseDto<TickerDto>
+             {
+-                Data = [new OkxTicker { InstId = "BTC-USDT", Last = "42000", Open24h = "40000" }]
++                Data = [new TickerDto { InstId = "BTC-USDT", Last = "42000", Open24h = "40000" }]
+             });
+ 
+         var service = new OkxMarketDataService(http, symbolMapper, mapper);
+@@ -196,9 +196,9 @@ public class OkxMappingAndServiceTests
+         // arr[3]=low, arr[4]=close, arr[5]=vol, arr[6]=volCcy.
+         var (symbolMapper, mapper) = BuildMappers();
+         var http = Substitute.For<IOkxHttpClient>();
+-        http.GetAsync<OkxResponse<List<string>>>(
++        http.GetAsync<ResponseDto<List<string>>>(
+                 "/api/v5/market/candles", Arg.Any<Dictionary<string, string>>(), false, Arg.Any<CancellationToken>())
+-            .Returns(new OkxResponse<List<string>>
++            .Returns(new ResponseDto<List<string>>
+             {
+                 Data = [["1700000000000", "42000", "43000", "41000", "42500", "10", "420000"]]
+             });
+@@ -219,9 +219,9 @@ public class OkxMappingAndServiceTests
+         // The safe OkxValueParsers.ParseMs("") returns 0L; long.Parse would have thrown.
+         var (symbolMapper, mapper) = BuildMappers();
+         var http = Substitute.For<IOkxHttpClient>();
+-        http.GetAsync<OkxResponse<List<string>>>(
++        http.GetAsync<ResponseDto<List<string>>>(
+                 "/api/v5/market/candles", Arg.Any<Dictionary<string, string>>(), false, Arg.Any<CancellationToken>())
+-            .Returns(new OkxResponse<List<string>>
++            .Returns(new ResponseDto<List<string>>
+             {
+                 Data = [["", "42000", "43000", "41000", "42500", "10", "420000"]]
+             });
+@@ -255,9 +255,9 @@ public class OkxMappingAndServiceTests
+         var (symbolMapper, mapper) = BuildMappers();
+         var http = Substitute.For<IOkxHttpClient>();
+         Dictionary<string, string>? captured = null;
+-        http.GetAsync<OkxResponse<List<string>>>(
++        http.GetAsync<ResponseDto<List<string>>>(
+                 "/api/v5/market/candles", Arg.Do<Dictionary<string, string>>(p => captured = p), false, Arg.Any<CancellationToken>())
+-            .Returns(new OkxResponse<List<string>>());
++            .Returns(new ResponseDto<List<string>>());
+ 
+         var service = new OkxMarketDataService(http, symbolMapper, mapper);
+         var act = async () => await service.GetCandlesticksAsync(BtcUsdt, KlineInterval.OneHour, limit: 500, ct: TestContext.Current.CancellationToken);
+@@ -272,13 +272,13 @@ public class OkxMappingAndServiceTests
+     {
+         var (symbolMapper, mapper) = BuildMappers();
+         var http = Substitute.For<IOkxHttpClient>();
+-        http.GetAsync<OkxResponse<OkxOrderBook>>(
++        http.GetAsync<ResponseDto<OrderBookDto>>(
+                 "/api/v5/market/books", Arg.Any<Dictionary<string, string>>(), false, Arg.Any<CancellationToken>())
+-            .Returns(new OkxResponse<OkxOrderBook>
++            .Returns(new ResponseDto<OrderBookDto>
+             {
+                 Data =
+                 [
+-                    new OkxOrderBook
++                    new OrderBookDto
+                     {
+                         Bids = [["100", "2", "0", "1"]],
+                         Asks = [["101", "3", "0", "1"]],
+@@ -301,18 +301,18 @@ public class OkxMappingAndServiceTests
+     {
+         var (symbolMapper, mapper) = BuildMappers();
+         var http = Substitute.For<IOkxHttpClient>();
+-        http.GetAsync<OkxResponse<OkxBalanceAccount>>(
++        http.GetAsync<ResponseDto<BalanceAccountDto>>(
+                 "/api/v5/account/balance", Arg.Any<Dictionary<string, string>>(), true, Arg.Any<CancellationToken>())
+-            .Returns(new OkxResponse<OkxBalanceAccount>
++            .Returns(new ResponseDto<BalanceAccountDto>
+             {
+                 Data =
+                 [
+-                    new OkxBalanceAccount
++                    new BalanceAccountDto
+                     {
+                         Details =
+                         [
+-                            new OkxBalanceDetail { Ccy = "BTC", AvailBal = "1.5", FrozenBal = "0" },
+-                            new OkxBalanceDetail { Ccy = "ZZZ", AvailBal = "0", FrozenBal = "0" }
++                            new BalanceDetailDto { Ccy = "BTC", AvailBal = "1.5", FrozenBal = "0" },
++                            new BalanceDetailDto { Ccy = "ZZZ", AvailBal = "0", FrozenBal = "0" }
+                         ]
+                     }
+                 ]
+@@ -332,9 +332,9 @@ public class OkxMappingAndServiceTests
+         var (symbolMapper, mapper) = BuildMappers();
+         var http = Substitute.For<IOkxHttpClient>();
+         Dictionary<string, string>? captured = null;
+-        http.GetAsync<OkxResponse<OkxFill>>(
++        http.GetAsync<ResponseDto<FillDto>>(
+                 "/api/v5/trade/fills", Arg.Do<Dictionary<string, string>>(p => captured = p), true, Arg.Any<CancellationToken>())
+-            .Returns(new OkxResponse<OkxFill>());
++            .Returns(new ResponseDto<FillDto>());
+ 
+         var service = new OkxAccountService(http, symbolMapper, mapper);
+ 
+@@ -353,11 +353,11 @@ public class OkxMappingAndServiceTests
+     {
+         var (symbolMapper, mapper) = BuildMappers();
+         var http = Substitute.For<IOkxHttpClient>();
+-        http.GetAsync<OkxResponse<OkxOrder>>(
++        http.GetAsync<ResponseDto<OrderDto>>(
+                 "/api/v5/trade/orders-pending", Arg.Any<Dictionary<string, string>>(), true, Arg.Any<CancellationToken>())
+-            .Returns(new OkxResponse<OkxOrder>
++            .Returns(new ResponseDto<OrderDto>
+             {
+-                Data = [new OkxOrder { InstId = "BTC-USDT", OrdId = "9", Sz = "1", Px = "5" }]
++                Data = [new OrderDto { InstId = "BTC-USDT", OrdId = "9", Sz = "1", Px = "5" }]
+             });
+ 
+         var service = new OkxTradingService(http, symbolMapper, mapper);
+@@ -374,9 +374,9 @@ public class OkxMappingAndServiceTests
+         var (symbolMapper, mapper) = BuildMappers();
+         var http = Substitute.For<IOkxHttpClient>();
+         Dictionary<string, string>? captured = null;
+-        http.GetAsync<OkxResponse<OkxOrder>>(
++        http.GetAsync<ResponseDto<OrderDto>>(
+                 "/api/v5/trade/orders-history", Arg.Do<Dictionary<string, string>>(p => captured = p), true, Arg.Any<CancellationToken>())
+-            .Returns(new OkxResponse<OkxOrder>());
++            .Returns(new ResponseDto<OrderDto>());
+ 
+         var service = new OkxTradingService(http, symbolMapper, mapper);
+ 
+@@ -394,15 +394,15 @@ public class OkxMappingAndServiceTests
+         var http = Substitute.For<IOkxHttpClient>();
+ 
+         Dictionary<string, string>? placed = null;
+-        http.PostAsync<OkxResponse<OkxOrderAck>>(
++        http.PostAsync<ResponseDto<OrderAckDto>>(
+                 "/api/v5/trade/order", Arg.Do<Dictionary<string, string>>(p => placed = p), true, Arg.Any<CancellationToken>())
+-            .Returns(new OkxResponse<OkxOrderAck> { Data = [new OkxOrderAck { OrdId = "ord-1", SCode = "0" }] });
++            .Returns(new ResponseDto<OrderAckDto> { Data = [new OrderAckDto { OrdId = "ord-1", SCode = "0" }] });
+ 
+-        http.GetAsync<OkxResponse<OkxOrder>>(
++        http.GetAsync<ResponseDto<OrderDto>>(
+                 "/api/v5/trade/order", Arg.Any<Dictionary<string, string>>(), true, Arg.Any<CancellationToken>())
+-            .Returns(new OkxResponse<OkxOrder>
++            .Returns(new ResponseDto<OrderDto>
+             {
+-                Data = [new OkxOrder { InstId = "BTC-USDT", OrdId = "ord-1", Sz = "0.5", OrdType = "market", State = "filled", Side = "buy" }]
++                Data = [new OrderDto { InstId = "BTC-USDT", OrdId = "ord-1", Sz = "0.5", OrdType = "market", State = "filled", Side = "buy" }]
+             });
+ 
+         var service = new OkxTradingService(http, symbolMapper, mapper);
+@@ -424,16 +424,16 @@ public class OkxMappingAndServiceTests
+         var http = Substitute.For<IOkxHttpClient>();
+ 
+         // The cancel ack omits ordId (only clOrdId is echoed).
+-        http.PostAsync<OkxResponse<OkxOrderAck>>(
++        http.PostAsync<ResponseDto<OrderAckDto>>(
+                 "/api/v5/trade/cancel-order", Arg.Any<Dictionary<string, string>>(), true, Arg.Any<CancellationToken>())
+-            .Returns(new OkxResponse<OkxOrderAck> { Data = [new OkxOrderAck { OrdId = string.Empty, ClOrdId = "cli-77", SCode = "0" }] });
++            .Returns(new ResponseDto<OrderAckDto> { Data = [new OrderAckDto { OrdId = string.Empty, ClOrdId = "cli-77", SCode = "0" }] });
+ 
+         Dictionary<string, string>? refetchParams = null;
+-        http.GetAsync<OkxResponse<OkxOrder>>(
++        http.GetAsync<ResponseDto<OrderDto>>(
+                 "/api/v5/trade/order", Arg.Do<Dictionary<string, string>>(p => refetchParams = p), true, Arg.Any<CancellationToken>())
+-            .Returns(new OkxResponse<OkxOrder>
++            .Returns(new ResponseDto<OrderDto>
+             {
+-                Data = [new OkxOrder { InstId = "BTC-USDT", OrdId = "real-99", ClOrdId = "cli-77", State = "canceled" }]
++                Data = [new OrderDto { InstId = "BTC-USDT", OrdId = "real-99", ClOrdId = "cli-77", State = "canceled" }]
+             });
+ 
+         var service = new OkxTradingService(http, symbolMapper, mapper);

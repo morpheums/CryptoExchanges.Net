@@ -1,6 +1,6 @@
-namespace CryptoExchanges.Net.Bitget.Services;
+namespace CryptoExchanges.Net.Bybit.Services;
 
-internal sealed record SymbolDto
+internal sealed record SymbolInfoDto
 {
     [JsonPropertyName("symbol")]
     public string Symbol { get; init; } = string.Empty;

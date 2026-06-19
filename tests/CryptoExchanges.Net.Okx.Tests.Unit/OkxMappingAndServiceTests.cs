@@ -144,9 +144,9 @@ public class OkxMappingAndServiceTests
     public void InstrumentProfile_MapsBaseQuoteToSymbol()
     {
         var (_, mapper) = BuildMappers();
-        var dto = new InstrumentDto { InstId = "BTC-USDT", BaseCcy = "BTC", QuoteCcy = "USDT" };
+        var dto = new SymbolInfoDto { InstId = "BTC-USDT", BaseCcy = "BTC", QuoteCcy = "USDT" };
 
-        var info = mapper.Map<InstrumentDto, SymbolInfo>(dto);
+        var info = mapper.Map<SymbolInfoDto, SymbolInfo>(dto);
 
         info.Symbol.Should().Be(BtcUsdt);
         info.AllowedOrderTypes.Should().Contain(OrderType.Limit).And.Contain(OrderType.Market);
@@ -156,9 +156,9 @@ public class OkxMappingAndServiceTests
     public void BalanceProfile_MapsAvailAndFrozen()
     {
         var (_, mapper) = BuildMappers();
-        var dto = new BalanceDetailDto { Ccy = "BTC", AvailBal = "1.5", FrozenBal = "0.25" };
+        var dto = new BalanceDto { Ccy = "BTC", AvailBal = "1.5", FrozenBal = "0.25" };
 
-        var balance = mapper.Map<BalanceDetailDto, AssetBalance>(dto);
+        var balance = mapper.Map<BalanceDto, AssetBalance>(dto);
 
         balance.Asset.Should().Be(Asset.Btc);
         balance.Free.Should().Be(1.5m);
@@ -301,18 +301,18 @@ public class OkxMappingAndServiceTests
     {
         var (symbolMapper, mapper) = BuildMappers();
         var http = Substitute.For<IOkxHttpClient>();
-        http.GetAsync<ResponseDto<BalanceAccountDto>>(
+        http.GetAsync<ResponseDto<AccountDto>>(
                 "/api/v5/account/balance", Arg.Any<Dictionary<string, string>>(), true, Arg.Any<CancellationToken>())
-            .Returns(new ResponseDto<BalanceAccountDto>
+            .Returns(new ResponseDto<AccountDto>
             {
                 Data =
                 [
-                    new BalanceAccountDto
+                    new AccountDto
                     {
                         Details =
                         [
-                            new BalanceDetailDto { Ccy = "BTC", AvailBal = "1.5", FrozenBal = "0" },
-                            new BalanceDetailDto { Ccy = "ZZZ", AvailBal = "0", FrozenBal = "0" }
+                            new BalanceDto { Ccy = "BTC", AvailBal = "1.5", FrozenBal = "0" },
+                            new BalanceDto { Ccy = "ZZZ", AvailBal = "0", FrozenBal = "0" }
                         ]
                     }
                 ]

@@ -1,6 +1,6 @@
 namespace CryptoExchanges.Net.Binance.Services;
 
-internal sealed record OrderBookResponseDto
+internal sealed record OrderBookDto
 {
     [JsonPropertyName("lastUpdateId")]
     public long LastUpdateId { get; init; }

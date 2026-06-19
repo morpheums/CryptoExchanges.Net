@@ -100,7 +100,7 @@ internal sealed class BybitTradingService(IBybitHttpClient http, ISymbolMapper m
 
         // cancel-all returns only ids; re-fetch the full picture via order history so the canceled
         // orders are returned with their full state.
-        var response = await http.PostAsync<ResponseDto<ListResultDto<OrderAckDto>>>("/v5/order/cancel-all", parameters, true, ct).ConfigureAwait(false);
+        var response = await http.PostAsync<ResponseDto<ListDto<OrderAckDto>>>("/v5/order/cancel-all", parameters, true, ct).ConfigureAwait(false);
         var acks = response.Result?.List ?? [];
         if (acks.Count == 0)
             return [];
@@ -121,7 +121,7 @@ internal sealed class BybitTradingService(IBybitHttpClient http, ISymbolMapper m
         if (symbol.HasValue)
             parameters["symbol"] = mapper.ToWire(symbol.Value);
 
-        var response = await http.GetAsync<ResponseDto<ListResultDto<OrderDto>>>("/v5/order/realtime", parameters, true, ct).ConfigureAwait(false);
+        var response = await http.GetAsync<ResponseDto<ListDto<OrderDto>>>("/v5/order/realtime", parameters, true, ct).ConfigureAwait(false);
         var orders = response.Result?.List ?? [];
         return modelMapper.Map<OrderDto, Order>(orders);
     }
@@ -151,7 +151,7 @@ internal sealed class BybitTradingService(IBybitHttpClient http, ISymbolMapper m
         if (endTime.HasValue)
             parameters["endTime"] = endTime.Value.ToUnixTimeMilliseconds().ToString();
 
-        var response = await http.GetAsync<ResponseDto<ListResultDto<OrderDto>>>("/v5/order/history", parameters, true, ct).ConfigureAwait(false);
+        var response = await http.GetAsync<ResponseDto<ListDto<OrderDto>>>("/v5/order/history", parameters, true, ct).ConfigureAwait(false);
         var orders = response.Result?.List ?? [];
         return modelMapper.Map<OrderDto, Order>(orders);
     }
@@ -176,12 +176,12 @@ internal sealed class BybitTradingService(IBybitHttpClient http, ISymbolMapper m
         else if (!string.IsNullOrEmpty(orderLinkId))
             parameters["orderLinkId"] = orderLinkId;
 
-        var realtime = await http.GetAsync<ResponseDto<ListResultDto<OrderDto>>>("/v5/order/realtime", parameters, true, ct).ConfigureAwait(false);
+        var realtime = await http.GetAsync<ResponseDto<ListDto<OrderDto>>>("/v5/order/realtime", parameters, true, ct).ConfigureAwait(false);
         var match = realtime.Result?.List.FirstOrDefault();
         if (match is not null)
             return modelMapper.Map<OrderDto, Order>(match);
 
-        var history = await http.GetAsync<ResponseDto<ListResultDto<OrderDto>>>("/v5/order/history", parameters, true, ct).ConfigureAwait(false);
+        var history = await http.GetAsync<ResponseDto<ListDto<OrderDto>>>("/v5/order/history", parameters, true, ct).ConfigureAwait(false);
         match = history.Result?.List.FirstOrDefault();
         if (match is not null)
             return modelMapper.Map<OrderDto, Order>(match);

@@ -1,6 +1,6 @@
 namespace CryptoExchanges.Net.Okx.Services;
 
-internal sealed record BalanceDetailDto
+internal sealed record BalanceDto
 {
     [JsonPropertyName("ccy")]
     public string Ccy { get; init; } = string.Empty;

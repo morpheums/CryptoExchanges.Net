@@ -1,9 +1,15 @@
 namespace CryptoExchanges.Net.Binance.Services;
 
-internal sealed record TradeResponseDto
+internal sealed record FillDto
 {
+    [JsonPropertyName("symbol")]
+    public string Symbol { get; init; } = string.Empty;
+
     [JsonPropertyName("id")]
     public long Id { get; init; }
+
+    [JsonPropertyName("orderId")]
+    public long OrderId { get; init; }
 
     [JsonPropertyName("price")]
     public string Price { get; init; } = "0";
@@ -17,6 +23,6 @@ internal sealed record TradeResponseDto
     [JsonPropertyName("time")]
     public long Time { get; init; }
 
-    [JsonPropertyName("isBuyerMaker")]
-    public bool IsBuyerMaker { get; init; }
+    [JsonPropertyName("isBuyer")]
+    public bool IsBuyer { get; init; }
 }

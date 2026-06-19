@@ -1,8 +1,8 @@
 namespace CryptoExchanges.Net.Okx.Services;
 
 /// <summary>A single account snapshot carrying its per-currency balance details.</summary>
-internal sealed record BalanceAccountDto
+internal sealed record AccountDto
 {
     [JsonPropertyName("details")]
-    public List<BalanceDetailDto> Details { get; init; } = [];
+    public List<BalanceDto> Details { get; init; } = [];
 }

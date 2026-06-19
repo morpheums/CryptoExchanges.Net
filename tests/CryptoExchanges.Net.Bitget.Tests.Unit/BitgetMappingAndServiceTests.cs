@@ -147,9 +147,9 @@ public class BitgetMappingAndServiceTests
     public void SymbolProfile_MapsBaseQuoteToSymbol()
     {
         var (_, mapper) = BuildMappers();
-        var dto = new SymbolDto { Symbol = "BTCUSDT", BaseCoin = "BTC", QuoteCoin = "USDT" };
+        var dto = new SymbolInfoDto { Symbol = "BTCUSDT", BaseCoin = "BTC", QuoteCoin = "USDT" };
 
-        var info = mapper.Map<SymbolDto, SymbolInfo>(dto);
+        var info = mapper.Map<SymbolInfoDto, SymbolInfo>(dto);
 
         info.Symbol.Should().Be(BtcUsdt);
         info.AllowedOrderTypes.Should().Contain(OrderType.Limit).And.Contain(OrderType.Market);

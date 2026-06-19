@@ -1,6 +1,6 @@
 namespace CryptoExchanges.Net.Bybit.Services;
 
-internal sealed record CoinBalanceDto
+internal sealed record BalanceDto
 {
     [JsonPropertyName("coin")]
     public string Coin { get; init; } = string.Empty;

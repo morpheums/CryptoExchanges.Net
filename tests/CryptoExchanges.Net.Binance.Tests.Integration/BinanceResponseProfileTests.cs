@@ -35,7 +35,7 @@ public class BinanceResponseProfileTests
     {
         var mapper = BuildMapper(out var btcusdt);
 
-        var dto = new OrderResponseDto
+        var dto = new OrderDto
         {
             Symbol = "BTCUSDT",
             OrderId = 12345,
@@ -52,7 +52,7 @@ public class BinanceResponseProfileTests
             UpdateTime = 1700000001000
         };
 
-        var order = mapper.Map<OrderResponseDto, Order>(dto);
+        var order = mapper.Map<OrderDto, Order>(dto);
 
         order.Symbol.Should().Be(btcusdt);
         order.OrderId.Should().Be("12345");
@@ -74,14 +74,14 @@ public class BinanceResponseProfileTests
     {
         var mapper = BuildMapper(out _);
 
-        var dto = new OrderResponseDto
+        var dto = new OrderDto
         {
             Symbol = "BTCUSDT",
             OrderId = 1,
             Status = "SOME_FUTURE_STATUS"
         };
 
-        var order = mapper.Map<OrderResponseDto, Order>(dto);
+        var order = mapper.Map<OrderDto, Order>(dto);
 
         order.Status.Should().Be(OrderStatus.Unknown);
     }
@@ -91,7 +91,7 @@ public class BinanceResponseProfileTests
     {
         var mapper = BuildMapper(out _);
 
-        var dto = new OrderResponseDto
+        var dto = new OrderDto
         {
             Symbol = "BTCUSDT",
             OrderId = 1,
@@ -99,7 +99,7 @@ public class BinanceResponseProfileTests
             UpdateTime = 0
         };
 
-        var order = mapper.Map<OrderResponseDto, Order>(dto);
+        var order = mapper.Map<OrderDto, Order>(dto);
 
         order.CreatedAt.Should().BeNull();
         order.UpdatedAt.Should().BeNull();
@@ -110,7 +110,7 @@ public class BinanceResponseProfileTests
     {
         var mapper = BuildMapper(out var btcusdt);
 
-        var dto = new TickerResponseDto
+        var dto = new TickerDto
         {
             Symbol = "BTCUSDT",
             LastPrice = "42000.1",
@@ -124,7 +124,7 @@ public class BinanceResponseProfileTests
             CloseTime = 1700000000000
         };
 
-        var ticker = mapper.Map<TickerResponseDto, Ticker>(dto);
+        var ticker = mapper.Map<TickerDto, Ticker>(dto);
 
         ticker.Symbol.Should().Be(btcusdt);
         ticker.LastPrice.Should().Be(42000.1m);
@@ -138,14 +138,14 @@ public class BinanceResponseProfileTests
     {
         var mapper = BuildMapper(out _);
 
-        var dto = new TickerResponseDto
+        var dto = new TickerDto
         {
             Symbol = "BTCUSDT",
             LastPrice = "42000",
             CloseTime = 0
         };
 
-        var ticker = mapper.Map<TickerResponseDto, Ticker>(dto);
+        var ticker = mapper.Map<TickerDto, Ticker>(dto);
 
         ticker.Timestamp.Should().BeNull();
     }

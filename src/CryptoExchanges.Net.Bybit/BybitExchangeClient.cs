@@ -85,7 +85,7 @@ public sealed class BybitExchangeClient : IExchangeClient, IAsyncDisposable
     /// <param name="ct">Cancellation token.</param>
     public async Task SyncServerTimeAsync(CancellationToken ct = default)
     {
-        var resp = await _http.GetAsync<ResponseDto<ServerTimeResultDto>>("/v5/market/time", signed: false, ct: ct).ConfigureAwait(false);
+        var resp = await _http.GetAsync<ResponseDto<ServerTimeDto>>("/v5/market/time", signed: false, ct: ct).ConfigureAwait(false);
         var serverTimeMs = ServerTimeMs(resp.Result);
         // A missing/malformed /time payload (ServerTimeMs returns 0) is a degraded but non-fatal
         // response: skip the offset update (keep the prior/local clock) rather than throw.
@@ -99,7 +99,7 @@ public sealed class BybitExchangeClient : IExchangeClient, IAsyncDisposable
         try
         {
             // The resilience pipeline throws typed exceptions on failure, so reaching here is success.
-            _ = await _http.GetAsync<ResponseDto<ServerTimeResultDto>>("/v5/market/time", signed: false, ct: ct).ConfigureAwait(false);
+            _ = await _http.GetAsync<ResponseDto<ServerTimeDto>>("/v5/market/time", signed: false, ct: ct).ConfigureAwait(false);
             return true;
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
@@ -128,7 +128,7 @@ public sealed class BybitExchangeClient : IExchangeClient, IAsyncDisposable
     /// Resolves server time in unix milliseconds from the V5 time envelope, preferring the
     /// nanosecond field (truncated to ms) and falling back to the second field.
     /// </summary>
-    private static long ServerTimeMs(ServerTimeResultDto? result)
+    private static long ServerTimeMs(ServerTimeDto? result)
     {
         if (result is null)
             return 0L;

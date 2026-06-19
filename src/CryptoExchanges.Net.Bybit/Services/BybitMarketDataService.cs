@@ -46,7 +46,7 @@ internal sealed class BybitMarketDataService(IBybitHttpClient http, ISymbolMappe
         if (symbol.HasValue)
             parameters["symbol"] = mapper.ToWire(symbol.Value);
 
-        var response = await http.GetAsync<ResponseDto<TickerResultDto>>("/v5/market/tickers", parameters, false, ct).ConfigureAwait(false);
+        var response = await http.GetAsync<ResponseDto<ListDto<TickerDto>>>("/v5/market/tickers", parameters, false, ct).ConfigureAwait(false);
         var list = response.Result?.List ?? [];
 
         if (symbol.HasValue)
@@ -72,8 +72,8 @@ internal sealed class BybitMarketDataService(IBybitHttpClient http, ISymbolMappe
             ["limit"] = depth.ToString()
         };
 
-        var response = await http.GetAsync<ResponseDto<OrderBookResultDto>>("/v5/market/orderbook", parameters, false, ct).ConfigureAwait(false);
-        var result = response.Result ?? new OrderBookResultDto();
+        var response = await http.GetAsync<ResponseDto<OrderBookDto>>("/v5/market/orderbook", parameters, false, ct).ConfigureAwait(false);
+        var result = response.Result ?? new OrderBookDto();
 
         var bids = result.Bids.Select(b => new OrderBookEntry(BybitValueParsers.ParseDecimal(b[0]), BybitValueParsers.ParseDecimal(b[1]))).ToList();
         var asks = result.Asks.Select(a => new OrderBookEntry(BybitValueParsers.ParseDecimal(a[0]), BybitValueParsers.ParseDecimal(a[1]))).ToList();
@@ -106,7 +106,7 @@ internal sealed class BybitMarketDataService(IBybitHttpClient http, ISymbolMappe
 
         // Bybit returns klines as result.list of string arrays:
         // [startTime, open, high, low, close, volume, turnover], newest-first.
-        var response = await http.GetAsync<ResponseDto<ListResultDto<List<string>>>>("/v5/market/kline", parameters, false, ct).ConfigureAwait(false);
+        var response = await http.GetAsync<ResponseDto<ListDto<List<string>>>>("/v5/market/kline", parameters, false, ct).ConfigureAwait(false);
         var rows = response.Result?.List ?? [];
 
         var candles = new List<Candlestick>();
@@ -142,7 +142,7 @@ internal sealed class BybitMarketDataService(IBybitHttpClient http, ISymbolMappe
             ["symbol"] = mapper.ToWire(symbol)
         };
 
-        var response = await http.GetAsync<ResponseDto<TickerResultDto>>("/v5/market/tickers", parameters, false, ct).ConfigureAwait(false);
+        var response = await http.GetAsync<ResponseDto<ListDto<TickerDto>>>("/v5/market/tickers", parameters, false, ct).ConfigureAwait(false);
         var ticker = response.Result?.List.FirstOrDefault();
         return ticker is null ? 0m : BybitValueParsers.ParseDecimal(ticker.LastPrice);
     }
@@ -157,7 +157,7 @@ internal sealed class BybitMarketDataService(IBybitHttpClient http, ISymbolMappe
             ["limit"] = limit.ToString()
         };
 
-        var response = await http.GetAsync<ResponseDto<ListResultDto<TradeDto>>>("/v5/market/recent-trade", parameters, false, ct).ConfigureAwait(false);
+        var response = await http.GetAsync<ResponseDto<ListDto<TradeDto>>>("/v5/market/recent-trade", parameters, false, ct).ConfigureAwait(false);
         var trades = response.Result?.List ?? [];
 
         // Trade.Symbol is the caller's typed argument (already held), not resolved from the wire
@@ -176,14 +176,14 @@ internal sealed class BybitMarketDataService(IBybitHttpClient http, ISymbolMappe
     public async Task<ExchangeInfo> GetExchangeInfoAsync(CancellationToken ct = default)
     {
         var parameters = new Dictionary<string, string> { ["category"] = SpotCategory };
-        var response = await http.GetAsync<ResponseDto<ListResultDto<InstrumentDto>>>("/v5/market/instruments-info", parameters, false, ct).ConfigureAwait(false);
+        var response = await http.GetAsync<ResponseDto<ListDto<SymbolInfoDto>>>("/v5/market/instruments-info", parameters, false, ct).ConfigureAwait(false);
         var instruments = response.Result?.List ?? [];
 
         // Bybit instruments can include entries whose base/quote are not representable assets;
         // skip those rather than throw.
         var representable = instruments
             .Where(s => Asset.TryOf(s.BaseCoin, out _) && Asset.TryOf(s.QuoteCoin, out _));
-        var symbols = modelMapper.Map<InstrumentDto, SymbolInfo>(representable);
+        var symbols = modelMapper.Map<SymbolInfoDto, SymbolInfo>(representable);
 
         // Populate the mapper's wire->Symbol lookup table from the freshly fetched symbols.
         mapper.UpdateSymbols(symbols);

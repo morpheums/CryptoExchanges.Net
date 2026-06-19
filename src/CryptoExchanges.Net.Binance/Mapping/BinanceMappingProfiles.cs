@@ -21,7 +21,7 @@ internal sealed class BinanceResponseProfile : Profile
     {
         ArgumentNullException.ThrowIfNull(symbolMapper);
 
-        CreateMap<OrderResponseDto, Order>()
+        CreateMap<OrderDto, Order>()
             .ForMember(d => d.Symbol, o => o.MapFrom(s => symbolMapper.FromWire(s.Symbol)))
             .ForMember(d => d.OrderId, o => o.MapFrom(s => s.OrderId.ToString()))
             .ForMember(d => d.ClientOrderId, o => o.MapFrom(s => string.IsNullOrEmpty(s.ClientOrderId) ? null : s.ClientOrderId))
@@ -38,7 +38,7 @@ internal sealed class BinanceResponseProfile : Profile
             .ForMember(d => d.UpdatedAt, o => o.MapFrom(s => s.UpdateTime > 0 ? DateTimeOffset.FromUnixTimeMilliseconds(s.UpdateTime) : (DateTimeOffset?)null))
             .ForMember(d => d.CumulativeQuoteQuantity, o => o.MapFrom(s => BinanceValueParsers.ParseDecimal(s.CumulativeQuoteQty)));
 
-        CreateMap<TickerResponseDto, Ticker>()
+        CreateMap<TickerDto, Ticker>()
             .ForMember(d => d.Symbol, o => o.MapFrom(s => symbolMapper.FromWire(s.Symbol)))
             .ForMember(d => d.LastPrice, o => o.MapFrom(s => BinanceValueParsers.ParseDecimal(s.LastPrice)))
             .ForMember(d => d.OpenPrice, o => o.MapFrom(s => BinanceValueParsers.ParseDecimal(s.OpenPrice)))
@@ -50,7 +50,7 @@ internal sealed class BinanceResponseProfile : Profile
             .ForMember(d => d.PriceChangePercent, o => o.MapFrom(s => BinanceValueParsers.ParseDecimal(s.PriceChangePercent)))
             .ForMember(d => d.Timestamp, o => o.MapFrom(s => s.CloseTime > 0 ? DateTimeOffset.FromUnixTimeMilliseconds(s.CloseTime) : (DateTimeOffset?)null));
 
-        // NOTE: TradeHistoryResponseDto -> Trade is intentionally NOT mapped here.
+        // NOTE: FillDto -> Trade is intentionally NOT mapped here.
         // Trade.Symbol for account trade history comes from the caller's typed Symbol argument
         // (which the caller already holds), not from resolving the wire string — resolving via
         // FromWire could throw on a cold mapper cache for pairs outside the fallback-quote list.

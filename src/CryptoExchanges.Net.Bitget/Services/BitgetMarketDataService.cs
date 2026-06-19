@@ -162,13 +162,13 @@ internal sealed class BitgetMarketDataService(IBitgetHttpClient http, ISymbolMap
     /// <inheritdoc />
     public async Task<ExchangeInfo> GetExchangeInfoAsync(CancellationToken ct = default)
     {
-        var response = await http.GetAsync<ResponseDto<SymbolDto>>("/api/v2/spot/public/symbols", null, false, ct).ConfigureAwait(false);
+        var response = await http.GetAsync<ResponseDto<SymbolInfoDto>>("/api/v2/spot/public/symbols", null, false, ct).ConfigureAwait(false);
 
         // Bitget symbols can include entries whose base/quote are not representable assets; skip
         // those rather than throw.
         var representable = response.Data
             .Where(s => Asset.TryOf(s.BaseCoin, out _) && Asset.TryOf(s.QuoteCoin, out _));
-        var symbols = modelMapper.Map<SymbolDto, SymbolInfo>(representable);
+        var symbols = modelMapper.Map<SymbolInfoDto, SymbolInfo>(representable);
 
         // Populate the mapper's wire->Symbol lookup table from the freshly fetched symbols.
         mapper.UpdateSymbols(symbols);

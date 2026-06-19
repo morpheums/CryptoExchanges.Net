@@ -86,7 +86,7 @@ public sealed class BitgetExchangeClient : IExchangeClient, IAsyncDisposable
     /// <param name="ct">Cancellation token.</param>
     public async Task SyncServerTimeAsync(CancellationToken ct = default)
     {
-        var resp = await _http.GetAsync<ObjectResponseDto<ServerTimeDto>>("/api/v2/public/time", signed: false, ct: ct).ConfigureAwait(false);
+        var resp = await _http.GetAsync<ResponseObjectDto<ServerTimeDto>>("/api/v2/public/time", signed: false, ct: ct).ConfigureAwait(false);
         var serverTimeMs = ServerTimeMs(resp.Data);
         // A missing/malformed /time payload (ServerTimeMs returns 0) is a degraded but non-fatal
         // response: skip the offset update (keep the prior/local clock) rather than throw.
@@ -100,7 +100,7 @@ public sealed class BitgetExchangeClient : IExchangeClient, IAsyncDisposable
         try
         {
             // The resilience pipeline throws typed exceptions on failure, so reaching here is success.
-            _ = await _http.GetAsync<ObjectResponseDto<ServerTimeDto>>("/api/v2/public/time", signed: false, ct: ct).ConfigureAwait(false);
+            _ = await _http.GetAsync<ResponseObjectDto<ServerTimeDto>>("/api/v2/public/time", signed: false, ct: ct).ConfigureAwait(false);
             return true;
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)

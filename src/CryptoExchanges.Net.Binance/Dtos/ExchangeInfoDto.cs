@@ -1,6 +1,6 @@
 namespace CryptoExchanges.Net.Binance.Services;
 
-internal sealed record ExchangeInfoResponseDto
+internal sealed record ExchangeInfoDto
 {
     [JsonPropertyName("symbols")]
     public List<SymbolInfoDto> Symbols { get; init; } = [];

@@ -54,9 +54,9 @@ internal sealed class BitgetResponseProfile : Profile
             .ForMember(d => d.PriceChangePercent, o => o.MapFrom(s => BitgetValueParsers.ParseDecimal(s.Change24h) * 100m))
             .ForMember(d => d.Timestamp, o => o.MapFrom(s => ParseTimestamp(s.Ts)));
 
-        // SymbolDto -> SymbolInfo. Bitget exposes lot/tick precision under separate fields this SDK
+        // SymbolInfoDto -> SymbolInfo. Bitget exposes lot/tick precision under separate fields this SDK
         // does not yet surface; the numeric filter fields stay null pending a dedicated task.
-        CreateMap<SymbolDto, SymbolInfo>()
+        CreateMap<SymbolInfoDto, SymbolInfo>()
             .ForMember(d => d.Symbol, o => o.MapFrom(s => symbolMapper.FromComponents(s.BaseCoin, s.QuoteCoin)))
             .ForMember(d => d.AllowedOrderTypes, o => o.MapFrom(s => DefaultSpotOrderTypes))
             .ForMember(d => d.MinPrice, o => o.Ignore())

@@ -6,18 +6,6 @@ namespace CryptoExchanges.Net.Http.Streaming;
 /// exchange package (binding constraint K1: DTO decode + model mapping stays exchange-side);
 /// the Http engine sees only raw bytes in and <see langword="object"/> out.
 /// </summary>
-/// <remarks>
-/// <para>
-/// Binding constraint K1: this type handles only <see cref="StreamKind"/> keys and
-/// opaque <c>Func</c> values. The Http layer holds no references to canonical model types
-/// or mapping libraries.
-/// </para>
-/// <para>
-/// The exchange package builds and registers closures at composition time (TASK-046).
-/// The engine looks up the closure by the frame's resolved <see cref="StreamKind"/> and
-/// invokes it to produce the typed model delivered to the subscription's channel.
-/// </para>
-/// </remarks>
 internal sealed class StreamDecoderRegistry
 {
     private readonly Dictionary<StreamKind, Func<ReadOnlyMemory<byte>, object>> _decoders = [];

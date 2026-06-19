@@ -77,14 +77,14 @@ REUSE existing discovery — do NOT re-run.
 
 | Task     | Status    | Wave | Description                                                                 |
 |----------|-----------|------|-----------------------------------------------------------------------------|
-| TASK-042 | ✦ IMPLEMENTED | 1 | Core streaming abstractions (`IStreamClient` family) — no transport      |
+| TASK-042 | ✦ DONE    | 1    | Core streaming abstractions (`IStreamClient` family) — no transport         |
 | TASK-043 | ◇ PLANNED | 2    | Http engine contracts + fake-transport test seam                            |
 | TASK-044 | ◇ PLANNED | 3    | Http reconnecting byte-engine (pump/route/backoff/replay/heartbeat/channels)|
 | TASK-045 | ◇ PLANNED | 4    | Generic `StreamClient` + `StreamClientFactory` + `AddStreams<TOptions>`      |
 | TASK-046 | ◇ PLANNED | 5    | Exchange-#1 package: protocol + 4 decode closures + options + `Add…Streams` |
 | TASK-047 | ◇ PLANNED | 6    | Wire 4 public subscribe methods end-to-end + live integration smoke + docs  |
 
-Tasks: 0/6 DONE — TASK-042 READY, TASK-043..047 PLANNED (blocked on the dependency chain).
+Tasks: 1/6 DONE — TASK-042 DONE, TASK-043 READY (dep satisfied), TASK-044..047 PLANNED.
 
 ## Wave Groups
 
@@ -93,7 +93,7 @@ single **vertical, dependency-ordered slice** — each task layers on the previo
 distinct part of the tree, so there is no within-wave parallelism. Waves are strictly sequential.
 
 ### Wave 1
-- **TASK-042** — Core abstractions. No dependencies. Creates only files under
+- **TASK-042** — Core abstractions. DONE. Created files under
   `src/CryptoExchanges.Net.Core/Streaming/` + Core unit tests.
 
 ### Wave 2
@@ -122,8 +122,8 @@ distinct part of the tree, so there is no within-wave parallelism. Waves are str
 TASK-042 ──► TASK-043 ──► TASK-044 ──► TASK-045 ──► TASK-046 ──► TASK-047
 ```
 
-State machine: TASK-042 is **READY**; TASK-043..047 are **PLANNED** with an explicit `depends_on`
-chain. The stop hook auto-promotes each PLANNED → READY when its single dependency reaches DONE.
+State machine: TASK-042 is **DONE**; TASK-043 is now **READY** (dependency satisfied);
+TASK-044..047 remain **PLANNED** with explicit `depends_on` chain.
 
 ## Traceability
 
@@ -149,15 +149,20 @@ constraint it fulfills. Coverage of the spec Success Criteria:
 Every spec scope-in item maps to a task; nothing in Scope-Out (order-book maintenance, private streams,
 other exchanges, `IAsyncEnumerable`, System.Reactive) is planned.
 
+## Completed
+
+- **TASK-042** — DONE (2026-06-19T18:30:00Z). Core streaming abstractions approved unanimously (4/4).
+  Commit: `1c041b5`. Review artifacts: `nazgul/reviews/TASK-042/`.
+
 ## Recovery Pointer
 
-- **Current stage**: TASK-042 IMPLEMENTED → awaiting review gate.
-- **Next action**: Review gate must approve TASK-042; then TASK-043 becomes READY.
-- **Active task**: TASK-042 (IMPLEMENTED, commit `1c041b5`).
+- **Current stage**: TASK-042 DONE — review gate passed unanimously.
+- **Next action**: Claim TASK-043 (Http engine contracts + fake-transport seam). TASK-043 is now READY.
+- **Active task**: none (TASK-042 complete; TASK-043 is next).
 - **Files are truth**: task manifests in `nazgul/tasks/TASK-042..047.md` carry full state;
   frontmatter `status:` is canonical.
 
 ─── ◈ NEXT ─────────────────────────────────────────────
-  ✦ TASK-042 — Core streaming abstractions. IMPLEMENTED (awaiting review).
-  ◇ TASK-043 — Http engine contracts + fake-transport seam. PLANNED (deps: TASK-042).
+  ✦ TASK-042 — Core streaming abstractions. DONE.
+  ◇ TASK-043 — Http engine contracts + fake-transport seam. READY (claim next).
 ────────────────────────────────────────────────────────

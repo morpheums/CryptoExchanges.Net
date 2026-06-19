@@ -1,6 +1,6 @@
 ---
 id: TASK-042
-status: IMPLEMENTED
+status: DONE
 depends_on: []
 ---
 # TASK-042: Core streaming abstractions (`IStreamClient` family)
@@ -18,7 +18,7 @@ depends_on: []
 - **Claimed at**: 2026-06-19T17:30:00Z
 - **Base SHA**: aa6fe22e4b9c0ed480bcf2c898bd41b60386902d
 - **Implemented at**: 2026-06-19T17:45:00Z
-- **Completed at**:
+- **Completed at**: 2026-06-19T18:30:00Z
 - **Blocked at**:
 - **Retry count**: 0/3
 - **Test failures**: 0
@@ -117,4 +117,19 @@ Created 6 source files + 1 test file. All types match the locked design signatur
 ## Review Results
 
 ### Attempt 1
-<!-- review-gate fills this in -->
+
+**Verdict: APPROVED — all 4 reviewers unanimous**
+
+| Reviewer | Verdict | Score |
+|---|---|---|
+| architect-reviewer | APPROVED | 98 |
+| code-reviewer | APPROVED | 98 |
+| security-reviewer | APPROVED | 98 |
+| api-reviewer | APPROVED | 96 |
+
+**Blocking findings**: none.
+
+**Non-blocking concerns (confidence < 80%)**:
+- architect-reviewer + api-reviewer (55%): `IsConnected` declared as pure abstract property rather than a default interface member (DIM). Noted for maintainer awareness before N exchange implementations exist. Non-blocking per design doc which explicitly left this choice open.
+
+**Pre-checks**: build 0W/0E, 497/497 non-integration tests pass, no smoke command configured.

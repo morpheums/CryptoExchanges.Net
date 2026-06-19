@@ -59,7 +59,7 @@ public static class MarketDataTools
         IExchangeClientFactory factory,
         [Description(ExchangeParam)] string exchange,
         [Description(SymbolParam)] string symbol,
-        [Description("Interval: 1m,3m,5m,15m,30m,1h,2h,4h,6h,12h,1d,1w,1M.")] string interval,
+        [Description("Interval (case-sensitive): 1m,3m,5m,15m,30m,1h,2h,4h,6h,8h,12h,1d,3d,1w,1M.")] string interval,
         [Description("Max candles (default 500).")] int limit = 500)
     {
         ArgumentNullException.ThrowIfNull(factory);

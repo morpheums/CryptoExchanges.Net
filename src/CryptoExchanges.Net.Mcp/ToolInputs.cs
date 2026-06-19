@@ -22,8 +22,9 @@ public static class ToolInputs
             ["5m"] = KlineInterval.FiveMinutes, ["15m"] = KlineInterval.FifteenMinutes,
             ["30m"] = KlineInterval.ThirtyMinutes, ["1h"] = KlineInterval.OneHour,
             ["2h"] = KlineInterval.TwoHours, ["4h"] = KlineInterval.FourHours,
-            ["6h"] = KlineInterval.SixHours, ["12h"] = KlineInterval.TwelveHours,
-            ["1d"] = KlineInterval.OneDay, ["1w"] = KlineInterval.OneWeek,
+            ["6h"] = KlineInterval.SixHours, ["8h"] = KlineInterval.EightHours,
+            ["12h"] = KlineInterval.TwelveHours, ["1d"] = KlineInterval.OneDay,
+            ["3d"] = KlineInterval.ThreeDays, ["1w"] = KlineInterval.OneWeek,
             ["1M"] = KlineInterval.OneMonth,
         };
 

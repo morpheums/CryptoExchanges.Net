@@ -52,12 +52,32 @@ public class MarketDataToolsTests
     }
 
     [Fact]
-    public async Task GetKlines_BadInterval_ReturnsSymbolNotSupported_OrValidationError()
+    public async Task GetKlines_BadInterval_ReturnsBadInterval()
     {
         var client = Substitute.For<IExchangeClient>();
         var factory = FactoryReturning(client);
         var result = await MarketDataTools.GetKlines(factory, "binance", "BTC/USDT", "13h");
         result.Ok.Should().BeFalse();
         result.Error!.Category.Should().Be("BadInterval");
+    }
+
+    [Theory]
+    [InlineData("8h", KlineInterval.EightHours)]
+    [InlineData("3d", KlineInterval.ThreeDays)]
+    public async Task GetKlines_SupportsAllCoreIntervals(string interval, KlineInterval expected)
+    {
+        var client = Substitute.For<IExchangeClient>();
+        client.MarketData.GetCandlesticksAsync(
+                Arg.Any<Symbol>(), Arg.Any<KlineInterval>(), Arg.Any<DateTimeOffset?>(),
+                Arg.Any<DateTimeOffset?>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
+            .Returns(Array.Empty<Candlestick>());
+        var factory = FactoryReturning(client);
+
+        var result = await MarketDataTools.GetKlines(factory, "binance", "BTC/USDT", interval);
+
+        result.Ok.Should().BeTrue();
+        await client.MarketData.Received(1).GetCandlesticksAsync(
+            Arg.Any<Symbol>(), expected, Arg.Any<DateTimeOffset?>(),
+            Arg.Any<DateTimeOffset?>(), Arg.Any<int>(), Arg.Any<CancellationToken>());
     }
 }

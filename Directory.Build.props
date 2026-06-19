@@ -8,10 +8,11 @@
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     
     <!-- Package metadata -->
-    <Authors>Morpheums</Authors>
+    <Authors>Orodruin Labs</Authors>
+    <Company>Orodruin Labs</Company>
     <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
-    <PackageProjectUrl>https://github.com/morpheums/CryptoExchanges.Net</PackageProjectUrl>
-    <RepositoryUrl>https://github.com/morpheums/CryptoExchanges.Net</RepositoryUrl>
+    <PackageProjectUrl>https://github.com/OrodruinLabs/CryptoExchanges.Net</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/OrodruinLabs/CryptoExchanges.Net</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageTags>crypto;exchange;trading;sdk;binance;coinbase;bybit;bitcoin;ethereum</PackageTags>
     <PackageReadmeFile>README.md</PackageReadmeFile>

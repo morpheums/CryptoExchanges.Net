@@ -15,6 +15,12 @@
     <RepositoryType>git</RepositoryType>
     <PackageTags>crypto;exchange;trading;sdk;binance;coinbase;bybit;bitcoin;ethereum</PackageTags>
     <PackageReadmeFile>README.md</PackageReadmeFile>
-    <Version>0.2.0-preview.1</Version>
+    <Version>0.3.0-preview.1</Version>
   </PropertyGroup>
+
+  <!-- Pack the repo-root README into every library package so the NuGet listing has a description.
+       The Mcp tool bundles its own README, so it is excluded here to avoid a duplicate root entry. -->
+  <ItemGroup Condition="'$(IsPackable)' != 'false' and '$(MSBuildProjectName)' != 'CryptoExchanges.Net.Mcp'">
+    <None Include="$(MSBuildThisFileDirectory)README.md" Pack="true" PackagePath="\" Visible="false" />
+  </ItemGroup>
 </Project>

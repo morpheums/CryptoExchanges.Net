@@ -1,0 +1,65 @@
+name: Release
+
+# Publishes all packages to NuGet when a version tag is pushed, e.g. `v0.3.0-preview.1`.
+# The package version is derived from the tag (leading `v` stripped), so the tag is the
+# single source of truth. Requires the `NUGET_API_KEY` repository secret.
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Pack & Publish to NuGet
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+
+      # GITHUB_REF_NAME is a trusted runner-provided env var; strip the leading `v`.
+      # Written to $GITHUB_ENV so later steps read it as a shell env var ($VERSION),
+      # never interpolated into a run-script body.
+      - name: Derive version from tag
+        run: echo "VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_ENV"
+
+      - name: Restore
+        run: dotnet restore CryptoExchanges.Net.sln
+
+      - name: Build
+        run: dotnet build CryptoExchanges.Net.sln --no-restore -c Release -p:Version="$VERSION" -p:ContinuousIntegrationBuild=true
+
+      - name: Test
+        run: dotnet test CryptoExchanges.Net.sln --no-build -c Release --filter 'Category!=Integration'
+
+      - name: Pack
+        run: dotnet pack CryptoExchanges.Net.sln --no-build -c Release -p:Version="$VERSION" -o "$GITHUB_WORKSPACE/nupkg"
+
+      - name: Push to NuGet
+        env:
+          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
+        run: >
+          dotnet nuget push "nupkg/*.nupkg"
+          --api-key "$NUGET_API_KEY"
+          --source https://api.nuget.org/v3/index.json
+          --skip-duplicate
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PRERELEASE: ${{ contains(github.ref_name, '-') && '--prerelease' || '' }}
+        run: >
+          gh release create "$GITHUB_REF_NAME" nupkg/*.nupkg
+          --title "$GITHUB_REF_NAME"
+          --notes "Packages published to NuGet. See CHANGELOG.md for details."
+          $PRERELEASE

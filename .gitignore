@@ -13,6 +13,11 @@
 [Dd]ebugPublic/
 [Rr]elease/
 [Rr]eleases/
+
+# Local NuGet pack output (produced by `dotnet pack` and the release workflow)
+nupkg/
+*.nupkg
+*.snupkg
 x64/
 x86/
 [Ww][Ii][Nn]32/

@@ -1,6 +1,6 @@
 ---
 id: TASK-031
-status: IMPLEMENTED
+status: CHANGES_REQUESTED
 depends_on: [TASK-029]
 commit: c27e976
 claimed_at: 2026-06-19T07:00:00Z

@@ -1,7 +1,7 @@
 ---
 id: TASK-040
-status: IN_PROGRESS
-commit:
+status: IMPLEMENTED
+commit: d281ea4
 claimed_at: 2026-06-19
 ---
 

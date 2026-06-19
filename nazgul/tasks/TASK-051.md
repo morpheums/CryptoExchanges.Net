@@ -5,7 +5,7 @@ status: IMPLEMENTED
 
 # TASK-051: NuGet publish setup — fix library packaging, version bump, release workflow
 
-**Status**: READY
+**Status**: IMPLEMENTED
 
 **Blast radius**: LOW — packaging/release config only. No product code change.
 
@@ -26,3 +26,8 @@ DependencyInjection, Mcp tool).
 - `dotnet pack CryptoExchanges.Net.sln -c Release` produces 8 `.nupkg` (0 errors).
 - Release workflow validates (`gh workflow`/yaml lint); full non-integration suite green; no opsec leakage
   in any packed README/metadata.
+
+## Commits
+- `9b6260b` — packaging fix (NU5039), version 0.3.0-preview.1, release workflow, CHANGELOG, .gitignore.
+- `2c8bc70` — publish under Orodruin Labs org (Authors/Company + URLs).
+- PR #28 review: SHA-pin GitHub Actions + `persist-credentials: false` (release.yml + ci.yml); status sync.

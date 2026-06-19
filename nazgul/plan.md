@@ -162,10 +162,10 @@ other exchanges, `IAsyncEnumerable`, System.Reactive) is planned.
 
 ## Recovery Pointer
 
-- **Current stage**: TASK-049 IMPLEMENTED (5195052) — routing-key fix + liveness fix committed.
-- **Next action**: Review gate for TASK-049.
-- **Active task**: TASK-049 (IMPLEMENTED — commit 5195052)
-- **Files are truth**: task manifests in `nazgul/tasks/TASK-042..049.md` carry full state;
+- **Current stage**: TASK-050 IMPLEMENTED (00b894b) — PR #26 review findings addressed.
+- **Next action**: Review gate for TASK-050.
+- **Active task**: TASK-050 (IMPLEMENTED — commit 00b894b)
+- **Files are truth**: task manifests in `nazgul/tasks/TASK-042..050.md` carry full state;
   frontmatter `status:` is canonical.
 
 ─── ◈ NEXT ─────────────────────────────────────────────

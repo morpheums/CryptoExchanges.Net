@@ -1,0 +1,437 @@
+diff --git a/nazgul/tasks/TASK-050.md b/nazgul/tasks/TASK-050.md
+new file mode 100644
+index 0000000..3ab0914
+--- /dev/null
++++ b/nazgul/tasks/TASK-050.md
+@@ -0,0 +1,23 @@
++---
++id: TASK-050
++status: IN_PROGRESS
++commit:
++claimed_at: 2026-06-19
++---
++
++# TASK-050: Address PR #26 review findings (streaming hardening)
++
++**Status**: READY
++
++**Blast radius**: LOW–MEDIUM — Http transport hardening + Binance parse perf + DI guard + test hygiene. No public API change.
++
++## Findings to fix (from Copilot + CodeRabbit on PR #26)
++1. **Max inbound message-size bound** — `ClientWebSocketConnection.ReceiveAsync` appends fragments to an unbounded `MemoryStream`; cap at a few MiB (const) and fail fast.
++2. **Control-frame Ping/Pong correctness** — .NET `ClientWebSocket.SendAsync` sends only data frames, not RFC 6455 control frames. For `PingFormat.ControlFrame`/`ServerPingClientPong`, rely on `ClientWebSocket.Options.KeepAliveInterval` (framework keep-alive) rather than manual control-frame sends; make `SendPing/SendPongAsync` honest (Text/Json client-ping → data frame is correct; ControlFrame → framework keep-alive + liveness-on-any-frame). Don't have the engine manually "pong" control frames.
++3. **Span parsing** — `BinanceStreamProtocol` calls `frame.ToArray()` (alloc/frame on hot path) while the comment claims span-based parsing; parse via `Utf8JsonReader`/`JsonDocument.Parse` over the span and correct the comment.
++4. **DI disposal guard** — keyed-singleton factory in `StreamServiceRegistration` creates `StreamEngine` then `StreamClient` with no dispose-on-failure guard (the container-free `Create` path has one); mirror it.
++5. **Test hygiene** — `StreamContractTests` use `await using` but the fake's final cleanup is in sync `Dispose()`; switch to `using`. Add `ArgumentNullException.ThrowIfNull(uri)` to the fake's `ConnectAsync`.
++6. **Cheap** — URI scheme guard (ws/wss) in `ClientWebSocketConnection.ConnectAsync`; return `Task` directly from `SendPing/SendPongAsync` (drop async state machine).
++
++## Acceptance
++- Build 0W/0E; full non-integration suite green; new tests for the message-size bound + URI scheme guard; K1/C1/K3 hold; no competitor names.
+diff --git a/src/CryptoExchanges.Net.Binance/Streaming/BinanceStreamProtocol.cs b/src/CryptoExchanges.Net.Binance/Streaming/BinanceStreamProtocol.cs
+index 09bd0df..300e48a 100644
+--- a/src/CryptoExchanges.Net.Binance/Streaming/BinanceStreamProtocol.cs
++++ b/src/CryptoExchanges.Net.Binance/Streaming/BinanceStreamProtocol.cs
+@@ -70,8 +70,10 @@ internal sealed class BinanceStreamProtocol : IStreamProtocol
+         if (frame.IsEmpty)
+             return new StreamFrame(FrameKind.Error, null);
+ 
+-        // Parse via Utf8JsonReader (stack-friendly with ReadOnlySpan<byte>).
+-        using var doc = JsonDocument.Parse(frame.ToArray());
++        // Parse via Utf8JsonReader directly from the span — no intermediate array allocation
++        // on the hot path (avoids the ToArray() alloc in the original implementation).
++        var reader = new Utf8JsonReader(frame);
++        using var doc = JsonDocument.ParseValue(ref reader);
+         var root = doc.RootElement;
+ 
+         // Combined-stream data frames carry a "stream" field + "data" field.
+diff --git a/src/CryptoExchanges.Net.Http/Streaming/ClientWebSocketConnection.cs b/src/CryptoExchanges.Net.Http/Streaming/ClientWebSocketConnection.cs
+index fffd45b..626e245 100644
+--- a/src/CryptoExchanges.Net.Http/Streaming/ClientWebSocketConnection.cs
++++ b/src/CryptoExchanges.Net.Http/Streaming/ClientWebSocketConnection.cs
+@@ -10,11 +10,48 @@ namespace CryptoExchanges.Net.Http.Streaming;
+ /// (no captive dependency — the factory produces a fresh instance for each connect,
+ /// matching the engine's own lifecycle).
+ /// </summary>
++/// <remarks>
++/// <para>
++/// <strong>Control-frame keep-alive</strong>: <see cref="System.Net.WebSockets.ClientWebSocket"/>
++/// can only emit data frames (opcodes 0x01 text / 0x02 binary); it cannot emit RFC 6455 control
++/// frames (Ping 0x09 / Pong 0x0A) directly. Framework-managed keep-alive / auto-pong is
++/// configured via <see cref="System.Net.WebSockets.ClientWebSocketOptions.KeepAliveInterval"/>
++/// (set in the constructor). Consequently <see cref="SendPingAsync"/> and
++/// <see cref="SendPongAsync"/> send <em>data</em> frames — correct for venues that use
++/// application-level heartbeat messages (<see cref="PingFormat.Text"/> /
++/// <see cref="PingFormat.Json"/>). For <see cref="PingFormat.ControlFrame"/> the engine
++/// must NOT call these methods; framework keep-alive handles the control-frame handshake
++/// automatically.
++/// </para>
++/// </remarks>
+ internal sealed class ClientWebSocketConnection : IWebSocketConnection
+ {
+     // Buffer used for receive — reused across calls within one connection lifetime.
+     private const int ReceiveBufferSize = 8192;
+-    private readonly ClientWebSocket _ws = new();
++
++    /// <summary>
++    /// Hard ceiling on a single inbound WebSocket message. Frames larger than this indicate
++    /// a misbehaving venue or a memory-exhaustion attempt; the receive loop throws rather than
++    /// buffering an unbounded payload.
++    /// </summary>
++    private const int MaxMessageBytes = 4 * 1024 * 1024; // 4 MiB
++
++    private readonly ClientWebSocket _ws;
++
++    /// <summary>
++    /// Initialises a new connection with the specified framework keep-alive interval.
++    /// </summary>
++    /// <param name="keepAliveInterval">
++    /// The <see cref="System.Net.WebSockets.ClientWebSocketOptions.KeepAliveInterval"/> passed
++    /// to the underlying <see cref="System.Net.WebSockets.ClientWebSocket"/>. The framework uses
++    /// this to manage RFC 6455 Ping/Pong control-frame keep-alive automatically.
++    /// Defaults to 20 seconds when not specified.
++    /// </param>
++    public ClientWebSocketConnection(TimeSpan? keepAliveInterval = null)
++    {
++        _ws = new ClientWebSocket();
++        _ws.Options.KeepAliveInterval = keepAliveInterval ?? TimeSpan.FromSeconds(20);
++    }
+ 
+     /// <inheritdoc/>
+     public WebSocketState State => _ws.State;
+@@ -23,9 +60,19 @@ internal sealed class ClientWebSocketConnection : IWebSocketConnection
+     public bool IsOpen => _ws.State == WebSocketState.Open;
+ 
+     /// <inheritdoc/>
++    /// <exception cref="ArgumentException">
++    /// Thrown when <paramref name="uri"/> does not use the <c>ws</c> or <c>wss</c> scheme.
++    /// </exception>
+     public Task ConnectAsync(Uri uri, CancellationToken ct)
+     {
+         ArgumentNullException.ThrowIfNull(uri);
++        if (!uri.Scheme.Equals("ws", StringComparison.OrdinalIgnoreCase) &&
++            !uri.Scheme.Equals("wss", StringComparison.OrdinalIgnoreCase))
++        {
++            throw new ArgumentException(
++                $"URI scheme '{uri.Scheme}' is not supported; expected 'ws' or 'wss'.",
++                nameof(uri));
++        }
+         return _ws.ConnectAsync(uri, ct);
+     }
+ 
+@@ -37,15 +84,39 @@ internal sealed class ClientWebSocketConnection : IWebSocketConnection
+         return _ws.SendAsync(bytes, WebSocketMessageType.Text, endOfMessage: true, cancellationToken: ct);
+     }
+ 
++    /// <summary>
++    /// Sends <paramref name="payload"/> as a binary <em>data</em> frame (opcode 0x02).
++    /// </summary>
++    /// <remarks>
++    /// Note: <see cref="System.Net.WebSockets.ClientWebSocket"/> cannot emit RFC 6455 Ping
++    /// control frames (opcode 0x09); this method sends a binary data frame instead.
++    /// It is correct for venues using application-level heartbeat messages
++    /// (<see cref="PingFormat.Text"/> / <see cref="PingFormat.Json"/>). For
++    /// <see cref="PingFormat.ControlFrame"/> the engine relies on the framework
++    /// <see cref="System.Net.WebSockets.ClientWebSocketOptions.KeepAliveInterval"/> and must
++    /// NOT call this method.
++    /// </remarks>
+     /// <inheritdoc/>
+-    public async Task SendPingAsync(ReadOnlyMemory<byte> payload, CancellationToken ct)
+-        => await _ws.SendAsync(payload, WebSocketMessageType.Binary, endOfMessage: true, cancellationToken: ct).ConfigureAwait(false);
++    public Task SendPingAsync(ReadOnlyMemory<byte> payload, CancellationToken ct)
++        => _ws.SendAsync(payload, WebSocketMessageType.Binary, endOfMessage: true, cancellationToken: ct).AsTask();
+ 
++    /// <summary>
++    /// Sends <paramref name="payload"/> as a binary <em>data</em> frame (opcode 0x02).
++    /// </summary>
++    /// <remarks>
++    /// Note: <see cref="System.Net.WebSockets.ClientWebSocket"/> cannot emit RFC 6455 Pong
++    /// control frames (opcode 0x0A); this method sends a binary data frame instead.
++    /// Framework auto-pong (via <see cref="System.Net.WebSockets.ClientWebSocketOptions.KeepAliveInterval"/>)
++    /// handles server-initiated Ping / Pong control frames automatically.
++    /// </remarks>
+     /// <inheritdoc/>
+-    public async Task SendPongAsync(ReadOnlyMemory<byte> payload, CancellationToken ct)
+-        => await _ws.SendAsync(payload, WebSocketMessageType.Binary, endOfMessage: true, cancellationToken: ct).ConfigureAwait(false);
++    public Task SendPongAsync(ReadOnlyMemory<byte> payload, CancellationToken ct)
++        => _ws.SendAsync(payload, WebSocketMessageType.Binary, endOfMessage: true, cancellationToken: ct).AsTask();
+ 
+     /// <inheritdoc/>
++    /// <exception cref="InvalidOperationException">
++    /// Thrown when a single inbound message exceeds <see cref="MaxMessageBytes"/> (4 MiB).
++    /// </exception>
+     public async ValueTask<ReadOnlyMemory<byte>?> ReceiveAsync(CancellationToken ct)
+     {
+         using var ms = new System.IO.MemoryStream();
+@@ -58,6 +129,10 @@ internal sealed class ClientWebSocketConnection : IWebSocketConnection
+             if (result.MessageType == WebSocketMessageType.Close)
+                 return null; // Clean venue-initiated close → engine reconnects.
+ 
++            if (ms.Length + result.Count > MaxMessageBytes)
++                throw new InvalidOperationException(
++                    $"WebSocket message exceeded {MaxMessageBytes} bytes.");
++
+             await ms.WriteAsync(buffer.AsMemory(0, result.Count), ct).ConfigureAwait(false);
+         }
+         while (!result.EndOfMessage);
+diff --git a/src/CryptoExchanges.Net.Http/Streaming/IWebSocketConnection.cs b/src/CryptoExchanges.Net.Http/Streaming/IWebSocketConnection.cs
+index 614ba3a..e351e8e 100644
+--- a/src/CryptoExchanges.Net.Http/Streaming/IWebSocketConnection.cs
++++ b/src/CryptoExchanges.Net.Http/Streaming/IWebSocketConnection.cs
+@@ -46,18 +46,34 @@ internal interface IWebSocketConnection : IAsyncDisposable
+     Task SendTextAsync(string text, CancellationToken ct);
+ 
+     /// <summary>
+-    /// Sends a binary payload as a WebSocket Ping control frame (RFC 6455 §5.5.2).
+-    /// Used by the engine to initiate a client-side heartbeat ping when
+-    /// <see cref="PingFormat.ControlFrame"/> is configured.
++    /// Sends a ping payload over the connection.
+     /// </summary>
++    /// <remarks>
++    /// <para>
++    /// The production implementation (<c>ClientWebSocketConnection</c>) sends a binary
++    /// <em>data</em> frame (opcode 0x02) because <see cref="System.Net.WebSockets.ClientWebSocket"/>
++    /// cannot emit RFC 6455 Ping control frames (opcode 0x09). This is correct for venues
++    /// that use application-level heartbeat messages (<see cref="PingFormat.Text"/> /
++    /// <see cref="PingFormat.Json"/>). For <see cref="PingFormat.ControlFrame"/> the engine
++    /// must NOT call this method; framework keep-alive handles control-frame Ping/Pong automatically.
++    /// </para>
++    /// </remarks>
+     /// <param name="payload">The ping payload bytes.</param>
+     /// <param name="ct">A token to cancel the send.</param>
+     Task SendPingAsync(ReadOnlyMemory<byte> payload, CancellationToken ct);
+ 
+     /// <summary>
+-    /// Sends a binary payload as a WebSocket Pong control frame (RFC 6455 §5.5.3).
+-    /// Used by the engine to respond to server-initiated Ping frames.
++    /// Sends a pong payload over the connection.
+     /// </summary>
++    /// <remarks>
++    /// <para>
++    /// The production implementation (<c>ClientWebSocketConnection</c>) sends a binary
++    /// <em>data</em> frame (opcode 0x02) because <see cref="System.Net.WebSockets.ClientWebSocket"/>
++    /// cannot emit RFC 6455 Pong control frames (opcode 0x0A). Framework auto-pong (via
++    /// <see cref="System.Net.WebSockets.ClientWebSocketOptions.KeepAliveInterval"/>) handles
++    /// server-initiated Ping / Pong control frames automatically.
++    /// </para>
++    /// </remarks>
+     /// <param name="payload">The pong payload bytes (typically echoes the ping payload).</param>
+     /// <param name="ct">A token to cancel the send.</param>
+     Task SendPongAsync(ReadOnlyMemory<byte> payload, CancellationToken ct);
+diff --git a/src/CryptoExchanges.Net.Http/Streaming/StreamEngine.cs b/src/CryptoExchanges.Net.Http/Streaming/StreamEngine.cs
+index 346026e..55b668d 100644
+--- a/src/CryptoExchanges.Net.Http/Streaming/StreamEngine.cs
++++ b/src/CryptoExchanges.Net.Http/Streaming/StreamEngine.cs
+@@ -636,10 +636,13 @@ internal sealed class StreamEngine : IAsyncDisposable
+                         switch (policy.PingFormat)
+                         {
+                             case PingFormat.ControlFrame:
+-                                // RFC 6455 §5.5.2: client-initiated heartbeat sends a Ping control
+-                                // frame (opcode 0x09). SendPingAsync carries the correct semantics;
+-                                // SendPongAsync (opcode 0x0A) is reserved for replying to server pings.
+-                                await _socket.SendPingAsync(policy.ClientPingPayload, ct).ConfigureAwait(false);
++                                // RFC 6455 §5.5.2 Ping control frames (opcode 0x09) cannot be
++                                // emitted by ClientWebSocket.SendAsync — it only sends data frames.
++                                // Framework keep-alive (ClientWebSocketOptions.KeepAliveInterval set
++                                // on ClientWebSocketConnection) handles the control-frame Ping/Pong
++                                // handshake automatically; the engine must not attempt a manual send.
++                                // Liveness is maintained by the existing liveness-on-any-frame reset
++                                // in PumpLoopAsync (every received frame resets the watchdog).
+                                 break;
+                             case PingFormat.Text:
+                             case PingFormat.Json:
+diff --git a/src/CryptoExchanges.Net.Http/Streaming/StreamServiceRegistration.cs b/src/CryptoExchanges.Net.Http/Streaming/StreamServiceRegistration.cs
+index 50ab8dd..6881de5 100644
+--- a/src/CryptoExchanges.Net.Http/Streaming/StreamServiceRegistration.cs
++++ b/src/CryptoExchanges.Net.Http/Streaming/StreamServiceRegistration.cs
+@@ -91,6 +91,8 @@ internal static class StreamServiceRegistration
+ 
+         // The IStreamClient keyed singleton: owns the engine + transport (no captive dependency,
+         // Inv 9 — the connection factory produces a fresh socket per connect attempt).
++        // Dispose guard: if StreamClient construction throws after the engine is created the
++        // engine is disposed to prevent a resource leak (mirrors StreamClientFactory.Create).
+         services.AddKeyedSingleton<IStreamClient>(exchangeId, (sp, _) =>
+         {
+             var protocol = protocolFactory(sp);
+@@ -107,8 +109,18 @@ internal static class StreamServiceRegistration
+                 : Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance;
+ 
+             var engine = new StreamEngine(protocol, decoders, engineOpts, connFactory, logger);
+-            var symbolMapper = sp.GetRequiredKeyedService<ISymbolMapper>(exchangeId);
+-            return new StreamClient(engine, symbolMapper, exchangeId);
++            try
++            {
++                var symbolMapper = sp.GetRequiredKeyedService<ISymbolMapper>(exchangeId);
++                return new StreamClient(engine, symbolMapper, exchangeId);
++            }
++            catch
++            {
++                // StreamClient construction failed; dispose the engine synchronously to
++                // avoid leaking background resources before the DI container ever owns it.
++                engine.DisposeAsync().AsTask().GetAwaiter().GetResult();
++                throw;
++            }
+         });
+ 
+         return services;
+diff --git a/tests/CryptoExchanges.Net.Http.Tests.Unit/Streaming/FakeWebSocketConnection.cs b/tests/CryptoExchanges.Net.Http.Tests.Unit/Streaming/FakeWebSocketConnection.cs
+index 6d2bee8..b66e826 100644
+--- a/tests/CryptoExchanges.Net.Http.Tests.Unit/Streaming/FakeWebSocketConnection.cs
++++ b/tests/CryptoExchanges.Net.Http.Tests.Unit/Streaming/FakeWebSocketConnection.cs
+@@ -56,6 +56,7 @@ public sealed class FakeWebSocketConnection : IWebSocketConnection, IDisposable
+     /// <inheritdoc/>
+     public Task ConnectAsync(Uri uri, CancellationToken ct)
+     {
++        ArgumentNullException.ThrowIfNull(uri);
+         ConnectCount++;
+         State = WebSocketState.Open;
+ 
+diff --git a/tests/CryptoExchanges.Net.Http.Tests.Unit/Streaming/StreamContractTests.cs b/tests/CryptoExchanges.Net.Http.Tests.Unit/Streaming/StreamContractTests.cs
+index 9e9926b..362648b 100644
+--- a/tests/CryptoExchanges.Net.Http.Tests.Unit/Streaming/StreamContractTests.cs
++++ b/tests/CryptoExchanges.Net.Http.Tests.Unit/Streaming/StreamContractTests.cs
+@@ -1,4 +1,5 @@
+ using System.Net.WebSockets;
++using System.Reflection;
+ using System.Text;
+ using FluentAssertions;
+ using Xunit;
+@@ -48,7 +49,7 @@ public sealed class StreamContractTests
+     [Fact]
+     public async Task Fake_Connect_OpensAndCounts()
+     {
+-        await using var fake = new FakeWebSocketConnection();
++        using var fake = new FakeWebSocketConnection();
+         await fake.ConnectAsync(new Uri("wss://example.com/ws"), TestContext.Current.CancellationToken);
+ 
+         fake.IsOpen.Should().BeTrue();
+@@ -59,7 +60,7 @@ public sealed class StreamContractTests
+     [Fact]
+     public async Task Fake_EnqueuedFrames_ReceivedInOrder()
+     {
+-        await using var fake = new FakeWebSocketConnection();
++        using var fake = new FakeWebSocketConnection();
+         await fake.ConnectAsync(new Uri("wss://example.com/ws"), TestContext.Current.CancellationToken);
+ 
+         fake.EnqueueFrame("frame-1");
+@@ -72,7 +73,7 @@ public sealed class StreamContractTests
+     [Fact]
+     public async Task Fake_SendText_CapturesMessages()
+     {
+-        await using var fake = new FakeWebSocketConnection();
++        using var fake = new FakeWebSocketConnection();
+         await fake.ConnectAsync(new Uri("wss://example.com/ws"), TestContext.Current.CancellationToken);
+ 
+         await fake.SendTextAsync("{\"method\":\"SUBSCRIBE\"}", TestContext.Current.CancellationToken);
+@@ -83,7 +84,7 @@ public sealed class StreamContractTests
+     [Fact]
+     public async Task Fake_Disconnect_ReceiveReturnsNull()
+     {
+-        await using var fake = new FakeWebSocketConnection();
++        using var fake = new FakeWebSocketConnection();
+         await fake.ConnectAsync(new Uri("wss://example.com/ws"), TestContext.Current.CancellationToken);
+ 
+         fake.SimulateDisconnect();
+@@ -91,4 +92,58 @@ public sealed class StreamContractTests
+         (await fake.ReceiveAsync(TestContext.Current.CancellationToken)).Should().BeNull();
+         fake.IsOpen.Should().BeFalse();
+     }
++
++    [Fact]
++    public async Task Fake_ConnectAsync_NullUri_Throws()
++    {
++        using var fake = new FakeWebSocketConnection();
++        var act = async () => await fake.ConnectAsync(null!, TestContext.Current.CancellationToken);
++        await act.Should().ThrowAsync<ArgumentNullException>();
++    }
++
++    // ── ClientWebSocketConnection guards ──────────────────────────────────────
++
++    [Fact]
++    public async Task ClientWebSocketConnection_ConnectAsync_HttpScheme_Throws()
++    {
++        // The URI scheme guard fires before any I/O; no network required.
++        await using var conn = new ClientWebSocketConnection();
++        var act = async () => await conn.ConnectAsync(new Uri("http://example.com"), TestContext.Current.CancellationToken);
++        await act.Should().ThrowAsync<ArgumentException>()
++            .WithMessage("*ws*");
++    }
++
++    [Fact]
++    public async Task ClientWebSocketConnection_ConnectAsync_HttpsScheme_Throws()
++    {
++        await using var conn = new ClientWebSocketConnection();
++        var act = async () => await conn.ConnectAsync(new Uri("https://example.com"), TestContext.Current.CancellationToken);
++        await act.Should().ThrowAsync<ArgumentException>()
++            .WithMessage("*ws*");
++    }
++
++    [Fact]
++    public async Task ClientWebSocketConnection_ConnectAsync_WssScheme_DoesNotThrowArgumentException()
++    {
++        // Scheme check passes for wss (the underlying ConnectAsync will fail with a network
++        // error, but the guard must not throw ArgumentException for a valid scheme).
++        await using var conn = new ClientWebSocketConnection();
++        var act = async () => await conn.ConnectAsync(new Uri("wss://example.com"), TestContext.Current.CancellationToken);
++        // Must NOT throw ArgumentException (scheme guard rejects only non-ws/wss URIs).
++        // It will throw some WebSocketException / network exception — that is expected.
++        await act.Should().NotThrowAsync<ArgumentException>(
++            "wss URIs must pass the scheme guard; only network errors are expected here.");
++    }
++
++    [Fact]
++    public void ClientWebSocketConnection_MaxMessageBytes_Is4Mib()
++    {
++        // The const must be exactly 4 MiB so the guard matches the documented limit.
++        // Tested via reflection because the field is private.
++        var field = typeof(ClientWebSocketConnection)
++            .GetField("MaxMessageBytes", BindingFlags.NonPublic | BindingFlags.Static);
++        field.Should().NotBeNull("MaxMessageBytes const must exist on ClientWebSocketConnection");
++        ((int)field!.GetValue(null)!).Should().Be(4 * 1024 * 1024,
++            "MaxMessageBytes must be 4 MiB (4 * 1024 * 1024 bytes)");
++    }
+ }
+diff --git a/tests/CryptoExchanges.Net.Http.Tests.Unit/Streaming/StreamEngineTests.cs b/tests/CryptoExchanges.Net.Http.Tests.Unit/Streaming/StreamEngineTests.cs
+index 40c3569..bbc6d00 100644
+--- a/tests/CryptoExchanges.Net.Http.Tests.Unit/Streaming/StreamEngineTests.cs
++++ b/tests/CryptoExchanges.Net.Http.Tests.Unit/Streaming/StreamEngineTests.cs
+@@ -689,10 +689,13 @@ public sealed class StreamEngineTests
+     }
+ 
+     [Fact]
+-    public async Task Engine_HeartbeatClientPing_ControlFrame_SendsPingNotPong()
++    public async Task Engine_HeartbeatClientPing_ControlFrame_NoManualSend()
+     {
+-        // PingFormat.ControlFrame must send a genuine RFC 6455 Ping (SendPingAsync / opcode 0x09),
+-        // NOT a Pong (SendPongAsync / opcode 0x0A). This test verifies the semantic fix.
++        // PingFormat.ControlFrame: ClientWebSocket.SendAsync cannot emit RFC 6455 control frames.
++        // The engine must NOT attempt a manual Ping/Pong data-frame send; framework keep-alive
++        // (ClientWebSocketOptions.KeepAliveInterval on ClientWebSocketConnection) handles the
++        // control-frame handshake automatically. The engine loop still sets livenessFlag = 1
++        // on each heartbeat tick so the watchdog does not falsely trigger.
+         var payload = Encoding.UTF8.GetBytes("ping");
+         var protocol = new FakeStreamProtocol
+         {
+@@ -712,15 +715,16 @@ public sealed class StreamEngineTests
+             var request = new StreamRequest(StreamKind.Ticker, "BTCUSDT");
+             await using var sub = await engine.SubscribeAsync(request, MakeHandlers(), TestContext.Current.CancellationToken);
+ 
+-            // Wait for at least 1 control-frame ping cycle.
+-            var deadline = Task.Delay(3000, TestContext.Current.CancellationToken);
+-            while (fake.SentPings.IsEmpty && !deadline.IsCompleted)
+-                await Task.Delay(20, TestContext.Current.CancellationToken);
++            // Wait several heartbeat intervals to confirm no manual send occurs.
++            await Task.Delay(400, TestContext.Current.CancellationToken);
+ 
+-            fake.SentPings.Should().NotBeEmpty(
+-                "PingFormat.ControlFrame must send via SendPingAsync (RFC 6455 Ping, opcode 0x09).");
++            fake.SentPings.Should().BeEmpty(
++                "PingFormat.ControlFrame must NOT send a data-frame ping — framework keep-alive handles it.");
+             fake.SentPongs.Should().BeEmpty(
+-                "PingFormat.ControlFrame must NOT call SendPongAsync — that is reserved for server-ping replies.");
++                "PingFormat.ControlFrame must NOT send a data-frame pong.");
++            // Subscribe text was sent; no heartbeat data frames added.
++            fake.SentText.Should().ContainSingle(
++                "only the subscribe message should be in SentText; no heartbeat text frames.");
+         }
+     }
+ 

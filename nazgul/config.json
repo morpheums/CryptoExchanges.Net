@@ -2,15 +2,23 @@
   "schema_version": 10,
   "install_mode": "shared",
   "mode": "afk",
-  "objective": "Add three new exchange integrations to CryptoExchanges.Net in strict priority order — (1) Bybit, (2) OKX, (3) Bitget — for a global (non-US) audience. Each exchange clones the verified Binance pattern (Core → Http → Exchange → DI, DeltaMapper DTO→model, bespoke ISymbolMapper, retry-only-on-GET, per-attempt re-signing). The signing/credential abstraction is generalized after Bybit, against OKX, and Bitget then reuses that abstraction.",
-  "feat_id": "FEAT-001",
-  "feat_display_id": "M2",
+  "objective": "Implement the read-only MCP server (CryptoExchanges.Net.Mcp): a local stdio MCP server exposing the existing REST library to LLM agents as read-only tools (6 market-data + 6 read-scoped account) across Binance/Bybit/OKX/Bitget, per docs/superpowers/specs/2026-06-19-mcp-server-readonly-v1-design.md and docs/superpowers/plans/2026-06-19-mcp-server-readonly-v1.md.",
+  "feat_id": "FEAT-002",
+  "feat_display_id": "FEAT-002",
   "objectives_history": [
     {
       "objective": "Add three new exchange integrations to CryptoExchanges.Net in strict priority order — (1) Bybit, (2) OKX, (3) Bitget — for a global (non-US) audience. Each exchange clones the verified Binance pattern (Core → Http → Exchange → DI, DeltaMapper DTO→model, bespoke ISymbolMapper, retry-only-on-GET, per-attempt re-signing). The signing/credential abstraction is generalized after Bybit, against OKX, and Bitget then reuses that abstraction.",
       "feat_id": "FEAT-001",
       "display_id": "M2",
-      "set_at": "2026-06-17T00:00:00Z"
+      "set_at": "2026-06-17T00:00:00Z",
+      "completed_at": "2026-06-19T02:39:04Z",
+      "plan_archived_to": "nazgul/archive/2026-06-19-033855-FEAT-001-M2"
+    },
+    {
+      "objective": "Read-only MCP server (sub-project A of AI-agent-native roadmap)",
+      "feat_id": "FEAT-002",
+      "display_id": "FEAT-002",
+      "set_at": "2026-06-19T02:39:04Z"
     }
   ],
   "max_iterations": 40,
@@ -140,7 +148,7 @@
     }
   },
   "branch": {
-    "feature": "chore/cleanup-file-per-type",
+    "feature": "feat/FEAT-002-mcp-server-readonly",
     "base": "main",
     "main_worktree_path": "/Users/josemejia/ai-platform/personal/workspace/repos/CryptoExchanges.Net",
     "worktree_dir": null,
@@ -156,7 +164,7 @@
     "timeout_minutes": 90,
     "checkpoint_every_n_iterations": 5,
     "auto_commit": true,
-    "commit_prefix": "refactor(cleanup):"
+    "commit_prefix": "feat(FEAT-002):"
   },
   "context": {
     "budget_strategy": "aggressive",
@@ -206,7 +214,7 @@
   "notifications": {
     "on_complete": null
   },
-  "objective_set_at": "2026-06-17T00:00:00Z",
+  "objective_set_at": "2026-06-19T02:39:04Z",
   "learning": {
     "enabled": true,
     "rules_doc": "nazgul/learning/learned-rules.md",

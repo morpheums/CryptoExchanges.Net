@@ -1,13 +1,13 @@
 ---
 id: TASK-024
-status: IMPLEMENTED
+status: DONE
 commit: 7eb04af
 claimed_at: 2026-06-19
 ---
 
 # TASK-024: Code-hygiene cleanup — file-per-type split + comment hygiene
 
-**Status**: IMPLEMENTED
+**Status**: DONE (merged to main via PR #17, squash 0d93d20)
 
 **Commits**: Phase 1 `18fe22f` (file-per-type split), Phase 2 `7eb04af` (comment hygiene).
 Build 0W/0E (Release); 455 tests pass; sweep clean; no banners; no API change.

@@ -1,6 +1,6 @@
 ---
 id: TASK-033
-status: IMPLEMENTED
+status: DONE
 commit: 9630611
 claimed_at: 2026-06-19
 ---

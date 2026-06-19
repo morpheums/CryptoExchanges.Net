@@ -162,10 +162,10 @@ other exchanges, `IAsyncEnumerable`, System.Reactive) is planned.
 
 ## Recovery Pointer
 
-- **Current stage**: TASK-047 IMPLEMENTED (58d5216) — awaiting consolidated review gate.
-- **Next action**: Review gate for TASK-047 (all tasks IMPLEMENTED; final review + DONE).
-- **Active task**: TASK-047 (IMPLEMENTED — commit 58d5216)
-- **Files are truth**: task manifests in `nazgul/tasks/TASK-042..047.md` carry full state;
+- **Current stage**: TASK-049 IMPLEMENTED (5195052) — routing-key fix + liveness fix committed.
+- **Next action**: Review gate for TASK-049.
+- **Active task**: TASK-049 (IMPLEMENTED — commit 5195052)
+- **Files are truth**: task manifests in `nazgul/tasks/TASK-042..049.md` carry full state;
   frontmatter `status:` is canonical.
 
 ─── ◈ NEXT ─────────────────────────────────────────────
@@ -175,4 +175,5 @@ other exchanges, `IAsyncEnumerable`, System.Reactive) is planned.
   ✦ TASK-045 — Generic StreamClient + factory + AddStreams<TOptions>. IMPLEMENTED (906c568).
   ✦ TASK-046 — Exchange-#1 streaming package. IMPLEMENTED (27169ea).
   ✦ TASK-047 — Wire 4 subscribe methods end-to-end + integration smoke. IMPLEMENTED (58d5216).
+  ✦ TASK-049 — Fix routing-key keyspace mismatch + liveness reset. IMPLEMENTED (5195052).
 ────────────────────────────────────────────────────────

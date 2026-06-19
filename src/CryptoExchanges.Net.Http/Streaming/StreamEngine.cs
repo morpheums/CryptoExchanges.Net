@@ -190,7 +190,7 @@ internal sealed class StreamEngine : IAsyncDisposable
             if (_socket is null || !_socket.IsOpen)
                 await OpenSocketAsync(ct).ConfigureAwait(false);
 
-            var routingKey = BuildRoutingKey(request);
+            var routingKey = _protocol.RoutingKeyFor(request);
 
             // Build the channel and subscription handle.
             var decoder = _decoders.Resolve(request.Kind);
@@ -363,6 +363,13 @@ internal sealed class StreamEngine : IAsyncDisposable
                 return;
             }
 
+            // Any received frame proves the socket is alive — reset the liveness watchdog now,
+            // before classification. Under ClientWebSocket auto-pong (ServerPingClientPong policy)
+            // the venue Ping control frame is answered automatically and never surfaces here, so
+            // FrameKind.Pong is never received; resetting on every data frame keeps the watchdog
+            // from falsely triggering on healthy high-data / quiet-data streams alike.
+            Interlocked.Exchange(ref _livenessFlag, 1);
+
             // Classify and dispatch.
             try
             {
@@ -373,7 +380,7 @@ internal sealed class StreamEngine : IAsyncDisposable
                         break; // discard
 
                     case FrameKind.Pong:
-                        Interlocked.Exchange(ref _livenessFlag, 1);
+                        // Liveness already reset above on every received frame; no further action.
                         break;
 
                     case FrameKind.Error:
@@ -809,10 +816,14 @@ internal sealed class StreamEngine : IAsyncDisposable
     // ── Routing key ───────────────────────────────────────────────────────────
 
     /// <summary>
-    /// Produces the routing key used to demultiplex frames to a subscription's channel.
-    /// The key is derived from <see cref="StreamRequest"/> fields and must match what
-    /// <see cref="IStreamProtocol.Classify"/> returns in <see cref="StreamFrame.RoutingKey"/>.
-    /// Convention (case-insensitive, uppercase): <c>&lt;WIRESYMBOL&gt;@&lt;KIND&gt;[/&lt;DEPTH&gt;][/&lt;INTERVAL&gt;]</c>.
+    /// Canonical routing-key helper for test fakes and contract-level assertions.
+    /// <para>
+    /// <strong>Note</strong>: the engine no longer uses this method on the subscribe/route hot
+    /// path — that path now delegates to <see cref="IStreamProtocol.RoutingKeyFor"/> so that
+    /// the keyspace is single-sourced in the protocol. This method is retained for
+    /// test doubles and test assertions that verify the canonical form.
+    /// Convention (uppercase): <c>&lt;WIRESYMBOL&gt;@&lt;KIND&gt;[/&lt;DEPTH&gt;][/&lt;INTERVAL&gt;]</c>.
+    /// </para>
     /// </summary>
     internal static string BuildRoutingKey(StreamRequest request)
     {

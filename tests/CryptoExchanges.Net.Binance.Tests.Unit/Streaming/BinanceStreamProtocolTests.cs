@@ -122,6 +122,77 @@ public class BinanceStreamProtocolTests
         doc.RootElement.GetProperty("params")[0].GetString().Should().Be("btcusdt@trade");
     }
 
+    // ── RoutingKeyFor ─────────────────────────────────────────────────────────
+    // Regression for Finding 1 (subscribe/classify keyspace mismatch).
+    // RoutingKeyFor (used by the engine at subscribe time) must equal Classify(frame).RoutingKey
+    // (used by the engine pump at receive time). Both sides must share one venue-native keyspace.
+    // These tests FAIL against old code where engine used BuildRoutingKey (canonical uppercase
+    // e.g. "BTCUSDT@TICKER") while Classify returned the venue lowercase token "btcusdt@ticker".
+
+    [Fact]
+    public void RoutingKeyFor_Ticker_MatchesClassifyRoutingKey()
+    {
+        var protocol = MakeProtocol();
+        var request = new StreamRequest(StreamKind.Ticker, "BTCUSDT");
+        var frame = Utf8("{\"stream\":\"btcusdt@ticker\",\"data\":{\"s\":\"BTCUSDT\"}}");
+
+        var subscribeKey = protocol.RoutingKeyFor(request);
+        var classifiedKey = protocol.Classify(frame).RoutingKey;
+
+        subscribeKey.Should().Be("btcusdt@ticker");
+        classifiedKey.Should().Be("btcusdt@ticker");
+        subscribeKey.Should().Be(classifiedKey,
+            "RoutingKeyFor and Classify must share one keyspace so frames reach their subscription");
+    }
+
+    [Fact]
+    public void RoutingKeyFor_Trade_MatchesClassifyRoutingKey()
+    {
+        var protocol = MakeProtocol();
+        var request = new StreamRequest(StreamKind.Trade, "BTCUSDT");
+        var frame = Utf8("{\"stream\":\"btcusdt@trade\",\"data\":{\"e\":\"trade\"}}");
+
+        var subscribeKey = protocol.RoutingKeyFor(request);
+        var classifiedKey = protocol.Classify(frame).RoutingKey;
+
+        subscribeKey.Should().Be("btcusdt@trade");
+        classifiedKey.Should().Be("btcusdt@trade");
+        subscribeKey.Should().Be(classifiedKey,
+            "RoutingKeyFor and Classify must share one keyspace so frames reach their subscription");
+    }
+
+    [Fact]
+    public void RoutingKeyFor_OrderBook_WithDepth_MatchesClassifyRoutingKey()
+    {
+        var protocol = MakeProtocol();
+        var request = new StreamRequest(StreamKind.OrderBook, "BTCUSDT", Depth: 20);
+        var frame = Utf8("{\"stream\":\"btcusdt@depth20\",\"data\":{\"e\":\"depthUpdate\"}}");
+
+        var subscribeKey = protocol.RoutingKeyFor(request);
+        var classifiedKey = protocol.Classify(frame).RoutingKey;
+
+        subscribeKey.Should().Be("btcusdt@depth20");
+        classifiedKey.Should().Be("btcusdt@depth20");
+        subscribeKey.Should().Be(classifiedKey,
+            "RoutingKeyFor and Classify must share one keyspace so frames reach their subscription");
+    }
+
+    [Fact]
+    public void RoutingKeyFor_Kline_MatchesClassifyRoutingKey()
+    {
+        var protocol = MakeProtocol();
+        var request = new StreamRequest(StreamKind.Kline, "BTCUSDT", Interval: nameof(KlineInterval.OneMinute));
+        var frame = Utf8("{\"stream\":\"btcusdt@kline_1m\",\"data\":{\"e\":\"kline\"}}");
+
+        var subscribeKey = protocol.RoutingKeyFor(request);
+        var classifiedKey = protocol.Classify(frame).RoutingKey;
+
+        subscribeKey.Should().Be("btcusdt@kline_1m");
+        classifiedKey.Should().Be("btcusdt@kline_1m");
+        subscribeKey.Should().Be(classifiedKey,
+            "RoutingKeyFor and Classify must share one keyspace so frames reach their subscription");
+    }
+
     // ── HeartbeatPolicy ───────────────────────────────────────────────────────
 
     [Fact]

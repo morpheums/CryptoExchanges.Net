@@ -91,12 +91,11 @@ public sealed class StreamClientTests
     [Fact]
     public async Task SubscribeToTickerAsync_DeliversDecodedValueToHandler()
     {
-        var (client, fake, protocol) = BuildClient();
+        var (client, fake, _) = BuildClient();
 
-        // Routing key must match what StreamClient builds for TestSymbol/Ticker.
-        protocol.NextRoutingKey = StreamEngine.BuildRoutingKey(
-            new StreamRequest(StreamKind.Ticker, WireSymbol));
-
+        // FakeStreamProtocol.RoutingKeyFor and Classify both return NextRoutingKey (the
+        // default "btcusdt@ticker"), so subscribe-time registration and receive-time
+        // dispatch agree without any additional setup.
         var received = new ConcurrentQueue<Ticker>();
         var handlers = new StreamHandlers<Ticker>(
             OnUpdate: v =>
@@ -125,10 +124,7 @@ public sealed class StreamClientTests
     [Fact]
     public async Task SubscribeToTradesAsync_DeliversDecodedValueToHandler()
     {
-        var (client, fake, protocol) = BuildClient();
-
-        protocol.NextRoutingKey = StreamEngine.BuildRoutingKey(
-            new StreamRequest(StreamKind.Trade, WireSymbol));
+        var (client, fake, _) = BuildClient();
 
         var received = new ConcurrentQueue<Trade>();
         var handlers = new StreamHandlers<Trade>(
@@ -157,10 +153,7 @@ public sealed class StreamClientTests
     [Fact]
     public async Task SubscribeToOrderBookAsync_DeliversDecodedValueToHandler()
     {
-        var (client, fake, protocol) = BuildClient();
-
-        protocol.NextRoutingKey = StreamEngine.BuildRoutingKey(
-            new StreamRequest(StreamKind.OrderBook, WireSymbol, Depth: 20));
+        var (client, fake, _) = BuildClient();
 
         var received = new ConcurrentQueue<OrderBook>();
         var handlers = new StreamHandlers<OrderBook>(
@@ -189,12 +182,7 @@ public sealed class StreamClientTests
     [Fact]
     public async Task SubscribeToKlinesAsync_DeliversDecodedValueToHandler()
     {
-        var (client, fake, protocol) = BuildClient();
-
-        // StreamClient passes KlineInterval.ToString() ("OneMinute") as the interval token.
-        protocol.NextRoutingKey = StreamEngine.BuildRoutingKey(
-            new StreamRequest(StreamKind.Kline, WireSymbol,
-                Interval: KlineInterval.OneMinute.ToString()));
+        var (client, fake, _) = BuildClient();
 
         var received = new ConcurrentQueue<Candlestick>();
         var handlers = new StreamHandlers<Candlestick>(
@@ -263,10 +251,7 @@ public sealed class StreamClientTests
     [Fact]
     public async Task SubscribeToTickerAsync_BareFunc_WrapsIntoHandlers_AndDelivers()
     {
-        var (client, fake, protocol) = BuildClient();
-
-        protocol.NextRoutingKey = StreamEngine.BuildRoutingKey(
-            new StreamRequest(StreamKind.Ticker, WireSymbol));
+        var (client, fake, _) = BuildClient();
 
         var received = new ConcurrentQueue<Ticker>();
         await using (client)
@@ -291,10 +276,7 @@ public sealed class StreamClientTests
     [Fact]
     public async Task SubscribeToTradesAsync_BareFunc_WrapsIntoHandlers_AndDelivers()
     {
-        var (client, fake, protocol) = BuildClient();
-
-        protocol.NextRoutingKey = StreamEngine.BuildRoutingKey(
-            new StreamRequest(StreamKind.Trade, WireSymbol));
+        var (client, fake, _) = BuildClient();
 
         var received = new ConcurrentQueue<Trade>();
         await using (client)
@@ -318,10 +300,7 @@ public sealed class StreamClientTests
     [Fact]
     public async Task SubscribeToOrderBookAsync_BareFunc_WrapsIntoHandlers_AndDelivers()
     {
-        var (client, fake, protocol) = BuildClient();
-
-        protocol.NextRoutingKey = StreamEngine.BuildRoutingKey(
-            new StreamRequest(StreamKind.OrderBook, WireSymbol, Depth: 5));
+        var (client, fake, _) = BuildClient();
 
         var received = new ConcurrentQueue<OrderBook>();
         await using (client)
@@ -346,11 +325,7 @@ public sealed class StreamClientTests
     [Fact]
     public async Task SubscribeToKlinesAsync_BareFunc_WrapsIntoHandlers_AndDelivers()
     {
-        var (client, fake, protocol) = BuildClient();
-
-        protocol.NextRoutingKey = StreamEngine.BuildRoutingKey(
-            new StreamRequest(StreamKind.Kline, WireSymbol,
-                Interval: KlineInterval.OneMinute.ToString()));
+        var (client, fake, _) = BuildClient();
 
         var received = new ConcurrentQueue<Candlestick>();
         await using (client)

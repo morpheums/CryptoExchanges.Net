@@ -36,6 +36,17 @@ internal sealed class BinanceStreamProtocol : IStreamProtocol
     public HeartbeatPolicy Heartbeat => HeartbeatPolicyInstance;
 
     /// <inheritdoc/>
+    public string RoutingKeyFor(StreamRequest request)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        // Returns the same venue-native token that Classify reads from the "stream" field
+        // of a combined-stream data frame (e.g. "btcusdt@ticker", "btcusdt@depth20",
+        // "btcusdt@kline_1m"). Single-sourcing both sides through BuildStreamToken ensures
+        // subscribe-time registration and receive-time lookup share one keyspace.
+        return BuildStreamToken(request);
+    }
+
+    /// <inheritdoc/>
     public string BuildSubscribe(StreamRequest request)
     {
         ArgumentNullException.ThrowIfNull(request);

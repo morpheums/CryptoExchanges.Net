@@ -42,6 +42,17 @@ internal interface IStreamProtocol
     string BuildUnsubscribe(StreamRequest request);
 
     /// <summary>
+    /// Returns the routing key the engine must use to register and look up subscriptions for
+    /// the given <paramref name="request"/>. The key produced here must be identical to the
+    /// <see cref="StreamFrame.RoutingKey"/> that <see cref="Classify"/> returns for a data frame
+    /// belonging to the same stream — both sides share one venue-native keyspace. The engine
+    /// calls this method on subscribe and uses <see cref="Classify"/> on receive; they must agree.
+    /// </summary>
+    /// <param name="request">The subscription descriptor.</param>
+    /// <returns>The venue-native routing key (e.g. <c>btcusdt@ticker</c>).</returns>
+    string RoutingKeyFor(StreamRequest request);
+
+    /// <summary>
     /// Classifies a raw received frame into an engine-actionable <see cref="StreamFrame"/>.
     /// <list type="bullet">
     ///   <item><see cref="FrameKind.Data"/> — routable market-data frame; <see cref="StreamFrame.RoutingKey"/> identifies the target subscription.</item>

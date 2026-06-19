@@ -3,128 +3,6 @@ using DeltaMapper;
 
 namespace CryptoExchanges.Net.Bitget.Services;
 
-// ---------------------------------------------------------------------------
-//  Bitget V2 response envelope + market-data DTOs (internal)
-// ---------------------------------------------------------------------------
-
-/// <summary>
-/// The uniform Bitget V2 response envelope: <c>{ code, msg, requestTime, data }</c>. Bitget's success
-/// code is the string <c>"00000"</c>; a non-zero code never reaches the services — the resilience
-/// pipeline's error translator converts such envelopes into typed exceptions — so any envelope
-/// deserialized here is already a success.
-/// </summary>
-/// <typeparam name="T">The element type of the <c>data</c> array for the endpoint.</typeparam>
-internal sealed record BitgetResponse<T>
-{
-    [JsonPropertyName("code")]
-    public string Code { get; init; } = "00000";
-
-    [JsonPropertyName("msg")]
-    public string Msg { get; init; } = string.Empty;
-
-    [JsonPropertyName("data")]
-    public List<T> Data { get; init; } = [];
-}
-
-/// <summary>Bitget V2 envelope for endpoints whose <c>data</c> is a single object, not an array
-/// (e.g. <c>/api/v2/public/time</c>).</summary>
-/// <typeparam name="T">The type of the <c>data</c> object.</typeparam>
-internal sealed record BitgetObjectResponse<T>
-{
-    [JsonPropertyName("code")]
-    public string Code { get; init; } = "00000";
-
-    [JsonPropertyName("msg")]
-    public string Msg { get; init; } = string.Empty;
-
-    [JsonPropertyName("data")]
-    public T? Data { get; init; }
-}
-
-internal sealed record BitgetTicker
-{
-    [JsonPropertyName("symbol")]
-    public string Symbol { get; init; } = string.Empty;
-
-    [JsonPropertyName("lastPr")]
-    public string LastPr { get; init; } = "0";
-
-    /// <summary>Opening price 24h ago, the reference for the 24h change.</summary>
-    [JsonPropertyName("open")]
-    public string Open { get; init; } = "0";
-
-    [JsonPropertyName("high24h")]
-    public string High24h { get; init; } = "0";
-
-    [JsonPropertyName("low24h")]
-    public string Low24h { get; init; } = "0";
-
-    /// <summary>24h trading volume in the base currency.</summary>
-    [JsonPropertyName("baseVolume")]
-    public string BaseVolume { get; init; } = "0";
-
-    /// <summary>24h trading volume in the quote currency.</summary>
-    [JsonPropertyName("quoteVolume")]
-    public string QuoteVolume { get; init; } = "0";
-
-    /// <summary>Fractional 24h price change (e.g. 0.05 = +5%); Bitget reports it directly.</summary>
-    [JsonPropertyName("change24h")]
-    public string Change24h { get; init; } = "0";
-
-    /// <summary>Ticker timestamp in unix milliseconds (string-encoded).</summary>
-    [JsonPropertyName("ts")]
-    public string Ts { get; init; } = "0";
-}
-
-internal sealed record BitgetOrderBook
-{
-    [JsonPropertyName("asks")]
-    public List<List<string>> Asks { get; init; } = [];
-
-    [JsonPropertyName("bids")]
-    public List<List<string>> Bids { get; init; } = [];
-
-    /// <summary>Snapshot timestamp in unix milliseconds (string-encoded).</summary>
-    [JsonPropertyName("ts")]
-    public string Ts { get; init; } = "0";
-}
-
-internal sealed record BitgetTrade
-{
-    [JsonPropertyName("tradeId")]
-    public string TradeId { get; init; } = string.Empty;
-
-    [JsonPropertyName("price")]
-    public string Price { get; init; } = "0";
-
-    [JsonPropertyName("size")]
-    public string Size { get; init; } = "0";
-
-    /// <summary>The taker side (<c>buy</c>/<c>sell</c>); a <c>sell</c> taker means the buyer was the maker.</summary>
-    [JsonPropertyName("side")]
-    public string Side { get; init; } = "buy";
-
-    /// <summary>Trade time in unix milliseconds (string-encoded).</summary>
-    [JsonPropertyName("ts")]
-    public string Ts { get; init; } = "0";
-}
-
-internal sealed record BitgetSymbol
-{
-    [JsonPropertyName("symbol")]
-    public string Symbol { get; init; } = string.Empty;
-
-    [JsonPropertyName("baseCoin")]
-    public string BaseCoin { get; init; } = string.Empty;
-
-    [JsonPropertyName("quoteCoin")]
-    public string QuoteCoin { get; init; } = string.Empty;
-}
-
-// ---------------------------------------------------------------------------
-//  BitgetMarketDataService
-// ---------------------------------------------------------------------------
-
 /// <summary>
 /// Bitget implementation of <see cref="IMarketDataService"/> against the V2 spot REST API.
 /// </summary>
@@ -163,11 +41,11 @@ internal sealed class BitgetMarketDataService(IBitgetHttpClient http, ISymbolMap
             // Single-symbol path: /api/v2/spot/market/tickers?symbol=... . The caller asked for a
             // specific symbol, so an unresolvable wire string is a genuine error — let the mapper throw.
             var single = new Dictionary<string, string> { ["symbol"] = mapper.ToWire(symbol.Value) };
-            var oneResp = await http.GetAsync<BitgetResponse<BitgetTicker>>("/api/v2/spot/market/tickers", single, false, ct).ConfigureAwait(false);
-            return oneResp.Data.Select(modelMapper.Map<BitgetTicker, Ticker>).ToList();
+            var oneResp = await http.GetAsync<ResponseDto<TickerDto>>("/api/v2/spot/market/tickers", single, false, ct).ConfigureAwait(false);
+            return oneResp.Data.Select(modelMapper.Map<TickerDto, Ticker>).ToList();
         }
 
-        var response = await http.GetAsync<BitgetResponse<BitgetTicker>>("/api/v2/spot/market/tickers", null, false, ct).ConfigureAwait(false);
+        var response = await http.GetAsync<ResponseDto<TickerDto>>("/api/v2/spot/market/tickers", null, false, ct).ConfigureAwait(false);
 
         // The full universe includes obscure/transitional pairs that may not resolve against a cold
         // cache or any known quote suffix; skip those rather than failing the whole batch. Callers
@@ -185,8 +63,8 @@ internal sealed class BitgetMarketDataService(IBitgetHttpClient http, ISymbolMap
             ["limit"] = Math.Clamp(depth, 1, 150).ToString(System.Globalization.CultureInfo.InvariantCulture)
         };
 
-        var response = await http.GetAsync<BitgetResponse<BitgetOrderBook>>("/api/v2/spot/market/orderbook", parameters, false, ct).ConfigureAwait(false);
-        var book = response.Data.FirstOrDefault() ?? new BitgetOrderBook();
+        var response = await http.GetAsync<ResponseDto<OrderBookDto>>("/api/v2/spot/market/orderbook", parameters, false, ct).ConfigureAwait(false);
+        var book = response.Data.FirstOrDefault() ?? new OrderBookDto();
 
         // Bitget book levels are [price, size]; only price+size are used. Skip short/malformed rows
         // (fewer than 2 fields) rather than index out of range — mirrors the candle parser's guard.
@@ -223,7 +101,7 @@ internal sealed class BitgetMarketDataService(IBitgetHttpClient http, ISymbolMap
 
         // Bitget returns candles as a data array of string arrays:
         // [ts, open, high, low, close, baseVolume, quoteVolume, usdtVolume].
-        var response = await http.GetAsync<BitgetResponse<List<string>>>("/api/v2/spot/market/candles", parameters, false, ct).ConfigureAwait(false);
+        var response = await http.GetAsync<ResponseDto<List<string>>>("/api/v2/spot/market/candles", parameters, false, ct).ConfigureAwait(false);
 
         var candles = new List<Candlestick>();
         foreach (var arr in response.Data)
@@ -252,7 +130,7 @@ internal sealed class BitgetMarketDataService(IBitgetHttpClient http, ISymbolMap
     public async Task<decimal> GetPriceAsync(Symbol symbol, CancellationToken ct = default)
     {
         var parameters = new Dictionary<string, string> { ["symbol"] = mapper.ToWire(symbol) };
-        var response = await http.GetAsync<BitgetResponse<BitgetTicker>>("/api/v2/spot/market/tickers", parameters, false, ct).ConfigureAwait(false);
+        var response = await http.GetAsync<ResponseDto<TickerDto>>("/api/v2/spot/market/tickers", parameters, false, ct).ConfigureAwait(false);
         var ticker = response.Data.FirstOrDefault();
         return ticker is null ? 0m : BitgetValueParsers.ParseDecimal(ticker.LastPr);
     }
@@ -267,7 +145,7 @@ internal sealed class BitgetMarketDataService(IBitgetHttpClient http, ISymbolMap
             ["limit"] = Math.Clamp(limit, 1, 500).ToString(System.Globalization.CultureInfo.InvariantCulture)
         };
 
-        var response = await http.GetAsync<BitgetResponse<BitgetTrade>>("/api/v2/spot/market/fills", parameters, false, ct).ConfigureAwait(false);
+        var response = await http.GetAsync<ResponseDto<TradeDto>>("/api/v2/spot/market/fills", parameters, false, ct).ConfigureAwait(false);
 
         // Trade.Symbol is the caller's typed argument (already held), not resolved from the wire
         // string, so a cold mapper cache can never make this throw. IsBuyerMaker = taker sold.
@@ -284,13 +162,13 @@ internal sealed class BitgetMarketDataService(IBitgetHttpClient http, ISymbolMap
     /// <inheritdoc />
     public async Task<ExchangeInfo> GetExchangeInfoAsync(CancellationToken ct = default)
     {
-        var response = await http.GetAsync<BitgetResponse<BitgetSymbol>>("/api/v2/spot/public/symbols", null, false, ct).ConfigureAwait(false);
+        var response = await http.GetAsync<ResponseDto<SymbolInfoDto>>("/api/v2/spot/public/symbols", null, false, ct).ConfigureAwait(false);
 
         // Bitget symbols can include entries whose base/quote are not representable assets; skip
         // those rather than throw.
         var representable = response.Data
             .Where(s => Asset.TryOf(s.BaseCoin, out _) && Asset.TryOf(s.QuoteCoin, out _));
-        var symbols = modelMapper.Map<BitgetSymbol, SymbolInfo>(representable);
+        var symbols = modelMapper.Map<SymbolInfoDto, SymbolInfo>(representable);
 
         // Populate the mapper's wire->Symbol lookup table from the freshly fetched symbols.
         mapper.UpdateSymbols(symbols);
@@ -316,18 +194,16 @@ internal sealed class BitgetMarketDataService(IBitgetHttpClient http, ISymbolMap
         return supported.TryGetValue(symbol, out var canonical) ? canonical : null;
     }
 
-    // ── Mapping helpers ──
-
     /// <summary>
     /// Maps a ticker, yielding nothing when its wire symbol cannot be resolved. Used for the
     /// full-universe response where unknown/delisted pairs must not abort the whole batch.
     /// </summary>
-    private IEnumerable<Ticker> TryMapTicker(BitgetTicker t)
+    private IEnumerable<Ticker> TryMapTicker(TickerDto t)
     {
         Ticker ticker;
         try
         {
-            ticker = modelMapper.Map<BitgetTicker, Ticker>(t);
+            ticker = modelMapper.Map<TickerDto, Ticker>(t);
         }
         catch (FormatException)
         {

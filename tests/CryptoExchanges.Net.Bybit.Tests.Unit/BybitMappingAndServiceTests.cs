@@ -39,7 +39,7 @@ public class BybitMappingAndServiceTests
     public void OrderProfile_MapsAllScalarsAndResolvesSymbol()
     {
         var (_, mapper) = BuildMappers();
-        var dto = new BybitOrder
+        var dto = new OrderDto
         {
             Symbol = "BTCUSDT",
             OrderId = "111",
@@ -57,7 +57,7 @@ public class BybitMappingAndServiceTests
             UpdatedTime = "1700000001000"
         };
 
-        var order = mapper.Map<BybitOrder, Order>(dto);
+        var order = mapper.Map<OrderDto, Order>(dto);
 
         order.Symbol.Should().Be(BtcUsdt);
         order.OrderId.Should().Be("111");
@@ -79,7 +79,7 @@ public class BybitMappingAndServiceTests
     public void TickerProfile_ScalesPercentAndComputesChange()
     {
         var (_, mapper) = BuildMappers();
-        var dto = new BybitTicker
+        var dto = new TickerDto
         {
             Symbol = "BTCUSDT",
             LastPrice = "42000",
@@ -91,7 +91,7 @@ public class BybitMappingAndServiceTests
             Price24hPcnt = "0.025"
         };
 
-        var ticker = mapper.Map<BybitTicker, Ticker>(dto);
+        var ticker = mapper.Map<TickerDto, Ticker>(dto);
 
         ticker.Symbol.Should().Be(BtcUsdt);
         ticker.LastPrice.Should().Be(42000m);
@@ -105,9 +105,9 @@ public class BybitMappingAndServiceTests
     public void InstrumentProfile_MapsBaseQuoteToSymbol()
     {
         var (_, mapper) = BuildMappers();
-        var dto = new BybitInstrument { Symbol = "BTCUSDT", BaseCoin = "BTC", QuoteCoin = "USDT" };
+        var dto = new SymbolInfoDto { Symbol = "BTCUSDT", BaseCoin = "BTC", QuoteCoin = "USDT" };
 
-        var info = mapper.Map<BybitInstrument, SymbolInfo>(dto);
+        var info = mapper.Map<SymbolInfoDto, SymbolInfo>(dto);
 
         info.Symbol.Should().Be(BtcUsdt);
         info.AllowedOrderTypes.Should().Contain(OrderType.Limit).And.Contain(OrderType.Market);
@@ -117,9 +117,9 @@ public class BybitMappingAndServiceTests
     public void BalanceProfile_FreeIsWalletMinusLocked()
     {
         var (_, mapper) = BuildMappers();
-        var dto = new BybitCoinBalance { Coin = "BTC", WalletBalance = "1.75", Locked = "0.25" };
+        var dto = new BalanceDto { Coin = "BTC", WalletBalance = "1.75", Locked = "0.25" };
 
-        var balance = mapper.Map<BybitCoinBalance, AssetBalance>(dto);
+        var balance = mapper.Map<BalanceDto, AssetBalance>(dto);
 
         balance.Asset.Should().Be(Asset.Btc);
         balance.Free.Should().Be(1.5m);
@@ -134,11 +134,11 @@ public class BybitMappingAndServiceTests
     {
         var (symbolMapper, mapper) = BuildMappers();
         var http = Substitute.For<IBybitHttpClient>();
-        http.GetAsync<BybitResponse<BybitTickerResult>>(
+        http.GetAsync<ResponseDto<ListDto<TickerDto>>>(
                 "/v5/market/tickers", Arg.Any<Dictionary<string, string>>(), false, Arg.Any<CancellationToken>())
-            .Returns(new BybitResponse<BybitTickerResult>
+            .Returns(new ResponseDto<ListDto<TickerDto>>
             {
-                Result = new BybitTickerResult { List = [new BybitTicker { Symbol = "BTCUSDT", LastPrice = "42000", PrevPrice24h = "41000" }] }
+                Result = new ListDto<TickerDto> { List = [new TickerDto { Symbol = "BTCUSDT", LastPrice = "42000", PrevPrice24h = "41000" }] }
             });
 
         var service = new BybitMarketDataService(http, symbolMapper, mapper);
@@ -156,20 +156,20 @@ public class BybitMappingAndServiceTests
     {
         var (symbolMapper, mapper) = BuildMappers();
         var http = Substitute.For<IBybitHttpClient>();
-        http.GetAsync<BybitResponse<BybitListResult<BybitWalletAccount>>>(
+        http.GetAsync<ResponseDto<ListDto<AccountDto>>>(
                 "/v5/account/wallet-balance", Arg.Any<Dictionary<string, string>>(), true, Arg.Any<CancellationToken>())
-            .Returns(new BybitResponse<BybitListResult<BybitWalletAccount>>
+            .Returns(new ResponseDto<ListDto<AccountDto>>
             {
-                Result = new BybitListResult<BybitWalletAccount>
+                Result = new ListDto<AccountDto>
                 {
                     List =
                     [
-                        new BybitWalletAccount
+                        new AccountDto
                         {
                             Coin =
                             [
-                                new BybitCoinBalance { Coin = "BTC", WalletBalance = "1.5", Locked = "0" },
-                                new BybitCoinBalance { Coin = "ZZZ", WalletBalance = "0", Locked = "0" }
+                                new BalanceDto { Coin = "BTC", WalletBalance = "1.5", Locked = "0" },
+                                new BalanceDto { Coin = "ZZZ", WalletBalance = "0", Locked = "0" }
                             ]
                         }
                     ]
@@ -191,13 +191,13 @@ public class BybitMappingAndServiceTests
     {
         var (symbolMapper, mapper) = BuildMappers();
         var http = Substitute.For<IBybitHttpClient>();
-        http.GetAsync<BybitResponse<BybitListResult<BybitOrder>>>(
+        http.GetAsync<ResponseDto<ListDto<OrderDto>>>(
                 "/v5/order/realtime", Arg.Any<Dictionary<string, string>>(), true, Arg.Any<CancellationToken>())
-            .Returns(new BybitResponse<BybitListResult<BybitOrder>>
+            .Returns(new ResponseDto<ListDto<OrderDto>>
             {
-                Result = new BybitListResult<BybitOrder>
+                Result = new ListDto<OrderDto>
                 {
-                    List = [new BybitOrder { Symbol = "BTCUSDT", OrderId = "9", Qty = "1", Price = "5" }]
+                    List = [new OrderDto { Symbol = "BTCUSDT", OrderId = "9", Qty = "1", Price = "5" }]
                 }
             });
 
@@ -217,9 +217,9 @@ public class BybitMappingAndServiceTests
         var (symbolMapper, mapper) = BuildMappers();
         var http = Substitute.For<IBybitHttpClient>();
         Dictionary<string, string>? captured = null;
-        http.GetAsync<BybitResponse<BybitListResult<BybitOrder>>>(
+        http.GetAsync<ResponseDto<ListDto<OrderDto>>>(
                 "/v5/order/history", Arg.Do<Dictionary<string, string>>(p => captured = p), true, Arg.Any<CancellationToken>())
-            .Returns(new BybitResponse<BybitListResult<BybitOrder>> { Result = new BybitListResult<BybitOrder>() });
+            .Returns(new ResponseDto<ListDto<OrderDto>> { Result = new ListDto<OrderDto>() });
 
         var service = new BybitTradingService(http, symbolMapper, mapper);
 
@@ -237,9 +237,9 @@ public class BybitMappingAndServiceTests
         var (symbolMapper, mapper) = BuildMappers();
         var http = Substitute.For<IBybitHttpClient>();
         Dictionary<string, string>? captured = null;
-        http.GetAsync<BybitResponse<BybitListResult<BybitExecution>>>(
+        http.GetAsync<ResponseDto<ListDto<FillDto>>>(
                 "/v5/execution/list", Arg.Do<Dictionary<string, string>>(p => captured = p), true, Arg.Any<CancellationToken>())
-            .Returns(new BybitResponse<BybitListResult<BybitExecution>> { Result = new BybitListResult<BybitExecution>() });
+            .Returns(new ResponseDto<ListDto<FillDto>> { Result = new ListDto<FillDto>() });
 
         var service = new BybitAccountService(http, symbolMapper, mapper);
 
@@ -259,19 +259,19 @@ public class BybitMappingAndServiceTests
         var http = Substitute.For<IBybitHttpClient>();
 
         // The cancel ACK omits orderId (only orderLinkId is echoed).
-        http.PostAsync<BybitResponse<BybitOrderAck>>(
+        http.PostAsync<ResponseDto<OrderAckDto>>(
                 "/v5/order/cancel", Arg.Any<Dictionary<string, string>>(), true, Arg.Any<CancellationToken>())
-            .Returns(new BybitResponse<BybitOrderAck> { Result = new BybitOrderAck { OrderId = string.Empty, OrderLinkId = "cli-77" } });
+            .Returns(new ResponseDto<OrderAckDto> { Result = new OrderAckDto { OrderId = string.Empty, OrderLinkId = "cli-77" } });
 
         // The re-fetch must query by orderLinkId (orderId is empty) and resolve the real order.
         Dictionary<string, string>? refetchParams = null;
-        http.GetAsync<BybitResponse<BybitListResult<BybitOrder>>>(
+        http.GetAsync<ResponseDto<ListDto<OrderDto>>>(
                 "/v5/order/realtime", Arg.Do<Dictionary<string, string>>(p => refetchParams = p), true, Arg.Any<CancellationToken>())
-            .Returns(new BybitResponse<BybitListResult<BybitOrder>>
+            .Returns(new ResponseDto<ListDto<OrderDto>>
             {
-                Result = new BybitListResult<BybitOrder>
+                Result = new ListDto<OrderDto>
                 {
-                    List = [new BybitOrder { Symbol = "BTCUSDT", OrderId = "real-99", OrderLinkId = "cli-77", OrderStatus = "Cancelled" }]
+                    List = [new OrderDto { Symbol = "BTCUSDT", OrderId = "real-99", OrderLinkId = "cli-77", OrderStatus = "Cancelled" }]
                 }
             });
 

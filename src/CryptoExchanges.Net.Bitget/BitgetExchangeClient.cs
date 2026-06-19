@@ -1,5 +1,4 @@
 using System.Diagnostics.CodeAnalysis;
-using System.Text.Json.Serialization;
 using CryptoExchanges.Net.Bitget.Internal;
 using CryptoExchanges.Net.Bitget.Services;
 using CryptoExchanges.Net.Core.Enums;
@@ -87,7 +86,7 @@ public sealed class BitgetExchangeClient : IExchangeClient, IAsyncDisposable
     /// <param name="ct">Cancellation token.</param>
     public async Task SyncServerTimeAsync(CancellationToken ct = default)
     {
-        var resp = await _http.GetAsync<BitgetObjectResponse<BitgetServerTime>>("/api/v2/public/time", signed: false, ct: ct).ConfigureAwait(false);
+        var resp = await _http.GetAsync<ResponseObjectDto<ServerTimeDto>>("/api/v2/public/time", signed: false, ct: ct).ConfigureAwait(false);
         var serverTimeMs = ServerTimeMs(resp.Data);
         // A missing/malformed /time payload (ServerTimeMs returns 0) is a degraded but non-fatal
         // response: skip the offset update (keep the prior/local clock) rather than throw.
@@ -101,7 +100,7 @@ public sealed class BitgetExchangeClient : IExchangeClient, IAsyncDisposable
         try
         {
             // The resilience pipeline throws typed exceptions on failure, so reaching here is success.
-            _ = await _http.GetAsync<BitgetObjectResponse<BitgetServerTime>>("/api/v2/public/time", signed: false, ct: ct).ConfigureAwait(false);
+            _ = await _http.GetAsync<ResponseObjectDto<ServerTimeDto>>("/api/v2/public/time", signed: false, ct: ct).ConfigureAwait(false);
             return true;
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
@@ -127,14 +126,6 @@ public sealed class BitgetExchangeClient : IExchangeClient, IAsyncDisposable
     }
 
     /// <summary>Resolves server time in unix milliseconds from the V2 time envelope (serverTime is ms as a string).</summary>
-    private static long ServerTimeMs(BitgetServerTime? result)
+    private static long ServerTimeMs(ServerTimeDto? result)
         => result is null ? 0L : BitgetValueParsers.ParseMs(result.ServerTime);
-}
-
-/// <summary>The <c>data</c> element of the Bitget V2 <c>/api/v2/public/time</c> response.</summary>
-internal sealed record BitgetServerTime
-{
-    /// <summary>Server time in unix milliseconds (string-encoded).</summary>
-    [JsonPropertyName("serverTime")]
-    public string ServerTime { get; init; } = "0";
 }

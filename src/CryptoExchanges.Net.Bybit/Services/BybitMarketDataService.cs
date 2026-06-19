@@ -1,128 +1,8 @@
-using System.Text.Json.Serialization;
 using CryptoExchanges.Net.Bybit.Internal;
 using CryptoExchanges.Net.Core.Interfaces;
 using DeltaMapper;
 
 namespace CryptoExchanges.Net.Bybit.Services;
-
-// ---------------------------------------------------------------------------
-//  Bybit V5 response envelope + market-data DTOs (internal)
-// ---------------------------------------------------------------------------
-
-/// <summary>
-/// The uniform Bybit V5 response envelope: <c>{ retCode, retMsg, result, time }</c>. A non-zero
-/// <c>retCode</c> never reaches the services — the resilience pipeline's error translator converts
-/// such envelopes into typed exceptions — so any envelope deserialized here is already a success.
-/// </summary>
-/// <typeparam name="T">The shape of the <c>result</c> object for the endpoint.</typeparam>
-internal sealed record BybitResponse<T>
-{
-    [JsonPropertyName("retCode")]
-    public int RetCode { get; init; }
-
-    [JsonPropertyName("retMsg")]
-    public string RetMsg { get; init; } = string.Empty;
-
-    [JsonPropertyName("result")]
-    public T? Result { get; init; }
-}
-
-/// <summary>A V5 <c>result.list</c> wrapper, used by the many list-returning endpoints.</summary>
-/// <typeparam name="T">The element type of the list.</typeparam>
-internal sealed record BybitListResult<T>
-{
-    [JsonPropertyName("list")]
-    public List<T> List { get; init; } = [];
-}
-
-internal sealed record BybitTickerResult
-{
-    [JsonPropertyName("list")]
-    public List<BybitTicker> List { get; init; } = [];
-}
-
-internal sealed record BybitTicker
-{
-    [JsonPropertyName("symbol")]
-    public string Symbol { get; init; } = string.Empty;
-
-    [JsonPropertyName("lastPrice")]
-    public string LastPrice { get; init; } = "0";
-
-    [JsonPropertyName("prevPrice24h")]
-    public string PrevPrice24h { get; init; } = "0";
-
-    [JsonPropertyName("highPrice24h")]
-    public string HighPrice24h { get; init; } = "0";
-
-    [JsonPropertyName("lowPrice24h")]
-    public string LowPrice24h { get; init; } = "0";
-
-    [JsonPropertyName("volume24h")]
-    public string Volume24h { get; init; } = "0";
-
-    [JsonPropertyName("turnover24h")]
-    public string Turnover24h { get; init; } = "0";
-
-    /// <summary>24h price change as a fraction (e.g. <c>0.01</c> = +1%); converted to a percent in the profile.</summary>
-    [JsonPropertyName("price24hPcnt")]
-    public string Price24hPcnt { get; init; } = "0";
-}
-
-internal sealed record BybitOrderBookResult
-{
-    [JsonPropertyName("s")]
-    public string Symbol { get; init; } = string.Empty;
-
-    [JsonPropertyName("b")]
-    public List<List<string>> Bids { get; init; } = [];
-
-    [JsonPropertyName("a")]
-    public List<List<string>> Asks { get; init; } = [];
-
-    /// <summary>Timestamp the snapshot was generated, in unix milliseconds.</summary>
-    [JsonPropertyName("ts")]
-    public long Timestamp { get; init; }
-
-    /// <summary>Update id of the snapshot.</summary>
-    [JsonPropertyName("u")]
-    public long UpdateId { get; init; }
-}
-
-internal sealed record BybitTrade
-{
-    [JsonPropertyName("execId")]
-    public string ExecId { get; init; } = string.Empty;
-
-    [JsonPropertyName("price")]
-    public string Price { get; init; } = "0";
-
-    [JsonPropertyName("size")]
-    public string Size { get; init; } = "0";
-
-    /// <summary>The taker side of the trade (<c>Buy</c>/<c>Sell</c>); a <c>Sell</c> taker means the buyer was the maker.</summary>
-    [JsonPropertyName("side")]
-    public string Side { get; init; } = "Buy";
-
-    [JsonPropertyName("time")]
-    public long Time { get; init; }
-}
-
-internal sealed record BybitInstrument
-{
-    [JsonPropertyName("symbol")]
-    public string Symbol { get; init; } = string.Empty;
-
-    [JsonPropertyName("baseCoin")]
-    public string BaseCoin { get; init; } = string.Empty;
-
-    [JsonPropertyName("quoteCoin")]
-    public string QuoteCoin { get; init; } = string.Empty;
-}
-
-// ---------------------------------------------------------------------------
-//  BybitMarketDataService
-// ---------------------------------------------------------------------------
 
 /// <summary>
 /// Bybit implementation of <see cref="IMarketDataService"/> against the V5 spot REST API.
@@ -166,14 +46,14 @@ internal sealed class BybitMarketDataService(IBybitHttpClient http, ISymbolMappe
         if (symbol.HasValue)
             parameters["symbol"] = mapper.ToWire(symbol.Value);
 
-        var response = await http.GetAsync<BybitResponse<BybitTickerResult>>("/v5/market/tickers", parameters, false, ct).ConfigureAwait(false);
+        var response = await http.GetAsync<ResponseDto<ListDto<TickerDto>>>("/v5/market/tickers", parameters, false, ct).ConfigureAwait(false);
         var list = response.Result?.List ?? [];
 
         if (symbol.HasValue)
         {
             // The caller asked for a specific symbol, so an unresolvable wire string is a genuine
             // error — let the mapper throw rather than silently dropping it.
-            return list.Select(modelMapper.Map<BybitTicker, Ticker>).ToList();
+            return list.Select(modelMapper.Map<TickerDto, Ticker>).ToList();
         }
 
         // The full universe includes obscure/transitional pairs that may not resolve against a
@@ -192,8 +72,8 @@ internal sealed class BybitMarketDataService(IBybitHttpClient http, ISymbolMappe
             ["limit"] = depth.ToString()
         };
 
-        var response = await http.GetAsync<BybitResponse<BybitOrderBookResult>>("/v5/market/orderbook", parameters, false, ct).ConfigureAwait(false);
-        var result = response.Result ?? new BybitOrderBookResult();
+        var response = await http.GetAsync<ResponseDto<OrderBookDto>>("/v5/market/orderbook", parameters, false, ct).ConfigureAwait(false);
+        var result = response.Result ?? new OrderBookDto();
 
         var bids = result.Bids.Select(b => new OrderBookEntry(BybitValueParsers.ParseDecimal(b[0]), BybitValueParsers.ParseDecimal(b[1]))).ToList();
         var asks = result.Asks.Select(a => new OrderBookEntry(BybitValueParsers.ParseDecimal(a[0]), BybitValueParsers.ParseDecimal(a[1]))).ToList();
@@ -226,7 +106,7 @@ internal sealed class BybitMarketDataService(IBybitHttpClient http, ISymbolMappe
 
         // Bybit returns klines as result.list of string arrays:
         // [startTime, open, high, low, close, volume, turnover], newest-first.
-        var response = await http.GetAsync<BybitResponse<BybitListResult<List<string>>>>("/v5/market/kline", parameters, false, ct).ConfigureAwait(false);
+        var response = await http.GetAsync<ResponseDto<ListDto<List<string>>>>("/v5/market/kline", parameters, false, ct).ConfigureAwait(false);
         var rows = response.Result?.List ?? [];
 
         var candles = new List<Candlestick>();
@@ -262,7 +142,7 @@ internal sealed class BybitMarketDataService(IBybitHttpClient http, ISymbolMappe
             ["symbol"] = mapper.ToWire(symbol)
         };
 
-        var response = await http.GetAsync<BybitResponse<BybitTickerResult>>("/v5/market/tickers", parameters, false, ct).ConfigureAwait(false);
+        var response = await http.GetAsync<ResponseDto<ListDto<TickerDto>>>("/v5/market/tickers", parameters, false, ct).ConfigureAwait(false);
         var ticker = response.Result?.List.FirstOrDefault();
         return ticker is null ? 0m : BybitValueParsers.ParseDecimal(ticker.LastPrice);
     }
@@ -277,7 +157,7 @@ internal sealed class BybitMarketDataService(IBybitHttpClient http, ISymbolMappe
             ["limit"] = limit.ToString()
         };
 
-        var response = await http.GetAsync<BybitResponse<BybitListResult<BybitTrade>>>("/v5/market/recent-trade", parameters, false, ct).ConfigureAwait(false);
+        var response = await http.GetAsync<ResponseDto<ListDto<TradeDto>>>("/v5/market/recent-trade", parameters, false, ct).ConfigureAwait(false);
         var trades = response.Result?.List ?? [];
 
         // Trade.Symbol is the caller's typed argument (already held), not resolved from the wire
@@ -296,14 +176,14 @@ internal sealed class BybitMarketDataService(IBybitHttpClient http, ISymbolMappe
     public async Task<ExchangeInfo> GetExchangeInfoAsync(CancellationToken ct = default)
     {
         var parameters = new Dictionary<string, string> { ["category"] = SpotCategory };
-        var response = await http.GetAsync<BybitResponse<BybitListResult<BybitInstrument>>>("/v5/market/instruments-info", parameters, false, ct).ConfigureAwait(false);
+        var response = await http.GetAsync<ResponseDto<ListDto<SymbolInfoDto>>>("/v5/market/instruments-info", parameters, false, ct).ConfigureAwait(false);
         var instruments = response.Result?.List ?? [];
 
         // Bybit instruments can include entries whose base/quote are not representable assets;
         // skip those rather than throw.
         var representable = instruments
             .Where(s => Asset.TryOf(s.BaseCoin, out _) && Asset.TryOf(s.QuoteCoin, out _));
-        var symbols = modelMapper.Map<BybitInstrument, SymbolInfo>(representable);
+        var symbols = modelMapper.Map<SymbolInfoDto, SymbolInfo>(representable);
 
         // Populate the mapper's wire->Symbol lookup table from the freshly fetched symbols.
         mapper.UpdateSymbols(symbols);
@@ -329,18 +209,16 @@ internal sealed class BybitMarketDataService(IBybitHttpClient http, ISymbolMappe
         return supported.TryGetValue(symbol, out var canonical) ? canonical : null;
     }
 
-    // ── Mapping helpers ──
-
     /// <summary>
     /// Maps a ticker, yielding nothing when its wire symbol cannot be resolved. Used for the
     /// full-universe response where unknown/delisted pairs must not abort the whole batch.
     /// </summary>
-    private IEnumerable<Ticker> TryMapTicker(BybitTicker t)
+    private IEnumerable<Ticker> TryMapTicker(TickerDto t)
     {
         Ticker ticker;
         try
         {
-            ticker = modelMapper.Map<BybitTicker, Ticker>(t);
+            ticker = modelMapper.Map<TickerDto, Ticker>(t);
         }
         catch (FormatException)
         {

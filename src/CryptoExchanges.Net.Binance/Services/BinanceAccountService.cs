@@ -5,59 +5,6 @@ using DeltaMapper;
 
 namespace CryptoExchanges.Net.Binance.Services;
 
-// ---------------------------------------------------------------------------
-//  Binance Account DTOs
-// ---------------------------------------------------------------------------
-
-internal sealed record BinanceAccountResponse
-{
-    [JsonPropertyName("balances")]
-    public List<BinanceBalance> Balances { get; init; } = [];
-}
-
-internal sealed record BinanceBalance
-{
-    [JsonPropertyName("asset")]
-    public string Asset { get; init; } = string.Empty;
-
-    [JsonPropertyName("free")]
-    public string Free { get; init; } = "0";
-
-    [JsonPropertyName("locked")]
-    public string Locked { get; init; } = "0";
-}
-
-internal sealed record BinanceTradeHistoryResponse
-{
-    [JsonPropertyName("symbol")]
-    public string Symbol { get; init; } = string.Empty;
-
-    [JsonPropertyName("id")]
-    public long Id { get; init; }
-
-    [JsonPropertyName("orderId")]
-    public long OrderId { get; init; }
-
-    [JsonPropertyName("price")]
-    public string Price { get; init; } = "0";
-
-    [JsonPropertyName("qty")]
-    public string Qty { get; init; } = "0";
-
-    [JsonPropertyName("quoteQty")]
-    public string QuoteQty { get; init; } = "0";
-
-    [JsonPropertyName("time")]
-    public long Time { get; init; }
-
-    [JsonPropertyName("isBuyer")]
-    public bool IsBuyer { get; init; }
-}
-
-// ---------------------------------------------------------------------------
-//  BinanceAccountService
-// ---------------------------------------------------------------------------
-
 /// <summary>
 /// Binance implementation of <see cref="IAccountService"/>.
 /// </summary>
@@ -71,9 +18,9 @@ internal sealed class BinanceAccountService(IBinanceHttpClient http, ISymbolMapp
             ["omitZeroBalances"] = "true"
         };
 
-        var response = await http.GetAsync<BinanceAccountResponse>("/api/v3/account", parameters, true, ct).ConfigureAwait(false);
+        var response = await http.GetAsync<AccountDto>("/api/v3/account", parameters, true, ct).ConfigureAwait(false);
 
-        return modelMapper.Map<BinanceBalance, AssetBalance>(response.Balances);
+        return modelMapper.Map<BalanceDto, AssetBalance>(response.Balances);
     }
 
     /// <inheritdoc />
@@ -84,10 +31,10 @@ internal sealed class BinanceAccountService(IBinanceHttpClient http, ISymbolMapp
             ["omitZeroBalances"] = "true"
         };
 
-        var response = await http.GetAsync<BinanceAccountResponse>("/api/v3/account", parameters, true, ct).ConfigureAwait(false);
+        var response = await http.GetAsync<AccountDto>("/api/v3/account", parameters, true, ct).ConfigureAwait(false);
 
         var match = response.Balances
-            .Select(modelMapper.Map<BinanceBalance, AssetBalance>)
+            .Select(modelMapper.Map<BalanceDto, AssetBalance>)
             .FirstOrDefault(b => b.Asset == asset);
 
         return match.Asset == asset ? match : new AssetBalance(asset, 0, 0);
@@ -114,7 +61,7 @@ internal sealed class BinanceAccountService(IBinanceHttpClient http, ISymbolMapp
         if (endTime.HasValue)
             parameters["endTime"] = endTime.Value.ToUnixTimeMilliseconds().ToString();
 
-        var results = await http.GetAsync<List<BinanceTradeHistoryResponse>>("/api/v3/myTrades", parameters, true, ct).ConfigureAwait(false);
+        var results = await http.GetAsync<List<FillDto>>("/api/v3/myTrades", parameters, true, ct).ConfigureAwait(false);
 
         // Trade.Symbol is taken from the caller's typed argument (the caller already holds it),
         // not resolved from the wire string, so a cold mapper cache can never make this throw.

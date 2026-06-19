@@ -5,130 +5,6 @@ using DeltaMapper;
 
 namespace CryptoExchanges.Net.Binance.Services;
 
-// ---------------------------------------------------------------------------
-//  Binance-specific DTOs (internal)
-// ---------------------------------------------------------------------------
-
-internal sealed record BinanceTickerResponse
-{
-    [JsonPropertyName("symbol")]
-    public string Symbol { get; init; } = string.Empty;
-
-    [JsonPropertyName("lastPrice")]
-    public string LastPrice { get; init; } = "0";
-
-    [JsonPropertyName("openPrice")]
-    public string OpenPrice { get; init; } = "0";
-
-    [JsonPropertyName("highPrice")]
-    public string HighPrice { get; init; } = "0";
-
-    [JsonPropertyName("lowPrice")]
-    public string LowPrice { get; init; } = "0";
-
-    [JsonPropertyName("volume")]
-    public string Volume { get; init; } = "0";
-
-    [JsonPropertyName("quoteVolume")]
-    public string QuoteVolume { get; init; } = "0";
-
-    [JsonPropertyName("priceChange")]
-    public string PriceChange { get; init; } = "0";
-
-    [JsonPropertyName("priceChangePercent")]
-    public string PriceChangePercent { get; init; } = "0";
-
-    [JsonPropertyName("closeTime")]
-    public long CloseTime { get; init; }
-}
-
-internal sealed record BinanceOrderBookResponse
-{
-    [JsonPropertyName("lastUpdateId")]
-    public long LastUpdateId { get; init; }
-
-    [JsonPropertyName("bids")]
-    public List<List<string>> Bids { get; init; } = [];
-
-    [JsonPropertyName("asks")]
-    public List<List<string>> Asks { get; init; } = [];
-}
-
-// BinanceKlineResponse removed — kline parsing uses raw JsonDocument.
-
-internal sealed record BinancePriceResponse
-{
-    [JsonPropertyName("symbol")]
-    public string Symbol { get; init; } = string.Empty;
-
-    [JsonPropertyName("price")]
-    public string Price { get; init; } = "0";
-}
-
-internal sealed record BinanceTradeResponse
-{
-    [JsonPropertyName("id")]
-    public long Id { get; init; }
-
-    [JsonPropertyName("price")]
-    public string Price { get; init; } = "0";
-
-    [JsonPropertyName("qty")]
-    public string Qty { get; init; } = "0";
-
-    [JsonPropertyName("quoteQty")]
-    public string QuoteQty { get; init; } = "0";
-
-    [JsonPropertyName("time")]
-    public long Time { get; init; }
-
-    [JsonPropertyName("isBuyerMaker")]
-    public bool IsBuyerMaker { get; init; }
-}
-
-internal sealed record BinanceExchangeInfoResponse
-{
-    [JsonPropertyName("symbols")]
-    public List<BinanceSymbolInfo> Symbols { get; init; } = [];
-
-    [JsonPropertyName("rateLimits")]
-    public List<BinanceRateLimit> RateLimits { get; init; } = [];
-}
-
-internal sealed record BinanceSymbolInfo
-{
-    [JsonPropertyName("symbol")]
-    public string Symbol { get; init; } = string.Empty;
-
-    [JsonPropertyName("baseAsset")]
-    public string BaseAsset { get; init; } = string.Empty;
-
-    [JsonPropertyName("quoteAsset")]
-    public string QuoteAsset { get; init; } = string.Empty;
-
-    [JsonPropertyName("orderTypes")]
-    public List<string> OrderTypes { get; init; } = [];
-
-    [JsonPropertyName("filters")]
-    public List<JsonElement> Filters { get; init; } = [];
-}
-
-internal sealed record BinanceRateLimit
-{
-    [JsonPropertyName("rateLimitType")]
-    public string RateLimitType { get; init; } = string.Empty;
-
-    [JsonPropertyName("interval")]
-    public string Interval { get; init; } = string.Empty;
-
-    [JsonPropertyName("limit")]
-    public int Limit { get; init; }
-}
-
-// ---------------------------------------------------------------------------
-//  BinanceMarketDataService
-// ---------------------------------------------------------------------------
-
 /// <summary>
 /// Binance implementation of <see cref="IMarketDataService"/>.
 /// </summary>
@@ -171,17 +47,17 @@ internal sealed class BinanceMarketDataService(IBinanceHttpClient http, ISymbolM
         else
             parameters["type"] = "FULL";
 
-        List<BinanceTickerResponse>? results;
+        List<TickerDto>? results;
 
         if (symbol.HasValue)
         {
             // Single symbol returns an object, not an array. The caller asked for a specific
             // symbol, so an unresolvable wire string is a genuine error — let MapTicker throw.
-            var single = await http.GetAsync<BinanceTickerResponse>("/api/v3/ticker/24hr", parameters, false, ct).ConfigureAwait(false);
-            return [modelMapper.Map<BinanceTickerResponse, Ticker>(single)];
+            var single = await http.GetAsync<TickerDto>("/api/v3/ticker/24hr", parameters, false, ct).ConfigureAwait(false);
+            return [modelMapper.Map<TickerDto, Ticker>(single)];
         }
 
-        results = await http.GetAsync<List<BinanceTickerResponse>>("/api/v3/ticker/24hr", parameters, false, ct).ConfigureAwait(false);
+        results = await http.GetAsync<List<TickerDto>>("/api/v3/ticker/24hr", parameters, false, ct).ConfigureAwait(false);
 
         // The full universe includes obscure/delisted pairs that may not resolve against a
         // cold cache or any known quote suffix; skip those rather than failing the whole batch.
@@ -199,7 +75,7 @@ internal sealed class BinanceMarketDataService(IBinanceHttpClient http, ISymbolM
             ["limit"] = depth.ToString()
         };
 
-        var response = await http.GetAsync<BinanceOrderBookResponse>("/api/v3/depth", parameters, false, ct).ConfigureAwait(false);
+        var response = await http.GetAsync<OrderBookDto>("/api/v3/depth", parameters, false, ct).ConfigureAwait(false);
 
         var bids = response.Bids.Select(b => new OrderBookEntry(BinanceValueParsers.ParseDecimal(b[0]), BinanceValueParsers.ParseDecimal(b[1]))).ToList();
         var asks = response.Asks.Select(a => new OrderBookEntry(BinanceValueParsers.ParseDecimal(a[0]), BinanceValueParsers.ParseDecimal(a[1]))).ToList();
@@ -266,7 +142,7 @@ internal sealed class BinanceMarketDataService(IBinanceHttpClient http, ISymbolM
             ["symbol"] = mapper.ToWire(symbol)
         };
 
-        var response = await http.GetAsync<BinancePriceResponse>("/api/v3/ticker/price", parameters, false, ct).ConfigureAwait(false);
+        var response = await http.GetAsync<PriceDto>("/api/v3/ticker/price", parameters, false, ct).ConfigureAwait(false);
         return BinanceValueParsers.ParseDecimal(response.Price);
     }
 
@@ -279,7 +155,7 @@ internal sealed class BinanceMarketDataService(IBinanceHttpClient http, ISymbolM
             ["limit"] = limit.ToString()
         };
 
-        var results = await http.GetAsync<List<BinanceTradeResponse>>("/api/v3/trades", parameters, false, ct).ConfigureAwait(false);
+        var results = await http.GetAsync<List<TradeDto>>("/api/v3/trades", parameters, false, ct).ConfigureAwait(false);
 
         return results.Select(t => new Trade(
             symbol,
@@ -294,13 +170,13 @@ internal sealed class BinanceMarketDataService(IBinanceHttpClient http, ISymbolM
     /// <inheritdoc />
     public async Task<ExchangeInfo> GetExchangeInfoAsync(CancellationToken ct = default)
     {
-        var response = await http.GetAsync<BinanceExchangeInfoResponse>("/api/v3/exchangeInfo", null, false, ct).ConfigureAwait(false);
+        var response = await http.GetAsync<ExchangeInfoDto>("/api/v3/exchangeInfo", null, false, ct).ConfigureAwait(false);
 
         // Binance exchangeInfo can include non-standard entries whose base/quote are not
         // representable assets (e.g. non-ASCII test symbols); skip those rather than throw.
         var representable = response.Symbols
             .Where(s => Asset.TryOf(s.BaseAsset, out _) && Asset.TryOf(s.QuoteAsset, out _));
-        var symbols = modelMapper.Map<BinanceSymbolInfo, SymbolInfo>(representable);
+        var symbols = modelMapper.Map<SymbolInfoDto, SymbolInfo>(representable);
 
         // Populate the mapper's wire->Symbol lookup table from the freshly fetched symbols.
         mapper.UpdateSymbols(symbols);
@@ -328,18 +204,16 @@ internal sealed class BinanceMarketDataService(IBinanceHttpClient http, ISymbolM
         return supported.TryGetValue(symbol, out var canonical) ? canonical : null;
     }
 
-    // ── Mapping helpers ──
-
     /// <summary>
     /// Maps a ticker, yielding nothing when its wire symbol cannot be resolved. Used for the
     /// full-universe response where unknown/delisted pairs must not abort the whole batch.
     /// </summary>
-    private IEnumerable<Ticker> TryMapTicker(BinanceTickerResponse t)
+    private IEnumerable<Ticker> TryMapTicker(TickerDto t)
     {
         Ticker ticker;
         try
         {
-            ticker = modelMapper.Map<BinanceTickerResponse, Ticker>(t);
+            ticker = modelMapper.Map<TickerDto, Ticker>(t);
         }
         catch (FormatException)
         {

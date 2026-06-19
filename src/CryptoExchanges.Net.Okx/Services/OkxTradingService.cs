@@ -3,81 +3,6 @@ using DeltaMapper;
 
 namespace CryptoExchanges.Net.Okx.Services;
 
-// ---------------------------------------------------------------------------
-//  OKX V5 trading DTOs
-// ---------------------------------------------------------------------------
-
-/// <summary>
-/// The per-order acknowledgement OKX V5 returns from place/cancel: ids + a per-order status code.
-/// OKX nests a per-order outcome (<c>sCode</c>/<c>sMsg</c>) inside the data array even when the
-/// top-level <c>code</c> is "0"; a non-zero <c>sCode</c> never reaches the services because the
-/// resilience pipeline's error translator converts it into a typed exception.
-/// </summary>
-internal sealed record OkxOrderAck
-{
-    [JsonPropertyName("ordId")]
-    public string OrdId { get; init; } = string.Empty;
-
-    [JsonPropertyName("clOrdId")]
-    public string ClOrdId { get; init; } = string.Empty;
-
-    /// <summary>Per-order result code ("0" = success).</summary>
-    [JsonPropertyName("sCode")]
-    public string SCode { get; init; } = "0";
-
-    [JsonPropertyName("sMsg")]
-    public string SMsg { get; init; } = string.Empty;
-}
-
-/// <summary>A full OKX V5 order record as returned by <c>/api/v5/trade/order</c> and the order lists.</summary>
-internal sealed record OkxOrder
-{
-    [JsonPropertyName("instId")]
-    public string InstId { get; init; } = string.Empty;
-
-    [JsonPropertyName("ordId")]
-    public string OrdId { get; init; } = string.Empty;
-
-    [JsonPropertyName("clOrdId")]
-    public string ClOrdId { get; init; } = string.Empty;
-
-    [JsonPropertyName("px")]
-    public string Px { get; init; } = "0";
-
-    /// <summary>Original order size (in base currency for spot limit; quote for market-buy by quote).</summary>
-    [JsonPropertyName("sz")]
-    public string Sz { get; init; } = "0";
-
-    /// <summary>Accumulated filled size in the base currency.</summary>
-    [JsonPropertyName("accFillSz")]
-    public string AccFillSz { get; init; } = "0";
-
-    /// <summary>Average fill price; OKX emits "" when there are no fills yet.</summary>
-    [JsonPropertyName("avgPx")]
-    public string AvgPx { get; init; } = string.Empty;
-
-    [JsonPropertyName("side")]
-    public string Side { get; init; } = "buy";
-
-    [JsonPropertyName("ordType")]
-    public string OrdType { get; init; } = "limit";
-
-    [JsonPropertyName("state")]
-    public string State { get; init; } = "live";
-
-    /// <summary>Order creation time in unix milliseconds (string-encoded).</summary>
-    [JsonPropertyName("cTime")]
-    public string CTime { get; init; } = "0";
-
-    /// <summary>Last update time in unix milliseconds (string-encoded).</summary>
-    [JsonPropertyName("uTime")]
-    public string UTime { get; init; } = "0";
-}
-
-// ---------------------------------------------------------------------------
-//  OkxTradingService
-// ---------------------------------------------------------------------------
-
 /// <summary>
 /// OKX implementation of <see cref="ITradingService"/> against the V5 spot REST API.
 /// </summary>
@@ -130,7 +55,7 @@ internal sealed class OkxTradingService(IOkxHttpClient http, ISymbolMapper mappe
         if (request.ClientOrderId is not null)
             parameters["clOrdId"] = request.ClientOrderId;
 
-        var response = await http.PostAsync<OkxResponse<OkxOrderAck>>("/api/v5/trade/order", parameters, true, ct).ConfigureAwait(false);
+        var response = await http.PostAsync<ResponseDto<OrderAckDto>>("/api/v5/trade/order", parameters, true, ct).ConfigureAwait(false);
         var ack = response.Data.FirstOrDefault();
         return await FetchOrderAsync(wireSymbol, ack?.OrdId ?? string.Empty, ct, clientOrderId: request.ClientOrderId).ConfigureAwait(false);
     }
@@ -145,7 +70,7 @@ internal sealed class OkxTradingService(IOkxHttpClient http, ISymbolMapper mappe
             ["ordId"] = orderId
         };
 
-        var response = await http.PostAsync<OkxResponse<OkxOrderAck>>("/api/v5/trade/cancel-order", parameters, true, ct).ConfigureAwait(false);
+        var response = await http.PostAsync<ResponseDto<OrderAckDto>>("/api/v5/trade/cancel-order", parameters, true, ct).ConfigureAwait(false);
         var canceledId = response.Data.FirstOrDefault()?.OrdId ?? orderId;
         return await FetchOrderAsync(wireSymbol, canceledId, ct).ConfigureAwait(false);
     }
@@ -160,7 +85,7 @@ internal sealed class OkxTradingService(IOkxHttpClient http, ISymbolMapper mappe
             ["clOrdId"] = clientOrderId
         };
 
-        var response = await http.PostAsync<OkxResponse<OkxOrderAck>>("/api/v5/trade/cancel-order", parameters, true, ct).ConfigureAwait(false);
+        var response = await http.PostAsync<ResponseDto<OrderAckDto>>("/api/v5/trade/cancel-order", parameters, true, ct).ConfigureAwait(false);
         var canceledId = response.Data.FirstOrDefault()?.OrdId ?? string.Empty;
         return await FetchOrderAsync(wireSymbol, canceledId, ct, clientOrderId: clientOrderId).ConfigureAwait(false);
     }
@@ -184,7 +109,7 @@ internal sealed class OkxTradingService(IOkxHttpClient http, ISymbolMapper mappe
         if (cancels.Count == 0)
             return [];
 
-        var response = await http.PostAsync<OkxResponse<OkxOrderAck>>("/api/v5/trade/cancel-batch-orders", cancels, true, ct).ConfigureAwait(false);
+        var response = await http.PostAsync<ResponseDto<OrderAckDto>>("/api/v5/trade/cancel-batch-orders", cancels, true, ct).ConfigureAwait(false);
         var canceledIds = response.Data.Select(a => a.OrdId).Where(id => !string.IsNullOrEmpty(id)).ToHashSet(StringComparer.Ordinal);
         if (canceledIds.Count == 0)
             return [];
@@ -204,8 +129,8 @@ internal sealed class OkxTradingService(IOkxHttpClient http, ISymbolMapper mappe
         if (symbol.HasValue)
             parameters["instId"] = mapper.ToWire(symbol.Value);
 
-        var response = await http.GetAsync<OkxResponse<OkxOrder>>("/api/v5/trade/orders-pending", parameters, true, ct).ConfigureAwait(false);
-        return modelMapper.Map<OkxOrder, Order>(response.Data);
+        var response = await http.GetAsync<ResponseDto<OrderDto>>("/api/v5/trade/orders-pending", parameters, true, ct).ConfigureAwait(false);
+        return modelMapper.Map<OrderDto, Order>(response.Data);
     }
 
     /// <inheritdoc />
@@ -234,11 +159,9 @@ internal sealed class OkxTradingService(IOkxHttpClient http, ISymbolMapper mappe
         if (endTime.HasValue)
             parameters["before"] = endTime.Value.ToUnixTimeMilliseconds().ToString(System.Globalization.CultureInfo.InvariantCulture);
 
-        var response = await http.GetAsync<OkxResponse<OkxOrder>>("/api/v5/trade/orders-history", parameters, true, ct).ConfigureAwait(false);
-        return modelMapper.Map<OkxOrder, Order>(response.Data);
+        var response = await http.GetAsync<ResponseDto<OrderDto>>("/api/v5/trade/orders-history", parameters, true, ct).ConfigureAwait(false);
+        return modelMapper.Map<OrderDto, Order>(response.Data);
     }
-
-    // ── Order re-fetch (V5 place/cancel return ids only) ──
 
     /// <summary>
     /// Resolves a full <see cref="Order"/> for an OKX order id. OKX place/cancel responses carry only
@@ -255,18 +178,16 @@ internal sealed class OkxTradingService(IOkxHttpClient http, ISymbolMapper mappe
         else if (!string.IsNullOrEmpty(clientOrderId))
             parameters["clOrdId"] = clientOrderId;
 
-        var response = await http.GetAsync<OkxResponse<OkxOrder>>("/api/v5/trade/order", parameters, true, ct).ConfigureAwait(false);
+        var response = await http.GetAsync<ResponseDto<OrderDto>>("/api/v5/trade/order", parameters, true, ct).ConfigureAwait(false);
         var match = response.Data.FirstOrDefault();
         if (match is not null)
-            return modelMapper.Map<OkxOrder, Order>(match);
+            return modelMapper.Map<OrderDto, Order>(match);
 
         // The order did not surface; return a minimal record carrying whichever identifier we have
         // (never empty) so callers still get an id to poll later rather than a null/throw.
         var fallbackId = !string.IsNullOrEmpty(orderId) ? orderId : (clientOrderId ?? string.Empty);
         return new Order(mapper.FromWire(wireSymbol), fallbackId);
     }
-
-    // ── Request-direction mapping helpers ──
 
     private static string MapOrderSide(OrderSide side) => side switch
     {

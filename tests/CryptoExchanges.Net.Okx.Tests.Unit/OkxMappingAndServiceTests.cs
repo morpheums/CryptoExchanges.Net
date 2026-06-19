@@ -48,7 +48,7 @@ public class OkxMappingAndServiceTests
     public void OrderProfile_MapsAllScalarsAndResolvesSymbol()
     {
         var (_, mapper) = BuildMappers();
-        var dto = new OkxOrder
+        var dto = new OrderDto
         {
             InstId = "BTC-USDT",
             OrdId = "111",
@@ -64,7 +64,7 @@ public class OkxMappingAndServiceTests
             UTime = "1700000001000"
         };
 
-        var order = mapper.Map<OkxOrder, Order>(dto);
+        var order = mapper.Map<OrderDto, Order>(dto);
 
         order.Symbol.Should().Be(BtcUsdt);
         order.OrderId.Should().Be("111");
@@ -88,7 +88,7 @@ public class OkxMappingAndServiceTests
     public void OrderProfile_MarketOrder_MapsCleanly()
     {
         var (_, mapper) = BuildMappers();
-        var dto = new OkxOrder
+        var dto = new OrderDto
         {
             InstId = "BTC-USDT",
             OrdId = "222",
@@ -103,10 +103,10 @@ public class OkxMappingAndServiceTests
         };
 
         // ParseOrderType("market") -> Market and ParseTimeInForce("market") -> Ioc must both succeed.
-        var act = () => mapper.Map<OkxOrder, Order>(dto);
+        var act = () => mapper.Map<OrderDto, Order>(dto);
         act.Should().NotThrow();
 
-        var order = mapper.Map<OkxOrder, Order>(dto);
+        var order = mapper.Map<OrderDto, Order>(dto);
         order.Type.Should().Be(OrderType.Market);
         order.TimeInForce.Should().Be(TimeInForce.Ioc);
         order.Status.Should().Be(OrderStatus.Filled);
@@ -117,7 +117,7 @@ public class OkxMappingAndServiceTests
     public void TickerProfile_ComputesChangeFromOpen24h()
     {
         var (_, mapper) = BuildMappers();
-        var dto = new OkxTicker
+        var dto = new TickerDto
         {
             InstId = "BTC-USDT",
             Last = "42000",
@@ -129,7 +129,7 @@ public class OkxMappingAndServiceTests
             Ts = "1700000000000"
         };
 
-        var ticker = mapper.Map<OkxTicker, Ticker>(dto);
+        var ticker = mapper.Map<TickerDto, Ticker>(dto);
 
         ticker.Symbol.Should().Be(BtcUsdt);
         ticker.LastPrice.Should().Be(42000m);
@@ -144,9 +144,9 @@ public class OkxMappingAndServiceTests
     public void InstrumentProfile_MapsBaseQuoteToSymbol()
     {
         var (_, mapper) = BuildMappers();
-        var dto = new OkxInstrument { InstId = "BTC-USDT", BaseCcy = "BTC", QuoteCcy = "USDT" };
+        var dto = new SymbolInfoDto { InstId = "BTC-USDT", BaseCcy = "BTC", QuoteCcy = "USDT" };
 
-        var info = mapper.Map<OkxInstrument, SymbolInfo>(dto);
+        var info = mapper.Map<SymbolInfoDto, SymbolInfo>(dto);
 
         info.Symbol.Should().Be(BtcUsdt);
         info.AllowedOrderTypes.Should().Contain(OrderType.Limit).And.Contain(OrderType.Market);
@@ -156,9 +156,9 @@ public class OkxMappingAndServiceTests
     public void BalanceProfile_MapsAvailAndFrozen()
     {
         var (_, mapper) = BuildMappers();
-        var dto = new OkxBalanceDetail { Ccy = "BTC", AvailBal = "1.5", FrozenBal = "0.25" };
+        var dto = new BalanceDto { Ccy = "BTC", AvailBal = "1.5", FrozenBal = "0.25" };
 
-        var balance = mapper.Map<OkxBalanceDetail, AssetBalance>(dto);
+        var balance = mapper.Map<BalanceDto, AssetBalance>(dto);
 
         balance.Asset.Should().Be(Asset.Btc);
         balance.Free.Should().Be(1.5m);
@@ -173,11 +173,11 @@ public class OkxMappingAndServiceTests
     {
         var (symbolMapper, mapper) = BuildMappers();
         var http = Substitute.For<IOkxHttpClient>();
-        http.GetAsync<OkxResponse<OkxTicker>>(
+        http.GetAsync<ResponseDto<TickerDto>>(
                 "/api/v5/market/ticker", Arg.Any<Dictionary<string, string>>(), false, Arg.Any<CancellationToken>())
-            .Returns(new OkxResponse<OkxTicker>
+            .Returns(new ResponseDto<TickerDto>
             {
-                Data = [new OkxTicker { InstId = "BTC-USDT", Last = "42000", Open24h = "40000" }]
+                Data = [new TickerDto { InstId = "BTC-USDT", Last = "42000", Open24h = "40000" }]
             });
 
         var service = new OkxMarketDataService(http, symbolMapper, mapper);
@@ -196,9 +196,9 @@ public class OkxMappingAndServiceTests
         // arr[3]=low, arr[4]=close, arr[5]=vol, arr[6]=volCcy.
         var (symbolMapper, mapper) = BuildMappers();
         var http = Substitute.For<IOkxHttpClient>();
-        http.GetAsync<OkxResponse<List<string>>>(
+        http.GetAsync<ResponseDto<List<string>>>(
                 "/api/v5/market/candles", Arg.Any<Dictionary<string, string>>(), false, Arg.Any<CancellationToken>())
-            .Returns(new OkxResponse<List<string>>
+            .Returns(new ResponseDto<List<string>>
             {
                 Data = [["1700000000000", "42000", "43000", "41000", "42500", "10", "420000"]]
             });
@@ -219,9 +219,9 @@ public class OkxMappingAndServiceTests
         // The safe OkxValueParsers.ParseMs("") returns 0L; long.Parse would have thrown.
         var (symbolMapper, mapper) = BuildMappers();
         var http = Substitute.For<IOkxHttpClient>();
-        http.GetAsync<OkxResponse<List<string>>>(
+        http.GetAsync<ResponseDto<List<string>>>(
                 "/api/v5/market/candles", Arg.Any<Dictionary<string, string>>(), false, Arg.Any<CancellationToken>())
-            .Returns(new OkxResponse<List<string>>
+            .Returns(new ResponseDto<List<string>>
             {
                 Data = [["", "42000", "43000", "41000", "42500", "10", "420000"]]
             });
@@ -255,9 +255,9 @@ public class OkxMappingAndServiceTests
         var (symbolMapper, mapper) = BuildMappers();
         var http = Substitute.For<IOkxHttpClient>();
         Dictionary<string, string>? captured = null;
-        http.GetAsync<OkxResponse<List<string>>>(
+        http.GetAsync<ResponseDto<List<string>>>(
                 "/api/v5/market/candles", Arg.Do<Dictionary<string, string>>(p => captured = p), false, Arg.Any<CancellationToken>())
-            .Returns(new OkxResponse<List<string>>());
+            .Returns(new ResponseDto<List<string>>());
 
         var service = new OkxMarketDataService(http, symbolMapper, mapper);
         var act = async () => await service.GetCandlesticksAsync(BtcUsdt, KlineInterval.OneHour, limit: 500, ct: TestContext.Current.CancellationToken);
@@ -272,13 +272,13 @@ public class OkxMappingAndServiceTests
     {
         var (symbolMapper, mapper) = BuildMappers();
         var http = Substitute.For<IOkxHttpClient>();
-        http.GetAsync<OkxResponse<OkxOrderBook>>(
+        http.GetAsync<ResponseDto<OrderBookDto>>(
                 "/api/v5/market/books", Arg.Any<Dictionary<string, string>>(), false, Arg.Any<CancellationToken>())
-            .Returns(new OkxResponse<OkxOrderBook>
+            .Returns(new ResponseDto<OrderBookDto>
             {
                 Data =
                 [
-                    new OkxOrderBook
+                    new OrderBookDto
                     {
                         Bids = [["100", "2", "0", "1"]],
                         Asks = [["101", "3", "0", "1"]],
@@ -301,18 +301,18 @@ public class OkxMappingAndServiceTests
     {
         var (symbolMapper, mapper) = BuildMappers();
         var http = Substitute.For<IOkxHttpClient>();
-        http.GetAsync<OkxResponse<OkxBalanceAccount>>(
+        http.GetAsync<ResponseDto<AccountDto>>(
                 "/api/v5/account/balance", Arg.Any<Dictionary<string, string>>(), true, Arg.Any<CancellationToken>())
-            .Returns(new OkxResponse<OkxBalanceAccount>
+            .Returns(new ResponseDto<AccountDto>
             {
                 Data =
                 [
-                    new OkxBalanceAccount
+                    new AccountDto
                     {
                         Details =
                         [
-                            new OkxBalanceDetail { Ccy = "BTC", AvailBal = "1.5", FrozenBal = "0" },
-                            new OkxBalanceDetail { Ccy = "ZZZ", AvailBal = "0", FrozenBal = "0" }
+                            new BalanceDto { Ccy = "BTC", AvailBal = "1.5", FrozenBal = "0" },
+                            new BalanceDto { Ccy = "ZZZ", AvailBal = "0", FrozenBal = "0" }
                         ]
                     }
                 ]
@@ -332,9 +332,9 @@ public class OkxMappingAndServiceTests
         var (symbolMapper, mapper) = BuildMappers();
         var http = Substitute.For<IOkxHttpClient>();
         Dictionary<string, string>? captured = null;
-        http.GetAsync<OkxResponse<OkxFill>>(
+        http.GetAsync<ResponseDto<FillDto>>(
                 "/api/v5/trade/fills", Arg.Do<Dictionary<string, string>>(p => captured = p), true, Arg.Any<CancellationToken>())
-            .Returns(new OkxResponse<OkxFill>());
+            .Returns(new ResponseDto<FillDto>());
 
         var service = new OkxAccountService(http, symbolMapper, mapper);
 
@@ -353,11 +353,11 @@ public class OkxMappingAndServiceTests
     {
         var (symbolMapper, mapper) = BuildMappers();
         var http = Substitute.For<IOkxHttpClient>();
-        http.GetAsync<OkxResponse<OkxOrder>>(
+        http.GetAsync<ResponseDto<OrderDto>>(
                 "/api/v5/trade/orders-pending", Arg.Any<Dictionary<string, string>>(), true, Arg.Any<CancellationToken>())
-            .Returns(new OkxResponse<OkxOrder>
+            .Returns(new ResponseDto<OrderDto>
             {
-                Data = [new OkxOrder { InstId = "BTC-USDT", OrdId = "9", Sz = "1", Px = "5" }]
+                Data = [new OrderDto { InstId = "BTC-USDT", OrdId = "9", Sz = "1", Px = "5" }]
             });
 
         var service = new OkxTradingService(http, symbolMapper, mapper);
@@ -374,9 +374,9 @@ public class OkxMappingAndServiceTests
         var (symbolMapper, mapper) = BuildMappers();
         var http = Substitute.For<IOkxHttpClient>();
         Dictionary<string, string>? captured = null;
-        http.GetAsync<OkxResponse<OkxOrder>>(
+        http.GetAsync<ResponseDto<OrderDto>>(
                 "/api/v5/trade/orders-history", Arg.Do<Dictionary<string, string>>(p => captured = p), true, Arg.Any<CancellationToken>())
-            .Returns(new OkxResponse<OkxOrder>());
+            .Returns(new ResponseDto<OrderDto>());
 
         var service = new OkxTradingService(http, symbolMapper, mapper);
 
@@ -394,15 +394,15 @@ public class OkxMappingAndServiceTests
         var http = Substitute.For<IOkxHttpClient>();
 
         Dictionary<string, string>? placed = null;
-        http.PostAsync<OkxResponse<OkxOrderAck>>(
+        http.PostAsync<ResponseDto<OrderAckDto>>(
                 "/api/v5/trade/order", Arg.Do<Dictionary<string, string>>(p => placed = p), true, Arg.Any<CancellationToken>())
-            .Returns(new OkxResponse<OkxOrderAck> { Data = [new OkxOrderAck { OrdId = "ord-1", SCode = "0" }] });
+            .Returns(new ResponseDto<OrderAckDto> { Data = [new OrderAckDto { OrdId = "ord-1", SCode = "0" }] });
 
-        http.GetAsync<OkxResponse<OkxOrder>>(
+        http.GetAsync<ResponseDto<OrderDto>>(
                 "/api/v5/trade/order", Arg.Any<Dictionary<string, string>>(), true, Arg.Any<CancellationToken>())
-            .Returns(new OkxResponse<OkxOrder>
+            .Returns(new ResponseDto<OrderDto>
             {
-                Data = [new OkxOrder { InstId = "BTC-USDT", OrdId = "ord-1", Sz = "0.5", OrdType = "market", State = "filled", Side = "buy" }]
+                Data = [new OrderDto { InstId = "BTC-USDT", OrdId = "ord-1", Sz = "0.5", OrdType = "market", State = "filled", Side = "buy" }]
             });
 
         var service = new OkxTradingService(http, symbolMapper, mapper);
@@ -424,16 +424,16 @@ public class OkxMappingAndServiceTests
         var http = Substitute.For<IOkxHttpClient>();
 
         // The cancel ack omits ordId (only clOrdId is echoed).
-        http.PostAsync<OkxResponse<OkxOrderAck>>(
+        http.PostAsync<ResponseDto<OrderAckDto>>(
                 "/api/v5/trade/cancel-order", Arg.Any<Dictionary<string, string>>(), true, Arg.Any<CancellationToken>())
-            .Returns(new OkxResponse<OkxOrderAck> { Data = [new OkxOrderAck { OrdId = string.Empty, ClOrdId = "cli-77", SCode = "0" }] });
+            .Returns(new ResponseDto<OrderAckDto> { Data = [new OrderAckDto { OrdId = string.Empty, ClOrdId = "cli-77", SCode = "0" }] });
 
         Dictionary<string, string>? refetchParams = null;
-        http.GetAsync<OkxResponse<OkxOrder>>(
+        http.GetAsync<ResponseDto<OrderDto>>(
                 "/api/v5/trade/order", Arg.Do<Dictionary<string, string>>(p => refetchParams = p), true, Arg.Any<CancellationToken>())
-            .Returns(new OkxResponse<OkxOrder>
+            .Returns(new ResponseDto<OrderDto>
             {
-                Data = [new OkxOrder { InstId = "BTC-USDT", OrdId = "real-99", ClOrdId = "cli-77", State = "canceled" }]
+                Data = [new OrderDto { InstId = "BTC-USDT", OrdId = "real-99", ClOrdId = "cli-77", State = "canceled" }]
             });
 
         var service = new OkxTradingService(http, symbolMapper, mapper);

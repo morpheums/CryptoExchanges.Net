@@ -49,7 +49,7 @@ public class BitgetMappingAndServiceTests
     public void OrderProfile_MapsAllScalarsAndResolvesSymbol()
     {
         var (_, mapper) = BuildMappers();
-        var dto = new BitgetOrder
+        var dto = new OrderDto
         {
             Symbol = "BTCUSDT",
             OrderId = "111",
@@ -67,7 +67,7 @@ public class BitgetMappingAndServiceTests
             UTime = "1700000001000"
         };
 
-        var order = mapper.Map<BitgetOrder, Order>(dto);
+        var order = mapper.Map<OrderDto, Order>(dto);
 
         order.Symbol.Should().Be(BtcUsdt);
         order.OrderId.Should().Be("111");
@@ -91,7 +91,7 @@ public class BitgetMappingAndServiceTests
     public void OrderProfile_MarketOrder_MapsCleanly()
     {
         var (_, mapper) = BuildMappers();
-        var dto = new BitgetOrder
+        var dto = new OrderDto
         {
             Symbol = "BTCUSDT",
             OrderId = "222",
@@ -106,10 +106,10 @@ public class BitgetMappingAndServiceTests
             UTime = "1700000000500"
         };
 
-        var act = () => mapper.Map<BitgetOrder, Order>(dto);
+        var act = () => mapper.Map<OrderDto, Order>(dto);
         act.Should().NotThrow();
 
-        var order = mapper.Map<BitgetOrder, Order>(dto);
+        var order = mapper.Map<OrderDto, Order>(dto);
         order.Type.Should().Be(OrderType.Market);
         order.Status.Should().Be(OrderStatus.Filled);
         order.CumulativeQuoteQuantity.Should().Be(21000m);
@@ -119,7 +119,7 @@ public class BitgetMappingAndServiceTests
     public void TickerProfile_ComputesChangeFromChange24h()
     {
         var (_, mapper) = BuildMappers();
-        var dto = new BitgetTicker
+        var dto = new TickerDto
         {
             Symbol = "BTCUSDT",
             LastPr = "42000",
@@ -132,7 +132,7 @@ public class BitgetMappingAndServiceTests
             Ts = "1700000000000"
         };
 
-        var ticker = mapper.Map<BitgetTicker, Ticker>(dto);
+        var ticker = mapper.Map<TickerDto, Ticker>(dto);
 
         ticker.Symbol.Should().Be(BtcUsdt);
         ticker.LastPrice.Should().Be(42000m);
@@ -147,9 +147,9 @@ public class BitgetMappingAndServiceTests
     public void SymbolProfile_MapsBaseQuoteToSymbol()
     {
         var (_, mapper) = BuildMappers();
-        var dto = new BitgetSymbol { Symbol = "BTCUSDT", BaseCoin = "BTC", QuoteCoin = "USDT" };
+        var dto = new SymbolInfoDto { Symbol = "BTCUSDT", BaseCoin = "BTC", QuoteCoin = "USDT" };
 
-        var info = mapper.Map<BitgetSymbol, SymbolInfo>(dto);
+        var info = mapper.Map<SymbolInfoDto, SymbolInfo>(dto);
 
         info.Symbol.Should().Be(BtcUsdt);
         info.AllowedOrderTypes.Should().Contain(OrderType.Limit).And.Contain(OrderType.Market);
@@ -159,9 +159,9 @@ public class BitgetMappingAndServiceTests
     public void BalanceProfile_MapsAvailableAndCombinesFrozenLocked()
     {
         var (_, mapper) = BuildMappers();
-        var dto = new BitgetBalance { Coin = "BTC", Available = "1.5", Frozen = "0.25", Locked = "0.1" };
+        var dto = new BalanceDto { Coin = "BTC", Available = "1.5", Frozen = "0.25", Locked = "0.1" };
 
-        var balance = mapper.Map<BitgetBalance, AssetBalance>(dto);
+        var balance = mapper.Map<BalanceDto, AssetBalance>(dto);
 
         balance.Asset.Should().Be(Asset.Btc);
         balance.Free.Should().Be(1.5m);
@@ -177,11 +177,11 @@ public class BitgetMappingAndServiceTests
     {
         var (symbolMapper, mapper) = BuildMappers();
         var http = Substitute.For<IBitgetHttpClient>();
-        http.GetAsync<BitgetResponse<BitgetTicker>>(
+        http.GetAsync<ResponseDto<TickerDto>>(
                 "/api/v2/spot/market/tickers", Arg.Any<Dictionary<string, string>>(), false, Arg.Any<CancellationToken>())
-            .Returns(new BitgetResponse<BitgetTicker>
+            .Returns(new ResponseDto<TickerDto>
             {
-                Data = [new BitgetTicker { Symbol = "BTCUSDT", LastPr = "42000", Open = "40000", Change24h = "0.05" }]
+                Data = [new TickerDto { Symbol = "BTCUSDT", LastPr = "42000", Open = "40000", Change24h = "0.05" }]
             });
 
         var service = new BitgetMarketDataService(http, symbolMapper, mapper);
@@ -199,9 +199,9 @@ public class BitgetMappingAndServiceTests
         // arr[3]=low, arr[4]=close, arr[5]=baseVolume, arr[6]=quoteVolume.
         var (symbolMapper, mapper) = BuildMappers();
         var http = Substitute.For<IBitgetHttpClient>();
-        http.GetAsync<BitgetResponse<List<string>>>(
+        http.GetAsync<ResponseDto<List<string>>>(
                 "/api/v2/spot/market/candles", Arg.Any<Dictionary<string, string>>(), false, Arg.Any<CancellationToken>())
-            .Returns(new BitgetResponse<List<string>>
+            .Returns(new ResponseDto<List<string>>
             {
                 Data = [["1700000000000", "42000", "43000", "41000", "42500", "10", "420000"]]
             });
@@ -221,9 +221,9 @@ public class BitgetMappingAndServiceTests
         // BitgetValueParsers.ParseMs("") returns 0L (safe TryParse); long.Parse would have thrown.
         var (symbolMapper, mapper) = BuildMappers();
         var http = Substitute.For<IBitgetHttpClient>();
-        http.GetAsync<BitgetResponse<List<string>>>(
+        http.GetAsync<ResponseDto<List<string>>>(
                 "/api/v2/spot/market/candles", Arg.Any<Dictionary<string, string>>(), false, Arg.Any<CancellationToken>())
-            .Returns(new BitgetResponse<List<string>>
+            .Returns(new ResponseDto<List<string>>
             {
                 Data = [["", "42000", "43000", "41000", "42500", "10", "420000"]]
             });
@@ -240,9 +240,9 @@ public class BitgetMappingAndServiceTests
         var (symbolMapper, mapper) = BuildMappers();
         var http = Substitute.For<IBitgetHttpClient>();
         Dictionary<string, string>? captured = null;
-        http.GetAsync<BitgetResponse<List<string>>>(
+        http.GetAsync<ResponseDto<List<string>>>(
                 "/api/v2/spot/market/candles", Arg.Do<Dictionary<string, string>>(p => captured = p), false, Arg.Any<CancellationToken>())
-            .Returns(new BitgetResponse<List<string>>());
+            .Returns(new ResponseDto<List<string>>());
 
         var service = new BitgetMarketDataService(http, symbolMapper, mapper);
         var act = async () => await service.GetCandlesticksAsync(BtcUsdt, KlineInterval.OneHour, limit: 5000, ct: TestContext.Current.CancellationToken);
@@ -269,13 +269,13 @@ public class BitgetMappingAndServiceTests
     {
         var (symbolMapper, mapper) = BuildMappers();
         var http = Substitute.For<IBitgetHttpClient>();
-        http.GetAsync<BitgetResponse<BitgetOrderBook>>(
+        http.GetAsync<ResponseDto<OrderBookDto>>(
                 "/api/v2/spot/market/orderbook", Arg.Any<Dictionary<string, string>>(), false, Arg.Any<CancellationToken>())
-            .Returns(new BitgetResponse<BitgetOrderBook>
+            .Returns(new ResponseDto<OrderBookDto>
             {
                 Data =
                 [
-                    new BitgetOrderBook
+                    new OrderBookDto
                     {
                         Bids = [["100", "2"]],
                         Asks = [["101", "3"]],
@@ -296,13 +296,13 @@ public class BitgetMappingAndServiceTests
     {
         var (symbolMapper, mapper) = BuildMappers();
         var http = Substitute.For<IBitgetHttpClient>();
-        http.GetAsync<BitgetResponse<BitgetOrderBook>>(
+        http.GetAsync<ResponseDto<OrderBookDto>>(
                 "/api/v2/spot/market/orderbook", Arg.Any<Dictionary<string, string>>(), false, Arg.Any<CancellationToken>())
-            .Returns(new BitgetResponse<BitgetOrderBook>
+            .Returns(new ResponseDto<OrderBookDto>
             {
                 Data =
                 [
-                    new BitgetOrderBook
+                    new OrderBookDto
                     {
                         // Malformed/short rows (fewer than [price, size]) must be skipped, not throw.
                         Bids = [["100", "2"], [], ["99"]],
@@ -326,14 +326,14 @@ public class BitgetMappingAndServiceTests
     {
         var (symbolMapper, mapper) = BuildMappers();
         var http = Substitute.For<IBitgetHttpClient>();
-        http.GetAsync<BitgetResponse<BitgetBalance>>(
+        http.GetAsync<ResponseDto<BalanceDto>>(
                 "/api/v2/spot/account/assets", Arg.Any<Dictionary<string, string>>(), true, Arg.Any<CancellationToken>())
-            .Returns(new BitgetResponse<BitgetBalance>
+            .Returns(new ResponseDto<BalanceDto>
             {
                 Data =
                 [
-                    new BitgetBalance { Coin = "BTC", Available = "1.5", Frozen = "0", Locked = "0" },
-                    new BitgetBalance { Coin = "ZZZ", Available = "0", Frozen = "0", Locked = "0" }
+                    new BalanceDto { Coin = "BTC", Available = "1.5", Frozen = "0", Locked = "0" },
+                    new BalanceDto { Coin = "ZZZ", Available = "0", Frozen = "0", Locked = "0" }
                 ]
             });
 
@@ -351,9 +351,9 @@ public class BitgetMappingAndServiceTests
         var (symbolMapper, mapper) = BuildMappers();
         var http = Substitute.For<IBitgetHttpClient>();
         Dictionary<string, string>? captured = null;
-        http.GetAsync<BitgetResponse<BitgetFill>>(
+        http.GetAsync<ResponseDto<FillDto>>(
                 "/api/v2/spot/trade/fills", Arg.Do<Dictionary<string, string>>(p => captured = p), true, Arg.Any<CancellationToken>())
-            .Returns(new BitgetResponse<BitgetFill>());
+            .Returns(new ResponseDto<FillDto>());
 
         var service = new BitgetAccountService(http, symbolMapper, mapper);
 
@@ -372,11 +372,11 @@ public class BitgetMappingAndServiceTests
     {
         var (symbolMapper, mapper) = BuildMappers();
         var http = Substitute.For<IBitgetHttpClient>();
-        http.GetAsync<BitgetResponse<BitgetOrder>>(
+        http.GetAsync<ResponseDto<OrderDto>>(
                 "/api/v2/spot/trade/unfilled-orders", Arg.Any<Dictionary<string, string>>(), true, Arg.Any<CancellationToken>())
-            .Returns(new BitgetResponse<BitgetOrder>
+            .Returns(new ResponseDto<OrderDto>
             {
-                Data = [new BitgetOrder { Symbol = "BTCUSDT", OrderId = "9", Size = "1", Price = "5" }]
+                Data = [new OrderDto { Symbol = "BTCUSDT", OrderId = "9", Size = "1", Price = "5" }]
             });
 
         var service = new BitgetTradingService(http, symbolMapper, mapper);
@@ -393,9 +393,9 @@ public class BitgetMappingAndServiceTests
         var (symbolMapper, mapper) = BuildMappers();
         var http = Substitute.For<IBitgetHttpClient>();
         Dictionary<string, string>? captured = null;
-        http.GetAsync<BitgetResponse<BitgetOrder>>(
+        http.GetAsync<ResponseDto<OrderDto>>(
                 "/api/v2/spot/trade/history-orders", Arg.Do<Dictionary<string, string>>(p => captured = p), true, Arg.Any<CancellationToken>())
-            .Returns(new BitgetResponse<BitgetOrder>());
+            .Returns(new ResponseDto<OrderDto>());
 
         var service = new BitgetTradingService(http, symbolMapper, mapper);
 
@@ -413,15 +413,15 @@ public class BitgetMappingAndServiceTests
         var http = Substitute.For<IBitgetHttpClient>();
 
         Dictionary<string, string>? placed = null;
-        http.PostAsync<BitgetResponse<BitgetOrderAck>>(
+        http.PostAsync<ResponseDto<OrderAckDto>>(
                 "/api/v2/spot/trade/place-order", Arg.Do<Dictionary<string, string>>(p => placed = p), true, Arg.Any<CancellationToken>())
-            .Returns(new BitgetResponse<BitgetOrderAck> { Data = [new BitgetOrderAck { OrderId = "ord-1" }] });
+            .Returns(new ResponseDto<OrderAckDto> { Data = [new OrderAckDto { OrderId = "ord-1" }] });
 
-        http.GetAsync<BitgetResponse<BitgetOrder>>(
+        http.GetAsync<ResponseDto<OrderDto>>(
                 "/api/v2/spot/trade/orderInfo", Arg.Any<Dictionary<string, string>>(), true, Arg.Any<CancellationToken>())
-            .Returns(new BitgetResponse<BitgetOrder>
+            .Returns(new ResponseDto<OrderDto>
             {
-                Data = [new BitgetOrder { Symbol = "BTCUSDT", OrderId = "ord-1", Size = "0.5", OrderType = "market", Status = "filled", Side = "buy" }]
+                Data = [new OrderDto { Symbol = "BTCUSDT", OrderId = "ord-1", Size = "0.5", OrderType = "market", Status = "filled", Side = "buy" }]
             });
 
         var service = new BitgetTradingService(http, symbolMapper, mapper);
@@ -443,16 +443,16 @@ public class BitgetMappingAndServiceTests
         var http = Substitute.For<IBitgetHttpClient>();
 
         // The cancel ack omits orderId (only clientOid is echoed).
-        http.PostAsync<BitgetResponse<BitgetOrderAck>>(
+        http.PostAsync<ResponseDto<OrderAckDto>>(
                 "/api/v2/spot/trade/cancel-order", Arg.Any<Dictionary<string, string>>(), true, Arg.Any<CancellationToken>())
-            .Returns(new BitgetResponse<BitgetOrderAck> { Data = [new BitgetOrderAck { OrderId = string.Empty, ClientOid = "cli-77" }] });
+            .Returns(new ResponseDto<OrderAckDto> { Data = [new OrderAckDto { OrderId = string.Empty, ClientOid = "cli-77" }] });
 
         Dictionary<string, string>? refetchParams = null;
-        http.GetAsync<BitgetResponse<BitgetOrder>>(
+        http.GetAsync<ResponseDto<OrderDto>>(
                 "/api/v2/spot/trade/orderInfo", Arg.Do<Dictionary<string, string>>(p => refetchParams = p), true, Arg.Any<CancellationToken>())
-            .Returns(new BitgetResponse<BitgetOrder>
+            .Returns(new ResponseDto<OrderDto>
             {
-                Data = [new BitgetOrder { Symbol = "BTCUSDT", OrderId = "real-99", ClientOid = "cli-77", Status = "cancelled" }]
+                Data = [new OrderDto { Symbol = "BTCUSDT", OrderId = "real-99", ClientOid = "cli-77", Status = "cancelled" }]
             });
 
         var service = new BitgetTradingService(http, symbolMapper, mapper);

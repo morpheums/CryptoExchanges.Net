@@ -35,7 +35,7 @@ public class BinanceResponseProfileTests
     {
         var mapper = BuildMapper(out var btcusdt);
 
-        var dto = new BinanceOrderResponse
+        var dto = new OrderDto
         {
             Symbol = "BTCUSDT",
             OrderId = 12345,
@@ -52,7 +52,7 @@ public class BinanceResponseProfileTests
             UpdateTime = 1700000001000
         };
 
-        var order = mapper.Map<BinanceOrderResponse, Order>(dto);
+        var order = mapper.Map<OrderDto, Order>(dto);
 
         order.Symbol.Should().Be(btcusdt);
         order.OrderId.Should().Be("12345");
@@ -74,14 +74,14 @@ public class BinanceResponseProfileTests
     {
         var mapper = BuildMapper(out _);
 
-        var dto = new BinanceOrderResponse
+        var dto = new OrderDto
         {
             Symbol = "BTCUSDT",
             OrderId = 1,
             Status = "SOME_FUTURE_STATUS"
         };
 
-        var order = mapper.Map<BinanceOrderResponse, Order>(dto);
+        var order = mapper.Map<OrderDto, Order>(dto);
 
         order.Status.Should().Be(OrderStatus.Unknown);
     }
@@ -91,7 +91,7 @@ public class BinanceResponseProfileTests
     {
         var mapper = BuildMapper(out _);
 
-        var dto = new BinanceOrderResponse
+        var dto = new OrderDto
         {
             Symbol = "BTCUSDT",
             OrderId = 1,
@@ -99,7 +99,7 @@ public class BinanceResponseProfileTests
             UpdateTime = 0
         };
 
-        var order = mapper.Map<BinanceOrderResponse, Order>(dto);
+        var order = mapper.Map<OrderDto, Order>(dto);
 
         order.CreatedAt.Should().BeNull();
         order.UpdatedAt.Should().BeNull();
@@ -110,7 +110,7 @@ public class BinanceResponseProfileTests
     {
         var mapper = BuildMapper(out var btcusdt);
 
-        var dto = new BinanceTickerResponse
+        var dto = new TickerDto
         {
             Symbol = "BTCUSDT",
             LastPrice = "42000.1",
@@ -124,7 +124,7 @@ public class BinanceResponseProfileTests
             CloseTime = 1700000000000
         };
 
-        var ticker = mapper.Map<BinanceTickerResponse, Ticker>(dto);
+        var ticker = mapper.Map<TickerDto, Ticker>(dto);
 
         ticker.Symbol.Should().Be(btcusdt);
         ticker.LastPrice.Should().Be(42000.1m);
@@ -138,14 +138,14 @@ public class BinanceResponseProfileTests
     {
         var mapper = BuildMapper(out _);
 
-        var dto = new BinanceTickerResponse
+        var dto = new TickerDto
         {
             Symbol = "BTCUSDT",
             LastPrice = "42000",
             CloseTime = 0
         };
 
-        var ticker = mapper.Map<BinanceTickerResponse, Ticker>(dto);
+        var ticker = mapper.Map<TickerDto, Ticker>(dto);
 
         ticker.Timestamp.Should().BeNull();
     }
@@ -155,9 +155,9 @@ public class BinanceResponseProfileTests
     {
         var mapper = BuildMapper(out _);
 
-        var dto = new BinanceBalance { Asset = "BTC", Free = "1.5", Locked = "0.25" };
+        var dto = new BalanceDto { Asset = "BTC", Free = "1.5", Locked = "0.25" };
 
-        var balance = mapper.Map<BinanceBalance, AssetBalance>(dto);
+        var balance = mapper.Map<BalanceDto, AssetBalance>(dto);
 
         balance.Asset.Should().Be(Asset.Btc);
         balance.Free.Should().Be(1.5m);
@@ -172,9 +172,9 @@ public class BinanceResponseProfileTests
 
         // A ticker with characters outside A-Z/0-9 is not representable as an Asset; it must
         // map to Asset.None rather than throwing (balances are where long-tail assets appear).
-        var dto = new BinanceBalance { Asset = "bad-ticker!", Free = "3", Locked = "0" };
+        var dto = new BalanceDto { Asset = "bad-ticker!", Free = "3", Locked = "0" };
 
-        var balance = mapper.Map<BinanceBalance, AssetBalance>(dto);
+        var balance = mapper.Map<BalanceDto, AssetBalance>(dto);
 
         balance.Asset.Should().Be(Asset.None);
         balance.Asset.IsNone.Should().BeTrue();

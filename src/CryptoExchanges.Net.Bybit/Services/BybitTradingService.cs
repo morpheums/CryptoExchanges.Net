@@ -1,76 +1,8 @@
-using System.Text.Json.Serialization;
 using CryptoExchanges.Net.Bybit.Internal;
 using CryptoExchanges.Net.Core.Interfaces;
 using DeltaMapper;
 
 namespace CryptoExchanges.Net.Bybit.Services;
-
-// ---------------------------------------------------------------------------
-//  Bybit V5 trading DTOs
-// ---------------------------------------------------------------------------
-
-/// <summary>The thin acknowledgement Bybit V5 returns from create/cancel: ids only, not a full order.</summary>
-internal sealed record BybitOrderAck
-{
-    [JsonPropertyName("orderId")]
-    public string OrderId { get; init; } = string.Empty;
-
-    [JsonPropertyName("orderLinkId")]
-    public string OrderLinkId { get; init; } = string.Empty;
-}
-
-/// <summary>A full Bybit V5 order record as returned by <c>/v5/order/realtime</c> and <c>/v5/order/history</c>.</summary>
-internal sealed record BybitOrder
-{
-    [JsonPropertyName("symbol")]
-    public string Symbol { get; init; } = string.Empty;
-
-    [JsonPropertyName("orderId")]
-    public string OrderId { get; init; } = string.Empty;
-
-    [JsonPropertyName("orderLinkId")]
-    public string OrderLinkId { get; init; } = string.Empty;
-
-    [JsonPropertyName("price")]
-    public string Price { get; init; } = "0";
-
-    [JsonPropertyName("qty")]
-    public string Qty { get; init; } = "0";
-
-    [JsonPropertyName("cumExecQty")]
-    public string CumExecQty { get; init; } = "0";
-
-    /// <summary>Cumulative executed value in the quote asset.</summary>
-    [JsonPropertyName("cumExecValue")]
-    public string CumExecValue { get; init; } = "0";
-
-    [JsonPropertyName("side")]
-    public string Side { get; init; } = "Buy";
-
-    [JsonPropertyName("orderType")]
-    public string OrderType { get; init; } = "Limit";
-
-    [JsonPropertyName("orderStatus")]
-    public string OrderStatus { get; init; } = "New";
-
-    [JsonPropertyName("timeInForce")]
-    public string TimeInForce { get; init; } = "GTC";
-
-    [JsonPropertyName("triggerPrice")]
-    public string TriggerPrice { get; init; } = "0";
-
-    /// <summary>Order creation time in unix milliseconds (string-encoded).</summary>
-    [JsonPropertyName("createdTime")]
-    public string CreatedTime { get; init; } = "0";
-
-    /// <summary>Last update time in unix milliseconds (string-encoded).</summary>
-    [JsonPropertyName("updatedTime")]
-    public string UpdatedTime { get; init; } = "0";
-}
-
-// ---------------------------------------------------------------------------
-//  BybitTradingService
-// ---------------------------------------------------------------------------
 
 /// <summary>
 /// Bybit implementation of <see cref="ITradingService"/> against the V5 spot REST API.
@@ -120,7 +52,7 @@ internal sealed class BybitTradingService(IBybitHttpClient http, ISymbolMapper m
         if (request.ClientOrderId is not null)
             parameters["orderLinkId"] = request.ClientOrderId;
 
-        var response = await http.PostAsync<BybitResponse<BybitOrderAck>>("/v5/order/create", parameters, true, ct).ConfigureAwait(false);
+        var response = await http.PostAsync<ResponseDto<OrderAckDto>>("/v5/order/create", parameters, true, ct).ConfigureAwait(false);
         var orderId = response.Result?.OrderId ?? string.Empty;
         return await FetchOrderAsync(wireSymbol, orderId, ct, orderLinkId: request.ClientOrderId).ConfigureAwait(false);
     }
@@ -136,7 +68,7 @@ internal sealed class BybitTradingService(IBybitHttpClient http, ISymbolMapper m
             ["orderId"] = orderId
         };
 
-        var response = await http.PostAsync<BybitResponse<BybitOrderAck>>("/v5/order/cancel", parameters, true, ct).ConfigureAwait(false);
+        var response = await http.PostAsync<ResponseDto<OrderAckDto>>("/v5/order/cancel", parameters, true, ct).ConfigureAwait(false);
         var canceledId = response.Result?.OrderId ?? orderId;
         return await FetchOrderAsync(wireSymbol, canceledId, ct).ConfigureAwait(false);
     }
@@ -152,7 +84,7 @@ internal sealed class BybitTradingService(IBybitHttpClient http, ISymbolMapper m
             ["orderLinkId"] = clientOrderId
         };
 
-        var response = await http.PostAsync<BybitResponse<BybitOrderAck>>("/v5/order/cancel", parameters, true, ct).ConfigureAwait(false);
+        var response = await http.PostAsync<ResponseDto<OrderAckDto>>("/v5/order/cancel", parameters, true, ct).ConfigureAwait(false);
         var canceledId = response.Result?.OrderId ?? string.Empty;
         return await FetchOrderAsync(wireSymbol, canceledId, ct, orderLinkId: clientOrderId).ConfigureAwait(false);
     }
@@ -168,7 +100,7 @@ internal sealed class BybitTradingService(IBybitHttpClient http, ISymbolMapper m
 
         // cancel-all returns only ids; re-fetch the full picture via order history so the canceled
         // orders are returned with their full state.
-        var response = await http.PostAsync<BybitResponse<BybitListResult<BybitOrderAck>>>("/v5/order/cancel-all", parameters, true, ct).ConfigureAwait(false);
+        var response = await http.PostAsync<ResponseDto<ListDto<OrderAckDto>>>("/v5/order/cancel-all", parameters, true, ct).ConfigureAwait(false);
         var acks = response.Result?.List ?? [];
         if (acks.Count == 0)
             return [];
@@ -189,9 +121,9 @@ internal sealed class BybitTradingService(IBybitHttpClient http, ISymbolMapper m
         if (symbol.HasValue)
             parameters["symbol"] = mapper.ToWire(symbol.Value);
 
-        var response = await http.GetAsync<BybitResponse<BybitListResult<BybitOrder>>>("/v5/order/realtime", parameters, true, ct).ConfigureAwait(false);
+        var response = await http.GetAsync<ResponseDto<ListDto<OrderDto>>>("/v5/order/realtime", parameters, true, ct).ConfigureAwait(false);
         var orders = response.Result?.List ?? [];
-        return modelMapper.Map<BybitOrder, Order>(orders);
+        return modelMapper.Map<OrderDto, Order>(orders);
     }
 
     /// <inheritdoc />
@@ -219,12 +151,10 @@ internal sealed class BybitTradingService(IBybitHttpClient http, ISymbolMapper m
         if (endTime.HasValue)
             parameters["endTime"] = endTime.Value.ToUnixTimeMilliseconds().ToString();
 
-        var response = await http.GetAsync<BybitResponse<BybitListResult<BybitOrder>>>("/v5/order/history", parameters, true, ct).ConfigureAwait(false);
+        var response = await http.GetAsync<ResponseDto<ListDto<OrderDto>>>("/v5/order/history", parameters, true, ct).ConfigureAwait(false);
         var orders = response.Result?.List ?? [];
-        return modelMapper.Map<BybitOrder, Order>(orders);
+        return modelMapper.Map<OrderDto, Order>(orders);
     }
-
-    // ── Order re-fetch (V5 create/cancel return ids only) ──
 
     /// <summary>
     /// Resolves a full <see cref="Order"/> for a Bybit order id. Bybit's create/cancel responses
@@ -246,23 +176,21 @@ internal sealed class BybitTradingService(IBybitHttpClient http, ISymbolMapper m
         else if (!string.IsNullOrEmpty(orderLinkId))
             parameters["orderLinkId"] = orderLinkId;
 
-        var realtime = await http.GetAsync<BybitResponse<BybitListResult<BybitOrder>>>("/v5/order/realtime", parameters, true, ct).ConfigureAwait(false);
+        var realtime = await http.GetAsync<ResponseDto<ListDto<OrderDto>>>("/v5/order/realtime", parameters, true, ct).ConfigureAwait(false);
         var match = realtime.Result?.List.FirstOrDefault();
         if (match is not null)
-            return modelMapper.Map<BybitOrder, Order>(match);
+            return modelMapper.Map<OrderDto, Order>(match);
 
-        var history = await http.GetAsync<BybitResponse<BybitListResult<BybitOrder>>>("/v5/order/history", parameters, true, ct).ConfigureAwait(false);
+        var history = await http.GetAsync<ResponseDto<ListDto<OrderDto>>>("/v5/order/history", parameters, true, ct).ConfigureAwait(false);
         match = history.Result?.List.FirstOrDefault();
         if (match is not null)
-            return modelMapper.Map<BybitOrder, Order>(match);
+            return modelMapper.Map<OrderDto, Order>(match);
 
         // Neither endpoint surfaced the order; return a minimal record carrying whichever identifier
         // we have (never empty) so callers still get an id to poll later rather than a null/throw.
         var fallbackId = !string.IsNullOrEmpty(orderId) ? orderId : (orderLinkId ?? string.Empty);
         return new Order(mapper.FromWire(wireSymbol), fallbackId);
     }
-
-    // ── Request-direction mapping helpers ──
 
     private static string MapOrderSide(OrderSide side) => side switch
     {

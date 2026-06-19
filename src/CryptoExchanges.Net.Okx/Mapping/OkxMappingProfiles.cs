@@ -21,8 +21,7 @@ internal sealed class OkxResponseProfile : Profile
     {
         ArgumentNullException.ThrowIfNull(symbolMapper);
 
-        // OkxOrder -> Order
-        CreateMap<OkxOrder, Order>()
+        CreateMap<OrderDto, Order>()
             .ForMember(d => d.Symbol, o => o.MapFrom(s => symbolMapper.FromWire(s.InstId)))
             .ForMember(d => d.OrderId, o => o.MapFrom(s => s.OrdId))
             .ForMember(d => d.ClientOrderId, o => o.MapFrom(s => string.IsNullOrEmpty(s.ClOrdId) ? null : s.ClOrdId))
@@ -42,9 +41,9 @@ internal sealed class OkxResponseProfile : Profile
             .ForMember(d => d.CumulativeQuoteQuantity, o => o.MapFrom(s =>
                 OkxValueParsers.ParseDecimal(s.AccFillSz) * OkxValueParsers.ParseDecimal(s.AvgPx)));
 
-        // OkxTicker -> Ticker. OKX reports open24h (the price 24h ago); price change is last - open24h,
+        // TickerDto -> Ticker. OKX reports open24h (the price 24h ago); price change is last - open24h,
         // and the percent is that change over open24h * 100 (OKX exposes no fractional-change field).
-        CreateMap<OkxTicker, Ticker>()
+        CreateMap<TickerDto, Ticker>()
             .ForMember(d => d.Symbol, o => o.MapFrom(s => symbolMapper.FromWire(s.InstId)))
             .ForMember(d => d.LastPrice, o => o.MapFrom(s => OkxValueParsers.ParseDecimal(s.Last)))
             .ForMember(d => d.OpenPrice, o => o.MapFrom(s => OkxValueParsers.ParseDecimal(s.Open24h)))
@@ -59,9 +58,9 @@ internal sealed class OkxResponseProfile : Profile
                     : (OkxValueParsers.ParseDecimal(s.Last) - OkxValueParsers.ParseDecimal(s.Open24h)) / OkxValueParsers.ParseDecimal(s.Open24h) * 100m))
             .ForMember(d => d.Timestamp, o => o.MapFrom(s => ParseTimestamp(s.Ts)));
 
-        // OkxInstrument -> SymbolInfo. OKX instruments expose lot/tick filters under separate fields
+        // SymbolInfoDto -> SymbolInfo. OKX instruments expose lot/tick filters under separate fields
         // this SDK does not yet surface; the numeric filter fields stay null pending a dedicated task.
-        CreateMap<OkxInstrument, SymbolInfo>()
+        CreateMap<SymbolInfoDto, SymbolInfo>()
             .ForMember(d => d.Symbol, o => o.MapFrom(s => symbolMapper.FromComponents(s.BaseCcy, s.QuoteCcy)))
             .ForMember(d => d.AllowedOrderTypes, o => o.MapFrom(s => DefaultSpotOrderTypes))
             .ForMember(d => d.MinPrice, o => o.Ignore())
@@ -72,9 +71,9 @@ internal sealed class OkxResponseProfile : Profile
             .ForMember(d => d.StepSize, o => o.Ignore())
             .ForMember(d => d.MinNotional, o => o.Ignore());
 
-        // OkxBalanceDetail -> AssetBalance. OKX reports availBal (free) + frozenBal (locked) directly.
+        // BalanceDto -> AssetBalance. OKX reports availBal (free) + frozenBal (locked) directly.
         // Long-tail coins map to Asset.None rather than throwing.
-        CreateMap<OkxBalanceDetail, AssetBalance>()
+        CreateMap<BalanceDto, AssetBalance>()
             .ForMember(d => d.Asset, o => o.MapFrom(s => OkxValueParsers.ParseAssetOrNone(s.Ccy)))
             .ForMember(d => d.Free, o => o.MapFrom(s => OkxValueParsers.ParseDecimal(s.AvailBal)))
             .ForMember(d => d.Locked, o => o.MapFrom(s => OkxValueParsers.ParseDecimal(s.FrozenBal)));

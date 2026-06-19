@@ -1,6 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
-using System.Text.Json.Serialization;
 using CryptoExchanges.Net.Okx.Services;
 using CryptoExchanges.Net.Core.Enums;
 using CryptoExchanges.Net.Core.Interfaces;
@@ -87,7 +86,7 @@ public sealed class OkxExchangeClient : IExchangeClient, IAsyncDisposable
     /// <param name="ct">Cancellation token.</param>
     public async Task SyncServerTimeAsync(CancellationToken ct = default)
     {
-        var resp = await _http.GetAsync<OkxResponse<OkxServerTime>>("/api/v5/public/time", signed: false, ct: ct).ConfigureAwait(false);
+        var resp = await _http.GetAsync<ResponseDto<ServerTimeDto>>("/api/v5/public/time", signed: false, ct: ct).ConfigureAwait(false);
         var serverTimeMs = ServerTimeMs(resp.Data.FirstOrDefault());
         // A missing/malformed /time payload (ServerTimeMs returns 0) is a degraded but non-fatal
         // response: skip the offset update (keep the prior/local clock) rather than throw.
@@ -101,7 +100,7 @@ public sealed class OkxExchangeClient : IExchangeClient, IAsyncDisposable
         try
         {
             // The resilience pipeline throws typed exceptions on failure, so reaching here is success.
-            _ = await _http.GetAsync<OkxResponse<OkxServerTime>>("/api/v5/public/time", signed: false, ct: ct).ConfigureAwait(false);
+            _ = await _http.GetAsync<ResponseDto<ServerTimeDto>>("/api/v5/public/time", signed: false, ct: ct).ConfigureAwait(false);
             return true;
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
@@ -127,18 +126,10 @@ public sealed class OkxExchangeClient : IExchangeClient, IAsyncDisposable
     }
 
     /// <summary>Resolves server time in unix milliseconds from the V5 time envelope (ts is ms as a string).</summary>
-    private static long ServerTimeMs(OkxServerTime? result)
+    private static long ServerTimeMs(ServerTimeDto? result)
     {
         if (result is null || string.IsNullOrEmpty(result.Ts))
             return 0L;
         return long.TryParse(result.Ts, NumberStyles.Integer, CultureInfo.InvariantCulture, out var ms) ? ms : 0L;
     }
-}
-
-/// <summary>The <c>data</c> element of the OKX V5 <c>/api/v5/public/time</c> response.</summary>
-internal sealed record OkxServerTime
-{
-    /// <summary>Server time in unix milliseconds (string-encoded).</summary>
-    [JsonPropertyName("ts")]
-    public string Ts { get; init; } = "0";
 }

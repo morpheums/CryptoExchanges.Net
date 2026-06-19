@@ -140,7 +140,7 @@
     }
   },
   "branch": {
-    "feature": "feat/m4-bitget",
+    "feature": "chore/cleanup-file-per-type",
     "base": "main",
     "main_worktree_path": "/Users/josemejia/ai-platform/personal/workspace/repos/CryptoExchanges.Net",
     "worktree_dir": null,
@@ -156,7 +156,7 @@
     "timeout_minutes": 90,
     "checkpoint_every_n_iterations": 5,
     "auto_commit": true,
-    "commit_prefix": "feat(M2):"
+    "commit_prefix": "refactor(cleanup):"
   },
   "context": {
     "budget_strategy": "aggressive",

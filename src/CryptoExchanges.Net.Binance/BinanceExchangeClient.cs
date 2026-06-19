@@ -1,31 +1,9 @@
 using System.Diagnostics.CodeAnalysis;
-using System.Text.Json.Serialization;
 using CryptoExchanges.Net.Core;
 using CryptoExchanges.Net.Core.Interfaces;
 using CryptoExchanges.Net.Core.Models;
 
 namespace CryptoExchanges.Net.Binance;
-
-/// <summary>
-/// Configuration options for the Binance exchange client.
-/// </summary>
-public sealed class BinanceOptions
-{
-    /// <summary>The Binance REST API base URL. Default: https://api.binance.com</summary>
-    public string BaseUrl { get; set; } = "https://api.binance.com";
-
-    /// <summary>Binance API key.</summary>
-    public string ApiKey { get; set; } = string.Empty;
-
-    /// <summary>Binance API secret key.</summary>
-    public string SecretKey { get; set; } = string.Empty;
-
-    /// <summary>Request timeout in seconds. Default: 30.</summary>
-    public int TimeoutSeconds { get; set; } = 30;
-
-    /// <summary>Receive window in milliseconds (decimal). Default: 5000.</summary>
-    public decimal ReceiveWindow { get; set; } = 5000m;
-}
 
 /// <summary>
 /// Full Binance exchange client implementing <see cref="IExchangeClient"/>.
@@ -104,7 +82,7 @@ public sealed class BinanceExchangeClient : IExchangeClient, IAsyncDisposable
     /// </summary>
     public async Task SyncServerTimeAsync(CancellationToken ct = default)
     {
-        var resp = await _http.GetAsync<BinanceServerTimeResponse>("/api/v3/time", signed: false, ct: ct).ConfigureAwait(false);
+        var resp = await _http.GetAsync<ServerTimeDto>("/api/v3/time", signed: false, ct: ct).ConfigureAwait(false);
         // A missing/malformed /time payload (serverTime <= 0) is a degraded but non-fatal response:
         // skip the offset update (keep the prior/local clock) rather than throw out of SyncServerTimeAsync.
         if (resp.ServerTime > 0)
@@ -118,7 +96,7 @@ public sealed class BinanceExchangeClient : IExchangeClient, IAsyncDisposable
         try
         {
             // The resilience pipeline throws typed exceptions on failure, so reaching here is success.
-            _ = await _http.GetAsync<BinanceServerTimeResponse>("/api/v3/time", signed: false, ct: ct).ConfigureAwait(false);
+            _ = await _http.GetAsync<ServerTimeDto>("/api/v3/time", signed: false, ct: ct).ConfigureAwait(false);
             return true;
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
@@ -142,13 +120,4 @@ public sealed class BinanceExchangeClient : IExchangeClient, IAsyncDisposable
             _httpClient.Dispose();
         await Task.CompletedTask.ConfigureAwait(false);
     }
-}
-
-/// <summary>
-/// Simple DTO for the /api/v3/time response used by PingAsync.
-/// </summary>
-internal sealed record BinanceServerTimeResponse
-{
-    [JsonPropertyName("serverTime")]
-    public long ServerTime { get; init; }
 }

@@ -3,81 +3,6 @@ using DeltaMapper;
 
 namespace CryptoExchanges.Net.Bitget.Services;
 
-// ---------------------------------------------------------------------------
-//  Bitget V2 trading DTOs
-// ---------------------------------------------------------------------------
-
-/// <summary>
-/// The per-order acknowledgement Bitget V2 returns from place/cancel: the ids only. A non-success
-/// envelope never reaches the services because the resilience pipeline's error translator converts
-/// it into a typed exception.
-/// </summary>
-internal sealed record BitgetOrderAck
-{
-    [JsonPropertyName("orderId")]
-    public string OrderId { get; init; } = string.Empty;
-
-    [JsonPropertyName("clientOid")]
-    public string ClientOid { get; init; } = string.Empty;
-}
-
-/// <summary>A full Bitget V2 order record as returned by <c>/api/v2/spot/trade/orderInfo</c> and the order lists.</summary>
-internal sealed record BitgetOrder
-{
-    [JsonPropertyName("symbol")]
-    public string Symbol { get; init; } = string.Empty;
-
-    [JsonPropertyName("orderId")]
-    public string OrderId { get; init; } = string.Empty;
-
-    [JsonPropertyName("clientOid")]
-    public string ClientOid { get; init; } = string.Empty;
-
-    [JsonPropertyName("price")]
-    public string Price { get; init; } = "0";
-
-    /// <summary>Original order size (base currency for limit; quote for market-buy by quote).</summary>
-    [JsonPropertyName("size")]
-    public string Size { get; init; } = "0";
-
-    /// <summary>Accumulated filled base quantity.</summary>
-    [JsonPropertyName("baseVolume")]
-    public string BaseVolume { get; init; } = "0";
-
-    /// <summary>Accumulated filled quote amount (price * filled base).</summary>
-    [JsonPropertyName("quoteVolume")]
-    public string QuoteVolume { get; init; } = "0";
-
-    /// <summary>Average fill price; Bitget emits "" / "0" when there are no fills yet.</summary>
-    [JsonPropertyName("priceAvg")]
-    public string PriceAvg { get; init; } = string.Empty;
-
-    [JsonPropertyName("side")]
-    public string Side { get; init; } = "buy";
-
-    [JsonPropertyName("orderType")]
-    public string OrderType { get; init; } = "limit";
-
-    /// <summary>Time-in-force (<c>gtc</c>/<c>ioc</c>/<c>fok</c>/<c>post_only</c>).</summary>
-    [JsonPropertyName("force")]
-    public string Force { get; init; } = "gtc";
-
-    [JsonPropertyName("status")]
-    public string Status { get; init; } = "live";
-
-    /// <summary>Order creation time in unix milliseconds (string-encoded).</summary>
-    [JsonPropertyName("cTime")]
-    public string CTime { get; init; } = "0";
-
-    /// <summary>Last update time in unix milliseconds (string-encoded).</summary>
-    [JsonPropertyName("uTime")]
-    public string UTime { get; init; } = "0";
-}
-
-// ---------------------------------------------------------------------------
-//  BitgetTradingService
-// ---------------------------------------------------------------------------
-
 /// <summary>
 /// Bitget implementation of <see cref="ITradingService"/> against the V2 spot REST API. Place/cancel
 /// endpoints return only the order id, so those methods re-fetch via <c>/api/v2/spot/trade/orderInfo</c>
@@ -112,7 +37,7 @@ internal sealed class BitgetTradingService(IBitgetHttpClient http, ISymbolMapper
         if (request.ClientOrderId is not null)
             parameters["clientOid"] = request.ClientOrderId;
 
-        var response = await http.PostAsync<BitgetResponse<BitgetOrderAck>>("/api/v2/spot/trade/place-order", parameters, true, ct).ConfigureAwait(false);
+        var response = await http.PostAsync<ResponseDto<OrderAckDto>>("/api/v2/spot/trade/place-order", parameters, true, ct).ConfigureAwait(false);
         var ack = response.Data.FirstOrDefault();
         return await FetchOrderAsync(wireSymbol, ack?.OrderId ?? string.Empty, ct, clientOrderId: request.ClientOrderId).ConfigureAwait(false);
     }
@@ -127,7 +52,7 @@ internal sealed class BitgetTradingService(IBitgetHttpClient http, ISymbolMapper
             ["orderId"] = orderId
         };
 
-        var response = await http.PostAsync<BitgetResponse<BitgetOrderAck>>("/api/v2/spot/trade/cancel-order", parameters, true, ct).ConfigureAwait(false);
+        var response = await http.PostAsync<ResponseDto<OrderAckDto>>("/api/v2/spot/trade/cancel-order", parameters, true, ct).ConfigureAwait(false);
         var canceledId = response.Data.FirstOrDefault()?.OrderId ?? orderId;
         return await FetchOrderAsync(wireSymbol, canceledId, ct).ConfigureAwait(false);
     }
@@ -142,7 +67,7 @@ internal sealed class BitgetTradingService(IBitgetHttpClient http, ISymbolMapper
             ["clientOid"] = clientOrderId
         };
 
-        var response = await http.PostAsync<BitgetResponse<BitgetOrderAck>>("/api/v2/spot/trade/cancel-order", parameters, true, ct).ConfigureAwait(false);
+        var response = await http.PostAsync<ResponseDto<OrderAckDto>>("/api/v2/spot/trade/cancel-order", parameters, true, ct).ConfigureAwait(false);
         var canceledId = response.Data.FirstOrDefault()?.OrderId ?? string.Empty;
         return await FetchOrderAsync(wireSymbol, canceledId, ct, clientOrderId: clientOrderId).ConfigureAwait(false);
     }
@@ -165,7 +90,7 @@ internal sealed class BitgetTradingService(IBitgetHttpClient http, ISymbolMapper
         if (cancels.Count == 0)
             return [];
 
-        var response = await http.PostAsync<BitgetResponse<BitgetOrderAck>>("/api/v2/spot/trade/batch-cancel-order", cancels, true, ct).ConfigureAwait(false);
+        var response = await http.PostAsync<ResponseDto<OrderAckDto>>("/api/v2/spot/trade/batch-cancel-order", cancels, true, ct).ConfigureAwait(false);
         var canceledIds = response.Data.Select(a => a.OrderId).Where(id => !string.IsNullOrEmpty(id)).ToHashSet(StringComparer.Ordinal);
         if (canceledIds.Count == 0)
             return [];
@@ -185,8 +110,8 @@ internal sealed class BitgetTradingService(IBitgetHttpClient http, ISymbolMapper
         if (symbol.HasValue)
             parameters["symbol"] = mapper.ToWire(symbol.Value);
 
-        var response = await http.GetAsync<BitgetResponse<BitgetOrder>>("/api/v2/spot/trade/unfilled-orders", parameters, true, ct).ConfigureAwait(false);
-        return modelMapper.Map<BitgetOrder, Order>(response.Data);
+        var response = await http.GetAsync<ResponseDto<OrderDto>>("/api/v2/spot/trade/unfilled-orders", parameters, true, ct).ConfigureAwait(false);
+        return modelMapper.Map<OrderDto, Order>(response.Data);
     }
 
     /// <inheritdoc />
@@ -213,11 +138,9 @@ internal sealed class BitgetTradingService(IBitgetHttpClient http, ISymbolMapper
         if (endTime.HasValue)
             parameters["endTime"] = endTime.Value.ToUnixTimeMilliseconds().ToString(System.Globalization.CultureInfo.InvariantCulture);
 
-        var response = await http.GetAsync<BitgetResponse<BitgetOrder>>("/api/v2/spot/trade/history-orders", parameters, true, ct).ConfigureAwait(false);
-        return modelMapper.Map<BitgetOrder, Order>(response.Data);
+        var response = await http.GetAsync<ResponseDto<OrderDto>>("/api/v2/spot/trade/history-orders", parameters, true, ct).ConfigureAwait(false);
+        return modelMapper.Map<OrderDto, Order>(response.Data);
     }
-
-    // ── Order re-fetch (V2 place/cancel return ids only) ──
 
     /// <summary>
     /// Resolves a full <see cref="Order"/> for a Bitget order id. Bitget place/cancel responses carry
@@ -235,18 +158,16 @@ internal sealed class BitgetTradingService(IBitgetHttpClient http, ISymbolMapper
         else if (!string.IsNullOrEmpty(clientOrderId))
             parameters["clientOid"] = clientOrderId;
 
-        var response = await http.GetAsync<BitgetResponse<BitgetOrder>>("/api/v2/spot/trade/orderInfo", parameters, true, ct).ConfigureAwait(false);
+        var response = await http.GetAsync<ResponseDto<OrderDto>>("/api/v2/spot/trade/orderInfo", parameters, true, ct).ConfigureAwait(false);
         var match = response.Data.FirstOrDefault();
         if (match is not null)
-            return modelMapper.Map<BitgetOrder, Order>(match);
+            return modelMapper.Map<OrderDto, Order>(match);
 
         // The order did not surface; return a minimal record carrying whichever identifier we have
         // (never empty) so callers still get an id to poll later rather than a null/throw.
         var fallbackId = !string.IsNullOrEmpty(orderId) ? orderId : (clientOrderId ?? string.Empty);
         return new Order(mapper.FromWire(wireSymbol), fallbackId);
     }
-
-    // ── Request-direction mapping helpers ──
 
     private static string MapOrderSide(OrderSide side) => side switch
     {

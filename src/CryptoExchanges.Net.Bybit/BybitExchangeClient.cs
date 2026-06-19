@@ -1,6 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
-using System.Text.Json.Serialization;
 using CryptoExchanges.Net.Bybit.Services;
 using CryptoExchanges.Net.Core.Enums;
 using CryptoExchanges.Net.Core.Interfaces;
@@ -86,7 +85,7 @@ public sealed class BybitExchangeClient : IExchangeClient, IAsyncDisposable
     /// <param name="ct">Cancellation token.</param>
     public async Task SyncServerTimeAsync(CancellationToken ct = default)
     {
-        var resp = await _http.GetAsync<BybitResponse<BybitServerTimeResult>>("/v5/market/time", signed: false, ct: ct).ConfigureAwait(false);
+        var resp = await _http.GetAsync<ResponseDto<ServerTimeDto>>("/v5/market/time", signed: false, ct: ct).ConfigureAwait(false);
         var serverTimeMs = ServerTimeMs(resp.Result);
         // A missing/malformed /time payload (ServerTimeMs returns 0) is a degraded but non-fatal
         // response: skip the offset update (keep the prior/local clock) rather than throw.
@@ -100,7 +99,7 @@ public sealed class BybitExchangeClient : IExchangeClient, IAsyncDisposable
         try
         {
             // The resilience pipeline throws typed exceptions on failure, so reaching here is success.
-            _ = await _http.GetAsync<BybitResponse<BybitServerTimeResult>>("/v5/market/time", signed: false, ct: ct).ConfigureAwait(false);
+            _ = await _http.GetAsync<ResponseDto<ServerTimeDto>>("/v5/market/time", signed: false, ct: ct).ConfigureAwait(false);
             return true;
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
@@ -129,7 +128,7 @@ public sealed class BybitExchangeClient : IExchangeClient, IAsyncDisposable
     /// Resolves server time in unix milliseconds from the V5 time envelope, preferring the
     /// nanosecond field (truncated to ms) and falling back to the second field.
     /// </summary>
-    private static long ServerTimeMs(BybitServerTimeResult? result)
+    private static long ServerTimeMs(ServerTimeDto? result)
     {
         if (result is null)
             return 0L;
@@ -141,16 +140,4 @@ public sealed class BybitExchangeClient : IExchangeClient, IAsyncDisposable
             return sec * 1_000L;
         return 0L;
     }
-}
-
-/// <summary>The <c>result</c> shape of the Bybit V5 <c>/v5/market/time</c> response.</summary>
-internal sealed record BybitServerTimeResult
-{
-    /// <summary>Server time in unix seconds (string-encoded).</summary>
-    [JsonPropertyName("timeSecond")]
-    public string TimeSecond { get; init; } = "0";
-
-    /// <summary>Server time in unix nanoseconds (string-encoded).</summary>
-    [JsonPropertyName("timeNano")]
-    public string TimeNano { get; init; } = "0";
 }

@@ -21,9 +21,9 @@ internal sealed class BitgetResponseProfile : Profile
     {
         ArgumentNullException.ThrowIfNull(symbolMapper);
 
-        // BitgetOrder -> Order. Bitget reports cumulative filled base (baseVolume) and cumulative
+        // OrderDto -> Order. Bitget reports cumulative filled base (baseVolume) and cumulative
         // filled quote (quoteVolume) directly, so no avgPx multiplication is needed.
-        CreateMap<BitgetOrder, Order>()
+        CreateMap<OrderDto, Order>()
             .ForMember(d => d.Symbol, o => o.MapFrom(s => symbolMapper.FromWire(s.Symbol)))
             .ForMember(d => d.OrderId, o => o.MapFrom(s => s.OrderId))
             .ForMember(d => d.ClientOrderId, o => o.MapFrom(s => string.IsNullOrEmpty(s.ClientOid) ? null : s.ClientOid))
@@ -40,9 +40,9 @@ internal sealed class BitgetResponseProfile : Profile
             .ForMember(d => d.CreatedAt, o => o.MapFrom(s => ParseTimestamp(s.CTime)))
             .ForMember(d => d.UpdatedAt, o => o.MapFrom(s => ParseTimestamp(s.UTime)));
 
-        // BitgetTicker -> Ticker. Bitget reports the fractional 24h change (change24h) directly, so
+        // TickerDto -> Ticker. Bitget reports the fractional 24h change (change24h) directly, so
         // the percent is change24h * 100 and the absolute change is last - open.
-        CreateMap<BitgetTicker, Ticker>()
+        CreateMap<TickerDto, Ticker>()
             .ForMember(d => d.Symbol, o => o.MapFrom(s => symbolMapper.FromWire(s.Symbol)))
             .ForMember(d => d.LastPrice, o => o.MapFrom(s => BitgetValueParsers.ParseDecimal(s.LastPr)))
             .ForMember(d => d.OpenPrice, o => o.MapFrom(s => BitgetValueParsers.ParseDecimal(s.Open)))
@@ -54,9 +54,9 @@ internal sealed class BitgetResponseProfile : Profile
             .ForMember(d => d.PriceChangePercent, o => o.MapFrom(s => BitgetValueParsers.ParseDecimal(s.Change24h) * 100m))
             .ForMember(d => d.Timestamp, o => o.MapFrom(s => ParseTimestamp(s.Ts)));
 
-        // BitgetSymbol -> SymbolInfo. Bitget exposes lot/tick precision under separate fields this SDK
+        // SymbolInfoDto -> SymbolInfo. Bitget exposes lot/tick precision under separate fields this SDK
         // does not yet surface; the numeric filter fields stay null pending a dedicated task.
-        CreateMap<BitgetSymbol, SymbolInfo>()
+        CreateMap<SymbolInfoDto, SymbolInfo>()
             .ForMember(d => d.Symbol, o => o.MapFrom(s => symbolMapper.FromComponents(s.BaseCoin, s.QuoteCoin)))
             .ForMember(d => d.AllowedOrderTypes, o => o.MapFrom(s => DefaultSpotOrderTypes))
             .ForMember(d => d.MinPrice, o => o.Ignore())
@@ -67,10 +67,10 @@ internal sealed class BitgetResponseProfile : Profile
             .ForMember(d => d.StepSize, o => o.Ignore())
             .ForMember(d => d.MinNotional, o => o.Ignore());
 
-        // BitgetBalance -> AssetBalance. Bitget splits unavailable balance across frozen (open orders)
+        // BalanceDto -> AssetBalance. Bitget splits unavailable balance across frozen (open orders)
         // and locked (other holds); both count toward the domain Locked. Long-tail coins map to
         // Asset.None rather than throwing.
-        CreateMap<BitgetBalance, AssetBalance>()
+        CreateMap<BalanceDto, AssetBalance>()
             .ForMember(d => d.Asset, o => o.MapFrom(s => BitgetValueParsers.ParseAssetOrNone(s.Coin)))
             .ForMember(d => d.Free, o => o.MapFrom(s => BitgetValueParsers.ParseDecimal(s.Available)))
             .ForMember(d => d.Locked, o => o.MapFrom(s => BitgetValueParsers.ParseDecimal(s.Frozen) + BitgetValueParsers.ParseDecimal(s.Locked)));

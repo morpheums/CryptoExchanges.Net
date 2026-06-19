@@ -71,9 +71,9 @@ REUSE existing discovery — do NOT re-run.
 | TASK-029 | ✦ DONE | 2    | Tool primitives (ToolResult, ToolInputs, ToolRunner) |
 | TASK-030 | ✦ DONE | 3  | Market-data tools (6, no keys)                    |
 | TASK-031 | ✦ DONE | 3  | Account tools (6, read-scoped keys)                  |
-| TASK-032 | ✦ IMPLEMENTED | 4  | Tool-roster guard test + README/packaging            |
+| TASK-032 | ✦ DONE | 4  | Tool-roster guard test + README/packaging            |
 
-Tasks: 5/5 IMPLEMENTED (awaiting review)
+Tasks: 5/5 DONE
 
 ## Wave Groups
 
@@ -117,16 +117,17 @@ unmapped; writes/WebSockets/hosted-transport are correctly absent.
 - TASK-029 (Wave 2) — tool primitives (ToolResult/ToolInputs/ToolRunner). DONE. Completion SHA: 66039b1.
 - TASK-030 (Wave 3) — 6 read-only market-data tools. DONE (review board PASS; fix-first added 8h/3d intervals). Completion SHA: 290869b.
 - TASK-031 (Wave 3) — 6 read-only account tools. DONE (review board PASS, cycle 2 — all 4 reviewers APPROVED). Completion SHA: 2de728c.
+- TASK-032 (Wave 4) — tool-roster guard test + README/packaging. DONE (review board PASS, cycle 1 — all 4 reviewers APPROVED). Implementation SHA: 3432f08.
 
 ## Recovery Pointer
 
-- **Current stage**: TASK-032 IMPLEMENTED (SHA 3432f08). All 5 tasks implemented. Awaiting review.
-- **Next action**: Review board for TASK-032.
-- **Active task**: TASK-032 — IMPLEMENTED.
+- **Current stage**: ALL 5 TASKS DONE. Post-loop phase next (post-loop simplify → PR).
+- **Next action**: Post-loop simplify pass + create PR for feat/FEAT-002-mcp-server-readonly → main.
+- **Active task**: none — all tasks DONE.
 - **Files are truth**: task manifests in `nazgul/tasks/TASK-028..032.md` carry full state;
   frontmatter `status:` is canonical.
 
 ─── ◈ NEXT ─────────────────────────────────────────────
-  Wave 4: TASK-032 (tool-roster guard + README) — TASK-031 DONE
-  /nazgul:start to continue
+  All 5 tasks DONE — post-loop phase (simplify + PR)
+  /nazgul:start to trigger post-loop
 ────────────────────────────────────────────────────────

@@ -1,6 +1,6 @@
 ---
 id: TASK-032
-status: IMPLEMENTED
+status: DONE
 depends_on: [TASK-030, TASK-031]
 commit: 3432f08
 claimed_at: 2026-06-19T06:00:00Z
@@ -20,9 +20,10 @@ claimed_at: 2026-06-19T06:00:00Z
 - **Claimed at**: 2026-06-19T06:00:00Z
 - **Base SHA**: fade890
 - **Implemented at**: 2026-06-19T06:30:00Z
-- **Completed at**:
+- **Completed at**: 2026-06-19T07:30:00Z
 - **Blocked at**:
 - **Retry count**: 0/3
+- **Test failures**: 0
 
 ## Status
 
@@ -51,9 +52,9 @@ pointing at the package. Do NOT touch license metadata (AGPL relicense is a sepa
 Verify packaging with `dotnet pack` (produces a `.nupkg`, 0W/0E).
 
 ## Acceptance Criteria
-- [ ] `dotnet build CryptoExchanges.Net.sln -c Release` is 0W/0E and full-solution `dotnet test` passes — existing 455 tests **plus** all new MCP tests green.
-- [ ] `ToolRosterTests` pass: exactly **12** tools, every tool has a non-empty description, **zero** write-named tools.
-- [ ] `src/CryptoExchanges.Net.Mcp/README.md` (install + env vars + MCP config block + 12-tool list + "read-only" statement) and a repo-root README "MCP server" section exist; `dotnet pack` produces a tool `.nupkg`.
+- [x] `dotnet build CryptoExchanges.Net.sln -c Release` is 0W/0E and full-solution `dotnet test` passes — existing 455 tests **plus** all new MCP tests green.
+- [x] `ToolRosterTests` pass: exactly **12** tools, every tool has a non-empty description, **zero** write-named tools.
+- [x] `src/CryptoExchanges.Net.Mcp/README.md` (install + env vars + MCP config block + 12-tool list + "read-only" statement) and a repo-root README "MCP server" section exist; `dotnet pack` produces a tool `.nupkg`.
 
 ## Pattern Reference
 - Tool types under test: `src/CryptoExchanges.Net.Mcp/Tools/MarketDataTools.cs` (TASK-030),
@@ -97,3 +98,9 @@ Verify packaging with `dotnet pack` (produces a `.nupkg`, 0W/0E).
 ## Review Results
 
 ### Attempt 1
+
+- **architect-reviewer**: APPROVED (97) — Roster guard structurally correct; csproj pack fix minimal and idiomatic; README accurately represents architecture. Non-blocking CONCERN: stale roadmap checkboxes in root README (pre-existing, confidence 70).
+- **code-reviewer**: APPROVED (97) — BindingFlags and attribute type correct; count guard not gameable; tool names match source exactly; pack syntax verified. LR-001/002/003 N/A.
+- **security-reviewer**: APPROVED (95) — No hardcoded secrets; placeholders used in config JSON; OKX_PASSPHRASE/BITGET_PASSPHRASE present; read-only claim verified against source. Non-blocking CONCERN: secret key rows missing "(read permission)" annotation (confidence 55).
+- **api-reviewer**: APPROVED (93) — PackAsTool+ToolCommandName correct; README pack fix satisfies NU5039; MCP config JSON valid; 12-tool count verified against source. Non-blocking CONCERN: GenerateDocumentationFile=false without inline comment (confidence 65).
+- **Overall**: ALL APPROVED — TASK-032 DONE.

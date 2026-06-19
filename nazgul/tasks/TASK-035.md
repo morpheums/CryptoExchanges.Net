@@ -1,13 +1,13 @@
 ---
 id: TASK-035
-status: IN_PROGRESS
-commit:
+status: IMPLEMENTED
+commit: d3d5f13
 claimed_at: 2026-06-19
 ---
 
 # TASK-035: Address PR #19 code-review findings (4)
 
-**Status**: READY
+**Status**: IMPLEMENTED (commit d3d5f13; ships with PR #19). All 4 findings fixed; build 0W/0E; 50 MCP tests.
 
 **Blast radius**: LOW — one type-file split, one dead-test-line removal, two doc fixes. No behavior change; tests stay green.
 

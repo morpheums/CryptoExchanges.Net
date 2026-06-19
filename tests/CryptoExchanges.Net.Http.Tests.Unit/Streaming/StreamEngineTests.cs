@@ -14,7 +14,6 @@ namespace CryptoExchanges.Net.Http.Tests.Unit.Streaming;
 /// </summary>
 public sealed class StreamEngineTests
 {
-    // ── Helpers ───────────────────────────────────────────────────────────────
 
     private static (StreamEngine engine, FakeWebSocketConnection fake) BuildEngine(
         FakeStreamProtocol? protocol = null,
@@ -79,7 +78,6 @@ public sealed class StreamEngineTests
             }));
     }
 
-    // ── Routing key helper ────────────────────────────────────────────────────
 
     [Fact]
     public void BuildRoutingKey_Ticker_ProducesExpectedKey()
@@ -102,7 +100,6 @@ public sealed class StreamEngineTests
         key.Should().Be("ETHUSDT@KLINE/1m");
     }
 
-    // ── Backoff schedule ──────────────────────────────────────────────────────
 
     [Fact]
     public void BackoffSchedule_Next_AdvancesAttemptAndDelay()
@@ -146,7 +143,6 @@ public sealed class StreamEngineTests
         act3.Should().Throw<ArgumentOutOfRangeException>();
     }
 
-    // ── Connect / lazy open ───────────────────────────────────────────────────
 
     [Fact]
     public async Task Engine_Subscribe_OpensSocketOnFirstSubscribe()
@@ -180,7 +176,6 @@ public sealed class StreamEngineTests
         }
     }
 
-    // ── Data routing ──────────────────────────────────────────────────────────
 
     [Fact]
     public async Task Engine_DataFrame_RoutedToCorrectSubscription()
@@ -276,7 +271,6 @@ public sealed class StreamEngineTests
         }
     }
 
-    // ── Decode closure invocation ─────────────────────────────────────────────
 
     [Fact]
     public async Task Engine_DecodeClosureInvoked_ObjectDeliveredToCallback()
@@ -326,7 +320,6 @@ public sealed class StreamEngineTests
         }
     }
 
-    // ── Per-subscription FIFO ─────────────────────────────────────────────────
 
     [Fact]
     public async Task Engine_FIFO_PreservedWithinSingleSubscription()
@@ -353,7 +346,6 @@ public sealed class StreamEngineTests
         }
     }
 
-    // ── Backpressure / OnLagged ───────────────────────────────────────────────
 
     [Fact]
     public async Task Engine_Backpressure_DropOldest_LagCallbackFires()
@@ -428,7 +420,6 @@ public sealed class StreamEngineTests
         }
     }
 
-    // ── Callback exception isolation ──────────────────────────────────────────
 
     [Fact]
     public async Task Engine_CallbackException_PumpSurvives_SubsequentFramesDelivered()
@@ -469,7 +460,6 @@ public sealed class StreamEngineTests
         }
     }
 
-    // ── Reconnect + auto-resubscribe (K2) ─────────────────────────────────────
 
     [Fact]
     public async Task Engine_Reconnect_AutoResubscribes_StoredSubscribeSet()
@@ -594,7 +584,6 @@ public sealed class StreamEngineTests
         }
     }
 
-    // ── Subscription state transitions ────────────────────────────────────────
 
     [Fact]
     public async Task Engine_LifecycleState_ConnectingToLiveOnSubscribe()
@@ -622,7 +611,6 @@ public sealed class StreamEngineTests
         }
     }
 
-    // ── Idle-close ────────────────────────────────────────────────────────────
 
     [Fact]
     public async Task Engine_IdleClose_ClosesSocketAfterLastUnsubscribe()
@@ -654,7 +642,6 @@ public sealed class StreamEngineTests
         }
     }
 
-    // ── Heartbeat — ClientPing ────────────────────────────────────────────────
 
     [Fact]
     public async Task Engine_HeartbeatClientPing_Text_SendsPingAtInterval()
@@ -758,7 +745,6 @@ public sealed class StreamEngineTests
         }
     }
 
-    // ── Watchdog-triggered reconnect ──────────────────────────────────────────
 
     [Fact]
     public async Task Engine_Watchdog_TriggersReconnect_WhenNoLiveness()
@@ -799,7 +785,6 @@ public sealed class StreamEngineTests
         }
     }
 
-    // ── Routing-key keyspace regression ──────────────────────────────────────
     // Regression for Finding 1: engine registered subscriptions under a canonical (uppercase)
     // key while the venue Classify returned a venue-native (lowercase) key — they never matched,
     // so every live data frame was discarded. The fix: single-source the routing keyspace through
@@ -881,7 +866,6 @@ public sealed class StreamEngineTests
             Timeout: TimeSpan.FromSeconds(60));
     }
 
-    // ── Liveness: data frames reset the watchdog (Finding 2 fix) ─────────────
 
     [Fact]
     public async Task Engine_Watchdog_DoesNotTriggerReconnect_WhenDataFramesArriveRegularly()
@@ -934,7 +918,6 @@ public sealed class StreamEngineTests
         }
     }
 
-    // ── Unsubscribe sends wire message ────────────────────────────────────────
 
     [Fact]
     public async Task Engine_Unsubscribe_SendsUnsubscribeMessage()

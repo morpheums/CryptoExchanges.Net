@@ -6,6 +6,9 @@ This page covers per-client configuration for `crypto-mcp`, the read-only
 [CryptoExchanges.Net MCP server](mcp-server.md). Every client launches the same local stdio
 command (`crypto-mcp`); only the config file location and key shape vary.
 
+Requires .NET 10 SDK and `crypto-mcp` installed globally — see
+[mcp-server.md — Install](mcp-server.md#install).
+
 Market-data tools require **no API credentials**. Account tools require read-permission API keys
 set via environment variables — see [mcp-server.md — Credentials](mcp-server.md#credentials)
 for the full env-var reference.
@@ -24,12 +27,14 @@ claude mcp add crypto -- crypto-mcp
 claude mcp add --scope user crypto -- crypto-mcp
 ```
 
-To pass exchange credentials, add `--env` flags:
+To pass exchange credentials, add `--env` flags **before** the `--` separator (everything after
+`--` is passed to the `crypto-mcp` subprocess, not to `claude mcp add`):
 
 ```bash
-claude mcp add crypto -- crypto-mcp \
+claude mcp add crypto \
   --env BINANCE_API_KEY=your_key \
-  --env BINANCE_SECRET_KEY=your_secret
+  --env BINANCE_SECRET_KEY=your_secret \
+  -- crypto-mcp
 ```
 
 Or set them in your shell environment before running Claude Code — they are inherited by the

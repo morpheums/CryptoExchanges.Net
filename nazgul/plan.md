@@ -59,10 +59,10 @@ REUSE existing discovery — do NOT re-run.
 |----------|----------|------|--------------------------------------------------------------------|
 | TASK-036 | ✦ DONE   | 1    | Exchange brand SVG assets (7) under `docs/assets/exchanges/`       |
 | TASK-037 | ✦ DONE   | 1    | Core library docs (getting-started, library-usage, architecture, exchanges) |
-| TASK-038 | ✦ IMPLEMENTED| 1    | MCP docs (mcp-server.md + mcp-clients.md, major clients)           |
+| TASK-038 | ✦ DONE   | 1    | MCP docs (mcp-server.md + mcp-clients.md, major clients)           |
 | TASK-039 | ◇ PLANNED| 2    | README rewrite (lean) — links into docs/, uses icons, status table |
 
-Tasks: 2/4 DONE
+Tasks: 3/4 DONE
 
 ## Wave Groups
 
@@ -115,16 +115,21 @@ docs-site generator, WebSockets) is planned.
 - **TASK-037** — Core library docs. All 4 reviewers ran; CHANGES_REQUESTED for 6 auto-fixable
   doc text errors (wrong field names, CS0128 duplicate var, broken link, layer diagram). Auto-fix
   applied by review-gate. Commit: 7deb9c0 + review-gate fix commit.
+- **TASK-038** — MCP docs (mcp-server.md + mcp-clients.md, 8 clients). All 4 reviewers APPROVED
+  (architect 9, code 10, security 10, api 9). Simplifier ran (prose-only, 9a2f291). Review-gate
+  auto-fixed 3 trivial doc errors: "24 h"→"24h", Claude Code `--env` moved before `--` separator
+  (verified vs `claude mcp add --help`), added .NET SDK prerequisite cross-link. Build green.
+  Commits: e588512 + 9a2f291 + review-gate auto-fix/DONE commit.
 
 ## Recovery Pointer
 
-- **Current stage**: Wave 1 — TASK-036 DONE, TASK-037 DONE. TASK-038 ready.
-- **Next action**: Implement TASK-038 (MCP docs).
+- **Current stage**: Wave 1 COMPLETE — TASK-036, TASK-037, TASK-038 all DONE. Wave 2 ready.
+- **Next action**: Implement TASK-039 (README rewrite — final task, Wave 2).
 - **Active task**: none.
 - **Files are truth**: task manifests in `nazgul/tasks/TASK-036..039.md` carry full state;
   frontmatter `status:` is canonical.
 
 ─── ◈ NEXT ─────────────────────────────────────────────
-  Wave 1 — TASK-038 (MCP docs: mcp-server.md + mcp-clients.md)
+  Wave 2 — TASK-039 (README rewrite — lean, links into docs/, icons, status table)
   /nazgul:start to continue
 ────────────────────────────────────────────────────────

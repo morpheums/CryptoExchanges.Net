@@ -1,9 +1,9 @@
 diff --git a/docs/mcp-clients.md b/docs/mcp-clients.md
 new file mode 100644
-index 0000000..9fe780d
+index 0000000..1232290
 --- /dev/null
 +++ b/docs/mcp-clients.md
-@@ -0,0 +1,304 @@
+@@ -0,0 +1,308 @@
 +# MCP Client Setup
 +
 +> **Note:** Config formats evolve — check your client's current MCP docs if a key differs.
@@ -12,9 +12,11 @@ index 0000000..9fe780d
 +[CryptoExchanges.Net MCP server](mcp-server.md). Every client launches the same local stdio
 +command (`crypto-mcp`); only the config file location and key shape vary.
 +
-+Market-data tools (price, ticker, order book, klines, recent trades, exchange info) require
-+**no API credentials**. Account tools (balances, orders, trade history) require read-permission
-+API keys set via environment variables — see [mcp-server.md — Credentials](mcp-server.md#credentials)
++Requires .NET 10 SDK and `crypto-mcp` installed globally — see
++[mcp-server.md — Install](mcp-server.md#install).
++
++Market-data tools require **no API credentials**. Account tools require read-permission API keys
++set via environment variables — see [mcp-server.md — Credentials](mcp-server.md#credentials)
 +for the full env-var reference.
 +
 +---
@@ -31,12 +33,14 @@ index 0000000..9fe780d
 +claude mcp add --scope user crypto -- crypto-mcp
 +```
 +
-+To pass exchange credentials, add `--env` flags:
++To pass exchange credentials, add `--env` flags **before** the `--` separator (everything after
++`--` is passed to the `crypto-mcp` subprocess, not to `claude mcp add`):
 +
 +```bash
-+claude mcp add crypto -- crypto-mcp \
++claude mcp add crypto \
 +  --env BINANCE_API_KEY=your_key \
-+  --env BINANCE_SECRET_KEY=your_secret
++  --env BINANCE_SECRET_KEY=your_secret \
++  -- crypto-mcp
 +```
 +
 +Or set them in your shell environment before running Claude Code — they are inherited by the
@@ -299,8 +303,8 @@ index 0000000..9fe780d
 +npx @modelcontextprotocol/inspector dotnet run --project src/CryptoExchanges.Net.Mcp -c Release
 +```
 +
-+This opens a browser UI where you can call tools interactively, inspect request/response
-+envelopes, and confirm credential handling — all without configuring a client.
++This opens a browser UI where you can call tools interactively and inspect request/response
++envelopes before connecting a full client.
 +
 +---
 +
@@ -310,10 +314,10 @@ index 0000000..9fe780d
 +- [getting-started.md](getting-started.md) — install and use the .NET library directly
 diff --git a/docs/mcp-server.md b/docs/mcp-server.md
 new file mode 100644
-index 0000000..898b16f
+index 0000000..149b350
 --- /dev/null
 +++ b/docs/mcp-server.md
-@@ -0,0 +1,162 @@
+@@ -0,0 +1,154 @@
 +# MCP Server
 +
 +CryptoExchanges.Net ships a **read-only**
@@ -362,21 +366,18 @@ index 0000000..898b16f
 +
 +### Market data (6) — no credentials required
 +
-+Market-data tools call public endpoints. No API key or secret is needed.
-+
-+| Tool              | Description                                                         |
-+|-------------------|---------------------------------------------------------------------|
-+| `GetPrice`        | Latest price for a trading pair on an exchange                      |
-+| `GetTicker`       | 24 h ticker statistics for one pair, or all pairs if symbol omitted |
-+| `GetOrderBook`    | Order book (bids/asks) for a pair, to the given depth               |
-+| `GetKlines`       | Candlestick/kline data for a pair at an interval                    |
-+| `GetRecentTrades` | Recent public trades for a pair                                     |
-+| `GetExchangeInfo` | Exchange trading rules and the list of supported symbols            |
++| Tool              | Description                                                        |
++|-------------------|--------------------------------------------------------------------|
++| `GetPrice`        | Latest price for a trading pair on an exchange                     |
++| `GetTicker`       | 24h ticker statistics for one pair, or all pairs if symbol omitted |
++| `GetOrderBook`    | Order book (bids/asks) for a pair, to the given depth              |
++| `GetKlines`       | Candlestick/kline data for a pair at an interval                   |
++| `GetRecentTrades` | Recent public trades for a pair                                    |
++| `GetExchangeInfo` | Exchange trading rules and the list of supported symbols           |
 +
 +### Account (6) — read-scoped API credentials required
 +
-+Account tools require read-permission API credentials for the target exchange. Supply them as
-+environment variables (see [Credentials](#credentials) below).
++Supply credentials as environment variables (see [Credentials](#credentials) below).
 +
 +| Tool               | Description                                                          |
 +|--------------------|----------------------------------------------------------------------|
@@ -391,11 +392,7 @@ index 0000000..898b16f
 +
 +## Symbol format
 +
-+All tools accept symbols as `BASE/QUOTE`, for example:
-+
-+- `BTC/USDT`
-+- `ETH/USDT`
-+- `SOL/BTC`
++All tools accept symbols as `BASE/QUOTE` (e.g., `BTC/USDT`, `ETH/USDT`, `SOL/BTC`).
 +
 +---
 +
@@ -428,8 +425,7 @@ index 0000000..898b16f
 +**OKX and Bitget require a passphrase** — a third credential configured in the exchange's API
 +management console alongside the key and secret.
 +
-+You only need to set the variables for the exchanges you intend to use account tools on.
-+Credentials for unused exchanges are silently ignored.
++Unused exchange credentials are silently ignored.
 +
 +---
 +
@@ -466,7 +462,7 @@ index 0000000..898b16f
 +
 +---
 +
-+## Client setup
++## Client Setup
 +
 +For per-client config blocks (Claude Code, Claude Desktop, Cursor, VS Code, Windsurf, Cline,
 +Codex CLI, Gemini CLI), see [mcp-clients.md](mcp-clients.md).
@@ -476,58 +472,3 @@ index 0000000..898b16f
 +## License
 +
 +Apache 2.0 — see [LICENSE](../LICENSE).
-diff --git a/nazgul/plan.md b/nazgul/plan.md
-index ffd4746..a5489c9 100644
---- a/nazgul/plan.md
-+++ b/nazgul/plan.md
-@@ -59,7 +59,7 @@ REUSE existing discovery — do NOT re-run.
- |----------|----------|------|--------------------------------------------------------------------|
- | TASK-036 | ✦ DONE   | 1    | Exchange brand SVG assets (7) under `docs/assets/exchanges/`       |
- | TASK-037 | ✦ DONE   | 1    | Core library docs (getting-started, library-usage, architecture, exchanges) |
--| TASK-038 | ◇ READY  | 1    | MCP docs (mcp-server.md + mcp-clients.md, major clients)           |
-+| TASK-038 | ◆ IN_PROGRESS | 1 | MCP docs (mcp-server.md + mcp-clients.md, major clients)        |
- | TASK-039 | ◇ PLANNED| 2    | README rewrite (lean) — links into docs/, uses icons, status table |
- 
- Tasks: 2/4 DONE
-diff --git a/nazgul/tasks/TASK-038.md b/nazgul/tasks/TASK-038.md
-index efbad28..d435a55 100644
---- a/nazgul/tasks/TASK-038.md
-+++ b/nazgul/tasks/TASK-038.md
-@@ -1,23 +1,23 @@
- ---
- id: TASK-038
--status: READY
-+status: IN_PROGRESS
- depends_on: []
- commit:
--claimed_at:
-+claimed_at: 2026-06-19T14:00:00Z
- ---
- # TASK-038: MCP docs (mcp-server.md + mcp-clients.md, major clients)
- 
- ## Metadata
- - **ID**: TASK-038
- - **Group**: 1
--- **Status**: (see `status:` in the frontmatter block at the top — canonical, read by scripts/lib/structured-state.sh)
-+- **Status**: IN_PROGRESS
- - **Depends on**: none
- - **Delegates to**: none
- - **Files modified**: [docs/mcp-server.md, docs/mcp-clients.md]
- - **Wave**: 1
- - **Traces to**: FEAT-003 spec §Scope-In "New public docs/ folder" (mcp-server.md, mcp-clients.md — major MCP clients)
- - **Created at**: 2026-06-19T13:10:00Z
--- **Claimed at**:
-+- **Claimed at**: 2026-06-19T14:00:00Z
- - **Implemented at**:
- - **Completed at**:
- - **Blocked at**:
-@@ -89,6 +89,9 @@ No-dependency task (Wave 1); file-disjoint from TASK-036/TASK-037.
- 
- ### Attempt 1
- 
-+- **Base SHA**: b2322b0f3263c4f1a4aa1a180edf063f3d7bf4ff
-+- Claimed 2026-06-19T14:00:00Z on branch feat/FEAT-003-docs-overhaul
-+
- ## Review Results
- 
- ### Attempt 1

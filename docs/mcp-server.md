@@ -46,14 +46,14 @@ The tables below mirror that source and are kept in sync with it.
 
 ### Market data (6) — no credentials required
 
-| Tool              | Description                                                         |
-|-------------------|---------------------------------------------------------------------|
-| `GetPrice`        | Latest price for a trading pair on an exchange                      |
-| `GetTicker`       | 24 h ticker statistics for one pair, or all pairs if symbol omitted |
-| `GetOrderBook`    | Order book (bids/asks) for a pair, to the given depth               |
-| `GetKlines`       | Candlestick/kline data for a pair at an interval                    |
-| `GetRecentTrades` | Recent public trades for a pair                                     |
-| `GetExchangeInfo` | Exchange trading rules and the list of supported symbols            |
+| Tool              | Description                                                        |
+|-------------------|--------------------------------------------------------------------|
+| `GetPrice`        | Latest price for a trading pair on an exchange                     |
+| `GetTicker`       | 24h ticker statistics for one pair, or all pairs if symbol omitted |
+| `GetOrderBook`    | Order book (bids/asks) for a pair, to the given depth              |
+| `GetKlines`       | Candlestick/kline data for a pair at an interval                   |
+| `GetRecentTrades` | Recent public trades for a pair                                    |
+| `GetExchangeInfo` | Exchange trading rules and the list of supported symbols           |
 
 ### Account (6) — read-scoped API credentials required
 

@@ -12,13 +12,13 @@
 
 | Exchange | Status | Package |
 |----------|--------|---------|
-| <img src="docs/assets/exchanges/binance.svg" width="20"> Binance | ✅ Supported | `CryptoExchanges.Net.Binance` |
-| <picture><source media="(prefers-color-scheme: dark)" srcset="docs/assets/exchanges/bybit-dark.svg"><img src="docs/assets/exchanges/bybit-light.svg" width="20"></picture> Bybit | ✅ Supported | `CryptoExchanges.Net.Bybit` |
-| <picture><source media="(prefers-color-scheme: dark)" srcset="docs/assets/exchanges/okx-dark.svg"><img src="docs/assets/exchanges/okx-light.svg" width="20"></picture> OKX | ✅ Supported | `CryptoExchanges.Net.Okx` |
-| <img src="docs/assets/exchanges/bitget.svg" width="20"> Bitget | ✅ Supported | `CryptoExchanges.Net.Bitget` |
-| <img src="docs/assets/exchanges/coinbase.svg" width="20"> Coinbase | 🕓 Coming soon | — |
-| <img src="docs/assets/exchanges/kraken.svg" width="20"> Kraken | 🕓 Coming soon | — |
-| <img src="docs/assets/exchanges/kucoin.svg" width="20"> KuCoin | 🕓 Coming soon | — |
+| <img src="docs/assets/exchanges/binance.svg?v=2" width="20"> Binance | ✅ Supported | `CryptoExchanges.Net.Binance` |
+| <picture><source media="(prefers-color-scheme: dark)" srcset="docs/assets/exchanges/bybit-dark.svg?v=2"><img src="docs/assets/exchanges/bybit-light.svg?v=2" width="20"></picture> Bybit | ✅ Supported | `CryptoExchanges.Net.Bybit` |
+| <picture><source media="(prefers-color-scheme: dark)" srcset="docs/assets/exchanges/okx-dark.svg?v=2"><img src="docs/assets/exchanges/okx-light.svg?v=2" width="20"></picture> OKX | ✅ Supported | `CryptoExchanges.Net.Okx` |
+| <img src="docs/assets/exchanges/bitget.svg?v=2" width="20"> Bitget | ✅ Supported | `CryptoExchanges.Net.Bitget` |
+| <img src="docs/assets/exchanges/coinbase.svg?v=2" width="20"> Coinbase | 🕓 Coming soon | — |
+| <img src="docs/assets/exchanges/kraken.svg?v=2" width="20"> Kraken | 🕓 Coming soon | — |
+| <img src="docs/assets/exchanges/kucoin.svg?v=2" width="20"> KuCoin | 🕓 Coming soon | — |
 
 REST, spot market data and account — read and write.
 

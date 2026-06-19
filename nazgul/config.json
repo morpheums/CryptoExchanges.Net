@@ -158,7 +158,7 @@
     }
   },
   "branch": {
-    "feature": "feat/FEAT-004-icon-polish",
+    "feature": "feat/FEAT-004-icon-fix",
     "base": "main",
     "main_worktree_path": "/Users/josemejia/ai-platform/personal/workspace/repos/CryptoExchanges.Net",
     "worktree_dir": null,

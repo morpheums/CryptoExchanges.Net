@@ -1,42 +1,37 @@
 # Exchange Icon Attribution
 
 These icons appear in the supported-exchanges table to denote integrations.
-The CryptoExchanges.Net project code is Apache-2.0 licensed; exchange logos and
+The CryptoExchanges.Net project code is Apache-2.0 licensed; exchange names and
 brand marks remain the property of their respective owners and are used here
 solely to identify supported integrations, not to imply endorsement.
 
 ## Official icons (Simple Icons — CC0 1.0)
 
-| File | Exchange | Source |
-|------|----------|--------|
-| `binance.svg`  | Binance  | https://cdn.simpleicons.org/binance  |
-| `coinbase.svg` | Coinbase | https://cdn.simpleicons.org/coinbase |
-| `kucoin.svg`   | KuCoin   | https://cdn.simpleicons.org/kucoin   |
-| `okx.svg`      | OKX      | https://cdn.simpleicons.org/okx      |
+| File | Exchange | Theme | Source |
+|------|----------|-------|--------|
+| `binance.svg`  | Binance | fixed (brand gold)        | https://cdn.simpleicons.org/binance |
+| `okx-light.svg` / `okx-dark.svg` | OKX | theme-aware (black/white) | https://cdn.simpleicons.org/okx |
+| `kucoin.svg`   | KuCoin  | fixed (brand green)       | https://cdn.simpleicons.org/kucoin |
 
 Simple Icons are released under the [CC0 1.0 Universal Public Domain
 Dedication](https://creativecommons.org/publicdomain/zero/1.0/).
-See https://simpleicons.org for the full catalog and license details.
+The OKX path is reused for both theme variants (black for light, white for dark).
 
-## Placeholder monograms (to be replaced)
+## Recreated marks (original geometry — not in Simple Icons)
 
-The following three exchanges are **not** in the Simple Icons catalog.
-Until official brand assets are sourced and cleared for use, a minimal
-rounded-square monogram (initial letter, neutral monochrome, 24 × 24 viewBox)
-is committed here to keep the icon table visually consistent.
+The following exchanges are **not** in the Simple Icons catalog. The icons here
+are minimal, original geometric recreations built from basic SVG shapes to keep
+the table visually consistent. They are simplified brand-style marks, not copies
+of any vendor's logo file, and use no `<text>` elements (stripped by GitHub's
+SVG sanitizer).
 
-| File | Exchange | Reason | Intended replacement |
-|------|----------|--------|----------------------|
-| `bybit.svg`  | Bybit  | Not in Simple Icons | Official SVG from Bybit brand kit once license confirmed |
-| `bitget.svg` | Bitget | Not in Simple Icons | Official SVG from Bitget brand kit once license confirmed |
-| `kraken.svg` | Kraken | Not in Simple Icons | Official SVG from Kraken brand kit once license confirmed |
+| File | Exchange | Treatment |
+|------|----------|-----------|
+| `coinbase.svg` | Coinbase | blue badge + white "C" ring, fixed both themes |
+| `bitget.svg`   | Bitget   | teal badge + black double-chevron, fixed both themes |
+| `kraken.svg`   | Kraken   | purple "jellyfish" mark (dome + tentacles), fixed both themes |
+| `bybit-light.svg` / `bybit-dark.svg` | Bybit | theme-aware mark with orange accent |
 
-Each monogram uses the first initial of the exchange name rendered as an SVG
-`<path>` (no `<text>` elements — those are stripped by GitHub's SVG sanitizer).
-Bybit and Bitget both have the initial `B`; they are distinguished by background
-shade (Bybit: near-black `#1a1a1a`, Bitget: dark-grey `#444444`).
-
-These placeholder files do **not** reproduce or approximate any registered
-trademark. They are geometric monograms created from scratch. Replace them
-with official brand assets before any production publishing that requires
-brand-accurate iconography.
+The Bybit mark is a stand-in; replace `bybit-light.svg` / `bybit-dark.svg` with
+the official Bybit wordmark SVG when available. Theme-aware files are wired in
+the README via `<picture>` + `prefers-color-scheme`.

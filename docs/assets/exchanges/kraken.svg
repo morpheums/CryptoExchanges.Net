@@ -1,5 +1,1 @@
-<svg role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="#000000">
-  <title>Kraken</title>
-  <rect x="1" y="1" width="22" height="22" rx="4" ry="4"/>
-  <path fill="#ffffff" d="M7 6h2v5.3l4.5-5.3H16l-5 5.8L16.2 18H13.5l-4.5-5.8V18H7V6z"/>
-</svg>
+<svg role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><title>Kraken</title><g fill="#7132F5"><path d="M3 13.5 A9 9 0 0 1 21 13.5 Z"/><rect x="3.5" y="10" width="3" height="10.6" rx="1.5"/><rect x="8.17" y="10" width="3" height="10.6" rx="1.5"/><rect x="12.83" y="10" width="3" height="10.6" rx="1.5"/><rect x="17.5" y="10" width="3" height="10.6" rx="1.5"/></g></svg>

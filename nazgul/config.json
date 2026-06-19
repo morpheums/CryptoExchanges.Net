@@ -2,9 +2,9 @@
   "schema_version": 11,
   "install_mode": "shared",
   "mode": "afk",
-  "objective": "Documentation & MCP-onboarding overhaul: a lean, polished README (exchange-icon status table, 60-second quick start, links out) + a public docs/ folder (getting-started, library usage with more examples, MCP server, per-client MCP setup for major clients, exchanges, architecture) + committed exchange SVG icons. No feature roadmap in public docs (opsec).",
-  "feat_id": "FEAT-003",
-  "feat_display_id": "FEAT-003",
+  "objective": "README polish: real colored exchange logos (theme-aware OKX/Bybit, fixed Coinbase/Bitget), cleaner coming-soon marker, and surface the MCP server in the headline tagline.",
+  "feat_id": "FEAT-004",
+  "feat_display_id": "FEAT-004",
   "objectives_history": [
     {
       "objective": "Add three new exchange integrations to CryptoExchanges.Net in strict priority order — (1) Bybit, (2) OKX, (3) Bitget — for a global (non-US) audience. Each exchange clones the verified Binance pattern (Core → Http → Exchange → DI, DeltaMapper DTO→model, bespoke ISymbolMapper, retry-only-on-GET, per-attempt re-signing). The signing/credential abstraction is generalized after Bybit, against OKX, and Bitget then reuses that abstraction.",
@@ -24,6 +24,11 @@
       "feat_id": "FEAT-003",
       "objective": "Documentation & MCP-onboarding overhaul: a lean, polished README (exchange-icon status table, 60-second quick start, links out) + a public docs/ folder (getting-started, library usage with more examples, MCP server, per-client MCP setup for major clients, exchanges, architecture) + committed exchange SVG icons. No feature roadmap in public docs (opsec).",
       "started_at": "2026-06-19T13:02:25Z"
+    },
+    {
+      "feat_id": "FEAT-004",
+      "objective": "README icon/tagline polish",
+      "started_at": "2026-06-19T14:48:25Z"
     }
   ],
   "max_iterations": 40,
@@ -153,7 +158,7 @@
     }
   },
   "branch": {
-    "feature": "feat/FEAT-003-docs-overhaul",
+    "feature": "feat/FEAT-004-icon-polish",
     "base": "main",
     "main_worktree_path": "/Users/josemejia/ai-platform/personal/workspace/repos/CryptoExchanges.Net",
     "worktree_dir": null,
@@ -169,7 +174,7 @@
     "timeout_minutes": 90,
     "checkpoint_every_n_iterations": 5,
     "auto_commit": true,
-    "commit_prefix": "feat(FEAT-003):"
+    "commit_prefix": "feat(FEAT-004):"
   },
   "context": {
     "budget_strategy": "aggressive",

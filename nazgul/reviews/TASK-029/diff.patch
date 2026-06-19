@@ -1,6 +1,6 @@
 diff --git a/src/CryptoExchanges.Net.Mcp/ToolInputs.cs b/src/CryptoExchanges.Net.Mcp/ToolInputs.cs
 new file mode 100644
-index 0000000..006368b
+index 0000000..27bc037
 --- /dev/null
 +++ b/src/CryptoExchanges.Net.Mcp/ToolInputs.cs
 @@ -0,0 +1,48 @@
@@ -34,11 +34,11 @@ index 0000000..006368b
 +        };
 +
 +    /// <summary>Resolves an exchange name (case-insensitive) to one of the registered exchanges.</summary>
-+    public static bool TryParseExchange(string value, out ExchangeId id)
++    public static bool TryParseExchange(string? value, out ExchangeId id)
 +        => Exchanges.TryGetValue(value ?? string.Empty, out id);
 +
 +    /// <summary>Resolves a kline interval string (e.g. "1m","4h","1d") to a <see cref="KlineInterval"/>.</summary>
-+    public static bool TryParseInterval(string value, out KlineInterval interval)
++    public static bool TryParseInterval(string? value, out KlineInterval interval)
 +        => Intervals.TryGetValue(value ?? string.Empty, out interval);
 +
 +    /// <summary>Parses "BASE/QUOTE" (e.g. "BTC/USDT") into a typed <see cref="Symbol"/>.</summary>
@@ -76,10 +76,10 @@ index 0000000..8083049
 +}
 diff --git a/src/CryptoExchanges.Net.Mcp/ToolRunner.cs b/src/CryptoExchanges.Net.Mcp/ToolRunner.cs
 new file mode 100644
-index 0000000..ea0e290
+index 0000000..8192a04
 --- /dev/null
 +++ b/src/CryptoExchanges.Net.Mcp/ToolRunner.cs
-@@ -0,0 +1,36 @@
+@@ -0,0 +1,40 @@
 +using CryptoExchanges.Net.Core.Exceptions;
 +
 +namespace CryptoExchanges.Net.Mcp;
@@ -94,6 +94,10 @@ index 0000000..ea0e290
 +        try
 +        {
 +            return ToolResult<T>.Success(await action().ConfigureAwait(false));
++        }
++        catch (OperationCanceledException)
++        {
++            throw;
 +        }
 +#pragma warning disable CA1031 // Intentional broad catch: ToolRunner is the MCP boundary — nothing may escape.
 +        catch (Exception ex)

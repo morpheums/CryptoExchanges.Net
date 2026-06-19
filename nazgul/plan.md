@@ -1,23 +1,32 @@
-# Nazgul Plan — FEAT-003
+# Nazgul Plan — FEAT-005
 
 ─── ◈ NAZGUL ▸ PLANNING ────────────────────────────────
 
 ## Objective
 
-**Documentation & MCP-onboarding overhaul.** Turn the project's public-facing docs into
-a polished, pro-level experience: a lean, scannable README that links out to a new public
-`docs/` folder, a supported-exchanges status table with committed brand icons, multi-client
-MCP setup guides, and fuller usage examples.
+**WebSocket streaming v1 (single-exchange first).** Add real-time market-data streaming —
+live ticker, trade, raw order-book, and kline updates feeding the existing canonical
+`Core.Models` — with auto-reconnect (engine backoff) + auto-resubscribe (replay the stored
+subscribe set), invisible to the consumer. Callback API (`IStreamClient`) delivering
+`Core.Models` directly. Built on a **shared, generic streaming engine** so later exchanges add
+only a small protocol + decode seam.
 
-**Objective type**: Documentation / polish — **NO production source or behavior changes.**
+**Objective type**: Feature — net-new transport capability. New interfaces only; the existing
+REST `IExchangeClient` surface is untouched. Opt-in DI (REST-only consumers pay nothing).
 
-Authoritative spec: `nazgul/context/objectives/FEAT-003-spec.md` (read it fully before any task).
+Authoritative inputs (read fully before any task):
+- Objective spec: `nazgul/context/objectives/FEAT-005-spec.md`
+- Locked design: `docs/superpowers/specs/2026-06-19-websocket-streaming-v1-design.md` (local, gitignored)
+- Architect rulings (committed): `nazgul/reviews/DESIGN-STREAMING-V1/architect-reviewer.md`,
+  `nazgul/reviews/DECISION-STREAMING-SHARED/architect-reviewer.md`
+
+**The architecture is LOCKED.** These tasks translate it into a build sequence. Do NOT redesign.
 
 ## Branch
 
 - **Base**: `main`
-- **Feature**: `feat/FEAT-003-docs-overhaul` (to be created)
-- Ship as one squash-merge PR to protected `main`.
+- **Feature**: `feat/FEAT-005-websocket-streaming` (to be created)
+- Ship as one PR to protected `main`.
 
 ## Discovery Status
 
@@ -25,116 +34,146 @@ REUSE existing discovery — do NOT re-run.
 - Discovery last run: 2026-06-17 (`nazgul/context/`, 83 files scanned).
 - Reviewers (4, existing — do NOT regenerate): `architect-reviewer`, `code-reviewer`,
   `security-reviewer`, `api-reviewer`.
-- Classification: BROWNFIELD (HIGH confidence). This objective is docs-only on top of the
-  shipped Core → Http → Exchange → DI library + the read-only MCP server.
-
-## Shipped State (docs MUST stay accurate to this)
-
-- **4 supported exchanges**: Binance, Bybit, OKX, Bitget (REST-only).
-- **3 coming-soon exchanges** (in the `ExchangeId` enum, not yet implemented): Coinbase, Kraken, KuCoin.
-- **MCP**: read-only stdio server, tool command `crypto-mcp`, **12 tools** (6 market-data + 6 account).
-- **License**: Apache-2.0. **Version**: v0.2.0-preview.1.
+- Classification: BROWNFIELD (HIGH confidence). New streaming transport on top of the shipped
+  Core → Http → Exchange → DI library (4 REST exchanges).
 
 ## Hard Constraints (recorded for implementer + reviewers)
 
-- **Docs-only.** No `.cs`/`.csproj`/source edits anywhere. `dotnet build` / `dotnet test`
-  must remain green and **unchanged** (nothing in `src/` or `tests/` is touched, except the
-  existing `src/CryptoExchanges.Net.Mcp/README.md` may be linked/reused but NOT rewritten — reuse, don't duplicate).
-- **No feature-roadmap / strategy leakage** (opsec). Do NOT mention WebSockets, a gateway,
-  AI/agent positioning, monetization, or competitive analysis in ANY public artifact.
-  "Coming soon" applies to **exchanges only** (Coinbase/Kraken/KuCoin).
-- **Public `docs/`** is distinct from the gitignored `docs/superpowers/`. New files go directly
-  under `docs/` and `docs/assets/exchanges/`.
-- **Reuse, don't duplicate** the existing `src/CryptoExchanges.Net.Mcp/README.md` (already documents
-  the 12 tools, env vars, error categories) — link to / mirror it, don't fork its content.
-- **Verify per-client MCP config formats** against each client's CURRENT docs before publishing
-  (formats differ per client and change over time).
-- **Curated SVG icon set required**: simple-icons lacks Bybit/Bitget/Kraken, so a committed,
-  consistent, small SVG set for all 7 exchanges is mandatory, with a short attribution note.
-- **Renders cleanly on GitHub**: all internal links resolve; icons display.
+- **Framework**: `net10.0`. Build **0 warnings / 0 errors** under `TreatWarningsAsErrors`.
+- **One type per file** (CLAUDE.md / comment-and-interface conventions). XML docs on public/internal
+  interfaces; `<inheritdoc/>` on impls. LEAN comments.
+- **Prefer interfaces over static-with-behavior** for swappable behavior (Inv 11). `IStreamProtocol`
+  and the decode registry are injected **`internal`** types — never `static class`es holding behavior.
+  The only permitted `static` carve-outs are the optional thin `CreateStreams` construction-glue
+  wrapper (zero behavior) and the DI registration extension methods.
+- **DeltaMapper for DTO → model** mapping; reuse the existing per-exchange `IMapper`/response profile
+  and the bespoke keyed `ISymbolMapper`. Do NOT hand-roll mapping that DeltaMapper covers.
+- **C1 (binding)** — the protocol *describes* heartbeat (policy data + frame `Classify`); the engine
+  *executes* it (timers / liveness watchdog / send / pong). No timers or threads in the protocol;
+  no `StartHeartbeat()`-style behavioral method on `IStreamProtocol`.
+- **K1 (binding, hard REJECT line)** — NO `using CryptoExchanges.Net.Core.Models` and NO DeltaMapper
+  reference anywhere under `src/CryptoExchanges.Net.Http/`. The engine handles `byte` / `object` /
+  opaque `Func<ReadOnlyMemory<byte>, object>` only. Any such reference is a blocking layering violation.
+- **K2 (binding)** — reconnect replays the **stored subscribe set**; `BuildUnsubscribe` removes from
+  that set so an unsubscribed stream is not resurrected on reconnect.
+- **K3 (binding)** — socket reconnect is the engine's **own bounded backoff loop**, NOT the REST Polly
+  resilience pipeline. Retry stays REST-GET-only; do not route reconnect through `ExchangeResiliencePipeline`.
+- **REST surface untouched** — `IExchangeClient` / `IMarketDataService` / `ITradingService` /
+  `IAccountService` get NO new members. New capability = new interface (Inv 4/5).
+- **No "reserved for v1.1" members** on any v1 interface. The order-book-maintenance hook is *additive*
+  (a future separate `IOrderBookMaintainer`), not *reserved*.
+- **No captive dependency (Inv 9)** — the long-lived transport is owned **inside** the keyed
+  `IStreamClient` singleton; DI path uses `ownsTransport: false` for any shared/factory-owned handle.
+- **No competitor / library / product names in committed artifacts.** Use generic terms
+  ("the venue", "exchange #1", "client-ping-json") in plan.md and task manifests. (The exchange package
+  task names the in-repo `Binance` assembly only because that assembly already exists in the tree;
+  no third-party venue is named in prose.)
+- **No System.Reactive. No `IAsyncEnumerable` surface in v1** (may be added later, non-breaking).
+- **Every task is TDD-able with NO network** via an injected fake transport. One live integration
+  smoke (Category=Integration) self-skips without connectivity — matching the existing pattern.
+- **Existing test suite (499 tests, `Category!=Integration`) stays green** after every task.
 
 ## Status Summary
 
-| Task     | Status   | Wave | Description                                                        |
-|----------|----------|------|--------------------------------------------------------------------|
-| TASK-036 | ✦ DONE   | 1    | Exchange brand SVG assets (7) under `docs/assets/exchanges/`       |
-| TASK-037 | ✦ DONE   | 1    | Core library docs (getting-started, library-usage, architecture, exchanges) |
-| TASK-038 | ✦ DONE   | 1    | MCP docs (mcp-server.md + mcp-clients.md, major clients)           |
-| TASK-039 | ✦ DONE   | 2    | README rewrite (lean) — links into docs/, uses icons, status table |
+| Task     | Status    | Wave | Description                                                                 |
+|----------|-----------|------|-----------------------------------------------------------------------------|
+| TASK-042 | ✦ DONE    | 1    | Core streaming abstractions (`IStreamClient` family) — no transport         |
+| TASK-043 | ✦ DONE    | 2    | Http engine contracts + fake-transport test seam                            |
+| TASK-044 | ✦ DONE    | 3    | Http reconnecting byte-engine (pump/route/backoff/replay/heartbeat/channels)|
+| TASK-045 | ◆ IMPL    | 4    | Generic `StreamClient` + `StreamClientFactory` + `AddStreams<TOptions>`      |
+| TASK-046 | ✦ IMPL    | 5    | Exchange-#1 package: protocol + 4 decode closures + options + `Add…Streams` |
+| TASK-047 | ✦ IMPL    | 6    | Wire 4 public subscribe methods end-to-end + live integration smoke + docs  |
 
-Tasks: 4/4 DONE
+Tasks: 3/6 DONE — TASK-042 DONE, TASK-043 DONE, TASK-044 DONE, TASK-045 IMPLEMENTED (906c568), TASK-046 IMPLEMENTED (27169ea), TASK-047 IMPLEMENTED (58d5216).
 
 ## Wave Groups
 
-The loop orchestrator reads this section to determine parallel execution order.
+The loop orchestrator reads this section to determine parallel execution order. This objective is a
+single **vertical, dependency-ordered slice** — each task layers on the previous one and edits a
+distinct part of the tree, so there is no within-wave parallelism. Waves are strictly sequential.
 
 ### Wave 1
-- **TASK-036**, **TASK-037**, **TASK-038** — all independent (no dependencies) and file-disjoint:
-  - TASK-036 → only `docs/assets/exchanges/*.svg` (+ attribution note). ✦ DONE
-  - TASK-037 → only `docs/getting-started.md`, `docs/library-usage.md`, `docs/architecture.md`, `docs/exchanges.md`. ✦ DONE
-  - TASK-038 → only `docs/mcp-server.md`, `docs/mcp-clients.md`. ✦ DONE
-  - No shared files → safe to run in parallel.
+- **TASK-042** — Core abstractions. DONE. Created files under
+  `src/CryptoExchanges.Net.Core/Streaming/` + Core unit tests.
 
 ### Wave 2
-- **TASK-039** — README rewrite. Depends on TASK-036 (icons), TASK-037 (core docs to link),
-  and TASK-038 (MCP docs to link). Modifies only repo-root `README.md`. ✦ DONE
+- **TASK-043** — Http engine contracts + fake-transport seam. DONE. Created 10 files under
+  `src/CryptoExchanges.Net.Http/Streaming/` + Http unit-test fakes. Reviewed 4/4 APPROVED.
+
+### Wave 3
+- **TASK-044** — Reconnecting byte-engine. DONE. Adds the engine + per-subscription
+  channels + heartbeat execution under `src/CryptoExchanges.Net.Http/Streaming/`; tested via the fake.
+  Reviewed 4/4 APPROVED (Cycle 2). Commit: 501ad13.
+
+### Wave 4
+- **TASK-045** — Generic `StreamClient` + factory + `AddStreams<TOptions>` + decode-registry plumbing.
+  Depends on TASK-044.
+
+### Wave 5
+- **TASK-046** — Exchange-#1 streaming package (protocol + 4 decode closures + options + 5-line
+  registration). Depends on TASK-045. First consumer of the seam.
+
+### Wave 6
+- **TASK-047** — 4 public subscribe methods wired end-to-end + live integration smoke + README/docs note.
+  Depends on TASK-046.
 
 ## Dependency Order
 
 ```
-TASK-036 ──┐
-TASK-037 ──┼──►  TASK-039
-TASK-038 ──┘
+TASK-042 ──► TASK-043 ──► TASK-044 ──► TASK-045 ──► TASK-046 ──► TASK-047
 ```
 
-## PRD Traceability
+State machine: TASK-042 is **DONE**; TASK-043 is now **DONE**; TASK-044 is now **DONE**;
+TASK-045 is now **READY** (dependency satisfied); TASK-046..047 remain **PLANNED** with explicit
+`depends_on` chain.
 
-No formal PRD/TRD/ADR document set was generated for FEAT-003. The authoritative acceptance
-source is the spec (`nazgul/context/objectives/FEAT-003-spec.md`). Each task's `Traces to`
-field points to the specific spec section it fulfills. Coverage check:
+## Traceability
 
-- Spec §Scope-In "Assets" / curated SVG set → **TASK-036** ✦ DONE.
-- Spec §Scope-In "New public docs/ folder" (getting-started, library-usage, architecture, exchanges) → **TASK-037** ✦ DONE.
-- Spec §Scope-In "mcp-server.md" + "mcp-clients.md" (major clients) → **TASK-038** ✦ DONE.
-- Spec §Scope-In "Lean README" (tagline+badges, 60s quick-start, exchange status table, MCP blurb, links into docs/) → **TASK-039** ✦ DONE.
+No formal PRD/TRD/ADR document set was generated for FEAT-005 (`nazgul/docs/manifest.md` absent for
+this objective). The authoritative acceptance source is the spec + the two committed architect rulings.
+Each task's **Traces to** field points to the exact spec section / ruling refinement / binding
+constraint it fulfills. Coverage of the spec Success Criteria:
 
-Objective-level acceptance (verified across the task set):
-- Renders cleanly on GitHub; all internal links resolve; exchange icons display for all 7 → TASK-036 (icons) + TASK-039 (table) + TASK-037/038 (link targets). ✦ DONE
-- README visibly leaner; accurate to shipped state; **no roadmap/strategy leakage** → TASK-039 (+ all tasks bound by the opsec constraint). ✦ DONE
-- Per-client MCP configs correct and copy-pasteable → TASK-038. ✦ DONE
-- Docs-only: build/test still green; no source edits → all tasks (Blast radius: docs only). ✦ DONE
+- "`IStreamClient` delivers live ticker/trade/order-book/kline `Core.Models`" → public surface defined
+  in **TASK-042**, decoders in **TASK-046**, wired + verified live in **TASK-047**.
+- "auto-reconnect + auto-resubscribe verified" → engine backoff + replay set in **TASK-044** (K2/K3),
+  live verification in **TASK-047**.
+- "shared engine/client/factory are exchange-agnostic; the exchange contributes only protocol + decode +
+  options + registration" → engine **TASK-044**, generic client/factory/registration **TASK-045**,
+  per-exchange seam **TASK-046**.
+- "Build 0W/0E; existing 499 tests stay green; new unit tests via injected fake transport (no network);
+  one live integration smoke that self-skips" → fake seam **TASK-043**, fake-driven unit tests
+  **TASK-044/045/046**, integration smoke **TASK-047**; the 0W/0E + 499-green bar is an acceptance
+  criterion on EVERY task.
+- "No `Core.Models`/DeltaMapper references under Http" (K1) → enforced as an acceptance criterion on
+  **TASK-043, TASK-044, TASK-045** (the only Http-touching tasks).
 
-Every spec scope item maps to at least one task; nothing in Scope-Out (roadmap, source changes,
-docs-site generator, WebSockets) is planned.
+Every spec scope-in item maps to a task; nothing in Scope-Out (order-book maintenance, private streams,
+other exchanges, `IAsyncEnumerable`, System.Reactive) is planned.
 
 ## Completed
 
-- **TASK-036** — Exchange brand SVG assets. All 4 reviewers APPROVED. Auto-fix applied (path
-  letterforms for GitHub-safe placeholder monograms; Bitget letter corrected; B/B disambiguation
-  by background shade). Commit: c8a4335 + review-gate commit.
-- **TASK-037** — Core library docs. All 4 reviewers ran; CHANGES_REQUESTED for 6 auto-fixable
-  doc text errors (wrong field names, CS0128 duplicate var, broken link, layer diagram). Auto-fix
-  applied by review-gate. Commit: 7deb9c0 + review-gate fix commit.
-- **TASK-038** — MCP docs (mcp-server.md + mcp-clients.md, 8 clients). All 4 reviewers APPROVED
-  (architect 9, code 10, security 10, api 9). Simplifier ran (prose-only, 9a2f291). Review-gate
-  auto-fixed 3 trivial doc errors: "24 h"→"24h", Claude Code `--env` moved before `--` separator
-  (verified vs `claude mcp add --help`), added .NET SDK prerequisite cross-link. Build green.
-  Commits: e588512 + 9a2f291 + review-gate auto-fix/DONE commit.
-- **TASK-039** — README rewrite (lean). All 4 reviewers APPROVED (architect 9.5, code 10,
-  security 10, api 9.5). Simplifier removed 3 redundant phrases. No blocking findings.
-  Build green (0 errors). Tests: 50/50. Commits: 6030fa2 + c976e7d + review-gate DONE commit.
+- **TASK-042** — DONE (2026-06-19T18:30:00Z). Core streaming abstractions approved unanimously (4/4).
+  Commit: `1c041b5`. Review artifacts: `nazgul/reviews/TASK-042/`.
+- **TASK-043** — DONE (2026-06-19T19:00:00Z). Http engine contracts + fake-transport seam approved unanimously (4/4).
+  Commits: `547f2f8` (impl) + `e1e87d0` (simplify). Review artifacts: `nazgul/reviews/TASK-043/`.
+- **TASK-044** — DONE (2026-06-19T23:45:00Z). Http reconnecting byte-engine approved unanimously (4/4, Cycle 2).
+  Commit: `501ad13`. Completion SHA: `8e5021c`. Review artifacts: `nazgul/reviews/TASK-044/`.
 
 ## Recovery Pointer
 
-- **Current stage**: NAZGUL_COMPLETE — all tasks DONE, post-loop done, PR open & green.
-- **Next action**: Human merge of PR #21 into `main` (protected branch).
-- **Active task**: none (all complete).
-- **Post-loop**: CHANGELOG `[Unreleased]` entry added (commit eb4dc4b); no version bump
-  needed for docs-only objective. PR #21 open, MERGEABLE, CI Build & Test SUCCESS,
-  CodeRabbit SUCCESS. All internal doc links verified resolving; 7 exchange icons present.
-- **Files are truth**: task manifests in `nazgul/tasks/TASK-036..039.md` carry full state;
+- **Current stage**: TASK-050 IMPLEMENTED (00b894b) — PR #26 review findings addressed.
+- **Next action**: Review gate for TASK-050.
+- **Active task**: TASK-050 (IMPLEMENTED — commit 00b894b)
+- **Files are truth**: task manifests in `nazgul/tasks/TASK-042..050.md` carry full state;
   frontmatter `status:` is canonical.
 
 ─── ◈ NEXT ─────────────────────────────────────────────
-  NAZGUL_COMPLETE. PR #21 → main is open and green. Awaiting human merge.
+  ✦ TASK-042 — Core streaming abstractions. DONE.
+  ✦ TASK-043 — Http engine contracts + fake-transport seam. DONE.
+  ✦ TASK-044 — Http reconnecting byte-engine. DONE.
+  ✦ TASK-045 — Generic StreamClient + factory + AddStreams<TOptions>. IMPLEMENTED (906c568).
+  ✦ TASK-046 — Exchange-#1 streaming package. IMPLEMENTED (27169ea).
+  ✦ TASK-047 — Wire 4 subscribe methods end-to-end + integration smoke. IMPLEMENTED (58d5216).
+  ✦ TASK-049 — Fix routing-key keyspace mismatch + liveness reset. IMPLEMENTED (5195052).
 ────────────────────────────────────────────────────────

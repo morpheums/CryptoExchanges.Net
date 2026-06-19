@@ -1,4 +1,5 @@
 using DeltaMapper;
+using CryptoExchanges.Net.Binance.Dtos.Streaming;
 using CryptoExchanges.Net.Binance.Internal;
 using CryptoExchanges.Net.Binance.Services;
 
@@ -74,5 +75,18 @@ internal sealed class BinanceResponseProfile : Profile
             .ForMember(d => d.Asset, o => o.MapFrom(s => BinanceValueParsers.ParseAssetOrNone(s.Asset)))
             .ForMember(d => d.Free, o => o.MapFrom(s => BinanceValueParsers.ParseDecimal(s.Free)))
             .ForMember(d => d.Locked, o => o.MapFrom(s => BinanceValueParsers.ParseDecimal(s.Locked)));
+
+        // WebSocket streaming ticker (field names differ from the REST TickerDto).
+        CreateMap<StreamTickerDto, Ticker>()
+            .ForMember(d => d.Symbol, o => o.MapFrom(s => symbolMapper.FromWire(s.Symbol)))
+            .ForMember(d => d.LastPrice, o => o.MapFrom(s => BinanceValueParsers.ParseDecimal(s.LastPrice)))
+            .ForMember(d => d.OpenPrice, o => o.MapFrom(s => BinanceValueParsers.ParseDecimal(s.OpenPrice)))
+            .ForMember(d => d.HighPrice, o => o.MapFrom(s => BinanceValueParsers.ParseDecimal(s.HighPrice)))
+            .ForMember(d => d.LowPrice, o => o.MapFrom(s => BinanceValueParsers.ParseDecimal(s.LowPrice)))
+            .ForMember(d => d.Volume, o => o.MapFrom(s => BinanceValueParsers.ParseDecimal(s.Volume)))
+            .ForMember(d => d.QuoteVolume, o => o.MapFrom(s => BinanceValueParsers.ParseDecimal(s.QuoteVolume)))
+            .ForMember(d => d.PriceChange, o => o.MapFrom(s => BinanceValueParsers.ParseDecimal(s.PriceChange)))
+            .ForMember(d => d.PriceChangePercent, o => o.MapFrom(s => BinanceValueParsers.ParseDecimal(s.PriceChangePercent)))
+            .ForMember(d => d.Timestamp, o => o.MapFrom(s => s.CloseTime > 0 ? DateTimeOffset.FromUnixTimeMilliseconds(s.CloseTime) : (DateTimeOffset?)null));
     }
 }

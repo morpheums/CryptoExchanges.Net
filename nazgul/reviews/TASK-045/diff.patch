@@ -1,0 +1,1093 @@
+diff --git a/src/CryptoExchanges.Net.Http/Streaming/ClientWebSocketConnection.cs b/src/CryptoExchanges.Net.Http/Streaming/ClientWebSocketConnection.cs
+new file mode 100644
+index 0000000..fffd45b
+--- /dev/null
++++ b/src/CryptoExchanges.Net.Http/Streaming/ClientWebSocketConnection.cs
+@@ -0,0 +1,78 @@
++using System.Net.WebSockets;
++using System.Text;
++
++namespace CryptoExchanges.Net.Http.Streaming;
++
++/// <summary>
++/// Production <see cref="IWebSocketConnection"/> implementation backed by
++/// <see cref="System.Net.WebSockets.ClientWebSocket"/>.
++/// One instance is created per connect/reconnect attempt by the connection factory
++/// (no captive dependency — the factory produces a fresh instance for each connect,
++/// matching the engine's own lifecycle).
++/// </summary>
++internal sealed class ClientWebSocketConnection : IWebSocketConnection
++{
++    // Buffer used for receive — reused across calls within one connection lifetime.
++    private const int ReceiveBufferSize = 8192;
++    private readonly ClientWebSocket _ws = new();
++
++    /// <inheritdoc/>
++    public WebSocketState State => _ws.State;
++
++    /// <inheritdoc/>
++    public bool IsOpen => _ws.State == WebSocketState.Open;
++
++    /// <inheritdoc/>
++    public Task ConnectAsync(Uri uri, CancellationToken ct)
++    {
++        ArgumentNullException.ThrowIfNull(uri);
++        return _ws.ConnectAsync(uri, ct);
++    }
++
++    /// <inheritdoc/>
++    public Task SendTextAsync(string text, CancellationToken ct)
++    {
++        ArgumentException.ThrowIfNullOrWhiteSpace(text);
++        var bytes = Encoding.UTF8.GetBytes(text);
++        return _ws.SendAsync(bytes, WebSocketMessageType.Text, endOfMessage: true, cancellationToken: ct);
++    }
++
++    /// <inheritdoc/>
++    public async Task SendPingAsync(ReadOnlyMemory<byte> payload, CancellationToken ct)
++        => await _ws.SendAsync(payload, WebSocketMessageType.Binary, endOfMessage: true, cancellationToken: ct).ConfigureAwait(false);
++
++    /// <inheritdoc/>
++    public async Task SendPongAsync(ReadOnlyMemory<byte> payload, CancellationToken ct)
++        => await _ws.SendAsync(payload, WebSocketMessageType.Binary, endOfMessage: true, cancellationToken: ct).ConfigureAwait(false);
++
++    /// <inheritdoc/>
++    public async ValueTask<ReadOnlyMemory<byte>?> ReceiveAsync(CancellationToken ct)
++    {
++        using var ms = new System.IO.MemoryStream();
++        var buffer = new byte[ReceiveBufferSize];
++        ValueWebSocketReceiveResult result;
++        do
++        {
++            result = await _ws.ReceiveAsync(buffer.AsMemory(), ct).ConfigureAwait(false);
++
++            if (result.MessageType == WebSocketMessageType.Close)
++                return null; // Clean venue-initiated close → engine reconnects.
++
++            await ms.WriteAsync(buffer.AsMemory(0, result.Count), ct).ConfigureAwait(false);
++        }
++        while (!result.EndOfMessage);
++
++        return ms.ToArray();
++    }
++
++    /// <inheritdoc/>
++    public Task CloseAsync(WebSocketCloseStatus status, string description, CancellationToken ct)
++        => _ws.CloseAsync(status, description, ct);
++
++    /// <inheritdoc/>
++    public ValueTask DisposeAsync()
++    {
++        _ws.Dispose();
++        return ValueTask.CompletedTask;
++    }
++}
+diff --git a/src/CryptoExchanges.Net.Http/Streaming/StreamClient.cs b/src/CryptoExchanges.Net.Http/Streaming/StreamClient.cs
+new file mode 100644
+index 0000000..4bae653
+--- /dev/null
++++ b/src/CryptoExchanges.Net.Http/Streaming/StreamClient.cs
+@@ -0,0 +1,177 @@
++using CryptoExchanges.Net.Core.Enums;
++using CryptoExchanges.Net.Core.Interfaces;
++using CryptoExchanges.Net.Core.Models;
++using CryptoExchanges.Net.Core.Streaming;
++
++namespace CryptoExchanges.Net.Http.Streaming;
++
++/// <summary>
++/// One exchange-agnostic, generic implementation of <see cref="IStreamClient"/> that wraps
++/// a <see cref="StreamEngine"/> and an injected <see cref="ISymbolMapper"/>.
++/// <para>
++/// There is no per-exchange subclass — divergence across venues is data (a protocol +
++/// a decode table), injected into the engine, not subclassed here. See the locked design:
++/// §"Shared-generic client".
++/// </para>
++/// <para>
++/// Binding constraint K1: this class uses <c>Core.Models</c> types only as transparent
++/// generic type parameters carried through to the engine's <see cref="StreamHandlers{T}"/>
++/// callback. No decode, no mapping, no DeltaMapper reference exists here.
++/// </para>
++/// </summary>
++internal sealed class StreamClient : IStreamClient
++{
++    private readonly StreamEngine _engine;
++    private readonly ISymbolMapper _symbolMapper;
++
++    /// <summary>
++    /// Initialises a <see cref="StreamClient"/> over an already-constructed engine.
++    /// </summary>
++    /// <param name="engine">The reconnecting byte-engine that owns the transport.</param>
++    /// <param name="symbolMapper">Resolves canonical <see cref="Symbol"/> values to exchange wire strings.</param>
++    /// <param name="exchangeId">The exchange this client is connected to.</param>
++    public StreamClient(StreamEngine engine, ISymbolMapper symbolMapper, ExchangeId exchangeId)
++    {
++        ArgumentNullException.ThrowIfNull(engine);
++        ArgumentNullException.ThrowIfNull(symbolMapper);
++
++        _engine = engine;
++        _symbolMapper = symbolMapper;
++        ExchangeId = exchangeId;
++    }
++
++    /// <inheritdoc/>
++    public ExchangeId ExchangeId { get; }
++
++    // ── IStreamClient subscribe methods ───────────────────────────────────────
++
++    /// <inheritdoc/>
++    public Task<IStreamSubscription> SubscribeToTickerAsync(
++        Symbol symbol,
++        StreamHandlers<Ticker> handlers,
++        CancellationToken ct = default)
++    {
++        ArgumentNullException.ThrowIfNull(handlers);
++        var wireSymbol = _symbolMapper.ToWire(symbol);
++        var request = new StreamRequest(StreamKind.Ticker, wireSymbol);
++        return _engine.SubscribeAsync(request, handlers, ct);
++    }
++
++    /// <summary>
++    /// Subscribes to real-time ticker updates using a bare <see cref="Func{T, TResult}"/> callback.
++    /// Convenience overload that wraps <paramref name="onUpdate"/> in a <see cref="StreamHandlers{T}"/>.
++    /// </summary>
++    /// <param name="symbol">The trading pair to subscribe to.</param>
++    /// <param name="onUpdate">Callback invoked on each ticker update.</param>
++    /// <param name="ct">Token to cancel the subscribe handshake.</param>
++    /// <returns>An <see cref="IStreamSubscription"/> that remains active until disposed.</returns>
++    public Task<IStreamSubscription> SubscribeToTickerAsync(
++        Symbol symbol,
++        Func<Ticker, ValueTask> onUpdate,
++        CancellationToken ct = default)
++    {
++        ArgumentNullException.ThrowIfNull(onUpdate);
++        return SubscribeToTickerAsync(symbol, new StreamHandlers<Ticker>(onUpdate), ct);
++    }
++
++    /// <inheritdoc/>
++    public Task<IStreamSubscription> SubscribeToTradesAsync(
++        Symbol symbol,
++        StreamHandlers<Trade> handlers,
++        CancellationToken ct = default)
++    {
++        ArgumentNullException.ThrowIfNull(handlers);
++        var wireSymbol = _symbolMapper.ToWire(symbol);
++        var request = new StreamRequest(StreamKind.Trade, wireSymbol);
++        return _engine.SubscribeAsync(request, handlers, ct);
++    }
++
++    /// <summary>
++    /// Subscribes to real-time trade updates using a bare <see cref="Func{T, TResult}"/> callback.
++    /// Convenience overload that wraps <paramref name="onUpdate"/> in a <see cref="StreamHandlers{T}"/>.
++    /// </summary>
++    /// <param name="symbol">The trading pair to subscribe to.</param>
++    /// <param name="onUpdate">Callback invoked on each trade update.</param>
++    /// <param name="ct">Token to cancel the subscribe handshake.</param>
++    /// <returns>An <see cref="IStreamSubscription"/> that remains active until disposed.</returns>
++    public Task<IStreamSubscription> SubscribeToTradesAsync(
++        Symbol symbol,
++        Func<Trade, ValueTask> onUpdate,
++        CancellationToken ct = default)
++    {
++        ArgumentNullException.ThrowIfNull(onUpdate);
++        return SubscribeToTradesAsync(symbol, new StreamHandlers<Trade>(onUpdate), ct);
++    }
++
++    /// <inheritdoc/>
++    public Task<IStreamSubscription> SubscribeToOrderBookAsync(
++        Symbol symbol,
++        int depth,
++        StreamHandlers<OrderBook> handlers,
++        CancellationToken ct = default)
++    {
++        ArgumentNullException.ThrowIfNull(handlers);
++        var wireSymbol = _symbolMapper.ToWire(symbol);
++        var request = new StreamRequest(StreamKind.OrderBook, wireSymbol, Depth: depth);
++        return _engine.SubscribeAsync(request, handlers, ct);
++    }
++
++    /// <summary>
++    /// Subscribes to real-time order-book updates using a bare <see cref="Func{T, TResult}"/> callback.
++    /// Convenience overload that wraps <paramref name="onUpdate"/> in a <see cref="StreamHandlers{T}"/>.
++    /// </summary>
++    /// <param name="symbol">The trading pair to subscribe to.</param>
++    /// <param name="depth">The number of price levels requested on each side.</param>
++    /// <param name="onUpdate">Callback invoked on each order-book update.</param>
++    /// <param name="ct">Token to cancel the subscribe handshake.</param>
++    /// <returns>An <see cref="IStreamSubscription"/> that remains active until disposed.</returns>
++    public Task<IStreamSubscription> SubscribeToOrderBookAsync(
++        Symbol symbol,
++        int depth,
++        Func<OrderBook, ValueTask> onUpdate,
++        CancellationToken ct = default)
++    {
++        ArgumentNullException.ThrowIfNull(onUpdate);
++        return SubscribeToOrderBookAsync(symbol, depth, new StreamHandlers<OrderBook>(onUpdate), ct);
++    }
++
++    /// <inheritdoc/>
++    public Task<IStreamSubscription> SubscribeToKlinesAsync(
++        Symbol symbol,
++        KlineInterval interval,
++        StreamHandlers<Candlestick> handlers,
++        CancellationToken ct = default)
++    {
++        ArgumentNullException.ThrowIfNull(handlers);
++        var wireSymbol = _symbolMapper.ToWire(symbol);
++        // The canonical interval token (enum name, e.g. "OneMinute") is passed to the request.
++        // IStreamProtocol.BuildSubscribe maps it to the exchange's native wire notation (e.g. "1m").
++        var intervalToken = interval.ToString();
++        var request = new StreamRequest(StreamKind.Kline, wireSymbol, Interval: intervalToken);
++        return _engine.SubscribeAsync(request, handlers, ct);
++    }
++
++    /// <summary>
++    /// Subscribes to real-time kline (candlestick) updates using a bare <see cref="Func{T, TResult}"/> callback.
++    /// Convenience overload that wraps <paramref name="onUpdate"/> in a <see cref="StreamHandlers{T}"/>.
++    /// </summary>
++    /// <param name="symbol">The trading pair to subscribe to.</param>
++    /// <param name="interval">The candlestick time interval.</param>
++    /// <param name="onUpdate">Callback invoked on each kline update.</param>
++    /// <param name="ct">Token to cancel the subscribe handshake.</param>
++    /// <returns>An <see cref="IStreamSubscription"/> that remains active until disposed.</returns>
++    public Task<IStreamSubscription> SubscribeToKlinesAsync(
++        Symbol symbol,
++        KlineInterval interval,
++        Func<Candlestick, ValueTask> onUpdate,
++        CancellationToken ct = default)
++    {
++        ArgumentNullException.ThrowIfNull(onUpdate);
++        return SubscribeToKlinesAsync(symbol, interval, new StreamHandlers<Candlestick>(onUpdate), ct);
++    }
++
++    // ── IAsyncDisposable ──────────────────────────────────────────────────────
++
++    /// <inheritdoc/>
++    public ValueTask DisposeAsync() => _engine.DisposeAsync();
++}
+diff --git a/src/CryptoExchanges.Net.Http/Streaming/StreamClientFactory.cs b/src/CryptoExchanges.Net.Http/Streaming/StreamClientFactory.cs
+new file mode 100644
+index 0000000..57169e2
+--- /dev/null
++++ b/src/CryptoExchanges.Net.Http/Streaming/StreamClientFactory.cs
+@@ -0,0 +1,90 @@
++using System.Diagnostics.CodeAnalysis;
++using CryptoExchanges.Net.Core.Enums;
++using CryptoExchanges.Net.Core.Exceptions;
++using CryptoExchanges.Net.Core.Interfaces;
++using Microsoft.Extensions.DependencyInjection;
++using Microsoft.Extensions.Logging;
++using Microsoft.Extensions.Logging.Abstractions;
++
++namespace CryptoExchanges.Net.Http.Streaming;
++
++/// <summary>
++/// Resolves keyed <see cref="IStreamClient"/> singletons by <see cref="ExchangeId"/>.
++/// Registered as a singleton; holds the provider and resolves on demand.
++/// Lives in the shared Http assembly so each exchange's <c>AddXxxStreams</c> can register
++/// it without depending on the aggregation package (mirrors <c>ExchangeClientFactory</c>,
++/// see ADR-001).
++/// </summary>
++internal sealed class StreamClientFactory(IServiceProvider services) : IStreamClientFactory
++{
++    // The registered set is fixed once the provider is built, so compute it once (lazily, to avoid
++    // realizing every stream client at factory-construction time) and reuse it.
++    private readonly Lazy<IReadOnlyCollection<ExchangeId>> _available = new(() =>
++        services.GetKeyedServices<IStreamClient>(KeyedService.AnyKey)
++            .Select(c => c.ExchangeId)
++            .ToArray());
++
++    /// <inheritdoc />
++    public IReadOnlyCollection<ExchangeId> Available => _available.Value;
++
++    /// <inheritdoc />
++    public IStreamClient GetClient(ExchangeId exchange)
++        => services.GetKeyedService<IStreamClient>(exchange)
++            ?? throw new ExchangeNotRegisteredException(exchange);
++
++    /// <inheritdoc />
++    public bool TryGet(ExchangeId exchange, [NotNullWhen(true)] out IStreamClient? client)
++    {
++        client = services.GetKeyedService<IStreamClient>(exchange);
++        return client is not null;
++    }
++
++    // ── Container-free path (mirrors ExchangeClientFactory) ──────────────────
++
++    /// <summary>
++    /// Container-free factory method: builds a fully-wired <see cref="StreamClient"/>
++    /// without a DI container. Equivalent composition to the DI path.
++    /// </summary>
++    /// <param name="exchangeId">The exchange this client represents.</param>
++    /// <param name="protocol">The venue-specific protocol strategy.</param>
++    /// <param name="decoders">The per-stream-kind decode closure registry.</param>
++    /// <param name="options">Engine configuration (channel capacity, backoff, idle-close).</param>
++    /// <param name="connectionFactory">
++    /// Factory that produces a fresh <see cref="IWebSocketConnection"/> for each connect/reconnect.
++    /// </param>
++    /// <param name="logger">Logger for engine events; pass <see cref="NullLogger.Instance"/> in tests.</param>
++    /// <param name="symbolMapper">Resolves canonical <see cref="Core.Models.Symbol"/> to exchange wire strings.</param>
++    /// <returns>A fully-wired <see cref="IStreamClient"/>.</returns>
++    public static IStreamClient Create(
++        ExchangeId exchangeId,
++        IStreamProtocol protocol,
++        StreamDecoderRegistry decoders,
++        StreamEngineOptions options,
++        Func<IWebSocketConnection> connectionFactory,
++        ILogger logger,
++        ISymbolMapper symbolMapper)
++    {
++        ArgumentNullException.ThrowIfNull(protocol);
++        ArgumentNullException.ThrowIfNull(decoders);
++        ArgumentNullException.ThrowIfNull(options);
++        ArgumentNullException.ThrowIfNull(connectionFactory);
++        ArgumentNullException.ThrowIfNull(logger);
++        ArgumentNullException.ThrowIfNull(symbolMapper);
++
++        // Ownership of the engine transfers to StreamClient on success;
++        // on exception, the engine is async-disposed inline.
++        // CA2000: intentional — ownership transfer to StreamClient; false-positive for IAsyncDisposable.
++#pragma warning disable CA2000
++        var engine = new StreamEngine(protocol, decoders, options, connectionFactory, logger);
++#pragma warning restore CA2000
++        try
++        {
++            return new StreamClient(engine, symbolMapper, exchangeId);
++        }
++        catch
++        {
++            engine.DisposeAsync().AsTask().GetAwaiter().GetResult();
++            throw;
++        }
++    }
++}
+diff --git a/src/CryptoExchanges.Net.Http/Streaming/StreamServiceRegistration.cs b/src/CryptoExchanges.Net.Http/Streaming/StreamServiceRegistration.cs
+new file mode 100644
+index 0000000..50ab8dd
+--- /dev/null
++++ b/src/CryptoExchanges.Net.Http/Streaming/StreamServiceRegistration.cs
+@@ -0,0 +1,116 @@
++using CryptoExchanges.Net.Core.Enums;
++using CryptoExchanges.Net.Core.Interfaces;
++using Microsoft.Extensions.DependencyInjection;
++using Microsoft.Extensions.DependencyInjection.Extensions;
++using Microsoft.Extensions.Logging;
++using Microsoft.Extensions.Options;
++
++namespace CryptoExchanges.Net.Http.Streaming;
++
++/// <summary>
++/// Shared body of every <c>AddXxxStreams</c> registration; each exchange supplies only
++/// its variation points (<see cref="IStreamProtocol"/> factory + decode-registry factory).
++/// Mirrors the grain of <c>ExchangeServiceRegistration.AddExchange&lt;TOptions,TMapper&gt;</c>.
++/// </summary>
++/// <remarks>
++/// <para>
++/// Binding constraint K1: this class never references <c>Core.Models</c> types or DeltaMapper.
++/// The decode-registry factory is an opaque <see cref="Func{T, TResult}"/> supplied by the
++/// exchange package; Http only holds the resulting <see cref="StreamDecoderRegistry"/> of
++/// opaque <c>Func&lt;ReadOnlyMemory&lt;byte&gt;, object&gt;</c> closures.
++/// </para>
++/// <para>
++/// No captive dependency (Inv 9): the long-lived <see cref="StreamEngine"/> + transport are
++/// owned <em>inside</em> the keyed <see cref="IStreamClient"/> singleton. The engine's
++/// connection factory produces a fresh <see cref="IWebSocketConnection"/> per connect attempt,
++/// so the singleton does not capture a transient.
++/// </para>
++/// </remarks>
++internal static class StreamServiceRegistration
++{
++    /// <summary>
++    /// Registers a streaming client and all its dependencies as per-exchange keyed singletons.
++    /// </summary>
++    /// <typeparam name="TOptions">The per-exchange stream options type.</typeparam>
++    /// <param name="services">The service collection to register into.</param>
++    /// <param name="exchangeId">The per-exchange key for all keyed singletons.</param>
++    /// <param name="protocolFactory">
++    /// Builds the per-exchange <see cref="IStreamProtocol"/>. The factory receives the
++    /// <see cref="IServiceProvider"/> so it can resolve its own keyed options/credentials.
++    /// </param>
++    /// <param name="decoderRegistryFactory">
++    /// Builds the per-exchange <see cref="StreamDecoderRegistry"/> of opaque decode closures.
++    /// The factory receives the <see cref="IServiceProvider"/> so it can resolve the keyed
++    /// <c>ISymbolMapper</c>/<c>IMapper</c> already registered by <c>AddXxxExchange</c>.
++    /// Http never sees the closure internals (K1).
++    /// </param>
++    /// <param name="configure">
++    /// Optional per-exchange options configuration applied on top of any environment defaults.
++    /// </param>
++    /// <param name="connectionFactory">
++    /// Optional factory that produces a fresh <see cref="IWebSocketConnection"/> for each
++    /// connect/reconnect attempt. When <see langword="null"/> a default
++    /// <see cref="ClientWebSocketConnection"/> factory is used.
++    /// </param>
++    /// <param name="engineOptionsFactory">
++    /// Optional factory for per-exchange <see cref="StreamEngineOptions"/> (channel capacity,
++    /// backoff, idle-close window). When <see langword="null"/> sensible defaults are used.
++    /// </param>
++    /// <returns>The same <paramref name="services"/> for chaining.</returns>
++    public static IServiceCollection AddStreams<TOptions>(
++        IServiceCollection services,
++        ExchangeId exchangeId,
++        Func<IServiceProvider, IStreamProtocol> protocolFactory,
++        Func<IServiceProvider, StreamDecoderRegistry> decoderRegistryFactory,
++        Action<TOptions>? configure,
++        Func<IServiceProvider, Func<IWebSocketConnection>>? connectionFactory = null,
++        Func<IServiceProvider, StreamEngineOptions>? engineOptionsFactory = null)
++        where TOptions : class
++    {
++        ArgumentNullException.ThrowIfNull(services);
++        ArgumentNullException.ThrowIfNull(protocolFactory);
++        ArgumentNullException.ThrowIfNull(decoderRegistryFactory);
++
++        // Register the shared factory once (TryAdd — first registration wins).
++        services.TryAddSingleton<IStreamClientFactory, StreamClientFactory>();
++
++        // Per-exchange options with ValidateOnStart.
++        services.AddOptions<TOptions>()
++            .Configure(o => configure?.Invoke(o))
++            .ValidateOnStart();
++
++        services.TryAddSingleton(sp => sp.GetRequiredService<IOptions<TOptions>>().Value);
++
++        // Register keyed ISymbolMapper if not already registered by AddXxxExchange.
++        // TryAdd ensures the exchange's existing keyed mapper is reused (not replaced).
++        // The stream client resolves it from the container rather than constructing a new one.
++        services.TryAddKeyedSingleton<ISymbolMapper>(exchangeId, (_, _) =>
++            throw new InvalidOperationException(
++                $"No keyed ISymbolMapper registered for '{exchangeId}'. " +
++                $"Call AddXxxExchange before AddXxxStreams, or register the mapper manually."));
++
++        // The IStreamClient keyed singleton: owns the engine + transport (no captive dependency,
++        // Inv 9 — the connection factory produces a fresh socket per connect attempt).
++        services.AddKeyedSingleton<IStreamClient>(exchangeId, (sp, _) =>
++        {
++            var protocol = protocolFactory(sp);
++            var decoders = decoderRegistryFactory(sp);
++            var engineOpts = engineOptionsFactory?.Invoke(sp) ?? new StreamEngineOptions();
++
++            Func<IWebSocketConnection> connFactory = connectionFactory is not null
++                ? connectionFactory(sp)
++                : () => new ClientWebSocketConnection();
++
++            var loggerFactory = sp.GetService<ILoggerFactory>();
++            ILogger logger = loggerFactory is not null
++                ? loggerFactory.CreateLogger<StreamClient>()
++                : Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance;
++
++            var engine = new StreamEngine(protocol, decoders, engineOpts, connFactory, logger);
++            var symbolMapper = sp.GetRequiredKeyedService<ISymbolMapper>(exchangeId);
++            return new StreamClient(engine, symbolMapper, exchangeId);
++        });
++
++        return services;
++    }
++}
+diff --git a/tests/CryptoExchanges.Net.Http.Tests.Unit/Streaming/StreamClientTests.cs b/tests/CryptoExchanges.Net.Http.Tests.Unit/Streaming/StreamClientTests.cs
+new file mode 100644
+index 0000000..e801248
+--- /dev/null
++++ b/tests/CryptoExchanges.Net.Http.Tests.Unit/Streaming/StreamClientTests.cs
+@@ -0,0 +1,602 @@
++using System.Collections.Concurrent;
++using FluentAssertions;
++using Microsoft.Extensions.DependencyInjection;
++using Microsoft.Extensions.Logging.Abstractions;
++using Xunit;
++using CryptoExchanges.Net.Core.Enums;
++using CryptoExchanges.Net.Core.Interfaces;
++using CryptoExchanges.Net.Core.Models;
++using CryptoExchanges.Net.Core.Streaming;
++using CryptoExchanges.Net.Http.Streaming;
++
++namespace CryptoExchanges.Net.Http.Tests.Unit.Streaming;
++
++/// <summary>
++/// Unit tests for <see cref="StreamClient"/>, <see cref="StreamClientFactory"/>,
++/// and <see cref="StreamServiceRegistration"/> using <see cref="FakeWebSocketConnection"/>
++/// and <see cref="FakeStreamProtocol"/> — no network required.
++/// </summary>
++[Collection("StreamClientTests")]
++public sealed class StreamClientTests
++{
++    // ── Shared sentinel models ────────────────────────────────────────────────
++
++    private static readonly Symbol TestSymbol = new Symbol(Asset.Of("BTC"), Asset.Of("USDT"));
++    private static readonly Ticker SentinelTicker = new Ticker(TestSymbol, LastPrice: 99m);
++    private static readonly Trade SentinelTrade = new Trade(TestSymbol);
++    private static readonly OrderBook SentinelOrderBook = new OrderBook(TestSymbol, [], []);
++    private static readonly Candlestick SentinelCandlestick = new Candlestick(
++        OpenTime: DateTimeOffset.UnixEpoch,
++        CloseTime: DateTimeOffset.UnixEpoch.AddMinutes(1),
++        Interval: KlineInterval.OneMinute,
++        TradingSymbol: TestSymbol);
++
++    // ── Helpers ───────────────────────────────────────────────────────────────
++
++    /// <summary>
++    /// Wire symbol produced by <see cref="FakeSymbolMapper"/> for <see cref="TestSymbol"/>.
++    /// </summary>
++    private static string WireSymbol => FakeSymbolMapper.ToWireStatic(TestSymbol);
++
++    /// <summary>
++    /// Builds a wired <see cref="StreamClient"/> backed by a <see cref="FakeWebSocketConnection"/>
++    /// with all four stream kinds registered to return their respective sentinel models.
++    /// </summary>
++    private static (StreamClient client, FakeWebSocketConnection fake, FakeStreamProtocol protocol)
++        BuildClient(
++            ExchangeId exchangeId = ExchangeId.Binance,
++            FakeStreamProtocol? protocol = null,
++            StreamEngineOptions? options = null)
++    {
++        var fake = new FakeWebSocketConnection();
++        protocol ??= new FakeStreamProtocol();
++        options ??= new StreamEngineOptions
++        {
++            IdleCloseDelay = TimeSpan.FromMilliseconds(200),
++            BackoffInitial = TimeSpan.FromMilliseconds(10),
++            BackoffMax = TimeSpan.FromMilliseconds(50),
++            BackoffMultiplier = 2.0,
++        };
++
++        var registry = BuildAllDecoders();
++
++        var capturedFake = fake;
++        var engine = new StreamEngine(
++            protocol,
++            registry,
++            options,
++            () => capturedFake,
++            NullLogger.Instance);
++
++        var symbolMapper = new FakeSymbolMapper();
++        var client = new StreamClient(engine, symbolMapper, exchangeId);
++        return (client, fake, protocol);
++    }
++
++    // ── StreamClient.ExchangeId ───────────────────────────────────────────────
++
++    [Fact]
++    public async Task StreamClient_ExchangeId_ReturnsConstructedValue()
++    {
++        var (client, fake, _) = BuildClient(ExchangeId.Binance);
++        await using (client)
++        {
++            client.ExchangeId.Should().Be(ExchangeId.Binance);
++        }
++        await fake.DisposeAsync();
++    }
++
++    // ── SubscribeToTickerAsync — subscribe → route → decode → deliver ─────────
++
++    [Fact]
++    public async Task SubscribeToTickerAsync_DeliversDecodedValueToHandler()
++    {
++        var (client, fake, protocol) = BuildClient();
++
++        // Routing key must match what StreamClient builds for TestSymbol/Ticker.
++        protocol.NextRoutingKey = StreamEngine.BuildRoutingKey(
++            new StreamRequest(StreamKind.Ticker, WireSymbol));
++
++        var received = new ConcurrentQueue<Ticker>();
++        var handlers = new StreamHandlers<Ticker>(
++            OnUpdate: v =>
++            {
++                received.Enqueue(v);
++                return ValueTask.CompletedTask;
++            });
++
++        await using (client)
++        {
++            await using var sub = await client.SubscribeToTickerAsync(TestSymbol, handlers);
++
++            fake.EnqueueFrame("ignored-bytes");
++
++            // Allow the pump loop to process the frame.
++            await WaitAsync(() => !received.IsEmpty);
++
++            received.TryDequeue(out var value).Should().BeTrue();
++            value.Should().BeSameAs(SentinelTicker);
++        }
++        await fake.DisposeAsync();
++    }
++
++    // ── SubscribeToTradesAsync ────────────────────────────────────────────────
++
++    [Fact]
++    public async Task SubscribeToTradesAsync_DeliversDecodedValueToHandler()
++    {
++        var (client, fake, protocol) = BuildClient();
++
++        protocol.NextRoutingKey = StreamEngine.BuildRoutingKey(
++            new StreamRequest(StreamKind.Trade, WireSymbol));
++
++        var received = new ConcurrentQueue<Trade>();
++        var handlers = new StreamHandlers<Trade>(
++            OnUpdate: v =>
++            {
++                received.Enqueue(v);
++                return ValueTask.CompletedTask;
++            });
++
++        await using (client)
++        {
++            await using var sub = await client.SubscribeToTradesAsync(TestSymbol, handlers);
++
++            fake.EnqueueFrame("trade-bytes");
++
++            await WaitAsync(() => !received.IsEmpty);
++
++            received.TryDequeue(out var value).Should().BeTrue();
++            value.Should().BeSameAs(SentinelTrade);
++        }
++        await fake.DisposeAsync();
++    }
++
++    // ── SubscribeToOrderBookAsync ─────────────────────────────────────────────
++
++    [Fact]
++    public async Task SubscribeToOrderBookAsync_DeliversDecodedValueToHandler()
++    {
++        var (client, fake, protocol) = BuildClient();
++
++        protocol.NextRoutingKey = StreamEngine.BuildRoutingKey(
++            new StreamRequest(StreamKind.OrderBook, WireSymbol, Depth: 20));
++
++        var received = new ConcurrentQueue<OrderBook>();
++        var handlers = new StreamHandlers<OrderBook>(
++            OnUpdate: v =>
++            {
++                received.Enqueue(v);
++                return ValueTask.CompletedTask;
++            });
++
++        await using (client)
++        {
++            await using var sub = await client.SubscribeToOrderBookAsync(TestSymbol, depth: 20, handlers);
++
++            fake.EnqueueFrame("book-bytes");
++
++            await WaitAsync(() => !received.IsEmpty);
++
++            received.TryDequeue(out var value).Should().BeTrue();
++            value.Should().BeSameAs(SentinelOrderBook);
++        }
++        await fake.DisposeAsync();
++    }
++
++    // ── SubscribeToKlinesAsync ────────────────────────────────────────────────
++
++    [Fact]
++    public async Task SubscribeToKlinesAsync_DeliversDecodedValueToHandler()
++    {
++        var (client, fake, protocol) = BuildClient();
++
++        // StreamClient passes KlineInterval.ToString() ("OneMinute") as the interval token.
++        protocol.NextRoutingKey = StreamEngine.BuildRoutingKey(
++            new StreamRequest(StreamKind.Kline, WireSymbol,
++                Interval: KlineInterval.OneMinute.ToString()));
++
++        var received = new ConcurrentQueue<Candlestick>();
++        var handlers = new StreamHandlers<Candlestick>(
++            OnUpdate: v =>
++            {
++                received.Enqueue(v);
++                return ValueTask.CompletedTask;
++            });
++
++        await using (client)
++        {
++            await using var sub = await client.SubscribeToKlinesAsync(TestSymbol, KlineInterval.OneMinute, handlers);
++
++            fake.EnqueueFrame("kline-bytes");
++
++            await WaitAsync(() => !received.IsEmpty);
++
++            received.TryDequeue(out var value).Should().BeTrue();
++            value.Should().BeSameAs(SentinelCandlestick);
++        }
++        await fake.DisposeAsync();
++    }
++
++    // ── Subscription State / IsConnected ─────────────────────────────────────
++
++    [Fact]
++    public async Task Subscription_AfterSubscribe_IsLiveAndConnected()
++    {
++        var (client, fake, _) = BuildClient();
++
++        await using (client)
++        {
++            var handlers = new StreamHandlers<Ticker>(OnUpdate: _ => ValueTask.CompletedTask);
++            await using var sub = await client.SubscribeToTickerAsync(TestSymbol, handlers);
++
++            sub.State.Should().Be(StreamConnectionState.Live);
++            sub.IsConnected.Should().BeTrue();
++        }
++        await fake.DisposeAsync();
++    }
++
++    // ── Dispose unsubscribes (K2) ─────────────────────────────────────────────
++
++    [Fact]
++    public async Task Subscription_DisposeAsync_TransitionsStateToClosed()
++    {
++        var (client, fake, _) = BuildClient();
++
++        await using (client)
++        {
++            var handlers = new StreamHandlers<Ticker>(OnUpdate: _ => ValueTask.CompletedTask);
++            var sub = await client.SubscribeToTickerAsync(TestSymbol, handlers);
++
++            sub.State.Should().Be(StreamConnectionState.Live);
++
++            await sub.DisposeAsync();
++
++            sub.State.Should().Be(StreamConnectionState.Closed);
++            sub.IsConnected.Should().BeFalse();
++        }
++        await fake.DisposeAsync();
++    }
++
++    // ── Convenience overloads (bare Func<T,ValueTask>) ─────────────────────────
++
++    [Fact]
++    public async Task SubscribeToTickerAsync_BareFunc_WrapsIntoHandlers_AndDelivers()
++    {
++        var (client, fake, protocol) = BuildClient();
++
++        protocol.NextRoutingKey = StreamEngine.BuildRoutingKey(
++            new StreamRequest(StreamKind.Ticker, WireSymbol));
++
++        var received = new ConcurrentQueue<Ticker>();
++        await using (client)
++        {
++            await using var sub = await client.SubscribeToTickerAsync(
++                TestSymbol,
++                onUpdate: v =>
++                {
++                    received.Enqueue(v);
++                    return ValueTask.CompletedTask;
++                });
++
++            fake.EnqueueFrame("ignored");
++
++            await WaitAsync(() => !received.IsEmpty);
++            received.TryDequeue(out var value).Should().BeTrue();
++            value.Should().BeSameAs(SentinelTicker);
++        }
++        await fake.DisposeAsync();
++    }
++
++    [Fact]
++    public async Task SubscribeToTradesAsync_BareFunc_WrapsIntoHandlers_AndDelivers()
++    {
++        var (client, fake, protocol) = BuildClient();
++
++        protocol.NextRoutingKey = StreamEngine.BuildRoutingKey(
++            new StreamRequest(StreamKind.Trade, WireSymbol));
++
++        var received = new ConcurrentQueue<Trade>();
++        await using (client)
++        {
++            await using var sub = await client.SubscribeToTradesAsync(
++                TestSymbol,
++                onUpdate: v =>
++                {
++                    received.Enqueue(v);
++                    return ValueTask.CompletedTask;
++                });
++
++            fake.EnqueueFrame("trade");
++            await WaitAsync(() => !received.IsEmpty);
++            received.TryDequeue(out var value).Should().BeTrue();
++            value.Should().BeSameAs(SentinelTrade);
++        }
++        await fake.DisposeAsync();
++    }
++
++    [Fact]
++    public async Task SubscribeToOrderBookAsync_BareFunc_WrapsIntoHandlers_AndDelivers()
++    {
++        var (client, fake, protocol) = BuildClient();
++
++        protocol.NextRoutingKey = StreamEngine.BuildRoutingKey(
++            new StreamRequest(StreamKind.OrderBook, WireSymbol, Depth: 5));
++
++        var received = new ConcurrentQueue<OrderBook>();
++        await using (client)
++        {
++            await using var sub = await client.SubscribeToOrderBookAsync(
++                TestSymbol,
++                depth: 5,
++                onUpdate: v =>
++                {
++                    received.Enqueue(v);
++                    return ValueTask.CompletedTask;
++                });
++
++            fake.EnqueueFrame("book");
++            await WaitAsync(() => !received.IsEmpty);
++            received.TryDequeue(out var value).Should().BeTrue();
++            value.Should().BeSameAs(SentinelOrderBook);
++        }
++        await fake.DisposeAsync();
++    }
++
++    [Fact]
++    public async Task SubscribeToKlinesAsync_BareFunc_WrapsIntoHandlers_AndDelivers()
++    {
++        var (client, fake, protocol) = BuildClient();
++
++        protocol.NextRoutingKey = StreamEngine.BuildRoutingKey(
++            new StreamRequest(StreamKind.Kline, WireSymbol,
++                Interval: KlineInterval.OneMinute.ToString()));
++
++        var received = new ConcurrentQueue<Candlestick>();
++        await using (client)
++        {
++            await using var sub = await client.SubscribeToKlinesAsync(
++                TestSymbol,
++                KlineInterval.OneMinute,
++                onUpdate: v =>
++                {
++                    received.Enqueue(v);
++                    return ValueTask.CompletedTask;
++                });
++
++            fake.EnqueueFrame("kline");
++            await WaitAsync(() => !received.IsEmpty);
++            received.TryDequeue(out var value).Should().BeTrue();
++            value.Should().BeSameAs(SentinelCandlestick);
++        }
++        await fake.DisposeAsync();
++    }
++
++    // ── StreamClientFactory ───────────────────────────────────────────────────
++
++    [Fact]
++    public async Task StreamClientFactory_Available_ReturnsRegisteredExchangeIds()
++    {
++        await using var sp = BuildStreamServices();
++        var factory = sp.GetRequiredService<IStreamClientFactory>();
++
++        factory.Available.Should().Contain(ExchangeId.Binance);
++    }
++
++    [Fact]
++    public async Task StreamClientFactory_GetClient_ReturnsRegisteredClient()
++    {
++        await using var sp = BuildStreamServices();
++        var factory = sp.GetRequiredService<IStreamClientFactory>();
++
++        var client = factory.GetClient(ExchangeId.Binance);
++        client.Should().NotBeNull();
++        client.ExchangeId.Should().Be(ExchangeId.Binance);
++    }
++
++    [Fact]
++    public async Task StreamClientFactory_TryGet_ReturnsTrueAndClient_WhenRegistered()
++    {
++        await using var sp = BuildStreamServices();
++        var factory = sp.GetRequiredService<IStreamClientFactory>();
++
++        var found = factory.TryGet(ExchangeId.Binance, out var client);
++        found.Should().BeTrue();
++        client.Should().NotBeNull();
++    }
++
++    [Fact]
++    public async Task StreamClientFactory_TryGet_ReturnsFalse_WhenNotRegistered()
++    {
++        await using var sp = BuildStreamServices();
++        var factory = sp.GetRequiredService<IStreamClientFactory>();
++
++        var found = factory.TryGet(ExchangeId.Bybit, out var client);
++        found.Should().BeFalse();
++        client.Should().BeNull();
++    }
++
++    [Fact]
++    public async Task StreamClientFactory_GetClient_Throws_WhenNotRegistered()
++    {
++        await using var sp = BuildStreamServices();
++        var factory = sp.GetRequiredService<IStreamClientFactory>();
++
++        var act = () => factory.GetClient(ExchangeId.Bybit);
++        act.Should().Throw<CryptoExchanges.Net.Core.Exceptions.ExchangeNotRegisteredException>();
++    }
++
++    // ── AddStreams<TOptions> keyed singleton + ValidateOnStart ────────────────
++
++    [Fact]
++    public async Task AddStreams_RegistersKeyedSingleton_ResolvableViaKeyedDI()
++    {
++        await using var sp = BuildStreamServices();
++        var client = sp.GetRequiredKeyedService<IStreamClient>(ExchangeId.Binance);
++
++        client.Should().NotBeNull();
++        client.ExchangeId.Should().Be(ExchangeId.Binance);
++    }
++
++    [Fact]
++    public async Task AddStreams_IsSingleton_ReturnsSameInstanceOnMultipleResolves()
++    {
++        await using var sp = BuildStreamServices();
++        var a = sp.GetRequiredKeyedService<IStreamClient>(ExchangeId.Binance);
++        var b = sp.GetRequiredKeyedService<IStreamClient>(ExchangeId.Binance);
++
++        a.Should().BeSameAs(b);
++    }
++
++    [Fact]
++    public async Task AddStreams_OptionsConfigure_AppliesConfiguration()
++    {
++        await using var sp = BuildStreamServices(configure: o => o.TestTag = "configured");
++        var opts = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<FakeStreamOptions>>().Value;
++
++        opts.TestTag.Should().Be("configured");
++    }
++
++    [Fact]
++    public async Task AddStreams_ReusesKeyedSymbolMapper_WhenAlreadyRegistered()
++    {
++        var services = new ServiceCollection();
++        services.AddLogging();
++
++        // Pre-register a keyed ISymbolMapper (simulating AddXxxExchange having run first).
++        var preRegisteredMapper = new FakeSymbolMapper();
++        services.AddKeyedSingleton<ISymbolMapper>(ExchangeId.Binance, preRegisteredMapper);
++
++        StreamServiceRegistration.AddStreams<FakeStreamOptions>(
++            services,
++            ExchangeId.Binance,
++            _ => new FakeStreamProtocol(),
++            _ => BuildAllDecoders(),
++            null);
++
++        await using var sp = services.BuildServiceProvider();
++
++        // The client should have been built with the pre-registered mapper (TryAddKeyedSingleton reuses it).
++        var client = sp.GetRequiredKeyedService<IStreamClient>(ExchangeId.Binance);
++        client.Should().NotBeNull();
++    }
++
++    // ── StreamClientFactory.Create — container-free path ─────────────────────
++
++    [Fact]
++    public async Task StreamClientFactory_Create_BuildsClientWithoutContainer()
++    {
++        var fake = new FakeWebSocketConnection();
++        var protocol = new FakeStreamProtocol();
++        var registry = BuildAllDecoders();
++        var options = new StreamEngineOptions();
++        var symbolMapper = new FakeSymbolMapper();
++
++        var client = StreamClientFactory.Create(
++            ExchangeId.Binance,
++            protocol,
++            registry,
++            options,
++            () => fake,
++            NullLogger.Instance,
++            symbolMapper);
++
++        await using (client)
++        {
++            client.ExchangeId.Should().Be(ExchangeId.Binance);
++        }
++        await fake.DisposeAsync();
++    }
++
++    // ── Helpers ───────────────────────────────────────────────────────────────
++
++    /// <summary>
++    /// Builds a <see cref="ServiceProvider"/> with a keyed <see cref="ISymbolMapper"/> and
++    /// <see cref="IStreamClient"/> registered for <see cref="ExchangeId.Binance"/>, using
++    /// the <see cref="FakeStreamProtocol"/> and decode closures that return sentinel models.
++    /// Pre-registering the mapper simulates <c>AddXxxExchange</c> having run first.
++    /// </summary>
++    private static ServiceProvider BuildStreamServices(
++        ExchangeId exchangeId = ExchangeId.Binance,
++        Action<FakeStreamOptions>? configure = null)
++    {
++        var services = new ServiceCollection();
++        services.AddLogging();
++
++        // Pre-register the keyed ISymbolMapper as AddXxxExchange would.
++        services.AddKeyedSingleton<ISymbolMapper>(exchangeId, new FakeSymbolMapper());
++
++        StreamServiceRegistration.AddStreams<FakeStreamOptions>(
++            services,
++            exchangeId,
++            _ => new FakeStreamProtocol(),
++            _ => BuildAllDecoders(),
++            configure);
++
++        return services.BuildServiceProvider();
++    }
++
++    private static StreamDecoderRegistry BuildAllDecoders()
++    {
++        var registry = new StreamDecoderRegistry();
++        registry.Register(StreamKind.Ticker, _ => (object)SentinelTicker);
++        registry.Register(StreamKind.Trade, _ => (object)SentinelTrade);
++        registry.Register(StreamKind.OrderBook, _ => (object)SentinelOrderBook);
++        registry.Register(StreamKind.Kline, _ => (object)SentinelCandlestick);
++        return registry;
++    }
++
++    /// <summary>
++    /// Polls <paramref name="condition"/> until true or 5 seconds elapse.
++    /// Used to await async side-effects on the pump loop without a fixed sleep.
++    /// </summary>
++    private static async Task WaitAsync(Func<bool> condition, int timeoutMs = 5_000)
++    {
++        var deadline = DateTime.UtcNow.AddMilliseconds(timeoutMs);
++        while (!condition() && DateTime.UtcNow < deadline)
++            await Task.Delay(5);
++        condition().Should().BeTrue("condition should be met within the timeout");
++    }
++}
++
++// ── Test-local helpers ────────────────────────────────────────────────────────
++
++/// <summary>
++/// Trivial <see cref="ISymbolMapper"/> for tests: formats <see cref="Symbol"/> as
++/// <c>"WIRE:{symbol}"</c> so routing-key tests can predict the wire string without
++/// exchange-specific logic.
++/// </summary>
++internal sealed class FakeSymbolMapper : ISymbolMapper
++{
++    /// <summary>Prefix prepended to every wire symbol to distinguish it from the canonical form.</summary>
++    public const string WirePrefix = "WIRE:";
++
++    /// <inheritdoc/>
++    public string ToWire(Symbol symbol) => ToWireStatic(symbol);
++
++    /// <summary>Static helper so test code can predict the wire symbol without constructing a mapper.</summary>
++    public static string ToWireStatic(Symbol symbol) => $"{WirePrefix}{symbol}";
++
++    /// <inheritdoc/>
++    public Symbol FromWire(string wireSymbol)
++        => throw new NotImplementedException("not needed in tests");
++
++    /// <inheritdoc/>
++    public Symbol FromComponents(string baseAsset, string quoteAsset)
++        => throw new NotImplementedException("not needed in tests");
++
++    /// <inheritdoc/>
++    public void UpdateSymbols(IEnumerable<SymbolInfo> symbols) { }
++}
++
++/// <summary>
++/// Minimal options type for <see cref="StreamServiceRegistration"/> DI tests.
++/// Carries no real configuration — just a tag for asserting options-configure wiring.
++/// </summary>
++[System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "CA1812:Avoid uninstantiated internal classes",
++    Justification = "Instantiated by the DI container via options infrastructure.")]
++internal sealed class FakeStreamOptions
++{
++    /// <summary>Test tag set by the configure delegate; asserted in DI tests.</summary>
++    public string TestTag { get; set; } = string.Empty;
++}

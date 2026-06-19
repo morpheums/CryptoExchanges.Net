@@ -1,0 +1,843 @@
+diff --git a/src/CryptoExchanges.Net.Http/Streaming/FrameKind.cs b/src/CryptoExchanges.Net.Http/Streaming/FrameKind.cs
+new file mode 100644
+index 0000000..accc5e3
+--- /dev/null
++++ b/src/CryptoExchanges.Net.Http/Streaming/FrameKind.cs
+@@ -0,0 +1,29 @@
++namespace CryptoExchanges.Net.Http.Streaming;
++
++/// <summary>
++/// Discriminates the engine-visible kind of a received WebSocket frame.
++/// The engine acts on <see cref="Data"/> (routes to a subscription channel),
++/// skips <see cref="Ack"/> and <see cref="Pong"/>, and surfaces <see cref="Error"/>
++/// for reconnect decisions.
++/// </summary>
++internal enum FrameKind
++{
++    /// <summary>A market-data frame carrying a routable payload.</summary>
++    Data,
++
++    /// <summary>An exchange acknowledgement (subscribe/unsubscribe echo); the engine discards these.</summary>
++    Ack,
++
++    /// <summary>
++    /// A pong response (control-frame or text/JSON pong). Returned by
++    /// <see cref="IStreamProtocol.Classify"/> when the frame satisfies the venue's liveness response;
++    /// the engine resets its watchdog timer.
++    /// </summary>
++    Pong,
++
++    /// <summary>
++    /// An error or unknown frame from the venue. The engine uses this signal to decide
++    /// whether to force a reconnect.
++    /// </summary>
++    Error,
++}
+diff --git a/src/CryptoExchanges.Net.Http/Streaming/HeartbeatDirection.cs b/src/CryptoExchanges.Net.Http/Streaming/HeartbeatDirection.cs
+new file mode 100644
+index 0000000..a385506
+--- /dev/null
++++ b/src/CryptoExchanges.Net.Http/Streaming/HeartbeatDirection.cs
+@@ -0,0 +1,22 @@
++namespace CryptoExchanges.Net.Http.Streaming;
++
++/// <summary>
++/// Describes which side initiates the heartbeat for a given venue.
++/// The engine reads this from <see cref="HeartbeatPolicy.Direction"/> to decide
++/// whether to wait for an incoming ping and respond with a pong, or to send
++/// periodic client-initiated pings.
++/// </summary>
++internal enum HeartbeatDirection
++{
++    /// <summary>
++    /// The venue sends periodic ping frames; the engine responds with pong frames.
++    /// Standard WebSocket RFC 6455 control-frame ping/pong.
++    /// </summary>
++    ServerPingClientPong,
++
++    /// <summary>
++    /// The engine sends periodic client-initiated pings on the configured cadence.
++    /// Used by venues that expect the client to maintain liveness probes.
++    /// </summary>
++    ClientPing,
++}
+diff --git a/src/CryptoExchanges.Net.Http/Streaming/HeartbeatPolicy.cs b/src/CryptoExchanges.Net.Http/Streaming/HeartbeatPolicy.cs
+new file mode 100644
+index 0000000..a044299
+--- /dev/null
++++ b/src/CryptoExchanges.Net.Http/Streaming/HeartbeatPolicy.cs
+@@ -0,0 +1,36 @@
++namespace CryptoExchanges.Net.Http.Streaming;
++
++/// <summary>
++/// Pure-data record describing the heartbeat policy for a venue's WebSocket connection.
++/// The protocol <em>describes</em> the policy; the engine <em>executes</em> it (timers,
++/// watchdog, send, pong — binding constraint C1). No timers, threads, or behavioral
++/// methods live here.
++/// </summary>
++/// <param name="Direction">
++/// Whether the venue sends pings and the engine sends pongs, or the engine sends
++/// periodic client-initiated pings.
++/// </param>
++/// <param name="Interval">
++/// The client-ping cadence (for <see cref="HeartbeatDirection.ClientPing"/>) or the
++/// expected server-ping interval (used by the engine's liveness watchdog).
++/// </param>
++/// <param name="Timeout">
++/// The liveness watchdog threshold: if no heartbeat signal is received within this
++/// duration the engine treats the connection as dead and initiates a reconnect.
++/// </param>
++/// <param name="ClientPingPayload">
++/// The raw bytes to send as the ping payload. Relevant only for
++/// <see cref="HeartbeatDirection.ClientPing"/>. Defaults to an empty
++/// <see cref="ReadOnlyMemory{T}"/> (zero bytes).
++/// </param>
++/// <param name="PingFormat">
++/// The wire format used when the engine sends client-initiated pings.
++/// Defaults to <see cref="PingFormat.ControlFrame"/>. Ignored for
++/// <see cref="HeartbeatDirection.ServerPingClientPong"/>.
++/// </param>
++internal sealed record HeartbeatPolicy(
++    HeartbeatDirection Direction,
++    TimeSpan Interval,
++    TimeSpan Timeout,
++    ReadOnlyMemory<byte> ClientPingPayload = default,
++    PingFormat PingFormat = PingFormat.ControlFrame);
+diff --git a/src/CryptoExchanges.Net.Http/Streaming/IStreamProtocol.cs b/src/CryptoExchanges.Net.Http/Streaming/IStreamProtocol.cs
+new file mode 100644
+index 0000000..60ca0ab
+--- /dev/null
++++ b/src/CryptoExchanges.Net.Http/Streaming/IStreamProtocol.cs
+@@ -0,0 +1,62 @@
++namespace CryptoExchanges.Net.Http.Streaming;
++
++/// <summary>
++/// Per-exchange protocol strategy injected into the generic reconnecting byte-engine.
++/// Supplies venue-specific knowledge: the WebSocket endpoint, subscribe/unsubscribe
++/// wire text, frame classification, and heartbeat policy.
++/// </summary>
++/// <remarks>
++/// <para>
++/// Implemented as a sealed class per exchange (invariant 11: prefer injected interfaces
++/// over static classes with behavior). The engine resolves this via DI — never calls
++/// <c>new XxxStreamProtocol()</c> directly.
++/// </para>
++/// <para>
++/// <strong>Binding constraint C1</strong>: the protocol <em>describes</em> heartbeat
++/// (policy data + frame classification); the engine <em>executes</em> it (timers,
++/// watchdog, send, pong). No timers, threads, or <c>StartHeartbeat</c>-style behavioral
++/// methods belong here.
++/// </para>
++/// </remarks>
++internal interface IStreamProtocol
++{
++    /// <summary>The WebSocket endpoint URI for this venue.</summary>
++    Uri Endpoint { get; }
++
++    /// <summary>
++    /// Builds the subscribe request text to send over the socket for the given
++    /// <paramref name="request"/>. The format is venue-specific (flat-string, JSON object, etc.).
++    /// </summary>
++    /// <param name="request">The subscription descriptor.</param>
++    /// <returns>The wire-format subscribe payload as a UTF-8 string.</returns>
++    string BuildSubscribe(StreamRequest request);
++
++    /// <summary>
++    /// Builds the unsubscribe request text to send over the socket for the given
++    /// <paramref name="request"/>. The engine calls this before removing the request from
++    /// the stored subscribe set (binding constraint K2: only acknowledged unsubscribes
++    /// are removed from the replay set so a reconnect does not resurface them).
++    /// </summary>
++    /// <param name="request">The subscription descriptor to cancel.</param>
++    /// <returns>The wire-format unsubscribe payload as a UTF-8 string.</returns>
++    string BuildUnsubscribe(StreamRequest request);
++
++    /// <summary>
++    /// Classifies a raw received frame into an engine-actionable <see cref="StreamFrame"/>.
++    /// <list type="bullet">
++    ///   <item><see cref="FrameKind.Data"/> — routable market-data frame; <see cref="StreamFrame.RoutingKey"/> identifies the target subscription.</item>
++    ///   <item><see cref="FrameKind.Ack"/> — subscribe/unsubscribe echo; the engine discards it.</item>
++    ///   <item><see cref="FrameKind.Pong"/> — venue liveness response; the engine resets its watchdog timer.</item>
++    ///   <item><see cref="FrameKind.Error"/> — error or unrecognised frame; the engine may force a reconnect.</item>
++    /// </list>
++    /// </summary>
++    /// <param name="frame">The raw frame bytes as received from the socket.</param>
++    /// <returns>The classified <see cref="StreamFrame"/>.</returns>
++    StreamFrame Classify(ReadOnlySpan<byte> frame);
++
++    /// <summary>
++    /// The heartbeat policy for this venue. The engine reads this once on connection
++    /// and executes the timers, watchdog, and send/pong logic accordingly.
++    /// </summary>
++    HeartbeatPolicy Heartbeat { get; }
++}
+diff --git a/src/CryptoExchanges.Net.Http/Streaming/IWebSocketConnection.cs b/src/CryptoExchanges.Net.Http/Streaming/IWebSocketConnection.cs
+new file mode 100644
+index 0000000..f28f82c
+--- /dev/null
++++ b/src/CryptoExchanges.Net.Http/Streaming/IWebSocketConnection.cs
+@@ -0,0 +1,75 @@
++using System.Net.WebSockets;
++
++namespace CryptoExchanges.Net.Http.Streaming;
++
++/// <summary>
++/// Minimal transport abstraction over a raw WebSocket connection.
++/// Encapsulates connect, send (text and control/pong), receive, close, and state
++/// so the engine never depends directly on <see cref="System.Net.WebSockets.ClientWebSocket"/>.
++/// </summary>
++/// <remarks>
++/// <para>
++/// This is the seam that unit tests replace with a fake (e.g. <c>FakeWebSocketConnection</c>),
++/// making the reconnecting engine fully testable without a network. The real
++/// <see cref="System.Net.WebSockets.ClientWebSocket"/>-backed implementation ships in TASK-044.
++/// </para>
++/// <para>
++/// Keep the surface minimal and transport-only (bytes in/out + connect/close).
++/// No protocol knowledge — no heartbeat logic, no subscribe text, no frame parsing here.
++/// </para>
++/// </remarks>
++internal interface IWebSocketConnection : IAsyncDisposable
++{
++    /// <summary>
++    /// The current state of the underlying WebSocket connection.
++    /// </summary>
++    WebSocketState State { get; }
++
++    /// <summary>
++    /// <see langword="true"/> when <see cref="State"/> is <see cref="WebSocketState.Open"/>.
++    /// Convenience shorthand for callers that only need a binary open/not-open check.
++    /// </summary>
++    bool IsOpen { get; }
++
++    /// <summary>
++    /// Opens the WebSocket connection to the given <paramref name="uri"/>.
++    /// </summary>
++    /// <param name="uri">The endpoint to connect to.</param>
++    /// <param name="ct">A token to cancel the connection attempt.</param>
++    Task ConnectAsync(Uri uri, CancellationToken ct);
++
++    /// <summary>
++    /// Sends a UTF-8 text message over the open connection.
++    /// </summary>
++    /// <param name="text">The text payload to send.</param>
++    /// <param name="ct">A token to cancel the send.</param>
++    Task SendTextAsync(string text, CancellationToken ct);
++
++    /// <summary>
++    /// Sends a binary payload as a WebSocket Pong control frame (RFC 6455 §5.5.3).
++    /// Used by the engine to respond to server-initiated Ping frames.
++    /// </summary>
++    /// <param name="payload">The pong payload bytes (typically echoes the ping payload).</param>
++    /// <param name="ct">A token to cancel the send.</param>
++    Task SendPongAsync(ReadOnlyMemory<byte> payload, CancellationToken ct);
++
++    /// <summary>
++    /// Awaits and returns the next complete frame from the connection.
++    /// Returns <see langword="null"/> when the connection is closed normally by the venue
++    /// (clean close handshake), signalling the engine to attempt a reconnect.
++    /// </summary>
++    /// <param name="ct">A token to cancel the receive.</param>
++    /// <returns>
++    /// The raw frame bytes, or <see langword="null"/> if the connection closed cleanly.
++    /// </returns>
++    ValueTask<ReadOnlyMemory<byte>?> ReceiveAsync(CancellationToken ct);
++
++    /// <summary>
++    /// Initiates a clean WebSocket close handshake with the given <paramref name="status"/>
++    /// and <paramref name="description"/>.
++    /// </summary>
++    /// <param name="status">The close status code.</param>
++    /// <param name="description">A human-readable reason for closing.</param>
++    /// <param name="ct">A token to cancel the close.</param>
++    Task CloseAsync(WebSocketCloseStatus status, string description, CancellationToken ct);
++}
+diff --git a/src/CryptoExchanges.Net.Http/Streaming/PingFormat.cs b/src/CryptoExchanges.Net.Http/Streaming/PingFormat.cs
+new file mode 100644
+index 0000000..3de4795
+--- /dev/null
++++ b/src/CryptoExchanges.Net.Http/Streaming/PingFormat.cs
+@@ -0,0 +1,26 @@
++namespace CryptoExchanges.Net.Http.Streaming;
++
++/// <summary>
++/// Specifies the wire format the engine uses when sending a client-initiated ping
++/// (relevant only when <see cref="HeartbeatDirection.ClientPing"/> is active).
++/// </summary>
++internal enum PingFormat
++{
++    /// <summary>
++    /// A standard WebSocket RFC 6455 Ping control frame. The venue responds with
++    /// a Pong control frame handled automatically by most WebSocket implementations.
++    /// </summary>
++    ControlFrame,
++
++    /// <summary>
++    /// A plain-text WebSocket message (opcode 0x01) carrying the ping payload.
++    /// Used by venues that treat heartbeats as application-level text messages.
++    /// </summary>
++    Text,
++
++    /// <summary>
++    /// A JSON-encoded WebSocket message (opcode 0x01) carrying the ping payload.
++    /// Used by venues that define a JSON envelope for their heartbeat request.
++    /// </summary>
++    Json,
++}
+diff --git a/src/CryptoExchanges.Net.Http/Streaming/StreamDecoderRegistry.cs b/src/CryptoExchanges.Net.Http/Streaming/StreamDecoderRegistry.cs
+new file mode 100644
+index 0000000..33a27a4
+--- /dev/null
++++ b/src/CryptoExchanges.Net.Http/Streaming/StreamDecoderRegistry.cs
+@@ -0,0 +1,50 @@
++namespace CryptoExchanges.Net.Http.Streaming;
++
++/// <summary>
++/// Maps each <see cref="StreamKind"/> to its decode closure for the engine.
++/// Closures are opaque <c>Func&lt;ReadOnlyMemory&lt;byte&gt;, object&gt;</c> built in the
++/// exchange package (binding constraint K1: DTO decode + model mapping stays exchange-side);
++/// the Http engine sees only raw bytes in and <see langword="object"/> out.
++/// </summary>
++internal sealed class StreamDecoderRegistry
++{
++    private readonly Dictionary<StreamKind, Func<ReadOnlyMemory<byte>, object>> _decoders = [];
++
++    /// <summary>
++    /// Registers a decode closure for the given <paramref name="kind"/>.
++    /// Overwrites any previously registered closure for that kind.
++    /// </summary>
++    /// <param name="kind">The stream kind this closure handles.</param>
++    /// <param name="decoder">
++    /// The opaque decode closure: accepts raw frame bytes, returns the decoded model
++    /// as <see langword="object"/>. The engine casts to <c>T</c> before delivering
++    /// to the subscription channel.
++    /// </param>
++    public void Register(StreamKind kind, Func<ReadOnlyMemory<byte>, object> decoder)
++    {
++        ArgumentNullException.ThrowIfNull(decoder);
++        _decoders[kind] = decoder;
++    }
++
++    /// <summary>
++    /// Resolves the decode closure for the given <paramref name="kind"/>.
++    /// </summary>
++    /// <param name="kind">The stream kind to look up.</param>
++    /// <returns>The registered decode closure.</returns>
++    /// <exception cref="InvalidOperationException">
++    /// No closure has been registered for <paramref name="kind"/>.
++    /// </exception>
++    public Func<ReadOnlyMemory<byte>, object> Resolve(StreamKind kind)
++    {
++        if (!_decoders.TryGetValue(kind, out var decoder))
++            throw new InvalidOperationException(
++                $"No decode closure registered for {nameof(StreamKind)}.{kind}. " +
++                $"Ensure the exchange package registers all four stream kinds before use.");
++        return decoder;
++    }
++
++    /// <summary>
++    /// Returns <see langword="true"/> if a closure is registered for <paramref name="kind"/>.
++    /// </summary>
++    public bool Contains(StreamKind kind) => _decoders.ContainsKey(kind);
++}
+diff --git a/src/CryptoExchanges.Net.Http/Streaming/StreamFrame.cs b/src/CryptoExchanges.Net.Http/Streaming/StreamFrame.cs
+new file mode 100644
+index 0000000..58877fe
+--- /dev/null
++++ b/src/CryptoExchanges.Net.Http/Streaming/StreamFrame.cs
+@@ -0,0 +1,14 @@
++namespace CryptoExchanges.Net.Http.Streaming;
++
++/// <summary>
++/// The classification result produced by <see cref="IStreamProtocol.Classify"/> for a single
++/// received WebSocket frame. The engine uses <see cref="Kind"/> to decide the action and, for
++/// <see cref="FrameKind.Data"/> frames, uses <see cref="RoutingKey"/> to find the target subscription.
++/// </summary>
++/// <param name="Kind">The classified kind of the received frame.</param>
++/// <param name="RoutingKey">
++/// The routing key that identifies which subscription receives this data frame.
++/// <see langword="null"/> for non-data frames (<see cref="FrameKind.Ack"/>,
++/// <see cref="FrameKind.Pong"/>, <see cref="FrameKind.Error"/>).
++/// </param>
++internal readonly record struct StreamFrame(FrameKind Kind, string? RoutingKey);
+diff --git a/src/CryptoExchanges.Net.Http/Streaming/StreamKind.cs b/src/CryptoExchanges.Net.Http/Streaming/StreamKind.cs
+new file mode 100644
+index 0000000..decf5ce
+--- /dev/null
++++ b/src/CryptoExchanges.Net.Http/Streaming/StreamKind.cs
+@@ -0,0 +1,22 @@
++namespace CryptoExchanges.Net.Http.Streaming;
++
++/// <summary>
++/// Discriminates the type of market-data stream a consumer subscribes to.
++/// This token is the key used to look up the decode closure in the
++/// <see cref="StreamDecoderRegistry"/> and is also the stream-type discriminator
++/// carried in <see cref="StreamRequest.Kind"/>.
++/// </summary>
++internal enum StreamKind
++{
++    /// <summary>Real-time best-bid/best-ask ticker updates.</summary>
++    Ticker,
++
++    /// <summary>Real-time individual trade execution updates.</summary>
++    Trade,
++
++    /// <summary>Raw per-frame order-book depth updates (no local-book maintenance in v1).</summary>
++    OrderBook,
++
++    /// <summary>OHLCV candlestick / kline updates for a given interval.</summary>
++    Kline,
++}
+diff --git a/src/CryptoExchanges.Net.Http/Streaming/StreamRequest.cs b/src/CryptoExchanges.Net.Http/Streaming/StreamRequest.cs
+new file mode 100644
+index 0000000..f118e27
+--- /dev/null
++++ b/src/CryptoExchanges.Net.Http/Streaming/StreamRequest.cs
+@@ -0,0 +1,27 @@
++namespace CryptoExchanges.Net.Http.Streaming;
++
++/// <summary>
++/// Venue-neutral, immutable descriptor for a single subscription request.
++/// The protocol's <c>BuildSubscribe</c> / <c>BuildUnsubscribe</c> methods translate
++/// this into the exchange wire format. Symbol resolution (from the canonical symbol type
++/// to the exchange wire symbol) happens exchange-side <em>before</em> this record is
++/// built — the Http layer receives only the resolved wire string (binding constraint K1).
++/// </summary>
++/// <param name="Kind">The type of market-data stream being requested.</param>
++/// <param name="WireSymbol">
++/// The already-resolved exchange wire symbol string (e.g. <c>"BTCUSDT"</c>).
++/// </param>
++/// <param name="Depth">
++/// Optional order-book depth level. Non-null only for <see cref="StreamKind.OrderBook"/>
++/// subscriptions; the protocol interprets the value per venue convention.
++/// </param>
++/// <param name="Interval">
++/// Optional kline interval string. Non-null only for <see cref="StreamKind.Kline"/>
++/// subscriptions; expressed in the exchange's native interval notation
++/// (e.g. <c>"1m"</c>, <c>"1h"</c>).
++/// </param>
++internal sealed record StreamRequest(
++    StreamKind Kind,
++    string WireSymbol,
++    int? Depth = null,
++    string? Interval = null);
+diff --git a/tests/CryptoExchanges.Net.Http.Tests.Unit/Streaming/FakeWebSocketConnection.cs b/tests/CryptoExchanges.Net.Http.Tests.Unit/Streaming/FakeWebSocketConnection.cs
+new file mode 100644
+index 0000000..a486845
+--- /dev/null
++++ b/tests/CryptoExchanges.Net.Http.Tests.Unit/Streaming/FakeWebSocketConnection.cs
+@@ -0,0 +1,121 @@
++using System.Collections.Concurrent;
++using System.Net.WebSockets;
++using System.Text;
++using CryptoExchanges.Net.Http.Streaming;
++
++namespace CryptoExchanges.Net.Http.Tests.Unit.Streaming;
++
++/// <summary>
++/// A controllable test double for <see cref="IWebSocketConnection"/>.
++/// Emits canned frames on demand, captures sent messages, and can simulate
++/// clean disconnects or reconnects — all without a network.
++/// </summary>
++public sealed class FakeWebSocketConnection : IWebSocketConnection
++{
++    private readonly ConcurrentQueue<ReadOnlyMemory<byte>?> _inbound = new();
++    private readonly SemaphoreSlim _available = new(0);
++
++    /// <summary>Messages sent via <see cref="SendTextAsync"/> in order.</summary>
++    public List<string> SentText { get; } = [];
++
++    /// <summary>Pong payloads sent via <see cref="SendPongAsync"/> in order.</summary>
++    public List<ReadOnlyMemory<byte>> SentPongs { get; } = [];
++
++    /// <summary>
++    /// Number of times <see cref="ConnectAsync"/> has been called.
++    /// Use to assert reconnect behaviour without a network.
++    /// </summary>
++    public int ConnectCount { get; private set; }
++
++    /// <inheritdoc/>
++    public WebSocketState State { get; private set; } = WebSocketState.None;
++
++    /// <inheritdoc/>
++    public bool IsOpen => State == WebSocketState.Open;
++
++    /// <inheritdoc/>
++    public Task ConnectAsync(Uri uri, CancellationToken ct)
++    {
++        ConnectCount++;
++        State = WebSocketState.Open;
++        return Task.CompletedTask;
++    }
++
++    /// <inheritdoc/>
++    public Task SendTextAsync(string text, CancellationToken ct)
++    {
++        SentText.Add(text);
++        return Task.CompletedTask;
++    }
++
++    /// <inheritdoc/>
++    public Task SendPongAsync(ReadOnlyMemory<byte> payload, CancellationToken ct)
++    {
++        SentPongs.Add(payload);
++        return Task.CompletedTask;
++    }
++
++    /// <inheritdoc/>
++    public async ValueTask<ReadOnlyMemory<byte>?> ReceiveAsync(CancellationToken ct)
++    {
++        await _available.WaitAsync(ct).ConfigureAwait(false);
++        _inbound.TryDequeue(out var frame);
++        return frame;
++    }
++
++    /// <inheritdoc/>
++    public Task CloseAsync(WebSocketCloseStatus status, string description, CancellationToken ct)
++    {
++        State = WebSocketState.Closed;
++        return Task.CompletedTask;
++    }
++
++    /// <inheritdoc/>
++    public ValueTask DisposeAsync()
++    {
++        State = WebSocketState.Closed;
++        _available.Dispose();
++        return ValueTask.CompletedTask;
++    }
++
++    // ── Test-control helpers ──────────────────────────────────────────────────
++
++    /// <summary>
++    /// Enqueues a canned text frame (UTF-8 encoded) for the next <see cref="ReceiveAsync"/> call.
++    /// </summary>
++    public void EnqueueFrame(string text)
++    {
++        _inbound.Enqueue(Encoding.UTF8.GetBytes(text));
++        _available.Release();
++    }
++
++    /// <summary>
++    /// Enqueues raw binary frame bytes for the next <see cref="ReceiveAsync"/> call.
++    /// </summary>
++    public void EnqueueFrame(ReadOnlyMemory<byte> bytes)
++    {
++        _inbound.Enqueue(bytes);
++        _available.Release();
++    }
++
++    /// <summary>
++    /// Enqueues a <see langword="null"/> frame to simulate a clean venue-initiated close.
++    /// The engine interprets a <see langword="null"/> return from <see cref="ReceiveAsync"/>
++    /// as a signal to attempt a reconnect.
++    /// </summary>
++    public void SimulateDisconnect()
++    {
++        State = WebSocketState.Closed;
++        _inbound.Enqueue(null);
++        _available.Release();
++    }
++
++    /// <summary>
++    /// Resets the fake to an open state so the engine can reconnect after a simulated disconnect.
++    /// Does not clear sent-message history so callers can assert across the reconnect boundary.
++    /// </summary>
++    public void SimulateReconnect()
++    {
++        State = WebSocketState.Open;
++    }
++}
+diff --git a/tests/CryptoExchanges.Net.Http.Tests.Unit/Streaming/StreamContractTests.cs b/tests/CryptoExchanges.Net.Http.Tests.Unit/Streaming/StreamContractTests.cs
+new file mode 100644
+index 0000000..61e4399
+--- /dev/null
++++ b/tests/CryptoExchanges.Net.Http.Tests.Unit/Streaming/StreamContractTests.cs
+@@ -0,0 +1,287 @@
++using System.Net.WebSockets;
++using System.Text;
++using FluentAssertions;
++using Xunit;
++using CryptoExchanges.Net.Http.Streaming;
++
++namespace CryptoExchanges.Net.Http.Tests.Unit.Streaming;
++
++/// <summary>
++/// Light contract tests asserting value semantics on the Http streaming contract types
++/// and exercising the <see cref="FakeWebSocketConnection"/> test seam.
++/// </summary>
++public sealed class StreamContractTests
++{
++    // ── StreamFrame ───────────────────────────────────────────────────────────
++
++    [Fact]
++    public void StreamFrame_Equality_SameKindAndKey_AreEqual()
++    {
++        var a = new StreamFrame(FrameKind.Data, "btcusdt@trade");
++        var b = new StreamFrame(FrameKind.Data, "btcusdt@trade");
++        a.Should().Be(b);
++    }
++
++    [Fact]
++    public void StreamFrame_Equality_DifferentKey_AreNotEqual()
++    {
++        var a = new StreamFrame(FrameKind.Data, "btcusdt@trade");
++        var b = new StreamFrame(FrameKind.Data, "ethusdt@trade");
++        a.Should().NotBe(b);
++    }
++
++    [Fact]
++    public void StreamFrame_NullRoutingKey_Equality_IsValueBased()
++    {
++        var a = new StreamFrame(FrameKind.Pong, null);
++        var b = new StreamFrame(FrameKind.Pong, null);
++        a.Should().Be(b);
++    }
++
++    [Fact]
++    public void StreamFrame_Kind_ReflectsConstructorArg()
++    {
++        var frame = new StreamFrame(FrameKind.Error, null);
++        frame.Kind.Should().Be(FrameKind.Error);
++        frame.RoutingKey.Should().BeNull();
++    }
++
++    // ── HeartbeatPolicy ───────────────────────────────────────────────────────
++
++    [Fact]
++    public void HeartbeatPolicy_Defaults_PingFormat_IsControlFrame()
++    {
++        var policy = new HeartbeatPolicy(
++            Direction: HeartbeatDirection.ServerPingClientPong,
++            Interval: TimeSpan.FromSeconds(20),
++            Timeout: TimeSpan.FromSeconds(60));
++
++        policy.PingFormat.Should().Be(PingFormat.ControlFrame);
++    }
++
++    [Fact]
++    public void HeartbeatPolicy_Defaults_ClientPingPayload_IsEmpty()
++    {
++        var policy = new HeartbeatPolicy(
++            Direction: HeartbeatDirection.ClientPing,
++            Interval: TimeSpan.FromSeconds(30),
++            Timeout: TimeSpan.FromSeconds(90));
++
++        policy.ClientPingPayload.IsEmpty.Should().BeTrue();
++    }
++
++    [Fact]
++    public void HeartbeatPolicy_Equality_IsValueBased()
++    {
++        var a = new HeartbeatPolicy(
++            HeartbeatDirection.ClientPing,
++            TimeSpan.FromSeconds(30),
++            TimeSpan.FromSeconds(90),
++            PingFormat: PingFormat.Json);
++
++        var b = new HeartbeatPolicy(
++            HeartbeatDirection.ClientPing,
++            TimeSpan.FromSeconds(30),
++            TimeSpan.FromSeconds(90),
++            PingFormat: PingFormat.Json);
++
++        a.Should().Be(b);
++    }
++
++    [Fact]
++    public void HeartbeatPolicy_Stores_AllProperties()
++    {
++        var payload = Encoding.UTF8.GetBytes("{\"op\":\"ping\"}");
++        var policy = new HeartbeatPolicy(
++            Direction: HeartbeatDirection.ClientPing,
++            Interval: TimeSpan.FromSeconds(15),
++            Timeout: TimeSpan.FromSeconds(45),
++            ClientPingPayload: payload,
++            PingFormat: PingFormat.Json);
++
++        policy.Direction.Should().Be(HeartbeatDirection.ClientPing);
++        policy.Interval.Should().Be(TimeSpan.FromSeconds(15));
++        policy.Timeout.Should().Be(TimeSpan.FromSeconds(45));
++        policy.PingFormat.Should().Be(PingFormat.Json);
++        policy.ClientPingPayload.Span.SequenceEqual(payload).Should().BeTrue();
++    }
++
++    // ── StreamRequest ─────────────────────────────────────────────────────────
++
++    [Fact]
++    public void StreamRequest_Defaults_OptionalParams_AreNull()
++    {
++        var req = new StreamRequest(StreamKind.Ticker, "BTCUSDT");
++        req.Depth.Should().BeNull();
++        req.Interval.Should().BeNull();
++    }
++
++    [Fact]
++    public void StreamRequest_OrderBook_CarriesDepth()
++    {
++        var req = new StreamRequest(StreamKind.OrderBook, "BTCUSDT", Depth: 20);
++        req.Kind.Should().Be(StreamKind.OrderBook);
++        req.WireSymbol.Should().Be("BTCUSDT");
++        req.Depth.Should().Be(20);
++    }
++
++    [Fact]
++    public void StreamRequest_Kline_CarriesInterval()
++    {
++        var req = new StreamRequest(StreamKind.Kline, "ETHUSDT", Interval: "1m");
++        req.Kind.Should().Be(StreamKind.Kline);
++        req.Interval.Should().Be("1m");
++    }
++
++    // ── StreamDecoderRegistry ─────────────────────────────────────────────────
++
++    [Fact]
++    public void StreamDecoderRegistry_Register_And_Resolve_RoundTrips()
++    {
++        var registry = new StreamDecoderRegistry();
++        var sentinel = new object();
++        registry.Register(StreamKind.Ticker, _ => sentinel);
++
++        var decoder = registry.Resolve(StreamKind.Ticker);
++        decoder(ReadOnlyMemory<byte>.Empty).Should().BeSameAs(sentinel);
++    }
++
++    [Fact]
++    public void StreamDecoderRegistry_Contains_ReturnsTrueAfterRegister()
++    {
++        var registry = new StreamDecoderRegistry();
++        registry.Register(StreamKind.Trade, _ => new object());
++        registry.Contains(StreamKind.Trade).Should().BeTrue();
++        registry.Contains(StreamKind.Kline).Should().BeFalse();
++    }
++
++    [Fact]
++    public void StreamDecoderRegistry_Resolve_Unregistered_Throws()
++    {
++        var registry = new StreamDecoderRegistry();
++        var act = () => registry.Resolve(StreamKind.OrderBook);
++        act.Should().Throw<InvalidOperationException>();
++    }
++
++    // ── FakeWebSocketConnection ───────────────────────────────────────────────
++
++    [Fact]
++    public async Task Fake_ConnectAsync_SetsStateOpen()
++    {
++        await using var fake = new FakeWebSocketConnection();
++        await fake.ConnectAsync(new Uri("wss://example.com/ws"), TestContext.Current.CancellationToken);
++        fake.IsOpen.Should().BeTrue();
++        fake.State.Should().Be(WebSocketState.Open);
++        fake.ConnectCount.Should().Be(1);
++    }
++
++    [Fact]
++    public async Task Fake_EnqueueAndReceive_RoundTripsTextFrame()
++    {
++        await using var fake = new FakeWebSocketConnection();
++        await fake.ConnectAsync(new Uri("wss://example.com/ws"), TestContext.Current.CancellationToken);
++
++        fake.EnqueueFrame("{\"stream\":\"btcusdt@trade\"}");
++        var result = await fake.ReceiveAsync(TestContext.Current.CancellationToken);
++
++        result.Should().NotBeNull();
++        Encoding.UTF8.GetString(result!.Value.Span).Should().Be("{\"stream\":\"btcusdt@trade\"}");
++    }
++
++    [Fact]
++    public async Task Fake_EnqueueBinaryFrame_RoundTrips()
++    {
++        await using var fake = new FakeWebSocketConnection();
++        await fake.ConnectAsync(new Uri("wss://example.com/ws"), TestContext.Current.CancellationToken);
++
++        var bytes = new byte[] { 0x01, 0x02, 0x03 };
++        fake.EnqueueFrame((ReadOnlyMemory<byte>)bytes);
++        var result = await fake.ReceiveAsync(TestContext.Current.CancellationToken);
++
++        result.Should().NotBeNull();
++        result!.Value.Span.SequenceEqual(bytes).Should().BeTrue();
++    }
++
++    [Fact]
++    public async Task Fake_SendTextAsync_CapturesMessages()
++    {
++        await using var fake = new FakeWebSocketConnection();
++        await fake.ConnectAsync(new Uri("wss://example.com/ws"), TestContext.Current.CancellationToken);
++
++        await fake.SendTextAsync("{\"method\":\"SUBSCRIBE\"}", TestContext.Current.CancellationToken);
++        await fake.SendTextAsync("{\"method\":\"UNSUBSCRIBE\"}", TestContext.Current.CancellationToken);
++
++        fake.SentText.Should().HaveCount(2);
++        fake.SentText[0].Should().Be("{\"method\":\"SUBSCRIBE\"}");
++        fake.SentText[1].Should().Be("{\"method\":\"UNSUBSCRIBE\"}");
++    }
++
++    [Fact]
++    public async Task Fake_SendPongAsync_CapturesPong()
++    {
++        await using var fake = new FakeWebSocketConnection();
++        await fake.ConnectAsync(new Uri("wss://example.com/ws"), TestContext.Current.CancellationToken);
++
++        var payload = Encoding.UTF8.GetBytes("pong-data");
++        await fake.SendPongAsync(payload, TestContext.Current.CancellationToken);
++
++        fake.SentPongs.Should().HaveCount(1);
++        fake.SentPongs[0].Span.SequenceEqual(payload).Should().BeTrue();
++    }
++
++    [Fact]
++    public async Task Fake_SimulateDisconnect_ReturnsNullFromReceive()
++    {
++        await using var fake = new FakeWebSocketConnection();
++        await fake.ConnectAsync(new Uri("wss://example.com/ws"), TestContext.Current.CancellationToken);
++
++        fake.SimulateDisconnect();
++        var result = await fake.ReceiveAsync(TestContext.Current.CancellationToken);
++
++        result.Should().BeNull();
++        fake.IsOpen.Should().BeFalse();
++    }
++
++    [Fact]
++    public async Task Fake_SimulateReconnect_RestoresOpenState()
++    {
++        await using var fake = new FakeWebSocketConnection();
++        await fake.ConnectAsync(new Uri("wss://example.com/ws"), TestContext.Current.CancellationToken);
++
++        fake.SimulateDisconnect();
++        fake.SimulateReconnect();
++
++        fake.IsOpen.Should().BeTrue();
++    }
++
++    [Fact]
++    public async Task Fake_CloseAsync_SetsStateClosed()
++    {
++        await using var fake = new FakeWebSocketConnection();
++        await fake.ConnectAsync(new Uri("wss://example.com/ws"), TestContext.Current.CancellationToken);
++
++        await fake.CloseAsync(WebSocketCloseStatus.NormalClosure, "done", TestContext.Current.CancellationToken);
++
++        fake.State.Should().Be(WebSocketState.Closed);
++        fake.IsOpen.Should().BeFalse();
++    }
++
++    [Fact]
++    public async Task Fake_MultipleFrames_DeliveredInOrder()
++    {
++        await using var fake = new FakeWebSocketConnection();
++        await fake.ConnectAsync(new Uri("wss://example.com/ws"), TestContext.Current.CancellationToken);
++
++        fake.EnqueueFrame("frame-1");
++        fake.EnqueueFrame("frame-2");
++        fake.EnqueueFrame("frame-3");
++
++        var f1 = await fake.ReceiveAsync(TestContext.Current.CancellationToken);
++        var f2 = await fake.ReceiveAsync(TestContext.Current.CancellationToken);
++        var f3 = await fake.ReceiveAsync(TestContext.Current.CancellationToken);
++
++        Encoding.UTF8.GetString(f1!.Value.Span).Should().Be("frame-1");
++        Encoding.UTF8.GetString(f2!.Value.Span).Should().Be("frame-2");
++        Encoding.UTF8.GetString(f3!.Value.Span).Should().Be("frame-3");
++    }
++}

@@ -1,0 +1,543 @@
+diff --git a/src/CryptoExchanges.Net.Binance/Streaming/BinanceStreamProtocol.cs b/src/CryptoExchanges.Net.Binance/Streaming/BinanceStreamProtocol.cs
+index 3086e11..09bd0df 100644
+--- a/src/CryptoExchanges.Net.Binance/Streaming/BinanceStreamProtocol.cs
++++ b/src/CryptoExchanges.Net.Binance/Streaming/BinanceStreamProtocol.cs
+@@ -35,6 +35,17 @@ internal sealed class BinanceStreamProtocol : IStreamProtocol
+     /// <inheritdoc/>
+     public HeartbeatPolicy Heartbeat => HeartbeatPolicyInstance;
+ 
++    /// <inheritdoc/>
++    public string RoutingKeyFor(StreamRequest request)
++    {
++        ArgumentNullException.ThrowIfNull(request);
++        // Returns the same venue-native token that Classify reads from the "stream" field
++        // of a combined-stream data frame (e.g. "btcusdt@ticker", "btcusdt@depth20",
++        // "btcusdt@kline_1m"). Single-sourcing both sides through BuildStreamToken ensures
++        // subscribe-time registration and receive-time lookup share one keyspace.
++        return BuildStreamToken(request);
++    }
++
+     /// <inheritdoc/>
+     public string BuildSubscribe(StreamRequest request)
+     {
+diff --git a/src/CryptoExchanges.Net.Http/Streaming/IStreamProtocol.cs b/src/CryptoExchanges.Net.Http/Streaming/IStreamProtocol.cs
+index 60ca0ab..d2a6de0 100644
+--- a/src/CryptoExchanges.Net.Http/Streaming/IStreamProtocol.cs
++++ b/src/CryptoExchanges.Net.Http/Streaming/IStreamProtocol.cs
+@@ -41,6 +41,17 @@ internal interface IStreamProtocol
+     /// <returns>The wire-format unsubscribe payload as a UTF-8 string.</returns>
+     string BuildUnsubscribe(StreamRequest request);
+ 
++    /// <summary>
++    /// Returns the routing key the engine must use to register and look up subscriptions for
++    /// the given <paramref name="request"/>. The key produced here must be identical to the
++    /// <see cref="StreamFrame.RoutingKey"/> that <see cref="Classify"/> returns for a data frame
++    /// belonging to the same stream — both sides share one venue-native keyspace. The engine
++    /// calls this method on subscribe and uses <see cref="Classify"/> on receive; they must agree.
++    /// </summary>
++    /// <param name="request">The subscription descriptor.</param>
++    /// <returns>The venue-native routing key (e.g. <c>btcusdt@ticker</c>).</returns>
++    string RoutingKeyFor(StreamRequest request);
++
+     /// <summary>
+     /// Classifies a raw received frame into an engine-actionable <see cref="StreamFrame"/>.
+     /// <list type="bullet">
+diff --git a/src/CryptoExchanges.Net.Http/Streaming/StreamEngine.cs b/src/CryptoExchanges.Net.Http/Streaming/StreamEngine.cs
+index 31a5407..346026e 100644
+--- a/src/CryptoExchanges.Net.Http/Streaming/StreamEngine.cs
++++ b/src/CryptoExchanges.Net.Http/Streaming/StreamEngine.cs
+@@ -190,7 +190,7 @@ internal sealed class StreamEngine : IAsyncDisposable
+             if (_socket is null || !_socket.IsOpen)
+                 await OpenSocketAsync(ct).ConfigureAwait(false);
+ 
+-            var routingKey = BuildRoutingKey(request);
++            var routingKey = _protocol.RoutingKeyFor(request);
+ 
+             // Build the channel and subscription handle.
+             var decoder = _decoders.Resolve(request.Kind);
+@@ -363,6 +363,13 @@ internal sealed class StreamEngine : IAsyncDisposable
+                 return;
+             }
+ 
++            // Any received frame proves the socket is alive — reset the liveness watchdog now,
++            // before classification. Under ClientWebSocket auto-pong (ServerPingClientPong policy)
++            // the venue Ping control frame is answered automatically and never surfaces here, so
++            // FrameKind.Pong is never received; resetting on every data frame keeps the watchdog
++            // from falsely triggering on healthy high-data / quiet-data streams alike.
++            Interlocked.Exchange(ref _livenessFlag, 1);
++
+             // Classify and dispatch.
+             try
+             {
+@@ -373,7 +380,7 @@ internal sealed class StreamEngine : IAsyncDisposable
+                         break; // discard
+ 
+                     case FrameKind.Pong:
+-                        Interlocked.Exchange(ref _livenessFlag, 1);
++                        // Liveness already reset above on every received frame; no further action.
+                         break;
+ 
+                     case FrameKind.Error:
+@@ -809,10 +816,14 @@ internal sealed class StreamEngine : IAsyncDisposable
+     // ── Routing key ───────────────────────────────────────────────────────────
+ 
+     /// <summary>
+-    /// Produces the routing key used to demultiplex frames to a subscription's channel.
+-    /// The key is derived from <see cref="StreamRequest"/> fields and must match what
+-    /// <see cref="IStreamProtocol.Classify"/> returns in <see cref="StreamFrame.RoutingKey"/>.
+-    /// Convention (case-insensitive, uppercase): <c>&lt;WIRESYMBOL&gt;@&lt;KIND&gt;[/&lt;DEPTH&gt;][/&lt;INTERVAL&gt;]</c>.
++    /// Canonical routing-key helper for test fakes and contract-level assertions.
++    /// <para>
++    /// <strong>Note</strong>: the engine no longer uses this method on the subscribe/route hot
++    /// path — that path now delegates to <see cref="IStreamProtocol.RoutingKeyFor"/> so that
++    /// the keyspace is single-sourced in the protocol. This method is retained for
++    /// test doubles and test assertions that verify the canonical form.
++    /// Convention (uppercase): <c>&lt;WIRESYMBOL&gt;@&lt;KIND&gt;[/&lt;DEPTH&gt;][/&lt;INTERVAL&gt;]</c>.
++    /// </para>
+     /// </summary>
+     internal static string BuildRoutingKey(StreamRequest request)
+     {
+diff --git a/tests/CryptoExchanges.Net.Binance.Tests.Unit/Streaming/BinanceStreamProtocolTests.cs b/tests/CryptoExchanges.Net.Binance.Tests.Unit/Streaming/BinanceStreamProtocolTests.cs
+index 5bb16ad..3515dc9 100644
+--- a/tests/CryptoExchanges.Net.Binance.Tests.Unit/Streaming/BinanceStreamProtocolTests.cs
++++ b/tests/CryptoExchanges.Net.Binance.Tests.Unit/Streaming/BinanceStreamProtocolTests.cs
+@@ -122,6 +122,77 @@ public class BinanceStreamProtocolTests
+         doc.RootElement.GetProperty("params")[0].GetString().Should().Be("btcusdt@trade");
+     }
+ 
++    // ── RoutingKeyFor ─────────────────────────────────────────────────────────
++    // Regression for Finding 1 (subscribe/classify keyspace mismatch).
++    // RoutingKeyFor (used by the engine at subscribe time) must equal Classify(frame).RoutingKey
++    // (used by the engine pump at receive time). Both sides must share one venue-native keyspace.
++    // These tests FAIL against old code where engine used BuildRoutingKey (canonical uppercase
++    // e.g. "BTCUSDT@TICKER") while Classify returned the venue lowercase token "btcusdt@ticker".
++
++    [Fact]
++    public void RoutingKeyFor_Ticker_MatchesClassifyRoutingKey()
++    {
++        var protocol = MakeProtocol();
++        var request = new StreamRequest(StreamKind.Ticker, "BTCUSDT");
++        var frame = Utf8("{\"stream\":\"btcusdt@ticker\",\"data\":{\"s\":\"BTCUSDT\"}}");
++
++        var subscribeKey = protocol.RoutingKeyFor(request);
++        var classifiedKey = protocol.Classify(frame).RoutingKey;
++
++        subscribeKey.Should().Be("btcusdt@ticker");
++        classifiedKey.Should().Be("btcusdt@ticker");
++        subscribeKey.Should().Be(classifiedKey,
++            "RoutingKeyFor and Classify must share one keyspace so frames reach their subscription");
++    }
++
++    [Fact]
++    public void RoutingKeyFor_Trade_MatchesClassifyRoutingKey()
++    {
++        var protocol = MakeProtocol();
++        var request = new StreamRequest(StreamKind.Trade, "BTCUSDT");
++        var frame = Utf8("{\"stream\":\"btcusdt@trade\",\"data\":{\"e\":\"trade\"}}");
++
++        var subscribeKey = protocol.RoutingKeyFor(request);
++        var classifiedKey = protocol.Classify(frame).RoutingKey;
++
++        subscribeKey.Should().Be("btcusdt@trade");
++        classifiedKey.Should().Be("btcusdt@trade");
++        subscribeKey.Should().Be(classifiedKey,
++            "RoutingKeyFor and Classify must share one keyspace so frames reach their subscription");
++    }
++
++    [Fact]
++    public void RoutingKeyFor_OrderBook_WithDepth_MatchesClassifyRoutingKey()
++    {
++        var protocol = MakeProtocol();
++        var request = new StreamRequest(StreamKind.OrderBook, "BTCUSDT", Depth: 20);
++        var frame = Utf8("{\"stream\":\"btcusdt@depth20\",\"data\":{\"e\":\"depthUpdate\"}}");
++
++        var subscribeKey = protocol.RoutingKeyFor(request);
++        var classifiedKey = protocol.Classify(frame).RoutingKey;
++
++        subscribeKey.Should().Be("btcusdt@depth20");
++        classifiedKey.Should().Be("btcusdt@depth20");
++        subscribeKey.Should().Be(classifiedKey,
++            "RoutingKeyFor and Classify must share one keyspace so frames reach their subscription");
++    }
++
++    [Fact]
++    public void RoutingKeyFor_Kline_MatchesClassifyRoutingKey()
++    {
++        var protocol = MakeProtocol();
++        var request = new StreamRequest(StreamKind.Kline, "BTCUSDT", Interval: nameof(KlineInterval.OneMinute));
++        var frame = Utf8("{\"stream\":\"btcusdt@kline_1m\",\"data\":{\"e\":\"kline\"}}");
++
++        var subscribeKey = protocol.RoutingKeyFor(request);
++        var classifiedKey = protocol.Classify(frame).RoutingKey;
++
++        subscribeKey.Should().Be("btcusdt@kline_1m");
++        classifiedKey.Should().Be("btcusdt@kline_1m");
++        subscribeKey.Should().Be(classifiedKey,
++            "RoutingKeyFor and Classify must share one keyspace so frames reach their subscription");
++    }
++
+     // ── HeartbeatPolicy ───────────────────────────────────────────────────────
+ 
+     [Fact]
+diff --git a/tests/CryptoExchanges.Net.Http.Tests.Unit/Streaming/FakeStreamProtocol.cs b/tests/CryptoExchanges.Net.Http.Tests.Unit/Streaming/FakeStreamProtocol.cs
+index 86123b6..dd73381 100644
+--- a/tests/CryptoExchanges.Net.Http.Tests.Unit/Streaming/FakeStreamProtocol.cs
++++ b/tests/CryptoExchanges.Net.Http.Tests.Unit/Streaming/FakeStreamProtocol.cs
+@@ -6,12 +6,23 @@ namespace CryptoExchanges.Net.Http.Tests.Unit.Streaming;
+ /// <summary>
+ /// A controllable <see cref="IStreamProtocol"/> test double.
+ /// By default classifies all frames as Data frames routed to <see cref="NextRoutingKey"/>
+-/// (which defaults to <c>BTCUSDT@TICKER</c>, the default subscribe key used in tests).
++/// (which defaults to <c>btcusdt@ticker</c> — the fake's own venue-style key).
++/// <para>
++/// <see cref="RoutingKeyFor"/> returns the same <see cref="NextRoutingKey"/> value so that
++/// the engine's subscribe-time registration and receive-time lookup share the same keyspace.
++/// Tests that need a different routing key per subscription should set
++/// <see cref="NextRoutingKey"/> before calling <c>SubscribeAsync</c> and before enqueuing
++/// frames, exactly as the real protocol would do.
++/// </para>
+ /// </summary>
+ internal sealed class FakeStreamProtocol : IStreamProtocol
+ {
+-    /// <summary>Routing key returned for all Data frames. Defaults to BTCUSDT@TICKER.</summary>
+-    public string NextRoutingKey { get; set; } = "BTCUSDT@TICKER";
++    /// <summary>
++    /// Routing key returned by <see cref="RoutingKeyFor"/> (for registration) and by
++    /// <see cref="Classify"/> (for dispatch). Both sides share this value so frames
++    /// reach their subscription. Defaults to <c>btcusdt@ticker</c>.
++    /// </summary>
++    public string NextRoutingKey { get; set; } = "btcusdt@ticker";
+ 
+     /// <summary>The kind all frames are classified as. Defaults to <see cref="FrameKind.Data"/>.</summary>
+     public FrameKind DefaultKind { get; set; } = FrameKind.Data;
+@@ -25,13 +36,17 @@ internal sealed class FakeStreamProtocol : IStreamProtocol
+     /// <inheritdoc/>
+     public Uri Endpoint { get; } = new Uri("wss://fake.test/ws");
+ 
++    /// <inheritdoc/>
++    public string RoutingKeyFor(StreamRequest request)
++        => NextRoutingKey;
++
+     /// <inheritdoc/>
+     public string BuildSubscribe(StreamRequest request)
+-        => $"SUBSCRIBE:{StreamEngine.BuildRoutingKey(request)}";
++        => $"SUBSCRIBE:{NextRoutingKey}";
+ 
+     /// <inheritdoc/>
+     public string BuildUnsubscribe(StreamRequest request)
+-        => $"UNSUBSCRIBE:{StreamEngine.BuildRoutingKey(request)}";
++        => $"UNSUBSCRIBE:{NextRoutingKey}";
+ 
+     /// <inheritdoc/>
+     public StreamFrame Classify(ReadOnlySpan<byte> frame)
+diff --git a/tests/CryptoExchanges.Net.Http.Tests.Unit/Streaming/StreamClientTests.cs b/tests/CryptoExchanges.Net.Http.Tests.Unit/Streaming/StreamClientTests.cs
+index e801248..d4d0d7c 100644
+--- a/tests/CryptoExchanges.Net.Http.Tests.Unit/Streaming/StreamClientTests.cs
++++ b/tests/CryptoExchanges.Net.Http.Tests.Unit/Streaming/StreamClientTests.cs
+@@ -91,12 +91,11 @@ public sealed class StreamClientTests
+     [Fact]
+     public async Task SubscribeToTickerAsync_DeliversDecodedValueToHandler()
+     {
+-        var (client, fake, protocol) = BuildClient();
+-
+-        // Routing key must match what StreamClient builds for TestSymbol/Ticker.
+-        protocol.NextRoutingKey = StreamEngine.BuildRoutingKey(
+-            new StreamRequest(StreamKind.Ticker, WireSymbol));
++        var (client, fake, _) = BuildClient();
+ 
++        // FakeStreamProtocol.RoutingKeyFor and Classify both return NextRoutingKey (the
++        // default "btcusdt@ticker"), so subscribe-time registration and receive-time
++        // dispatch agree without any additional setup.
+         var received = new ConcurrentQueue<Ticker>();
+         var handlers = new StreamHandlers<Ticker>(
+             OnUpdate: v =>
+@@ -125,10 +124,7 @@ public sealed class StreamClientTests
+     [Fact]
+     public async Task SubscribeToTradesAsync_DeliversDecodedValueToHandler()
+     {
+-        var (client, fake, protocol) = BuildClient();
+-
+-        protocol.NextRoutingKey = StreamEngine.BuildRoutingKey(
+-            new StreamRequest(StreamKind.Trade, WireSymbol));
++        var (client, fake, _) = BuildClient();
+ 
+         var received = new ConcurrentQueue<Trade>();
+         var handlers = new StreamHandlers<Trade>(
+@@ -157,10 +153,7 @@ public sealed class StreamClientTests
+     [Fact]
+     public async Task SubscribeToOrderBookAsync_DeliversDecodedValueToHandler()
+     {
+-        var (client, fake, protocol) = BuildClient();
+-
+-        protocol.NextRoutingKey = StreamEngine.BuildRoutingKey(
+-            new StreamRequest(StreamKind.OrderBook, WireSymbol, Depth: 20));
++        var (client, fake, _) = BuildClient();
+ 
+         var received = new ConcurrentQueue<OrderBook>();
+         var handlers = new StreamHandlers<OrderBook>(
+@@ -189,12 +182,7 @@ public sealed class StreamClientTests
+     [Fact]
+     public async Task SubscribeToKlinesAsync_DeliversDecodedValueToHandler()
+     {
+-        var (client, fake, protocol) = BuildClient();
+-
+-        // StreamClient passes KlineInterval.ToString() ("OneMinute") as the interval token.
+-        protocol.NextRoutingKey = StreamEngine.BuildRoutingKey(
+-            new StreamRequest(StreamKind.Kline, WireSymbol,
+-                Interval: KlineInterval.OneMinute.ToString()));
++        var (client, fake, _) = BuildClient();
+ 
+         var received = new ConcurrentQueue<Candlestick>();
+         var handlers = new StreamHandlers<Candlestick>(
+@@ -263,10 +251,7 @@ public sealed class StreamClientTests
+     [Fact]
+     public async Task SubscribeToTickerAsync_BareFunc_WrapsIntoHandlers_AndDelivers()
+     {
+-        var (client, fake, protocol) = BuildClient();
+-
+-        protocol.NextRoutingKey = StreamEngine.BuildRoutingKey(
+-            new StreamRequest(StreamKind.Ticker, WireSymbol));
++        var (client, fake, _) = BuildClient();
+ 
+         var received = new ConcurrentQueue<Ticker>();
+         await using (client)
+@@ -291,10 +276,7 @@ public sealed class StreamClientTests
+     [Fact]
+     public async Task SubscribeToTradesAsync_BareFunc_WrapsIntoHandlers_AndDelivers()
+     {
+-        var (client, fake, protocol) = BuildClient();
+-
+-        protocol.NextRoutingKey = StreamEngine.BuildRoutingKey(
+-            new StreamRequest(StreamKind.Trade, WireSymbol));
++        var (client, fake, _) = BuildClient();
+ 
+         var received = new ConcurrentQueue<Trade>();
+         await using (client)
+@@ -318,10 +300,7 @@ public sealed class StreamClientTests
+     [Fact]
+     public async Task SubscribeToOrderBookAsync_BareFunc_WrapsIntoHandlers_AndDelivers()
+     {
+-        var (client, fake, protocol) = BuildClient();
+-
+-        protocol.NextRoutingKey = StreamEngine.BuildRoutingKey(
+-            new StreamRequest(StreamKind.OrderBook, WireSymbol, Depth: 5));
++        var (client, fake, _) = BuildClient();
+ 
+         var received = new ConcurrentQueue<OrderBook>();
+         await using (client)
+@@ -346,11 +325,7 @@ public sealed class StreamClientTests
+     [Fact]
+     public async Task SubscribeToKlinesAsync_BareFunc_WrapsIntoHandlers_AndDelivers()
+     {
+-        var (client, fake, protocol) = BuildClient();
+-
+-        protocol.NextRoutingKey = StreamEngine.BuildRoutingKey(
+-            new StreamRequest(StreamKind.Kline, WireSymbol,
+-                Interval: KlineInterval.OneMinute.ToString()));
++        var (client, fake, _) = BuildClient();
+ 
+         var received = new ConcurrentQueue<Candlestick>();
+         await using (client)
+diff --git a/tests/CryptoExchanges.Net.Http.Tests.Unit/Streaming/StreamEngineTests.cs b/tests/CryptoExchanges.Net.Http.Tests.Unit/Streaming/StreamEngineTests.cs
+index fe8c427..40c3569 100644
+--- a/tests/CryptoExchanges.Net.Http.Tests.Unit/Streaming/StreamEngineTests.cs
++++ b/tests/CryptoExchanges.Net.Http.Tests.Unit/Streaming/StreamEngineTests.cs
+@@ -176,7 +176,7 @@ public sealed class StreamEngineTests
+             var request = new StreamRequest(StreamKind.Ticker, "BTCUSDT");
+             await using var sub = await engine.SubscribeAsync(request, MakeHandlers(), TestContext.Current.CancellationToken);
+ 
+-            fake.SentText.Should().ContainSingle(m => m.Contains("SUBSCRIBE:BTCUSDT@TICKER"));
++            fake.SentText.Should().ContainSingle(m => m.Contains("SUBSCRIBE:btcusdt@ticker"));
+         }
+     }
+ 
+@@ -219,12 +219,16 @@ public sealed class StreamEngineTests
+             var tickerRequest = new StreamRequest(StreamKind.Ticker, "BTCUSDT");
+             var tradeRequest = new StreamRequest(StreamKind.Trade, "BTCUSDT");
+ 
++            // Subscribe ticker with the default NextRoutingKey ("btcusdt@ticker").
+             await using var tickerSub = await engine.SubscribeAsync(tickerRequest, MakeHandlers(tickerReceived), TestContext.Current.CancellationToken);
++
++            // Switch the fake's routing key BEFORE subscribing trade so the engine registers
++            // trade under "btcusdt@trade" (a different key than ticker).
++            protocol.NextRoutingKey = "btcusdt@trade";
+             await using var tradeSub = await engine.SubscribeAsync(tradeRequest, MakeHandlers(tradeReceived), TestContext.Current.CancellationToken);
+ 
+-            // FakeStreamProtocol routes frames with routing key == first line of content
+-            // Set the protocol's active routing key to trade, then enqueue a trade frame.
+-            protocol.NextRoutingKey = StreamEngine.BuildRoutingKey(tradeRequest);
++            // Enqueue a frame now; NextRoutingKey is "btcusdt@trade" so Classify routes it
++            // to the trade subscription and NOT to the ticker subscription.
+             fake.EnqueueFrame("{\"side\":\"buy\"}");
+ 
+             var deadline = Task.Delay(2000, TestContext.Current.CancellationToken);
+@@ -545,10 +549,14 @@ public sealed class StreamEngineTests
+             var tickerRequest = new StreamRequest(StreamKind.Ticker, "BTCUSDT");
+             var tradeRequest = new StreamRequest(StreamKind.Trade, "BTCUSDT");
+ 
++            // Subscribe ticker under the default NextRoutingKey ("btcusdt@ticker").
+             var tickerSub = await engine.SubscribeAsync(tickerRequest, MakeHandlers(), TestContext.Current.CancellationToken);
++
++            // Switch the fake's routing key so trade registers under a distinct key.
++            protocol.NextRoutingKey = "btcusdt@trade";
+             await using var tradeSub = await engine.SubscribeAsync(tradeRequest, MakeHandlers(), TestContext.Current.CancellationToken);
+ 
+-            // Unsubscribe ticker — removes from replay set (K2).
++            // Unsubscribe ticker — removes "btcusdt@ticker" from replay set (K2).
+             await tickerSub.DisposeAsync();
+ 
+             // Capture the set of messages sent before the disconnect boundary.
+@@ -579,9 +587,9 @@ public sealed class StreamEngineTests
+                 .ToArray();
+ 
+             replaySubscribes.Should().NotBeEmpty("Engine must replay the subscribe set on reconnect (K2).");
+-            replaySubscribes.Should().AllSatisfy(m => m.Should().Contain("TRADE"),
++            replaySubscribes.Should().AllSatisfy(m => m.Should().Contain("btcusdt@trade"),
+                 "Only the still-active Trade subscription should be replayed (K2).");
+-            replaySubscribes.Should().NotContain(m => m.Contains("TICKER", StringComparison.Ordinal),
++            replaySubscribes.Should().NotContain(m => m.Contains("btcusdt@ticker", StringComparison.Ordinal),
+                 "The unsubscribed Ticker stream must not be resurrected on reconnect (K2).");
+         }
+     }
+@@ -787,6 +795,141 @@ public sealed class StreamEngineTests
+         }
+     }
+ 
++    // ── Routing-key keyspace regression ──────────────────────────────────────
++    // Regression for Finding 1: engine registered subscriptions under a canonical (uppercase)
++    // key while the venue Classify returned a venue-native (lowercase) key — they never matched,
++    // so every live data frame was discarded. The fix: single-source the routing keyspace through
++    // IStreamProtocol.RoutingKeyFor, ensuring subscribe-time registration and receive-time lookup
++    // both use the protocol's venue-native keyspace.
++
++    [Fact]
++    public async Task Engine_RoutingKey_VenueNativeKeyspace_FrameReachesSubscription()
++    {
++        // Use a protocol stub whose RoutingKeyFor and Classify both return a venue-native
++        // (lowercase) key — mimicking the real per-exchange protocol convention.
++        // The test FAILS against old code where the engine used BuildRoutingKey (canonical
++        // uppercase e.g. "BTCUSDT@TICKER") while Classify returned "btcusdt@ticker".
++        var venueProtocol = new VenueKeyProtocol();
++        var fake = new FakeWebSocketConnection();
++        var registry = new StreamDecoderRegistry();
++        registry.Register(StreamKind.Ticker, bytes => Encoding.UTF8.GetString(bytes.Span));
++        var engineOptions = new StreamEngineOptions
++        {
++            IdleCloseDelay = TimeSpan.FromMilliseconds(200),
++            BackoffInitial = TimeSpan.FromMilliseconds(10),
++            BackoffMax = TimeSpan.FromMilliseconds(50),
++        };
++        var engine = new StreamEngine(venueProtocol, registry, engineOptions, () => fake, NullLogger.Instance);
++
++        await using (engine)
++        {
++            var received = new ConcurrentQueue<string>();
++            var request = new StreamRequest(StreamKind.Ticker, "BTCUSDT");
++            await using var sub = await engine.SubscribeAsync(request, MakeHandlers(received), TestContext.Current.CancellationToken);
++
++            // Feed a frame. VenueKeyProtocol.Classify returns "btcusdt@ticker" (venue-native).
++            // The engine must route this frame to the subscription registered via RoutingKeyFor,
++            // which also returns "btcusdt@ticker". If the engine used BuildRoutingKey instead,
++            // the subscription would be under "BTCUSDT@TICKER" and the frame would be discarded.
++            fake.EnqueueFrame("{\"stream\":\"btcusdt@ticker\",\"data\":{}}");
++
++            var deadline = Task.Delay(2000, TestContext.Current.CancellationToken);
++            while (received.IsEmpty && !deadline.IsCompleted)
++                await Task.Delay(10, TestContext.Current.CancellationToken);
++
++            received.Should().ContainSingle(
++                "the pump must route the venue-native-keyed frame to the subscription " +
++                "registered via IStreamProtocol.RoutingKeyFor (venue-native keyspace)");
++        }
++    }
++
++    /// <summary>
++    /// A minimal <see cref="IStreamProtocol"/> stub whose <see cref="RoutingKeyFor"/> and
++    /// <see cref="Classify"/> both return the same venue-native (lowercase) key, mirroring
++    /// how a real per-exchange protocol works (subscribe and classify share one keyspace).
++    /// Used by the routing-keyspace regression test to prove frames reach their subscription.
++    /// </summary>
++    private sealed class VenueKeyProtocol : IStreamProtocol
++    {
++        /// <inheritdoc/>
++        public Uri Endpoint { get; } = new Uri("wss://fake.test/ws");
++
++        /// <inheritdoc/>
++        public string RoutingKeyFor(StreamRequest request)
++            => "btcusdt@ticker"; // venue-native key — lowercase, matches Classify
++
++        /// <inheritdoc/>
++        public string BuildSubscribe(StreamRequest request)
++            => "{\"method\":\"SUBSCRIBE\",\"params\":[\"btcusdt@ticker\"],\"id\":1}";
++
++        /// <inheritdoc/>
++        public string BuildUnsubscribe(StreamRequest request)
++            => "{\"method\":\"UNSUBSCRIBE\",\"params\":[\"btcusdt@ticker\"],\"id\":2}";
++
++        /// <inheritdoc/>
++        public StreamFrame Classify(ReadOnlySpan<byte> frame)
++            => new(FrameKind.Data, "btcusdt@ticker"); // same venue-native key — frames must route
++
++        /// <inheritdoc/>
++        public HeartbeatPolicy Heartbeat { get; } = new HeartbeatPolicy(
++            Direction: HeartbeatDirection.ServerPingClientPong,
++            Interval: TimeSpan.FromSeconds(30),
++            Timeout: TimeSpan.FromSeconds(60));
++    }
++
++    // ── Liveness: data frames reset the watchdog (Finding 2 fix) ─────────────
++
++    [Fact]
++    public async Task Engine_Watchdog_DoesNotTriggerReconnect_WhenDataFramesArriveRegularly()
++    {
++        // Regression for Finding 2: the liveness flag was only reset on FrameKind.Pong.
++        // Under ClientWebSocket auto-pong (ServerPingClientPong policy) the venue Ping is
++        // auto-replied to and never surfaces, so the watchdog saw no liveness and would
++        // trigger a reconnect even on a healthy socket actively delivering Data frames.
++        // Fix: reset liveness on ANY received frame (before classification).
++        var protocol = new FakeStreamProtocol
++        {
++            DefaultKind = FrameKind.Data, // Data frames, not Pong
++            HeartbeatPolicy = new HeartbeatPolicy(
++                Direction: HeartbeatDirection.ServerPingClientPong,
++                Interval: TimeSpan.FromSeconds(30),
++                Timeout: TimeSpan.FromMilliseconds(200)), // short watchdog
++        };
++
++        var options = new StreamEngineOptions
++        {
++            IdleCloseDelay = TimeSpan.FromSeconds(5),
++            BackoffInitial = TimeSpan.FromMilliseconds(20),
++            BackoffMax = TimeSpan.FromMilliseconds(50),
++        };
++        var fake = new FakeWebSocketConnection();
++        var registry = new StreamDecoderRegistry();
++        registry.Register(StreamKind.Ticker, bytes => Encoding.UTF8.GetString(bytes.Span));
++
++        var engine = new StreamEngine(protocol, registry, options, () => fake, NullLogger.Instance);
++
++        await using (engine)
++        {
++            var request = new StreamRequest(StreamKind.Ticker, "BTCUSDT");
++            await using var sub = await engine.SubscribeAsync(request, MakeHandlers(), TestContext.Current.CancellationToken);
++
++            // Continuously send Data frames just before the watchdog timeout so it does
++            // not fire. We run for 5 × Timeout (1s total) without a reconnect.
++            var runUntil = DateTimeOffset.UtcNow.AddMilliseconds(1000);
++            while (DateTimeOffset.UtcNow < runUntil)
++            {
++                fake.EnqueueFrame("{\"ping\":\"data\"}");
++                await Task.Delay(60, TestContext.Current.CancellationToken); // < 200ms Timeout
++            }
++
++            // The engine must not have reconnected — Data frames must keep the watchdog alive.
++            fake.ConnectCount.Should().Be(1,
++                "Data frames must reset the liveness watchdog; watchdog must not trigger a " +
++                "reconnect on a socket that is actively delivering frames (Finding 2 fix).");
++            sub.State.Should().Be(StreamConnectionState.Live);
++        }
++    }
++
+     // ── Unsubscribe sends wire message ────────────────────────────────────────
+ 
+     [Fact]

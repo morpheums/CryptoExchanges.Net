@@ -15,8 +15,9 @@ internal static class ExchangeServiceRegistration
     /// </summary>
     /// <typeparam name="TOptions">The per-exchange options type.</typeparam>
     /// <typeparam name="TMapper">
-    /// The DeltaMapper <c>IMapper</c> type (supplied as a generic argument so Http needs no DeltaMapper
-    /// reference). Registered as a keyed singleton resolved by the composer's <c>ComposeForDi</c>.
+    /// The per-exchange mapper type (supplied as a generic argument to preserve the Http layer's
+    /// layering invariant — no mapping-library reference in Http). Registered as a keyed singleton
+    /// resolved by the composer's <c>ComposeForDi</c>.
     /// </typeparam>
     /// <param name="services">The service collection.</param>
     /// <param name="exchangeId">The per-exchange key for all keyed singletons.</param>

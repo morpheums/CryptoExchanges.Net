@@ -1,6 +1,6 @@
 ---
 id: TASK-044
-status: IMPLEMENTED
+status: IN_PROGRESS
 commit: 2fb3895
 depends_on: [TASK-043]
 ---
@@ -21,8 +21,8 @@ depends_on: [TASK-043]
 - **Implemented at**:
 - **Completed at**:
 - **Blocked at**:
-- **Retry count**: 0/3
-- **Test failures**: 0
+- **Retry count**: 1/3
+- **Test failures**: 1
 
 ## Description
 
@@ -98,9 +98,22 @@ heartbeat send/pong driven by each `HeartbeatPolicy` variant; backoff schedule b
 ## Implementation Log
 
 ### Attempt 1
-<!-- implementer fills this in -->
+Initial implementation. One test failure in pre-check (Attempt 2 fixing).
+
+### Attempt 2 (IN_PROGRESS — fixing test)
+Pre-check failure: `Engine_Reconnect_AutoResubscribes_StoredSubscribeSet` fails because
+`FakeWebSocketConnection.DisposeAsync()` disposes `_available` (SemaphoreSlim), making the fake
+permanently unusable for reconnect. The reconnect tests use a factory `() => fake` (same instance),
+so after `DisposeAsync` the next `ReceiveAsync` call throws `ObjectDisposedException`, causing the
+reconnect loop to spin but never complete the post-reconnect Live transition.
+
+Fix: update `FakeWebSocketConnection` to NOT dispose `_available` in `DisposeAsync`. Instead,
+drain any pending items and reset state to Closed, but leave `_available` functional so the test can
+reuse it across reconnect cycles. Add a `Reset()` helper for completeness.
+
+Also: the `Engine_Reconnect_AutoResubscribes_StoredSubscribeSet` test uses `while (!lifecycle.Contains("reconnected"))` with a deadline, which is correct. The assertion `sub.State.Should().Be(Live)` on line 521 fires only if `lifecycle` contains "reconnected" (meaning reconnect completed), so the real issue is the fake being broken — not a race.
 
 ## Review Results
 
 ### Attempt 1
-<!-- review-gate fills this in -->
+Pre-check FAIL — `Engine_Reconnect_AutoResubscribes_StoredSubscribeSet` test fails. See Implementation Log Attempt 2 for fix details.

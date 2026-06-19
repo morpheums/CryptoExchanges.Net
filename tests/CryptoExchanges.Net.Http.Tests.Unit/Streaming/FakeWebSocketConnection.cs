@@ -15,11 +15,20 @@ namespace CryptoExchanges.Net.Http.Tests.Unit.Streaming;
 /// task concurrently with test assertions, so <see cref="SentText"/> and
 /// <see cref="SentPongs"/> use <see cref="ConcurrentQueue{T}"/> instead of plain
 /// <see cref="List{T}"/> to avoid data races.
+///
+/// The fake is designed to survive multiple connect/disconnect/reconnect cycles when
+/// the engine's connection factory returns the same instance (the common test pattern).
+/// On each <see cref="ConnectAsync"/> call the internal receive-semaphore is recreated
+/// so that <see cref="ReceiveAsync"/> works correctly after the engine reconnects.
 /// </remarks>
-public sealed class FakeWebSocketConnection : IWebSocketConnection
+public sealed class FakeWebSocketConnection : IWebSocketConnection, IDisposable
 {
     private readonly ConcurrentQueue<ReadOnlyMemory<byte>?> _inbound = new();
-    private readonly SemaphoreSlim _available = new(0);
+
+    // Recreated on each ConnectAsync so reconnect tests can reuse the same fake instance.
+    // Guarded by _semLock to avoid data races between ConnectAsync and concurrent ReceiveAsync.
+    private SemaphoreSlim _available = new(0);
+    private readonly object _semLock = new();
 
     // ── Captured outbound messages (thread-safe) ──────────────────────────────
 
@@ -46,6 +55,17 @@ public sealed class FakeWebSocketConnection : IWebSocketConnection
     {
         ConnectCount++;
         State = WebSocketState.Open;
+
+        // Recreate the semaphore so ReceiveAsync works after a reconnect cycle.
+        // Any previously enqueued frames from before the disconnect are drained first.
+        lock (_semLock)
+        {
+            while (_inbound.TryDequeue(out _)) { } // drain stale frames
+            var old = _available;
+            _available = new SemaphoreSlim(0);
+            old.Dispose();
+        }
+
         return Task.CompletedTask;
     }
 
@@ -66,7 +86,9 @@ public sealed class FakeWebSocketConnection : IWebSocketConnection
     /// <inheritdoc/>
     public async ValueTask<ReadOnlyMemory<byte>?> ReceiveAsync(CancellationToken ct)
     {
-        await _available.WaitAsync(ct).ConfigureAwait(false);
+        SemaphoreSlim sem;
+        lock (_semLock) { sem = _available; }
+        await sem.WaitAsync(ct).ConfigureAwait(false);
         _inbound.TryDequeue(out var frame);
         return frame;
     }
@@ -81,9 +103,20 @@ public sealed class FakeWebSocketConnection : IWebSocketConnection
     /// <inheritdoc/>
     public ValueTask DisposeAsync()
     {
+        // Set state Closed. Do NOT dispose _available here — the engine may reconnect using
+        // the same instance (test factory `() => fake`). ConnectAsync recreates _available on
+        // the next connect, and Dispose() on the IDisposable path handles final cleanup.
         State = WebSocketState.Closed;
-        _available.Dispose();
         return ValueTask.CompletedTask;
+    }
+
+    /// <inheritdoc/>
+    public void Dispose()
+    {
+        lock (_semLock)
+        {
+            _available.Dispose();
+        }
     }
 
     // ── Test-control helpers ──────────────────────────────────────────────────
@@ -93,8 +126,10 @@ public sealed class FakeWebSocketConnection : IWebSocketConnection
     /// </summary>
     public void EnqueueFrame(string text)
     {
+        SemaphoreSlim sem;
+        lock (_semLock) { sem = _available; }
         _inbound.Enqueue(Encoding.UTF8.GetBytes(text));
-        _available.Release();
+        sem.Release();
     }
 
     /// <summary>
@@ -102,8 +137,10 @@ public sealed class FakeWebSocketConnection : IWebSocketConnection
     /// </summary>
     public void EnqueueFrame(ReadOnlyMemory<byte> bytes)
     {
+        SemaphoreSlim sem;
+        lock (_semLock) { sem = _available; }
         _inbound.Enqueue(bytes);
-        _available.Release();
+        sem.Release();
     }
 
     /// <summary>
@@ -114,8 +151,10 @@ public sealed class FakeWebSocketConnection : IWebSocketConnection
     public void SimulateDisconnect()
     {
         State = WebSocketState.Closed;
+        SemaphoreSlim sem;
+        lock (_semLock) { sem = _available; }
         _inbound.Enqueue(null);
-        _available.Release();
+        sem.Release();
     }
 
     /// <summary>

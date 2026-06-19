@@ -551,21 +551,34 @@ public sealed class StreamEngineTests
             // Unsubscribe ticker — removes from replay set (K2).
             await tickerSub.DisposeAsync();
 
-            // Count subscribe messages before disconnect.
+            // Capture the set of messages sent before the disconnect boundary.
             var sentBefore = fake.SentText.ToArray();
 
             // Simulate disconnect.
             fake.SimulateDisconnect();
 
+            // Wait for the engine to reconnect (ConnectCount increments during ConnectAsync).
             var deadline = Task.Delay(5000, TestContext.Current.CancellationToken);
             while (fake.ConnectCount < 2 && !deadline.IsCompleted)
                 await Task.Delay(20, TestContext.Current.CancellationToken);
 
             fake.ConnectCount.Should().BeGreaterThanOrEqualTo(2);
 
-            // After reconnect, only Trade should be resubscribed (not Ticker — it was removed from replay set).
+            // Wait for the K2 replay subscribe to arrive in SentText. The replay happens
+            // inside ReconnectCoreAsync after ConnectAsync returns, so ConnectCount >= 2
+            // does not guarantee the replay send has completed. We poll until at least one
+            // new message (the Trade replay) appears beyond sentBefore.Length.
+            var replayDeadline = Task.Delay(3000, TestContext.Current.CancellationToken);
+            while (fake.SentText.Count <= sentBefore.Length && !replayDeadline.IsCompleted)
+                await Task.Delay(20, TestContext.Current.CancellationToken);
+
+            // After reconnect, only Trade should be resubscribed (not Ticker — removed from replay set).
             var allSent = fake.SentText.ToArray();
-            var replaySubscribes = allSent.Skip(sentBefore.Length).Where(m => m.Contains("SUBSCRIBE", StringComparison.Ordinal)).ToArray();
+            var replaySubscribes = allSent.Skip(sentBefore.Length)
+                .Where(m => m.Contains("SUBSCRIBE", StringComparison.Ordinal))
+                .ToArray();
+
+            replaySubscribes.Should().NotBeEmpty("Engine must replay the subscribe set on reconnect (K2).");
             replaySubscribes.Should().AllSatisfy(m => m.Should().Contain("TRADE"),
                 "Only the still-active Trade subscription should be replayed (K2).");
             replaySubscribes.Should().NotContain(m => m.Contains("TICKER", StringComparison.Ordinal),

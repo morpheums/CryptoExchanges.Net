@@ -6,9 +6,8 @@ This page covers per-client configuration for `crypto-mcp`, the read-only
 [CryptoExchanges.Net MCP server](mcp-server.md). Every client launches the same local stdio
 command (`crypto-mcp`); only the config file location and key shape vary.
 
-Market-data tools (price, ticker, order book, klines, recent trades, exchange info) require
-**no API credentials**. Account tools (balances, orders, trade history) require read-permission
-API keys set via environment variables — see [mcp-server.md — Credentials](mcp-server.md#credentials)
+Market-data tools require **no API credentials**. Account tools require read-permission API keys
+set via environment variables — see [mcp-server.md — Credentials](mcp-server.md#credentials)
 for the full env-var reference.
 
 ---
@@ -293,8 +292,8 @@ Before connecting a full client you can verify the server works using the offici
 npx @modelcontextprotocol/inspector dotnet run --project src/CryptoExchanges.Net.Mcp -c Release
 ```
 
-This opens a browser UI where you can call tools interactively, inspect request/response
-envelopes, and confirm credential handling — all without configuring a client.
+This opens a browser UI where you can call tools interactively and inspect request/response
+envelopes before connecting a full client.
 
 ---
 

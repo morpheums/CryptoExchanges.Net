@@ -46,8 +46,6 @@ The tables below mirror that source and are kept in sync with it.
 
 ### Market data (6) — no credentials required
 
-Market-data tools call public endpoints. No API key or secret is needed.
-
 | Tool              | Description                                                         |
 |-------------------|---------------------------------------------------------------------|
 | `GetPrice`        | Latest price for a trading pair on an exchange                      |
@@ -59,8 +57,7 @@ Market-data tools call public endpoints. No API key or secret is needed.
 
 ### Account (6) — read-scoped API credentials required
 
-Account tools require read-permission API credentials for the target exchange. Supply them as
-environment variables (see [Credentials](#credentials) below).
+Supply credentials as environment variables (see [Credentials](#credentials) below).
 
 | Tool               | Description                                                          |
 |--------------------|----------------------------------------------------------------------|
@@ -75,11 +72,7 @@ environment variables (see [Credentials](#credentials) below).
 
 ## Symbol format
 
-All tools accept symbols as `BASE/QUOTE`, for example:
-
-- `BTC/USDT`
-- `ETH/USDT`
-- `SOL/BTC`
+All tools accept symbols as `BASE/QUOTE` (e.g., `BTC/USDT`, `ETH/USDT`, `SOL/BTC`).
 
 ---
 
@@ -112,8 +105,7 @@ block — see [mcp-clients.md](mcp-clients.md)).
 **OKX and Bitget require a passphrase** — a third credential configured in the exchange's API
 management console alongside the key and secret.
 
-You only need to set the variables for the exchanges you intend to use account tools on.
-Credentials for unused exchanges are silently ignored.
+Unused exchange credentials are silently ignored.
 
 ---
 
@@ -150,7 +142,7 @@ request/response envelopes.
 
 ---
 
-## Client setup
+## Client Setup
 
 For per-client config blocks (Claude Code, Claude Desktop, Cursor, VS Code, Windsurf, Cline,
 Codex CLI, Gemini CLI), see [mcp-clients.md](mcp-clients.md).

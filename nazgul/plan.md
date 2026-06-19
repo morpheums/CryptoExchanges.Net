@@ -70,7 +70,7 @@ REUSE existing discovery — do NOT re-run.
 | TASK-028 | ✦ DONE | 1    | Project scaffold + host wiring + env→options binder  |
 | TASK-029 | ✦ DONE | 2    | Tool primitives (ToolResult, ToolInputs, ToolRunner) |
 | TASK-030 | ✦ DONE | 3  | Market-data tools (6, no keys)                    |
-| TASK-031 | ◇ PLANNED | 3  | Account tools (6, read-scoped keys)                  |
+| TASK-031 | ◆ IN_PROGRESS | 3  | Account tools (6, read-scoped keys)                  |
 | TASK-032 | ◇ PLANNED | 4  | Tool-roster guard test + README/packaging            |
 
 Tasks: 3/5 complete (TASK-030 DONE — review board PASS, fix-first applied)
@@ -119,9 +119,9 @@ unmapped; writes/WebSockets/hosted-transport are correctly absent.
 
 ## Recovery Pointer
 
-- **Current stage**: TASK-030 DONE (review board PASS, commit 290869b, 2026-06-19T06:15:00Z). Wave 3 next: TASK-031.
-- **Next action**: TASK-031 (account tools, read-scoped keys) — the remaining Wave 3 task.
-- **Active task**: none — TASK-030 complete; TASK-031 is next.
+- **Current stage**: TASK-031 IN_PROGRESS (claimed 2026-06-19T07:00:00Z). Implementing AccountTools.cs.
+- **Next action**: Write AccountToolsTests.cs (failing), implement AccountTools.cs, run tests, commit.
+- **Active task**: TASK-031 — account tools (6 read-scoped tools).
 - **Files are truth**: task manifests in `nazgul/tasks/TASK-028..032.md` carry full state;
   frontmatter `status:` is canonical.
 

@@ -1,9 +1,9 @@
 ---
 id: TASK-031
-status: PLANNED
+status: IN_PROGRESS
 depends_on: [TASK-029]
 commit:
-claimed_at:
+claimed_at: 2026-06-19T07:00:00Z
 ---
 # TASK-031: Account tools (read-scoped credentials)
 
@@ -17,7 +17,7 @@ claimed_at:
 - **Wave**: 3
 - **Traces to**: Approved design §Tool surface (Account — read-scoped) + §Credentials (AuthRequired); Approved plan **Task 4**
 - **Created at**: 2026-06-19T04:00:00Z
-- **Claimed at**:
+- **Claimed at**: 2026-06-19T07:00:00Z
 - **Implemented at**:
 - **Completed at**:
 - **Blocked at**:
@@ -80,6 +80,8 @@ NOTE (from plan): confirm the `AssetBalance` constructor arg order
 ## Implementation Log
 
 ### Attempt 1
+- **Base SHA**: 36704699930575d375bb5852dc09f928395be89b
+- Claimed at: 2026-06-19T07:00:00Z
 
 ## Review Results
 

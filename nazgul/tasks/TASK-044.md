@@ -1,7 +1,7 @@
 ---
 id: TASK-044
-status: IN_PROGRESS
-commit: 2fb3895
+status: CHANGES_REQUESTED
+commit: 75ec4e8
 depends_on: [TASK-043]
 ---
 # TASK-044: Http reconnecting byte-engine (pump / route / backoff / replay / heartbeat / channels)
@@ -12,13 +12,13 @@ depends_on: [TASK-043]
 - **Status**: (see `status:` in the frontmatter block at the top — canonical, read by scripts/lib/structured-state.sh)
 - **Depends on**: TASK-043
 - **Delegates to**: none
-- **Files modified**: [src/CryptoExchanges.Net.Http/Streaming/StreamEngine.cs, src/CryptoExchanges.Net.Http/Streaming/StreamSubscriptionChannel.cs, src/CryptoExchanges.Net.Http/Streaming/BackoffSchedule.cs, src/CryptoExchanges.Net.Http/Streaming/StreamEngineOptions.cs, tests/CryptoExchanges.Net.Http.Tests.Unit/Streaming/StreamEngineTests.cs]
+- **Files modified**: [src/CryptoExchanges.Net.Http/Streaming/StreamEngine.cs, src/CryptoExchanges.Net.Http/Streaming/StreamSubscriptionChannel.cs, src/CryptoExchanges.Net.Http/Streaming/BackoffSchedule.cs, src/CryptoExchanges.Net.Http/Streaming/StreamEngineOptions.cs, tests/CryptoExchanges.Net.Http.Tests.Unit/Streaming/StreamEngineTests.cs, tests/CryptoExchanges.Net.Http.Tests.Unit/Streaming/FakeWebSocketConnection.cs]
 - **Wave**: 3
 - **Traces to**: FEAT-005 spec §Architecture "Delivery"/"Connection" + C1/K2/K3; design §"Delivery model" + §"Connection & disposal (R5)"; DESIGN-STREAMING-V1 R4/R5; DECISION-STREAMING-SHARED §1 (Http byte-engine) + §6 (K1/K2/K3, C1)
 - **Created at**: 2026-06-19T17:20:00Z
 - **Claimed at**: 2026-06-19T20:00:00Z
 - **Base SHA**: c18c48d0fdd53bd3f6934484ad028e9cff61637a
-- **Implemented at**:
+- **Implemented at**: 2026-06-19T21:00:00Z
 - **Completed at**:
 - **Blocked at**:
 - **Retry count**: 1/3
@@ -68,9 +68,9 @@ lifecycle-state transitions `Connecting → Live → Reconnecting → Live → C
 heartbeat send/pong driven by each `HeartbeatPolicy` variant; backoff schedule bounds.
 
 ## Acceptance Criteria
-- [ ] Engine implements pump+`Classify`-route, per-subscription `DropOldest` channel + consumer + FIFO + `OnLagged`, isolated/logged callback exceptions, lazy-open + keep-warm + idle-close, engine-backoff reconnect (K3) with subscribe-set replay (K2), and heartbeat execution driven by `HeartbeatPolicy` (C1) — no timers/threads in the protocol.
-- [ ] `StreamEngineTests` cover routing, reconnect+resubscribe (incl. unsubscribe-removal), backpressure/`OnLagged`, pump-survives-callback-exception, and lifecycle-state transitions — all via the fake transport with NO network; solution builds 0W/0E.
-- [ ] **K1 verified**: zero `Core.Models`/DeltaMapper references under `src/CryptoExchanges.Net.Http/`; reconnect does NOT route through `ExchangeResiliencePipeline` (K3); existing 499 tests stay green.
+- [x] Engine implements pump+`Classify`-route, per-subscription `DropOldest` channel + consumer + FIFO + `OnLagged`, isolated/logged callback exceptions, lazy-open + keep-warm + idle-close, engine-backoff reconnect (K3) with subscribe-set replay (K2), and heartbeat execution driven by `HeartbeatPolicy` (C1) — no timers/threads in the protocol.
+- [x] `StreamEngineTests` cover routing, reconnect+resubscribe (incl. unsubscribe-removal), backpressure/`OnLagged`, pump-survives-callback-exception, and lifecycle-state transitions — all via the fake transport with NO network; solution builds 0W/0E.
+- [x] **K1 verified**: zero `Core.Models`/DeltaMapper references under `src/CryptoExchanges.Net.Http/`; reconnect does NOT route through `ExchangeResiliencePipeline` (K3); existing 499 tests stay green.
 
 ## Pattern Reference
 - Engine behavior spec: design §"Delivery model" (lines 92-97) + §"Connection & disposal (R5)" (lines 99-103); binding C1/K1/K2/K3 (lines 124-128).
@@ -88,7 +88,7 @@ heartbeat send/pong driven by each `HeartbeatPolicy` variant; backoff schedule b
 - tests/CryptoExchanges.Net.Http.Tests.Unit/Streaming/StreamEngineTests.cs
 
 **Modifies**:
-- none
+- tests/CryptoExchanges.Net.Http.Tests.Unit/Streaming/FakeWebSocketConnection.cs
 
 ## Traceability
 - **PRD Acceptance Criteria**: n/a — FEAT-005 spec Success criterion "auto-reconnect + auto-resubscribe verified" + "new unit tests via an injected fake transport"
@@ -98,22 +98,15 @@ heartbeat send/pong driven by each `HeartbeatPolicy` variant; backoff schedule b
 ## Implementation Log
 
 ### Attempt 1
-Initial implementation. One test failure in pre-check (Attempt 2 fixing).
+Initial implementation (commit 2fb3895). One pre-check test failure: `Engine_Reconnect_AutoResubscribes_StoredSubscribeSet` — FakeWebSocketConnection.DisposeAsync disposed _available semaphore; reconnect loop couldn't complete.
 
-### Attempt 2 (IN_PROGRESS — fixing test)
-Pre-check failure: `Engine_Reconnect_AutoResubscribes_StoredSubscribeSet` fails because
-`FakeWebSocketConnection.DisposeAsync()` disposes `_available` (SemaphoreSlim), making the fake
-permanently unusable for reconnect. The reconnect tests use a factory `() => fake` (same instance),
-so after `DisposeAsync` the next `ReceiveAsync` call throws `ObjectDisposedException`, causing the
-reconnect loop to spin but never complete the post-reconnect Live transition.
-
-Fix: update `FakeWebSocketConnection` to NOT dispose `_available` in `DisposeAsync`. Instead,
-drain any pending items and reset state to Closed, but leave `_available` functional so the test can
-reuse it across reconnect cycles. Add a `Reset()` helper for completeness.
-
-Also: the `Engine_Reconnect_AutoResubscribes_StoredSubscribeSet` test uses `while (!lifecycle.Contains("reconnected"))` with a deadline, which is correct. The assertion `sub.State.Should().Be(Live)` on line 521 fires only if `lifecycle` contains "reconnected" (meaning reconnect completed), so the real issue is the fake being broken — not a race.
+### Attempt 2
+Fixed (commit 75ec4e8): FakeWebSocketConnection.ConnectAsync now swaps in a fresh SemaphoreSlim and drains stale frames, making the fake resilient to reuse across reconnect cycles. `Engine_Unsubscribe_RemovesFromReplaySet_NotResurrectedOnReconnect` also fixed to wait for the K2 replay send before snapshotting SentText (ConnectCount >= 2 does not guarantee replay has committed). All 70 Http unit tests pass + 546 total suite passes. Build 0W/0E.
 
 ## Review Results
 
 ### Attempt 1
-Pre-check FAIL — `Engine_Reconnect_AutoResubscribes_StoredSubscribeSet` test fails. See Implementation Log Attempt 2 for fix details.
+Pre-check FAIL — test failure in reconnect tests (see Implementation Log Attempt 1).
+
+### Attempt 2
+Pre-checks PASS — proceeding to review board.

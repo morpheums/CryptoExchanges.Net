@@ -4,7 +4,7 @@
 >
 > Built for .NET 10 with Clean Architecture, SOLID principles, and modern C# features.
 
-[![NuGet](https://img.shields.io/badge/nuget-v0.1.0--preview.1-blue)](https://www.nuget.org/)
+[![NuGet](https://img.shields.io/badge/nuget-v0.2.0--preview.1-blue)](https://www.nuget.org/)
 [![License](https://img.shields.io/badge/license-Apache%202.0-green)](LICENSE)
 [![.NET](https://img.shields.io/badge/.NET-10.0-512BD4)](https://dotnet.microsoft.com/)
 

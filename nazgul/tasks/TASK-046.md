@@ -1,6 +1,6 @@
 ---
 id: TASK-046
-status: IN_PROGRESS
+status: IMPLEMENTED
 depends_on: [TASK-045]
 ---
 # TASK-046: Exchange-#1 streaming package (protocol + 4 decode closures + options + `Add…Streams`)
@@ -17,7 +17,7 @@ depends_on: [TASK-045]
 - **Created at**: 2026-06-19T17:20:00Z
 - **Claimed at**: 2026-06-19T20:00:00Z
 - **Base SHA**: 98b3808fb712ec62cfc7f5a6b103db54fedf3d71
-- **Implemented at**:
+- **Implemented at**: 2026-06-19T20:30:00Z
 - **Completed at**:
 - **Blocked at**:
 - **Retry count**: 0/3
@@ -95,10 +95,34 @@ routes Data to the right stream-type; assert `BuildSubscribe`/`BuildUnsubscribe`
 - **TRD Component**: per-exchange streaming seam (design §"The seam", §"Decode registry", §"Adding exchange #2 — the entire template")
 - **ADR Reference**: DECISION-STREAMING-SHARED §1 (per-exchange irreducible minimum, optional thin construction-glue static permitted, zero behavior), §2 (rich `HeartbeatPolicy`, server-ping/client-pong), §3 (decode = exchange-side opaque `Func`, reuse keyed `IMapper`/`ISymbolMapper`); Inv 6/11
 
+## Commits
+
+- **27169ea** — feat(FEAT-005): add Binance streaming protocol + decoders + AddBinanceStreams (TASK-046)
+
 ## Implementation Log
 
 ### Attempt 1
-<!-- implementer fills this in -->
+
+**Files created:**
+- `src/CryptoExchanges.Net.Binance/Streaming/BinanceStreamProtocol.cs` — `internal sealed`, server-ping/client-pong HeartbeatPolicy, Classify (combined-stream data/ack/error), BuildSubscribe/BuildUnsubscribe (JSON SUBSCRIBE/UNSUBSCRIBE wire format), no timers (C1)
+- `src/CryptoExchanges.Net.Binance/Streaming/BinanceStreamOptions.cs` — `StreamBaseUrl` with default combined-stream URL
+- `src/CryptoExchanges.Net.Binance/Streaming/BinanceStreamDecoders.cs` — 4 decode closures: Ticker (DeltaMapper), Trade (hand-map), OrderBook (hand-map), Kline (hand-map); case-sensitive JSON serialization to handle single-char keys
+- `src/CryptoExchanges.Net.Binance/Dtos/Streaming/StreamTickerDto.cs` — new WS ticker DTO (short field names differ from REST TickerDto)
+- `src/CryptoExchanges.Net.Binance/Dtos/Streaming/StreamTradeDto.cs` — new WS trade DTO
+- `src/CryptoExchanges.Net.Binance/Dtos/Streaming/StreamDepthDto.cs` — new WS depth DTO with optional `s` symbol field
+- `src/CryptoExchanges.Net.Binance/Dtos/Streaming/StreamKlineDto.cs` — new WS kline DTO (2 records: StreamKlineDto + StreamKlineBarDto)
+- `src/CryptoExchanges.Net.Binance/StreamServiceCollectionExtensions.cs` — `AddBinanceStreams` ~10-line delegator to `StreamServiceRegistration.AddStreams<BinanceStreamOptions>`
+- `tests/CryptoExchanges.Net.Binance.Tests.Unit/` — new unit test project, 14 behavior tests
+
+**Files modified:**
+- `src/CryptoExchanges.Net.Binance/Mapping/BinanceMappingProfiles.cs` — added `StreamTickerDto→Ticker` CreateMap
+- `src/CryptoExchanges.Net.Binance/CryptoExchanges.Net.Binance.csproj` — added InternalsVisibleTo (Tests.Unit, DynamicProxyGenAssembly2), CA1308 suppressed (lowercase required for WS token names)
+- `src/CryptoExchanges.Net.Http/CryptoExchanges.Net.Http.csproj` — added InternalsVisibleTo for Binance.Tests.Unit
+- `CryptoExchanges.Net.sln` — added new unit test project
+
+**DTOs reused vs added:** 4 new streaming DTOs (WS frame shapes differ from REST). Existing REST DTOs (TickerDto, TradeDto, OrderBookDto) NOT reused — short single-char field names differ. Existing DeltaMapper BinanceResponseProfile extended with StreamTickerDto→Ticker. Trade/OrderBook/Kline decoded hand-mapped (same convention as REST, which also hand-maps these).
+
+**Build:** 0W/0E Release. 14 new tests pass. All 558 suite tests pass.
 
 ## Review Results
 

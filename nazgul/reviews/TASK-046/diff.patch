@@ -1,0 +1,1022 @@
+diff --git a/CryptoExchanges.Net.sln b/CryptoExchanges.Net.sln
+index 72f276f..a06564c 100644
+--- a/CryptoExchanges.Net.sln
++++ b/CryptoExchanges.Net.sln
+@@ -47,6 +47,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CryptoExchanges.Net.Mcp", "
+ EndProject
+ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CryptoExchanges.Net.Mcp.Tests.Unit", "tests\CryptoExchanges.Net.Mcp.Tests.Unit\CryptoExchanges.Net.Mcp.Tests.Unit.csproj", "{8E1EA724-F7D2-4B9A-BBBB-1C53974C1DA2}"
+ EndProject
++Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CryptoExchanges.Net.Binance.Tests.Unit", "tests\CryptoExchanges.Net.Binance.Tests.Unit\CryptoExchanges.Net.Binance.Tests.Unit.csproj", "{48857E22-8F09-4226-B7BB-2770440B8742}"
++EndProject
+ Global
+ 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+ 		Debug|Any CPU = Debug|Any CPU
+@@ -297,6 +299,18 @@ Global
+ 		{8E1EA724-F7D2-4B9A-BBBB-1C53974C1DA2}.Release|x64.Build.0 = Release|Any CPU
+ 		{8E1EA724-F7D2-4B9A-BBBB-1C53974C1DA2}.Release|x86.ActiveCfg = Release|Any CPU
+ 		{8E1EA724-F7D2-4B9A-BBBB-1C53974C1DA2}.Release|x86.Build.0 = Release|Any CPU
++		{48857E22-8F09-4226-B7BB-2770440B8742}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
++		{48857E22-8F09-4226-B7BB-2770440B8742}.Debug|Any CPU.Build.0 = Debug|Any CPU
++		{48857E22-8F09-4226-B7BB-2770440B8742}.Debug|x64.ActiveCfg = Debug|Any CPU
++		{48857E22-8F09-4226-B7BB-2770440B8742}.Debug|x64.Build.0 = Debug|Any CPU
++		{48857E22-8F09-4226-B7BB-2770440B8742}.Debug|x86.ActiveCfg = Debug|Any CPU
++		{48857E22-8F09-4226-B7BB-2770440B8742}.Debug|x86.Build.0 = Debug|Any CPU
++		{48857E22-8F09-4226-B7BB-2770440B8742}.Release|Any CPU.ActiveCfg = Release|Any CPU
++		{48857E22-8F09-4226-B7BB-2770440B8742}.Release|Any CPU.Build.0 = Release|Any CPU
++		{48857E22-8F09-4226-B7BB-2770440B8742}.Release|x64.ActiveCfg = Release|Any CPU
++		{48857E22-8F09-4226-B7BB-2770440B8742}.Release|x64.Build.0 = Release|Any CPU
++		{48857E22-8F09-4226-B7BB-2770440B8742}.Release|x86.ActiveCfg = Release|Any CPU
++		{48857E22-8F09-4226-B7BB-2770440B8742}.Release|x86.Build.0 = Release|Any CPU
+ 	EndGlobalSection
+ 	GlobalSection(SolutionProperties) = preSolution
+ 		HideSolutionNode = FALSE
+@@ -315,5 +329,6 @@ Global
+ 		{B14807A0-7583-47E5-B14E-C5D20C2ADFDF} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
+ 		{4FEE0B63-0BF4-4E66-B924-DB1BD936D93D} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
+ 		{8E1EA724-F7D2-4B9A-BBBB-1C53974C1DA2} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
++		{48857E22-8F09-4226-B7BB-2770440B8742} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
+ 	EndGlobalSection
+ EndGlobal
+diff --git a/nazgul/plan.md b/nazgul/plan.md
+index 12b48a8..eefac76 100644
+--- a/nazgul/plan.md
++++ b/nazgul/plan.md
+@@ -81,7 +81,7 @@ REUSE existing discovery — do NOT re-run.
+ | TASK-043 | ✦ DONE    | 2    | Http engine contracts + fake-transport test seam                            |
+ | TASK-044 | ✦ DONE    | 3    | Http reconnecting byte-engine (pump/route/backoff/replay/heartbeat/channels)|
+ | TASK-045 | ◆ IMPL    | 4    | Generic `StreamClient` + `StreamClientFactory` + `AddStreams<TOptions>`      |
+-| TASK-046 | ◇ PLANNED | 5    | Exchange-#1 package: protocol + 4 decode closures + options + `Add…Streams` |
++| TASK-046 | ◆ IN_PROG | 5    | Exchange-#1 package: protocol + 4 decode closures + options + `Add…Streams` |
+ | TASK-047 | ◇ PLANNED | 6    | Wire 4 public subscribe methods end-to-end + live integration smoke + docs  |
+ 
+ Tasks: 3/6 DONE — TASK-042 DONE, TASK-043 DONE, TASK-044 DONE, TASK-045 IMPLEMENTED (906c568), TASK-046..047 PLANNED.
+diff --git a/nazgul/tasks/TASK-046.md b/nazgul/tasks/TASK-046.md
+index f08ccf0..524267f 100644
+--- a/nazgul/tasks/TASK-046.md
++++ b/nazgul/tasks/TASK-046.md
+@@ -1,6 +1,6 @@
+ ---
+ id: TASK-046
+-status: PLANNED
++status: IN_PROGRESS
+ depends_on: [TASK-045]
+ ---
+ # TASK-046: Exchange-#1 streaming package (protocol + 4 decode closures + options + `Add…Streams`)
+@@ -15,7 +15,8 @@ depends_on: [TASK-045]
+ - **Wave**: 5
+ - **Traces to**: FEAT-005 spec §Architecture "Binance package"; design §"The seam" + §"Decode registry" + §"Adding exchange #2"; DECISION-STREAMING-SHARED §1 (per-exchange irreducible minimum), §2, §3
+ - **Created at**: 2026-06-19T17:20:00Z
+-- **Claimed at**:
++- **Claimed at**: 2026-06-19T20:00:00Z
++- **Base SHA**: 98b3808fb712ec62cfc7f5a6b103db54fedf3d71
+ - **Implemented at**:
+ - **Completed at**:
+ - **Blocked at**:
+diff --git a/src/CryptoExchanges.Net.Binance/CryptoExchanges.Net.Binance.csproj b/src/CryptoExchanges.Net.Binance/CryptoExchanges.Net.Binance.csproj
+index 9207edd..996847e 100644
+--- a/src/CryptoExchanges.Net.Binance/CryptoExchanges.Net.Binance.csproj
++++ b/src/CryptoExchanges.Net.Binance/CryptoExchanges.Net.Binance.csproj
+@@ -5,7 +5,7 @@
+     <Description>Binance exchange implementation for CryptoExchanges.Net.</Description>
+     <PackageId>CryptoExchanges.Net.Binance</PackageId>
+     <!-- Suppress analysis noise for HTTP client / JSON deserialization library -->
+-    <NoWarn>$(NoWarn);CA1812;CA1056;CA1031;CA2000;CA1305;CA1032;CS1591</NoWarn>
++    <NoWarn>$(NoWarn);CA1812;CA1056;CA1031;CA2000;CA1305;CA1032;CS1591;CA1308</NoWarn>
+   </PropertyGroup>
+ 
+   <ItemGroup>
+@@ -16,6 +16,9 @@
+   <ItemGroup>
+     <!-- Allow the test assembly to unit-test internal DTOs, mapping profiles, and signing types. -->
+     <InternalsVisibleTo Include="CryptoExchanges.Net.Binance.Tests.Integration" />
++    <InternalsVisibleTo Include="CryptoExchanges.Net.Binance.Tests.Unit" />
++    <!-- NSubstitute generates proxy types at runtime. -->
++    <InternalsVisibleTo Include="DynamicProxyGenAssembly2" />
+   </ItemGroup>
+ 
+   <ItemGroup>
+diff --git a/src/CryptoExchanges.Net.Binance/Dtos/Streaming/StreamDepthDto.cs b/src/CryptoExchanges.Net.Binance/Dtos/Streaming/StreamDepthDto.cs
+new file mode 100644
+index 0000000..4131280
+--- /dev/null
++++ b/src/CryptoExchanges.Net.Binance/Dtos/Streaming/StreamDepthDto.cs
+@@ -0,0 +1,32 @@
++namespace CryptoExchanges.Net.Binance.Dtos.Streaming;
++
++/// <summary>
++/// WebSocket combined-stream order-book depth payload (the <c>data</c> field of a
++/// <c>stream:&lt;symbol&gt;@depth</c> diff-depth frame or a depth snapshot).
++/// v1 delivers raw per-frame snapshots; no local-book maintenance is performed.
++/// </summary>
++internal sealed record StreamDepthDto
++{
++    /// <summary>
++    /// Trading symbol wire string (e.g. <c>"BTCUSDT"</c>).
++    /// Present in diff-depth frames; absent in partial-book-depth frames.
++    /// </summary>
++    [JsonPropertyName("s")]
++    public string? Symbol { get; init; }
++
++    /// <summary>Last-update sequence ID for consumer-side gap detection.</summary>
++    [JsonPropertyName("lastUpdateId")]
++    public long LastUpdateId { get; init; }
++
++    /// <summary>
++    /// Bid price levels: each inner list is <c>[price, quantity]</c> as strings.
++    /// </summary>
++    [JsonPropertyName("bids")]
++    public List<List<string>> Bids { get; init; } = [];
++
++    /// <summary>
++    /// Ask price levels: each inner list is <c>[price, quantity]</c> as strings.
++    /// </summary>
++    [JsonPropertyName("asks")]
++    public List<List<string>> Asks { get; init; } = [];
++}
+diff --git a/src/CryptoExchanges.Net.Binance/Dtos/Streaming/StreamKlineDto.cs b/src/CryptoExchanges.Net.Binance/Dtos/Streaming/StreamKlineDto.cs
+new file mode 100644
+index 0000000..a2e2edc
+--- /dev/null
++++ b/src/CryptoExchanges.Net.Binance/Dtos/Streaming/StreamKlineDto.cs
+@@ -0,0 +1,63 @@
++namespace CryptoExchanges.Net.Binance.Dtos.Streaming;
++
++/// <summary>
++/// WebSocket combined-stream kline/candlestick payload (the <c>data</c> field of a
++/// <c>stream:&lt;symbol&gt;@kline_&lt;interval&gt;</c> frame).
++/// The kline data is nested inside a <c>k</c> object.
++/// </summary>
++internal sealed record StreamKlineDto
++{
++    /// <summary>Trading symbol wire string.</summary>
++    [JsonPropertyName("s")]
++    public string Symbol { get; init; } = string.Empty;
++
++    /// <summary>The kline bar data.</summary>
++    [JsonPropertyName("k")]
++    public StreamKlineBarDto Kline { get; init; } = new();
++}
++
++/// <summary>
++/// The nested kline bar inside a <see cref="StreamKlineDto"/> payload.
++/// </summary>
++internal sealed record StreamKlineBarDto
++{
++    /// <summary>Kline open time (unix-millisecond timestamp).</summary>
++    [JsonPropertyName("t")]
++    public long OpenTime { get; init; }
++
++    /// <summary>Kline close time (unix-millisecond timestamp).</summary>
++    [JsonPropertyName("T")]
++    public long CloseTime { get; init; }
++
++    /// <summary>Open price.</summary>
++    [JsonPropertyName("o")]
++    public string Open { get; init; } = "0";
++
++    /// <summary>High price.</summary>
++    [JsonPropertyName("h")]
++    public string High { get; init; } = "0";
++
++    /// <summary>Low price.</summary>
++    [JsonPropertyName("l")]
++    public string Low { get; init; } = "0";
++
++    /// <summary>Close price.</summary>
++    [JsonPropertyName("c")]
++    public string Close { get; init; } = "0";
++
++    /// <summary>Base asset volume.</summary>
++    [JsonPropertyName("v")]
++    public string Volume { get; init; } = "0";
++
++    /// <summary>Quote asset volume.</summary>
++    [JsonPropertyName("q")]
++    public string QuoteVolume { get; init; } = "0";
++
++    /// <summary>Number of trades in the kline window.</summary>
++    [JsonPropertyName("n")]
++    public int TradeCount { get; init; }
++
++    /// <summary>Kline interval string (e.g. <c>"1m"</c>).</summary>
++    [JsonPropertyName("i")]
++    public string Interval { get; init; } = string.Empty;
++}
+diff --git a/src/CryptoExchanges.Net.Binance/Dtos/Streaming/StreamTickerDto.cs b/src/CryptoExchanges.Net.Binance/Dtos/Streaming/StreamTickerDto.cs
+new file mode 100644
+index 0000000..73a753b
+--- /dev/null
++++ b/src/CryptoExchanges.Net.Binance/Dtos/Streaming/StreamTickerDto.cs
+@@ -0,0 +1,48 @@
++namespace CryptoExchanges.Net.Binance.Dtos.Streaming;
++
++/// <summary>
++/// WebSocket combined-stream ticker payload (the <c>data</c> field of a <c>stream:&lt;symbol&gt;@ticker</c> frame).
++/// Field names match the 24-hour price change statistics stream format.
++/// </summary>
++internal sealed record StreamTickerDto
++{
++    /// <summary>Trading symbol wire string (e.g. <c>"BTCUSDT"</c>).</summary>
++    [JsonPropertyName("s")]
++    public string Symbol { get; init; } = string.Empty;
++
++    /// <summary>Last price.</summary>
++    [JsonPropertyName("c")]
++    public string LastPrice { get; init; } = "0";
++
++    /// <summary>Open price (first trade price of the 24-hour statistical window).</summary>
++    [JsonPropertyName("o")]
++    public string OpenPrice { get; init; } = "0";
++
++    /// <summary>High price during the 24-hour window.</summary>
++    [JsonPropertyName("h")]
++    public string HighPrice { get; init; } = "0";
++
++    /// <summary>Low price during the 24-hour window.</summary>
++    [JsonPropertyName("l")]
++    public string LowPrice { get; init; } = "0";
++
++    /// <summary>Total traded base-asset volume.</summary>
++    [JsonPropertyName("v")]
++    public string Volume { get; init; } = "0";
++
++    /// <summary>Total traded quote-asset volume.</summary>
++    [JsonPropertyName("q")]
++    public string QuoteVolume { get; init; } = "0";
++
++    /// <summary>Price change over the 24-hour window.</summary>
++    [JsonPropertyName("p")]
++    public string PriceChange { get; init; } = "0";
++
++    /// <summary>Price change percent over the 24-hour window.</summary>
++    [JsonPropertyName("P")]
++    public string PriceChangePercent { get; init; } = "0";
++
++    /// <summary>Statistics close time (unix-millisecond timestamp).</summary>
++    [JsonPropertyName("C")]
++    public long CloseTime { get; init; }
++}
+diff --git a/src/CryptoExchanges.Net.Binance/Dtos/Streaming/StreamTradeDto.cs b/src/CryptoExchanges.Net.Binance/Dtos/Streaming/StreamTradeDto.cs
+new file mode 100644
+index 0000000..f24b63e
+--- /dev/null
++++ b/src/CryptoExchanges.Net.Binance/Dtos/Streaming/StreamTradeDto.cs
+@@ -0,0 +1,32 @@
++namespace CryptoExchanges.Net.Binance.Dtos.Streaming;
++
++/// <summary>
++/// WebSocket combined-stream trade payload (the <c>data</c> field of a <c>stream:&lt;symbol&gt;@trade</c> frame).
++/// Field names match the individual symbol trade stream format.
++/// </summary>
++internal sealed record StreamTradeDto
++{
++    /// <summary>Trading symbol wire string.</summary>
++    [JsonPropertyName("s")]
++    public string Symbol { get; init; } = string.Empty;
++
++    /// <summary>Trade ID.</summary>
++    [JsonPropertyName("t")]
++    public long TradeId { get; init; }
++
++    /// <summary>Trade price.</summary>
++    [JsonPropertyName("p")]
++    public string Price { get; init; } = "0";
++
++    /// <summary>Trade quantity.</summary>
++    [JsonPropertyName("q")]
++    public string Quantity { get; init; } = "0";
++
++    /// <summary>Trade execution time (unix-millisecond timestamp).</summary>
++    [JsonPropertyName("T")]
++    public long TradeTime { get; init; }
++
++    /// <summary><see langword="true"/> if the buyer is the market maker.</summary>
++    [JsonPropertyName("m")]
++    public bool IsBuyerMaker { get; init; }
++}
+diff --git a/src/CryptoExchanges.Net.Binance/Mapping/BinanceMappingProfiles.cs b/src/CryptoExchanges.Net.Binance/Mapping/BinanceMappingProfiles.cs
+index 8122029..8886115 100644
+--- a/src/CryptoExchanges.Net.Binance/Mapping/BinanceMappingProfiles.cs
++++ b/src/CryptoExchanges.Net.Binance/Mapping/BinanceMappingProfiles.cs
+@@ -1,4 +1,5 @@
+ using DeltaMapper;
++using CryptoExchanges.Net.Binance.Dtos.Streaming;
+ using CryptoExchanges.Net.Binance.Internal;
+ using CryptoExchanges.Net.Binance.Services;
+ 
+@@ -74,5 +75,18 @@ internal sealed class BinanceResponseProfile : Profile
+             .ForMember(d => d.Asset, o => o.MapFrom(s => BinanceValueParsers.ParseAssetOrNone(s.Asset)))
+             .ForMember(d => d.Free, o => o.MapFrom(s => BinanceValueParsers.ParseDecimal(s.Free)))
+             .ForMember(d => d.Locked, o => o.MapFrom(s => BinanceValueParsers.ParseDecimal(s.Locked)));
++
++        // WebSocket streaming ticker (field names differ from the REST TickerDto).
++        CreateMap<StreamTickerDto, Ticker>()
++            .ForMember(d => d.Symbol, o => o.MapFrom(s => symbolMapper.FromWire(s.Symbol)))
++            .ForMember(d => d.LastPrice, o => o.MapFrom(s => BinanceValueParsers.ParseDecimal(s.LastPrice)))
++            .ForMember(d => d.OpenPrice, o => o.MapFrom(s => BinanceValueParsers.ParseDecimal(s.OpenPrice)))
++            .ForMember(d => d.HighPrice, o => o.MapFrom(s => BinanceValueParsers.ParseDecimal(s.HighPrice)))
++            .ForMember(d => d.LowPrice, o => o.MapFrom(s => BinanceValueParsers.ParseDecimal(s.LowPrice)))
++            .ForMember(d => d.Volume, o => o.MapFrom(s => BinanceValueParsers.ParseDecimal(s.Volume)))
++            .ForMember(d => d.QuoteVolume, o => o.MapFrom(s => BinanceValueParsers.ParseDecimal(s.QuoteVolume)))
++            .ForMember(d => d.PriceChange, o => o.MapFrom(s => BinanceValueParsers.ParseDecimal(s.PriceChange)))
++            .ForMember(d => d.PriceChangePercent, o => o.MapFrom(s => BinanceValueParsers.ParseDecimal(s.PriceChangePercent)))
++            .ForMember(d => d.Timestamp, o => o.MapFrom(s => s.CloseTime > 0 ? DateTimeOffset.FromUnixTimeMilliseconds(s.CloseTime) : (DateTimeOffset?)null));
+     }
+ }
+diff --git a/src/CryptoExchanges.Net.Binance/StreamServiceCollectionExtensions.cs b/src/CryptoExchanges.Net.Binance/StreamServiceCollectionExtensions.cs
+new file mode 100644
+index 0000000..c6b4bf3
+--- /dev/null
++++ b/src/CryptoExchanges.Net.Binance/StreamServiceCollectionExtensions.cs
+@@ -0,0 +1,43 @@
++using CryptoExchanges.Net.Binance.Internal;
++using CryptoExchanges.Net.Binance.Streaming;
++using CryptoExchanges.Net.Core.Enums;
++using CryptoExchanges.Net.Http.Streaming;
++using DeltaMapper;
++using Microsoft.Extensions.DependencyInjection;
++
++namespace CryptoExchanges.Net.Binance;
++
++/// <summary>
++/// Dependency-injection extensions for registering the venue WebSocket streaming client.
++/// Opt-in: REST-only consumers pay nothing for socket machinery.
++/// </summary>
++public static class StreamServiceCollectionExtensions
++{
++    /// <summary>
++    /// Registers the venue WebSocket streaming client and all its dependencies as per-exchange
++    /// keyed singletons. Requires <c>AddBinanceExchange</c> to be called first so the keyed
++    /// <c>ISymbolMapper</c> and <c>IMapper</c> are already available in the container.
++    /// Options are validated with fail-fast (<c>ValidateOnStart</c>).
++    /// </summary>
++    /// <param name="services">The <see cref="IServiceCollection"/> to add services to.</param>
++    /// <param name="configure">An optional action to configure <see cref="BinanceStreamOptions"/>.</param>
++    /// <returns>The <see cref="IServiceCollection"/> for chaining.</returns>
++    public static IServiceCollection AddBinanceStreams(
++        this IServiceCollection services,
++        Action<BinanceStreamOptions>? configure = null) =>
++        StreamServiceRegistration.AddStreams<BinanceStreamOptions>(
++            services,
++            ExchangeId.Binance,
++            protocolFactory: sp =>
++            {
++                var opts = sp.GetRequiredService<BinanceStreamOptions>();
++                return new BinanceStreamProtocol(opts);
++            },
++            decoderRegistryFactory: sp =>
++            {
++                var mapper = sp.GetRequiredKeyedService<IMapper>(ExchangeId.Binance);
++                var symbolMapper = sp.GetRequiredKeyedService<ISymbolMapper>(ExchangeId.Binance);
++                return BinanceStreamDecoders.Build(mapper, symbolMapper);
++            },
++            configure: configure);
++}
+diff --git a/src/CryptoExchanges.Net.Binance/Streaming/BinanceStreamDecoders.cs b/src/CryptoExchanges.Net.Binance/Streaming/BinanceStreamDecoders.cs
+new file mode 100644
+index 0000000..b39dfa0
+--- /dev/null
++++ b/src/CryptoExchanges.Net.Binance/Streaming/BinanceStreamDecoders.cs
+@@ -0,0 +1,134 @@
++using CryptoExchanges.Net.Binance.Dtos.Streaming;
++using CryptoExchanges.Net.Binance.Internal;
++using CryptoExchanges.Net.Http.Streaming;
++using DeltaMapper;
++
++namespace CryptoExchanges.Net.Binance.Streaming;
++
++/// <summary>
++/// Builds the <see cref="StreamDecoderRegistry"/> for the venue WebSocket streams.
++/// Each closure deserializes the combined-stream <c>data</c> payload into its venue DTO
++/// and maps it to the matching <see cref="CryptoExchanges.Net.Core.Models"/> type,
++/// reusing the keyed <see cref="IMapper"/> and bespoke <see cref="ISymbolMapper"/>.
++/// </summary>
++/// <remarks>
++/// Binding constraint K1: DTO deserialization, DeltaMapper projection, and symbol resolution
++/// all happen here in the exchange package. The Http engine receives only the resulting
++/// opaque <see cref="StreamDecoderRegistry"/> of <c>Func&lt;ReadOnlyMemory&lt;byte&gt;, object&gt;</c>.
++/// </remarks>
++internal static class BinanceStreamDecoders
++{
++    // Case-sensitive: the venue uses single-character keys where case distinguishes fields
++    // (e.g. ticker "p" = price change, "P" = percent change). Web defaults are case-insensitive
++    // and would cause property-name collisions at runtime.
++    private static readonly JsonSerializerOptions JsonOpts = new()
++    {
++        PropertyNameCaseInsensitive = false
++    };
++
++    /// <summary>
++    /// Builds a fully-populated <see cref="StreamDecoderRegistry"/> with decoders for
++    /// all four stream kinds, capturing the provided mapper and symbol mapper as closures.
++    /// </summary>
++    /// <param name="mapper">The keyed DeltaMapper instance from <c>AddBinanceExchange</c>.</param>
++    /// <param name="symbolMapper">The bespoke keyed symbol mapper from <c>AddBinanceExchange</c>.</param>
++    /// <returns>A registry ready for injection into the engine.</returns>
++    public static StreamDecoderRegistry Build(IMapper mapper, ISymbolMapper symbolMapper)
++    {
++        ArgumentNullException.ThrowIfNull(mapper);
++        ArgumentNullException.ThrowIfNull(symbolMapper);
++
++        var registry = new StreamDecoderRegistry();
++
++        // ── Ticker ────────────────────────────────────────────────────────────
++        registry.Register(StreamKind.Ticker, bytes =>
++        {
++            var dto = JsonSerializer.Deserialize<StreamTickerDto>(bytes.Span, JsonOpts)!;
++            return mapper.Map<StreamTickerDto, Ticker>(dto);
++        });
++
++        // ── Trade ─────────────────────────────────────────────────────────────
++        // Trade mapping is hand-written (DeltaMapper not used for trade projection;
++        // matches the REST convention: FillDto -> Trade is skipped in the profile).
++        registry.Register(StreamKind.Trade, bytes =>
++        {
++            var dto = JsonSerializer.Deserialize<StreamTradeDto>(bytes.Span, JsonOpts)!;
++            var symbol = symbolMapper.FromWire(dto.Symbol);
++            return new Trade(
++                Symbol: symbol,
++                Id: dto.TradeId.ToString(),
++                Price: BinanceValueParsers.ParseDecimal(dto.Price),
++                Quantity: BinanceValueParsers.ParseDecimal(dto.Quantity),
++                Timestamp: dto.TradeTime > 0
++                    ? DateTimeOffset.FromUnixTimeMilliseconds(dto.TradeTime)
++                    : null,
++                IsBuyerMaker: dto.IsBuyerMaker);
++        });
++
++        // ── OrderBook ─────────────────────────────────────────────────────────
++        // Hand-mapped following the REST GetOrderBookAsync convention.
++        // The diff-depth stream payload includes the symbol wire string; partial-book frames do not.
++        registry.Register(StreamKind.OrderBook, bytes =>
++        {
++            var dto = JsonSerializer.Deserialize<StreamDepthDto>(bytes.Span, JsonOpts)!;
++            var symbol = !string.IsNullOrEmpty(dto.Symbol)
++                ? symbolMapper.FromWire(dto.Symbol)
++                : throw new InvalidOperationException(
++                    "Order-book depth frame does not carry a symbol field. " +
++                    "Use the diff-depth stream (e.g. '@depth') which includes 's'.");
++            var bids = dto.Bids
++                .Select(b => new OrderBookEntry(
++                    BinanceValueParsers.ParseDecimal(b[0]),
++                    BinanceValueParsers.ParseDecimal(b[1])))
++                .ToList();
++            var asks = dto.Asks
++                .Select(a => new OrderBookEntry(
++                    BinanceValueParsers.ParseDecimal(a[0]),
++                    BinanceValueParsers.ParseDecimal(a[1])))
++                .ToList();
++            return new OrderBook(symbol, bids, asks, null, dto.LastUpdateId);
++        });
++
++        // ── Kline ─────────────────────────────────────────────────────────────
++        // Hand-mapped following the REST GetCandlesticksAsync convention.
++        registry.Register(StreamKind.Kline, bytes =>
++        {
++            var dto = JsonSerializer.Deserialize<StreamKlineDto>(bytes.Span, JsonOpts)!;
++            var k = dto.Kline;
++            var interval = MapWireInterval(k.Interval);
++            return new Candlestick(
++                OpenTime: DateTimeOffset.FromUnixTimeMilliseconds(k.OpenTime),
++                CloseTime: DateTimeOffset.FromUnixTimeMilliseconds(k.CloseTime),
++                Open: BinanceValueParsers.ParseDecimal(k.Open),
++                High: BinanceValueParsers.ParseDecimal(k.High),
++                Low: BinanceValueParsers.ParseDecimal(k.Low),
++                Close: BinanceValueParsers.ParseDecimal(k.Close),
++                Volume: BinanceValueParsers.ParseDecimal(k.Volume),
++                QuoteVolume: BinanceValueParsers.ParseDecimal(k.QuoteVolume),
++                TradeCount: k.TradeCount,
++                Interval: interval);
++        });
++
++        return registry;
++    }
++
++    private static KlineInterval? MapWireInterval(string wire) => wire switch
++    {
++        "1m" => KlineInterval.OneMinute,
++        "3m" => KlineInterval.ThreeMinutes,
++        "5m" => KlineInterval.FiveMinutes,
++        "15m" => KlineInterval.FifteenMinutes,
++        "30m" => KlineInterval.ThirtyMinutes,
++        "1h" => KlineInterval.OneHour,
++        "2h" => KlineInterval.TwoHours,
++        "4h" => KlineInterval.FourHours,
++        "6h" => KlineInterval.SixHours,
++        "8h" => KlineInterval.EightHours,
++        "12h" => KlineInterval.TwelveHours,
++        "1d" => KlineInterval.OneDay,
++        "3d" => KlineInterval.ThreeDays,
++        "1w" => KlineInterval.OneWeek,
++        "1M" => KlineInterval.OneMonth,
++        _ => null
++    };
++}
+diff --git a/src/CryptoExchanges.Net.Binance/Streaming/BinanceStreamOptions.cs b/src/CryptoExchanges.Net.Binance/Streaming/BinanceStreamOptions.cs
+new file mode 100644
+index 0000000..3518448
+--- /dev/null
++++ b/src/CryptoExchanges.Net.Binance/Streaming/BinanceStreamOptions.cs
+@@ -0,0 +1,13 @@
++namespace CryptoExchanges.Net.Binance.Streaming;
++
++/// <summary>
++/// Configuration options for the Binance WebSocket streaming client.
++/// </summary>
++public sealed class BinanceStreamOptions
++{
++    /// <summary>
++    /// The WebSocket base URL for the combined-stream endpoint.
++    /// Default: <c>wss://stream.binance.com:9443</c>.
++    /// </summary>
++    public string StreamBaseUrl { get; set; } = "wss://stream.binance.com:9443";
++}
+diff --git a/src/CryptoExchanges.Net.Binance/Streaming/BinanceStreamProtocol.cs b/src/CryptoExchanges.Net.Binance/Streaming/BinanceStreamProtocol.cs
+new file mode 100644
+index 0000000..3086e11
+--- /dev/null
++++ b/src/CryptoExchanges.Net.Binance/Streaming/BinanceStreamProtocol.cs
+@@ -0,0 +1,140 @@
++using CryptoExchanges.Net.Binance.Internal;
++using CryptoExchanges.Net.Http.Streaming;
++
++namespace CryptoExchanges.Net.Binance.Streaming;
++
++/// <summary>
++/// Per-exchange protocol strategy for the venue WebSocket combined-stream endpoint.
++/// Implements the subscribe/unsubscribe wire format, frame classification, and
++/// heartbeat policy (server-ping / client-pong control frame). Pure data + classification
++/// — no timers or threads (binding constraint C1).
++/// </summary>
++internal sealed class BinanceStreamProtocol : IStreamProtocol
++{
++    private static readonly HeartbeatPolicy HeartbeatPolicyInstance = new(
++        Direction: HeartbeatDirection.ServerPingClientPong,
++        Interval: TimeSpan.FromSeconds(20),
++        Timeout: TimeSpan.FromSeconds(60));
++
++    private int _nextId;
++
++    /// <summary>
++    /// Initialises the protocol with the streaming base URL from options.
++    /// The combined-stream path (<c>/stream</c>) is appended automatically.
++    /// </summary>
++    /// <param name="options">Stream options supplying the base URL.</param>
++    public BinanceStreamProtocol(BinanceStreamOptions options)
++    {
++        ArgumentNullException.ThrowIfNull(options);
++        Endpoint = new Uri(options.StreamBaseUrl.TrimEnd('/') + "/stream");
++    }
++
++    /// <inheritdoc/>
++    public Uri Endpoint { get; }
++
++    /// <inheritdoc/>
++    public HeartbeatPolicy Heartbeat => HeartbeatPolicyInstance;
++
++    /// <inheritdoc/>
++    public string BuildSubscribe(StreamRequest request)
++    {
++        ArgumentNullException.ThrowIfNull(request);
++        var token = BuildStreamToken(request);
++        var id = Interlocked.Increment(ref _nextId);
++        return $"{{\"method\":\"SUBSCRIBE\",\"params\":[\"{token}\"],\"id\":{id}}}";
++    }
++
++    /// <inheritdoc/>
++    public string BuildUnsubscribe(StreamRequest request)
++    {
++        ArgumentNullException.ThrowIfNull(request);
++        var token = BuildStreamToken(request);
++        var id = Interlocked.Increment(ref _nextId);
++        return $"{{\"method\":\"UNSUBSCRIBE\",\"params\":[\"{token}\"],\"id\":{id}}}";
++    }
++
++    /// <inheritdoc/>
++    public StreamFrame Classify(ReadOnlySpan<byte> frame)
++    {
++        if (frame.IsEmpty)
++            return new StreamFrame(FrameKind.Error, null);
++
++        // Parse via Utf8JsonReader (stack-friendly with ReadOnlySpan<byte>).
++        using var doc = JsonDocument.Parse(frame.ToArray());
++        var root = doc.RootElement;
++
++        // Combined-stream data frames carry a "stream" field + "data" field.
++        if (root.TryGetProperty("stream"u8, out var streamProp) &&
++            root.TryGetProperty("data"u8, out _))
++        {
++            // The routing key is the full stream token, e.g. "btcusdt@ticker".
++            var routingKey = streamProp.GetString();
++            return new StreamFrame(FrameKind.Data, routingKey);
++        }
++
++        // Subscribe/unsubscribe acknowledgement: { "result": null, "id": N }
++        if (root.TryGetProperty("result"u8, out var resultProp) &&
++            root.TryGetProperty("id"u8, out _) &&
++            resultProp.ValueKind == JsonValueKind.Null)
++        {
++            return new StreamFrame(FrameKind.Ack, null);
++        }
++
++        // Error response: { "code": -1, "msg": "..." }
++        if (root.TryGetProperty("code"u8, out _) &&
++            root.TryGetProperty("msg"u8, out _))
++        {
++            return new StreamFrame(FrameKind.Error, null);
++        }
++
++        // Unrecognised frame shape.
++        return new StreamFrame(FrameKind.Error, null);
++    }
++
++    // ── Helpers ───────────────────────────────────────────────────────────────
++
++    /// <summary>
++    /// Builds the venue stream-name token (e.g. <c>"btcusdt@ticker"</c>) from a
++    /// canonical <see cref="StreamRequest"/>. The wire symbol is lower-cased per
++    /// the combined-stream naming convention.
++    /// </summary>
++    private static string BuildStreamToken(StreamRequest request)
++    {
++        var symbol = request.WireSymbol.ToLowerInvariant();
++        return request.Kind switch
++        {
++            StreamKind.Ticker => $"{symbol}@ticker",
++            StreamKind.Trade => $"{symbol}@trade",
++            StreamKind.OrderBook when request.Depth.HasValue => $"{symbol}@depth{request.Depth}",
++            StreamKind.OrderBook => $"{symbol}@depth",
++            StreamKind.Kline when request.Interval is not null =>
++                $"{symbol}@kline_{MapInterval(request.Interval)}",
++            StreamKind.Kline => $"{symbol}@kline_1m",
++            _ => throw new ArgumentOutOfRangeException(nameof(request), request.Kind, $"Unsupported stream kind: {request.Kind}")
++        };
++    }
++
++    /// <summary>
++    /// Maps the canonical <see cref="KlineInterval"/> enum name (from <c>StreamRequest.Interval</c>)
++    /// to the venue wire notation (e.g. <c>"OneMinute"</c> → <c>"1m"</c>).
++    /// </summary>
++    private static string MapInterval(string intervalToken) => intervalToken switch
++    {
++        nameof(KlineInterval.OneMinute) => "1m",
++        nameof(KlineInterval.ThreeMinutes) => "3m",
++        nameof(KlineInterval.FiveMinutes) => "5m",
++        nameof(KlineInterval.FifteenMinutes) => "15m",
++        nameof(KlineInterval.ThirtyMinutes) => "30m",
++        nameof(KlineInterval.OneHour) => "1h",
++        nameof(KlineInterval.TwoHours) => "2h",
++        nameof(KlineInterval.FourHours) => "4h",
++        nameof(KlineInterval.SixHours) => "6h",
++        nameof(KlineInterval.EightHours) => "8h",
++        nameof(KlineInterval.TwelveHours) => "12h",
++        nameof(KlineInterval.OneDay) => "1d",
++        nameof(KlineInterval.ThreeDays) => "3d",
++        nameof(KlineInterval.OneWeek) => "1w",
++        nameof(KlineInterval.OneMonth) => "1M",
++        _ => throw new ArgumentOutOfRangeException(nameof(intervalToken), intervalToken, $"Unsupported interval: {intervalToken}")
++    };
++}
+diff --git a/src/CryptoExchanges.Net.Http/CryptoExchanges.Net.Http.csproj b/src/CryptoExchanges.Net.Http/CryptoExchanges.Net.Http.csproj
+index e954d54..45a6358 100644
+--- a/src/CryptoExchanges.Net.Http/CryptoExchanges.Net.Http.csproj
++++ b/src/CryptoExchanges.Net.Http/CryptoExchanges.Net.Http.csproj
+@@ -10,6 +10,7 @@
+     <InternalsVisibleTo Include="CryptoExchanges.Net.Okx" />
+     <InternalsVisibleTo Include="CryptoExchanges.Net.Bitget" />
+     <InternalsVisibleTo Include="CryptoExchanges.Net.Http.Tests.Unit" />
++    <InternalsVisibleTo Include="CryptoExchanges.Net.Binance.Tests.Unit" />
+   </ItemGroup>
+   <ItemGroup>
+     <PackageReference Include="Microsoft.Extensions.Http.Resilience" Version="10.7.0" />
+diff --git a/tests/CryptoExchanges.Net.Binance.Tests.Unit/CryptoExchanges.Net.Binance.Tests.Unit.csproj b/tests/CryptoExchanges.Net.Binance.Tests.Unit/CryptoExchanges.Net.Binance.Tests.Unit.csproj
+new file mode 100644
+index 0000000..09ac7ca
+--- /dev/null
++++ b/tests/CryptoExchanges.Net.Binance.Tests.Unit/CryptoExchanges.Net.Binance.Tests.Unit.csproj
+@@ -0,0 +1,25 @@
++<Project Sdk="Microsoft.NET.Sdk">
++  <PropertyGroup>
++    <RootNamespace>CryptoExchanges.Net.Binance.Tests.Unit</RootNamespace>
++    <AssemblyName>CryptoExchanges.Net.Binance.Tests.Unit</AssemblyName>
++    <OutputType>Exe</OutputType>
++    <IsPackable>false</IsPackable>
++    <IsTestProject>true</IsTestProject>
++    <NoWarn>$(NoWarn);CA1812;CA1056;CA1031;CA2000;CA1305;CA1032;CA1707;CS1591;CA2007;CA1515;xUnit1051</NoWarn>
++  </PropertyGroup>
++
++  <ItemGroup>
++    <ProjectReference Include="..\..\src\CryptoExchanges.Net.Core\CryptoExchanges.Net.Core.csproj" />
++    <ProjectReference Include="..\..\src\CryptoExchanges.Net.Binance\CryptoExchanges.Net.Binance.csproj" />
++    <ProjectReference Include="..\..\src\CryptoExchanges.Net.Http\CryptoExchanges.Net.Http.csproj" />
++    <ProjectReference Include="..\..\src\CryptoExchanges.Net.DependencyInjection\CryptoExchanges.Net.DependencyInjection.csproj" />
++  </ItemGroup>
++
++  <ItemGroup>
++    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.6.0" />
++    <PackageReference Include="xunit.v3" Version="3.2.2" />
++    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5" />
++    <PackageReference Include="NSubstitute" Version="5.3.0" />
++    <PackageReference Include="FluentAssertions" Version="6.12.2" />
++  </ItemGroup>
++</Project>
+diff --git a/tests/CryptoExchanges.Net.Binance.Tests.Unit/Streaming/BinanceStreamDecodeTests.cs b/tests/CryptoExchanges.Net.Binance.Tests.Unit/Streaming/BinanceStreamDecodeTests.cs
+new file mode 100644
+index 0000000..5796684
+--- /dev/null
++++ b/tests/CryptoExchanges.Net.Binance.Tests.Unit/Streaming/BinanceStreamDecodeTests.cs
+@@ -0,0 +1,155 @@
++using System.Text;
++using Xunit;
++using FluentAssertions;
++using DeltaMapper;
++using CryptoExchanges.Net.Binance;
++using CryptoExchanges.Net.Binance.Internal;
++using CryptoExchanges.Net.Binance.Streaming;
++using CryptoExchanges.Net.Binance.Mapping;
++using CryptoExchanges.Net.Core;
++using CryptoExchanges.Net.Core.Interfaces;
++using CryptoExchanges.Net.Core.Models;
++using CryptoExchanges.Net.Core.Enums;
++using CryptoExchanges.Net.Http.Streaming;
++using Microsoft.Extensions.DependencyInjection;
++
++namespace CryptoExchanges.Net.Binance.Tests.Unit.Streaming;
++
++/// <summary>
++/// No-network unit tests for the four Binance stream decoder closures.
++/// Each test feeds a canned combined-stream <c>data</c> payload (raw bytes) through
++/// the registered closure and asserts the resulting <see cref="Core.Models"/> values.
++/// </summary>
++public class BinanceStreamDecodeTests
++{
++    private static readonly Symbol BtcUsdt = new(Asset.Btc, Asset.Usdt);
++
++    private static (IMapper mapper, ISymbolMapper symbolMapper) BuildMappers()
++    {
++        var symbolMapper = new SymbolMapper(BinanceSymbolFormat.Instance);
++        symbolMapper.UpdateSymbols([new SymbolInfo(BtcUsdt, [OrderType.Limit])]);
++        var mapper = BinanceClientComposer.CreateMapper(symbolMapper);
++        return (mapper, symbolMapper);
++    }
++
++    private static StreamDecoderRegistry BuildRegistry()
++    {
++        var (mapper, symbolMapper) = BuildMappers();
++        return BinanceStreamDecoders.Build(mapper, symbolMapper);
++    }
++
++    private static ReadOnlyMemory<byte> Utf8Bytes(string json) =>
++        new ReadOnlyMemory<byte>(Encoding.UTF8.GetBytes(json));
++
++    // ── Ticker ───────────────────────────────────────────────────────────────
++
++    [Fact]
++    public void Ticker_CannedFrame_MapsAllFields()
++    {
++        var registry = BuildRegistry();
++        var decoder = registry.Resolve(StreamKind.Ticker);
++
++        // Real combined-stream ticker data payload (abbreviated).
++        var data = Utf8Bytes(
++            "{\"s\":\"BTCUSDT\",\"c\":\"67000.00\",\"o\":\"65000.00\",\"h\":\"68000.00\"," +
++            "\"l\":\"64000.00\",\"v\":\"12345.678\",\"q\":\"820000000.00\"," +
++            "\"p\":\"2000.00\",\"P\":\"3.08\",\"C\":1718784000000}");
++
++        var result = (Ticker)decoder(data);
++
++        result.Symbol.Should().Be(BtcUsdt);
++        result.LastPrice.Should().Be(67000.00m);
++        result.OpenPrice.Should().Be(65000.00m);
++        result.HighPrice.Should().Be(68000.00m);
++        result.LowPrice.Should().Be(64000.00m);
++        result.Volume.Should().Be(12345.678m);
++        result.PriceChange.Should().Be(2000.00m);
++        result.Timestamp.Should().NotBeNull();
++    }
++
++    // ── Trade ─────────────────────────────────────────────────────────────────
++
++    [Fact]
++    public void Trade_CannedFrame_MapsAllFields()
++    {
++        var registry = BuildRegistry();
++        var decoder = registry.Resolve(StreamKind.Trade);
++
++        var data = Utf8Bytes(
++            "{\"s\":\"BTCUSDT\",\"t\":999001,\"p\":\"67050.00\",\"q\":\"0.001\"," +
++            "\"T\":1718784001000,\"m\":false}");
++
++        var result = (Trade)decoder(data);
++
++        result.Symbol.Should().Be(BtcUsdt);
++        result.Id.Should().Be("999001");
++        result.Price.Should().Be(67050.00m);
++        result.Quantity.Should().Be(0.001m);
++        result.IsBuyerMaker.Should().BeFalse();
++        result.Timestamp.Should().NotBeNull();
++    }
++
++    // ── OrderBook ─────────────────────────────────────────────────────────────
++
++    [Fact]
++    public void OrderBook_CannedFrame_MapsBidsAndAsks()
++    {
++        var registry = BuildRegistry();
++        var decoder = registry.Resolve(StreamKind.OrderBook);
++
++        // Diff-depth stream payload — includes "s" field.
++        var data = Utf8Bytes(
++            "{\"s\":\"BTCUSDT\",\"lastUpdateId\":99999," +
++            "\"bids\":[[\"66990.00\",\"0.5\"],[\"66980.00\",\"1.2\"]]," +
++            "\"asks\":[[\"67010.00\",\"0.3\"],[\"67020.00\",\"0.8\"]]}");
++
++        var result = (OrderBook)decoder(data);
++
++        result.Symbol.Should().Be(BtcUsdt);
++        result.LastUpdateId.Should().Be(99999L);
++        result.Bids.Should().HaveCount(2);
++        result.Bids[0].Price.Should().Be(66990.00m);
++        result.Asks.Should().HaveCount(2);
++        result.Asks[0].Price.Should().Be(67010.00m);
++    }
++
++    // ── Kline ─────────────────────────────────────────────────────────────────
++
++    [Fact]
++    public void Kline_CannedFrame_MapsOhlcvAndInterval()
++    {
++        var registry = BuildRegistry();
++        var decoder = registry.Resolve(StreamKind.Kline);
++
++        var data = Utf8Bytes(
++            "{\"s\":\"BTCUSDT\",\"k\":{\"t\":1718784000000,\"T\":1718784059999," +
++            "\"o\":\"66900.00\",\"h\":\"67100.00\",\"l\":\"66850.00\",\"c\":\"67050.00\"," +
++            "\"v\":\"45.678\",\"q\":\"3060000.00\",\"n\":1500,\"i\":\"1m\"}}");
++
++        var result = (Candlestick)decoder(data);
++
++        result.Open.Should().Be(66900.00m);
++        result.High.Should().Be(67100.00m);
++        result.Low.Should().Be(66850.00m);
++        result.Close.Should().Be(67050.00m);
++        result.Volume.Should().Be(45.678m);
++        result.TradeCount.Should().Be(1500);
++        result.Interval.Should().Be(KlineInterval.OneMinute);
++        result.OpenTime.ToUnixTimeMilliseconds().Should().Be(1718784000000L);
++    }
++
++    // ── DI resolution ─────────────────────────────────────────────────────────
++
++    [Fact]
++    public async Task AddBinanceStreams_AfterAddBinanceExchange_ResolvesKeyedStreamClient()
++    {
++        var services = new ServiceCollection();
++        services.AddBinanceExchange();
++        services.AddBinanceStreams();
++        await using var sp = services.BuildServiceProvider();
++
++        var client = sp.GetRequiredKeyedService<IStreamClient>(ExchangeId.Binance);
++
++        client.ExchangeId.Should().Be(ExchangeId.Binance);
++    }
++}
+diff --git a/tests/CryptoExchanges.Net.Binance.Tests.Unit/Streaming/BinanceStreamProtocolTests.cs b/tests/CryptoExchanges.Net.Binance.Tests.Unit/Streaming/BinanceStreamProtocolTests.cs
+new file mode 100644
+index 0000000..5bb16ad
+--- /dev/null
++++ b/tests/CryptoExchanges.Net.Binance.Tests.Unit/Streaming/BinanceStreamProtocolTests.cs
+@@ -0,0 +1,133 @@
++using System.Text;
++using System.Text.Json;
++using Xunit;
++using FluentAssertions;
++using CryptoExchanges.Net.Binance;
++using CryptoExchanges.Net.Binance.Streaming;
++using CryptoExchanges.Net.Http.Streaming;
++using CryptoExchanges.Net.Core.Enums;
++
++namespace CryptoExchanges.Net.Binance.Tests.Unit.Streaming;
++
++/// <summary>
++/// No-network unit tests for <see cref="BinanceStreamProtocol"/>: Classify, BuildSubscribe,
++/// BuildUnsubscribe. Canned byte frames only — no sockets.
++/// </summary>
++public class BinanceStreamProtocolTests
++{
++    private static readonly BinanceStreamOptions DefaultOptions = new();
++
++    private static BinanceStreamProtocol MakeProtocol() => new(DefaultOptions);
++
++    private static byte[] Utf8(string json) => Encoding.UTF8.GetBytes(json);
++
++    // ── Classify ─────────────────────────────────────────────────────────────
++
++    [Fact]
++    public void Classify_CombinedStreamDataFrame_ReturnsDataWithRoutingKey()
++    {
++        var protocol = MakeProtocol();
++        var frame = Utf8("{\"stream\":\"btcusdt@ticker\",\"data\":{\"s\":\"BTCUSDT\"}}");
++
++        var result = protocol.Classify(frame);
++
++        result.Kind.Should().Be(FrameKind.Data);
++        result.RoutingKey.Should().Be("btcusdt@ticker");
++    }
++
++    [Fact]
++    public void Classify_SubscribeAckFrame_ReturnsAck()
++    {
++        var protocol = MakeProtocol();
++        var frame = Utf8("{\"result\":null,\"id\":1}");
++
++        var result = protocol.Classify(frame);
++
++        result.Kind.Should().Be(FrameKind.Ack);
++        result.RoutingKey.Should().BeNull();
++    }
++
++    [Fact]
++    public void Classify_ErrorFrame_ReturnsError()
++    {
++        var protocol = MakeProtocol();
++        var frame = Utf8("{\"code\":-1121,\"msg\":\"Invalid symbol.\"}");
++
++        var result = protocol.Classify(frame);
++
++        result.Kind.Should().Be(FrameKind.Error);
++        result.RoutingKey.Should().BeNull();
++    }
++
++    [Fact]
++    public void Classify_UnrecognisedFrame_ReturnsError()
++    {
++        var protocol = MakeProtocol();
++        var frame = Utf8("{\"mystery\":true}");
++
++        var result = protocol.Classify(frame);
++
++        result.Kind.Should().Be(FrameKind.Error);
++    }
++
++    // ── BuildSubscribe ────────────────────────────────────────────────────────
++
++    [Fact]
++    public void BuildSubscribe_Ticker_ProducesCorrectToken()
++    {
++        var protocol = MakeProtocol();
++        var request = new StreamRequest(StreamKind.Ticker, "BTCUSDT");
++
++        var wire = protocol.BuildSubscribe(request);
++        using var doc = JsonDocument.Parse(wire);
++
++        doc.RootElement.GetProperty("method").GetString().Should().Be("SUBSCRIBE");
++        doc.RootElement.GetProperty("params")[0].GetString().Should().Be("btcusdt@ticker");
++    }
++
++    [Fact]
++    public void BuildSubscribe_OrderBookWithDepth_ProducesDepthToken()
++    {
++        var protocol = MakeProtocol();
++        var request = new StreamRequest(StreamKind.OrderBook, "ETHUSDT", Depth: 20);
++
++        var wire = protocol.BuildSubscribe(request);
++        using var doc = JsonDocument.Parse(wire);
++
++        doc.RootElement.GetProperty("params")[0].GetString().Should().Be("ethusdt@depth20");
++    }
++
++    [Fact]
++    public void BuildSubscribe_Kline_ProducesIntervalToken()
++    {
++        var protocol = MakeProtocol();
++        var request = new StreamRequest(StreamKind.Kline, "BTCUSDT", Interval: nameof(KlineInterval.OneHour));
++
++        var wire = protocol.BuildSubscribe(request);
++        using var doc = JsonDocument.Parse(wire);
++
++        doc.RootElement.GetProperty("params")[0].GetString().Should().Be("btcusdt@kline_1h");
++    }
++
++    [Fact]
++    public void BuildUnsubscribe_Trade_ProducesUnsubscribeMethod()
++    {
++        var protocol = MakeProtocol();
++        var request = new StreamRequest(StreamKind.Trade, "BTCUSDT");
++
++        var wire = protocol.BuildUnsubscribe(request);
++        using var doc = JsonDocument.Parse(wire);
++
++        doc.RootElement.GetProperty("method").GetString().Should().Be("UNSUBSCRIBE");
++        doc.RootElement.GetProperty("params")[0].GetString().Should().Be("btcusdt@trade");
++    }
++
++    // ── HeartbeatPolicy ───────────────────────────────────────────────────────
++
++    [Fact]
++    public void Heartbeat_IsServerPingClientPong()
++    {
++        var protocol = MakeProtocol();
++        protocol.Heartbeat.Direction.Should().Be(HeartbeatDirection.ServerPingClientPong);
++    }
++}

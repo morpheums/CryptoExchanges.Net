@@ -81,10 +81,10 @@ REUSE existing discovery — do NOT re-run.
 | TASK-043 | ✦ DONE    | 2    | Http engine contracts + fake-transport test seam                            |
 | TASK-044 | ✦ DONE    | 3    | Http reconnecting byte-engine (pump/route/backoff/replay/heartbeat/channels)|
 | TASK-045 | ◆ IMPL    | 4    | Generic `StreamClient` + `StreamClientFactory` + `AddStreams<TOptions>`      |
-| TASK-046 | ◆ IN_PROG | 5    | Exchange-#1 package: protocol + 4 decode closures + options + `Add…Streams` |
+| TASK-046 | ✦ IMPL    | 5    | Exchange-#1 package: protocol + 4 decode closures + options + `Add…Streams` |
 | TASK-047 | ◇ PLANNED | 6    | Wire 4 public subscribe methods end-to-end + live integration smoke + docs  |
 
-Tasks: 3/6 DONE — TASK-042 DONE, TASK-043 DONE, TASK-044 DONE, TASK-045 IMPLEMENTED (906c568), TASK-046..047 PLANNED.
+Tasks: 3/6 DONE — TASK-042 DONE, TASK-043 DONE, TASK-044 DONE, TASK-045 IMPLEMENTED (906c568), TASK-046 IMPLEMENTED (27169ea), TASK-047 PLANNED.
 
 ## Wave Groups
 

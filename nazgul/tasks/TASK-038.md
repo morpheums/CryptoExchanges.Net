@@ -1,23 +1,23 @@
 ---
 id: TASK-038
-status: READY
+status: IN_PROGRESS
 depends_on: []
 commit:
-claimed_at:
+claimed_at: 2026-06-19T14:00:00Z
 ---
 # TASK-038: MCP docs (mcp-server.md + mcp-clients.md, major clients)
 
 ## Metadata
 - **ID**: TASK-038
 - **Group**: 1
-- **Status**: (see `status:` in the frontmatter block at the top — canonical, read by scripts/lib/structured-state.sh)
+- **Status**: IN_PROGRESS
 - **Depends on**: none
 - **Delegates to**: none
 - **Files modified**: [docs/mcp-server.md, docs/mcp-clients.md]
 - **Wave**: 1
 - **Traces to**: FEAT-003 spec §Scope-In "New public docs/ folder" (mcp-server.md, mcp-clients.md — major MCP clients)
 - **Created at**: 2026-06-19T13:10:00Z
-- **Claimed at**:
+- **Claimed at**: 2026-06-19T14:00:00Z
 - **Implemented at**:
 - **Completed at**:
 - **Blocked at**:
@@ -88,6 +88,9 @@ No-dependency task (Wave 1); file-disjoint from TASK-036/TASK-037.
 ## Implementation Log
 
 ### Attempt 1
+
+- **Base SHA**: b2322b0f3263c4f1a4aa1a180edf063f3d7bf4ff
+- Claimed 2026-06-19T14:00:00Z on branch feat/FEAT-003-docs-overhaul
 
 ## Review Results
 

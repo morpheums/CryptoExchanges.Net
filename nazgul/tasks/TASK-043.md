@@ -1,6 +1,6 @@
 ---
 id: TASK-043
-status: IMPLEMENTED
+status: DONE
 depends_on: [TASK-042]
 ---
 # TASK-043: Http engine contracts + fake-transport test seam
@@ -18,7 +18,7 @@ depends_on: [TASK-042]
 - **Claimed at**: 2026-06-19T17:30:00Z
 - **Base SHA**: 1a16f66
 - **Implemented at**: 2026-06-19T17:55:00Z
-- **Completed at**:
+- **Completed at**: 2026-06-19T19:00:00Z
 - **Blocked at**:
 - **Retry count**: 0/3
 - **Test failures**: 0
@@ -65,9 +65,9 @@ Test seam (in the Http unit-test project):
   defaults; `StreamFrame` equality) and that `FakeWebSocketConnection` round-trips a canned frame.
 
 ## Acceptance Criteria
-- [ ] All eight contract types exist under `src/CryptoExchanges.Net.Http/Streaming/` (one per file) with the exact locked shapes; `IStreamProtocol`/`IWebSocketConnection` are `internal`, `HeartbeatPolicy` is pure data (no timers/threads/behavioral methods — C1).
-- [ ] `FakeWebSocketConnection` + `StreamContractTests` pass; the fake can emit canned frames and simulate disconnect with no network; solution builds 0W/0E under `TreatWarningsAsErrors`.
-- [ ] **K1 verified**: zero `Core.Models` and zero DeltaMapper references under `src/CryptoExchanges.Net.Http/` (`grep -rn "Core.Models\|DeltaMapper\|IMapper" src/CryptoExchanges.Net.Http/` returns nothing); existing 499 tests stay green.
+- [x] All eight contract types exist under `src/CryptoExchanges.Net.Http/Streaming/` (one per file) with the exact locked shapes; `IStreamProtocol`/`IWebSocketConnection` are `internal`, `HeartbeatPolicy` is pure data (no timers/threads/behavioral methods — C1).
+- [x] `FakeWebSocketConnection` + `StreamContractTests` pass; the fake can emit canned frames and simulate disconnect with no network; solution builds 0W/0E under `TreatWarningsAsErrors`.
+- [x] **K1 verified**: zero `Core.Models` and zero DeltaMapper references under `src/CryptoExchanges.Net.Http/` (`grep -rn "Core.Models\|DeltaMapper\|IMapper" src/CryptoExchanges.Net.Http/` returns nothing); existing 499 tests stay green.
 
 ## Pattern Reference
 - Exact seam member signatures: design doc §"The seam" (lines 64-87) — copy verbatim; §"Testing" (line 118-119) for the fake-transport approach.
@@ -100,13 +100,14 @@ Test seam (in the Http unit-test project):
 ## Commits
 
 - `547f2f8` — feat(FEAT-005): Http streaming contracts + fake-transport seam (TASK-043)
+- `e1e87d0` — feat(FEAT-005): simplify TASK-043 — trim redundant remarks block in StreamDecoderRegistry
 
 ## Implementation Log
 
 ### Attempt 1
 
-**Status**: IMPLEMENTED
-**Commit**: `547f2f8`
+**Status**: DONE
+**Commit**: `547f2f8` (impl) + `e1e87d0` (simplify)
 
 **Files created** (all under `src/CryptoExchanges.Net.Http/Streaming/`):
 - `FrameKind.cs` — enum: Data, Ack, Pong, Error
@@ -122,10 +123,12 @@ Test seam (in the Http unit-test project):
 
 **Test seam** (`tests/CryptoExchanges.Net.Http.Tests.Unit/Streaming/`):
 - `FakeWebSocketConnection.cs` — controllable IWebSocketConnection test double
-- `StreamContractTests.cs` — 20 unit tests covering value semantics + fake behaviour
+- `StreamContractTests.cs` — 23 unit tests covering value semantics + fake behaviour
 
 **Modified** (doc comment only, K1 hygiene):
 - `src/CryptoExchanges.Net.Http/ExchangeServiceRegistration.cs` — removed "DeltaMapper" from TMapper XML doc comment
+
+**Simplify pass**: Removed redundant K1-restatement `<remarks>` block from `StreamDecoderRegistry.cs` (code-reviewer finding applied).
 
 **K1 result**: `grep -rn "Core.Models\|DeltaMapper" src/CryptoExchanges.Net.Http/ --include="*.cs"` → empty
 **Build**: 0 warnings, 0 errors (TreatWarningsAsErrors)
@@ -134,4 +137,22 @@ Test seam (in the Http unit-test project):
 ## Review Results
 
 ### Attempt 1
-<!-- review-gate fills this in -->
+
+**Review date**: 2026-06-19
+**Verdict**: APPROVED (4/4 unanimous)
+
+| Reviewer | Verdict | Blocking findings |
+|---|---|---|
+| architect-reviewer | ✦ APPROVED | 0 |
+| code-reviewer | ✦ APPROVED | 0 |
+| api-reviewer | ✦ APPROVED | 0 |
+| security-reviewer | ✦ APPROVED | 0 |
+
+**K1**: PASS — grep returned empty (zero Core.Models / DeltaMapper references under Http).
+**Build**: 0W/0E.
+**Tests**: 519/519 green.
+
+Non-blocking concerns noted for forward tasks:
+- `FakeWebSocketConnection.SentText`/`SentPongs` are `List<T>` — flag for TASK-044 engine tests if concurrent sends needed (security-reviewer, confidence 55).
+- `StreamKind` as `internal` requires `InternalsVisibleTo` maintenance for any new exchange package added after TASK-046 (api-reviewer, confidence 70).
+- `HeartbeatPolicy` record equality with `ReadOnlyMemory<byte>` payload is reference-only for array-backed values — test name noted as misleading (code-reviewer, confidence 65).

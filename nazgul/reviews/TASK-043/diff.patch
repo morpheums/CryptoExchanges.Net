@@ -1,54 +1,3 @@
-diff --git a/nazgul/plan.md b/nazgul/plan.md
-index a364c00..7f70978 100644
---- a/nazgul/plan.md
-+++ b/nazgul/plan.md
-@@ -78,7 +78,7 @@ REUSE existing discovery — do NOT re-run.
- | Task     | Status    | Wave | Description                                                                 |
- |----------|-----------|------|-----------------------------------------------------------------------------|
- | TASK-042 | ✦ DONE    | 1    | Core streaming abstractions (`IStreamClient` family) — no transport         |
--| TASK-043 | ◇ PLANNED | 2    | Http engine contracts + fake-transport test seam                            |
-+| TASK-043 | ◆ IN_PROGRESS | 2    | Http engine contracts + fake-transport test seam                            |
- | TASK-044 | ◇ PLANNED | 3    | Http reconnecting byte-engine (pump/route/backoff/replay/heartbeat/channels)|
- | TASK-045 | ◇ PLANNED | 4    | Generic `StreamClient` + `StreamClientFactory` + `AddStreams<TOptions>`      |
- | TASK-046 | ◇ PLANNED | 5    | Exchange-#1 package: protocol + 4 decode closures + options + `Add…Streams` |
-diff --git a/nazgul/tasks/TASK-043.md b/nazgul/tasks/TASK-043.md
-index cb5b0d1..cccf3a7 100644
---- a/nazgul/tasks/TASK-043.md
-+++ b/nazgul/tasks/TASK-043.md
-@@ -1,6 +1,6 @@
- ---
- id: TASK-043
--status: PLANNED
-+status: IN_PROGRESS
- depends_on: [TASK-042]
- ---
- # TASK-043: Http engine contracts + fake-transport test seam
-@@ -15,7 +15,8 @@ depends_on: [TASK-042]
- - **Wave**: 2
- - **Traces to**: FEAT-005 spec §Architecture "Http" + §"Binding constraints" C1; design §"The seam" + §"Testing"; DECISION-STREAMING-SHARED §2 (`IStreamProtocol`) + §6 (C1, Inv 11)
- - **Created at**: 2026-06-19T17:20:00Z
--- **Claimed at**:
-+- **Claimed at**: 2026-06-19T17:30:00Z
-+- **Base SHA**: 1a16f66
- - **Implemented at**:
- - **Completed at**:
- - **Blocked at**:
-diff --git a/src/CryptoExchanges.Net.Http/ExchangeServiceRegistration.cs b/src/CryptoExchanges.Net.Http/ExchangeServiceRegistration.cs
-index b712a68..f1c7e75 100644
---- a/src/CryptoExchanges.Net.Http/ExchangeServiceRegistration.cs
-+++ b/src/CryptoExchanges.Net.Http/ExchangeServiceRegistration.cs
-@@ -15,8 +15,9 @@ internal static class ExchangeServiceRegistration
-     /// </summary>
-     /// <typeparam name="TOptions">The per-exchange options type.</typeparam>
-     /// <typeparam name="TMapper">
--    /// The DeltaMapper <c>IMapper</c> type (supplied as a generic argument so Http needs no DeltaMapper
--    /// reference). Registered as a keyed singleton resolved by the composer's <c>ComposeForDi</c>.
-+    /// The per-exchange mapper type (supplied as a generic argument to preserve the Http layer's
-+    /// layering invariant — no mapping-library reference in Http). Registered as a keyed singleton
-+    /// resolved by the composer's <c>ComposeForDi</c>.
-     /// </typeparam>
-     /// <param name="services">The service collection.</param>
-     /// <param name="exchangeId">The per-exchange key for all keyed singletons.</param>
 diff --git a/src/CryptoExchanges.Net.Http/Streaming/FrameKind.cs b/src/CryptoExchanges.Net.Http/Streaming/FrameKind.cs
 new file mode 100644
 index 0000000..accc5e3
@@ -337,10 +286,10 @@ index 0000000..3de4795
 +}
 diff --git a/src/CryptoExchanges.Net.Http/Streaming/StreamDecoderRegistry.cs b/src/CryptoExchanges.Net.Http/Streaming/StreamDecoderRegistry.cs
 new file mode 100644
-index 0000000..10d06a7
+index 0000000..33a27a4
 --- /dev/null
 +++ b/src/CryptoExchanges.Net.Http/Streaming/StreamDecoderRegistry.cs
-@@ -0,0 +1,62 @@
+@@ -0,0 +1,50 @@
 +namespace CryptoExchanges.Net.Http.Streaming;
 +
 +/// <summary>
@@ -349,18 +298,6 @@ index 0000000..10d06a7
 +/// exchange package (binding constraint K1: DTO decode + model mapping stays exchange-side);
 +/// the Http engine sees only raw bytes in and <see langword="object"/> out.
 +/// </summary>
-+/// <remarks>
-+/// <para>
-+/// Binding constraint K1: this type handles only <see cref="StreamKind"/> keys and
-+/// opaque <c>Func</c> values. The Http layer holds no references to canonical model types
-+/// or mapping libraries.
-+/// </para>
-+/// <para>
-+/// The exchange package builds and registers closures at composition time (TASK-046).
-+/// The engine looks up the closure by the frame's resolved <see cref="StreamKind"/> and
-+/// invokes it to produce the typed model delivered to the subscription's channel.
-+/// </para>
-+/// </remarks>
 +internal sealed class StreamDecoderRegistry
 +{
 +    private readonly Dictionary<StreamKind, Func<ReadOnlyMemory<byte>, object>> _decoders = [];

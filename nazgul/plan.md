@@ -78,13 +78,13 @@ REUSE existing discovery — do NOT re-run.
 | Task     | Status    | Wave | Description                                                                 |
 |----------|-----------|------|-----------------------------------------------------------------------------|
 | TASK-042 | ✦ DONE    | 1    | Core streaming abstractions (`IStreamClient` family) — no transport         |
-| TASK-043 | ✦ IMPLEMENTED | 2    | Http engine contracts + fake-transport test seam                            |
+| TASK-043 | ✦ DONE    | 2    | Http engine contracts + fake-transport test seam                            |
 | TASK-044 | ◇ PLANNED | 3    | Http reconnecting byte-engine (pump/route/backoff/replay/heartbeat/channels)|
 | TASK-045 | ◇ PLANNED | 4    | Generic `StreamClient` + `StreamClientFactory` + `AddStreams<TOptions>`      |
 | TASK-046 | ◇ PLANNED | 5    | Exchange-#1 package: protocol + 4 decode closures + options + `Add…Streams` |
 | TASK-047 | ◇ PLANNED | 6    | Wire 4 public subscribe methods end-to-end + live integration smoke + docs  |
 
-Tasks: 1/6 DONE — TASK-042 DONE, TASK-043 READY (dep satisfied), TASK-044..047 PLANNED.
+Tasks: 2/6 DONE — TASK-042 DONE, TASK-043 DONE, TASK-044 READY (dep satisfied), TASK-045..047 PLANNED.
 
 ## Wave Groups
 
@@ -97,8 +97,8 @@ distinct part of the tree, so there is no within-wave parallelism. Waves are str
   `src/CryptoExchanges.Net.Core/Streaming/` + Core unit tests.
 
 ### Wave 2
-- **TASK-043** — Http engine contracts + fake-transport seam. Depends on TASK-042. Creates only files
-  under `src/CryptoExchanges.Net.Http/Streaming/` + Http unit-test fakes.
+- **TASK-043** — Http engine contracts + fake-transport seam. DONE. Created 10 files under
+  `src/CryptoExchanges.Net.Http/Streaming/` + Http unit-test fakes. Reviewed 4/4 APPROVED.
 
 ### Wave 3
 - **TASK-044** — Reconnecting byte-engine. Depends on TASK-043. Adds the engine + per-subscription
@@ -122,8 +122,8 @@ distinct part of the tree, so there is no within-wave parallelism. Waves are str
 TASK-042 ──► TASK-043 ──► TASK-044 ──► TASK-045 ──► TASK-046 ──► TASK-047
 ```
 
-State machine: TASK-042 is **DONE**; TASK-043 is now **READY** (dependency satisfied);
-TASK-044..047 remain **PLANNED** with explicit `depends_on` chain.
+State machine: TASK-042 is **DONE**; TASK-043 is now **DONE**; TASK-044 is now **READY**
+(dependency satisfied); TASK-045..047 remain **PLANNED** with explicit `depends_on` chain.
 
 ## Traceability
 
@@ -153,16 +153,19 @@ other exchanges, `IAsyncEnumerable`, System.Reactive) is planned.
 
 - **TASK-042** — DONE (2026-06-19T18:30:00Z). Core streaming abstractions approved unanimously (4/4).
   Commit: `1c041b5`. Review artifacts: `nazgul/reviews/TASK-042/`.
+- **TASK-043** — DONE (2026-06-19T19:00:00Z). Http engine contracts + fake-transport seam approved unanimously (4/4).
+  Commits: `547f2f8` (impl) + `e1e87d0` (simplify). Review artifacts: `nazgul/reviews/TASK-043/`.
 
 ## Recovery Pointer
 
-- **Current stage**: TASK-042 DONE — review gate passed unanimously.
-- **Next action**: Claim TASK-043 (Http engine contracts + fake-transport seam). TASK-043 is now READY.
-- **Active task**: none (TASK-042 complete; TASK-043 is next).
+- **Current stage**: TASK-043 DONE — review gate passed unanimously (4/4). Simplify applied (1 fix).
+- **Next action**: Claim TASK-044 (Http reconnecting byte-engine). TASK-044 is now READY (TASK-043 dep satisfied).
+- **Active task**: none (TASK-043 complete; TASK-044 is next).
 - **Files are truth**: task manifests in `nazgul/tasks/TASK-042..047.md` carry full state;
   frontmatter `status:` is canonical.
 
 ─── ◈ NEXT ─────────────────────────────────────────────
   ✦ TASK-042 — Core streaming abstractions. DONE.
-  ◇ TASK-043 — Http engine contracts + fake-transport seam. READY (claim next).
+  ✦ TASK-043 — Http engine contracts + fake-transport seam. DONE.
+  ◇ TASK-044 — Http reconnecting byte-engine. READY (claim next).
 ────────────────────────────────────────────────────────

@@ -1,13 +1,13 @@
 ---
 id: TASK-034
-status: IN_PROGRESS
-commit:
+status: IMPLEMENTED
+commit: d9daf1f
 claimed_at: 2026-06-19
 ---
 
 # TASK-034: Revert split licensing — all packages Apache-2.0 for now
 
-**Status**: READY
+**Status**: IMPLEMENTED (commit d9daf1f; ships with PR #19). MCP nuspec verified Apache-2.0; build 0W/0E.
 
 **Blast radius**: NONE (license metadata/docs only; no code/behavior).
 

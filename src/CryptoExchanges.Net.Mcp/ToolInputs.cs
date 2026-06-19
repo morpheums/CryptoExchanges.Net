@@ -28,11 +28,11 @@ public static class ToolInputs
         };
 
     /// <summary>Resolves an exchange name (case-insensitive) to one of the registered exchanges.</summary>
-    public static bool TryParseExchange(string value, out ExchangeId id)
+    public static bool TryParseExchange(string? value, out ExchangeId id)
         => Exchanges.TryGetValue(value ?? string.Empty, out id);
 
     /// <summary>Resolves a kline interval string (e.g. "1m","4h","1d") to a <see cref="KlineInterval"/>.</summary>
-    public static bool TryParseInterval(string value, out KlineInterval interval)
+    public static bool TryParseInterval(string? value, out KlineInterval interval)
         => Intervals.TryGetValue(value ?? string.Empty, out interval);
 
     /// <summary>Parses "BASE/QUOTE" (e.g. "BTC/USDT") into a typed <see cref="Symbol"/>.</summary>

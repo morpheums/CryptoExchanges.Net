@@ -13,6 +13,10 @@ public static class ToolRunner
         {
             return ToolResult<T>.Success(await action().ConfigureAwait(false));
         }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
 #pragma warning disable CA1031 // Intentional broad catch: ToolRunner is the MCP boundary — nothing may escape.
         catch (Exception ex)
 #pragma warning restore CA1031

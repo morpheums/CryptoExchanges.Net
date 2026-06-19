@@ -127,7 +127,7 @@
     "focus": null
   },
   "guards": {
-    "requireActiveTask": true
+    "requireActiveTask": false
   },
   "safety": {
     "block_destructive_commands": true,

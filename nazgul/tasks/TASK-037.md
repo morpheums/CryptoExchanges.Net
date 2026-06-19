@@ -1,9 +1,9 @@
 ---
 id: TASK-037
-status: READY
+status: IN_PROGRESS
 depends_on: []
 commit:
-claimed_at:
+claimed_at: 2026-06-19T14:00:00Z
 ---
 # TASK-037: Core library docs (getting-started, library-usage, architecture, exchanges)
 
@@ -17,7 +17,7 @@ claimed_at:
 - **Wave**: 1
 - **Traces to**: FEAT-003 spec §Scope-In "New public docs/ folder" (getting-started, library-usage, architecture, exchanges)
 - **Created at**: 2026-06-19T13:10:00Z
-- **Claimed at**:
+- **Claimed at**: 2026-06-19T14:00:00Z
 - **Implemented at**:
 - **Completed at**:
 - **Blocked at**:
@@ -92,9 +92,14 @@ TASK-036's filenames.)
 - **TRD Component**: n/a — `nazgul/context/architecture-map.md` is the architecture source
 - **ADR Reference**: n/a
 
+- **Base SHA**: e17d246
+
 ## Implementation Log
 
 ### Attempt 1
+- Claimed 2026-06-19T14:00:00Z on feat/FEAT-003-docs-overhaul
+- Verified all API signatures from source before writing docs
+- Creating 4 markdown docs under public docs/
 
 ## Review Results
 

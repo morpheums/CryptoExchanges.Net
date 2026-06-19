@@ -122,7 +122,7 @@ IReadOnlyList<Trade> trades = await client.MarketData.GetRecentTradesAsync(
 foreach (var t in trades)
 {
     var side = t.IsBuyerMaker ? "SELL" : "BUY";
-    Console.WriteLine($"[{t.Timestamp:HH:mm:ss}] {side} {t.Quantity:F6} @ {t.Price:N2}");
+    Console.WriteLine($"[{t.Timestamp?.ToString("HH:mm:ss") ?? "-"}] {side} {t.Quantity:F6} @ {t.Price:N2}");
 }
 ```
 
@@ -388,4 +388,3 @@ When registered via DI, the container owns the lifetime — do not dispose the i
 - [Getting Started](getting-started.md) — install and first calls
 - [Architecture](architecture.md) — how the layers fit together
 - [Exchanges](exchanges.md) — per-exchange packages, credentials, and status
-- [MCP server](mcp-server.md) — AI-agent read-only access via the Model Context Protocol

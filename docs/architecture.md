@@ -15,6 +15,7 @@ This page describes the shipped design only.
 ┌────────────────────────────▼────────────────────────────────────┐
 │  CryptoExchanges.Net.Core                                        │
 │  Interfaces · Models · Enums · Exceptions · ISymbolMapper        │
+│  IExchangeClientFactory (interface)                              │
 │  Zero production dependencies (only ME.Logging.Abstractions,     │
 │  ME.DI.Abstractions)                                             │
 └────────────┬───────────────────────────────────────────────────-┘
@@ -23,18 +24,20 @@ This page describes the shipped design only.
 │  CryptoExchanges.Net.Http                                        │
 │  Shared resilience pipeline (Polly retry + timeout)              │
 │  DelegatingHandler chain — signing, rate-limit, error-translate  │
+│  ExchangeClientFactory (implementation)                          │
 └────────────┬────────────────────────────────────────────────────┘
              │ depends on Core + Http
 ┌────────────▼────────────────────────────────────────────────────┐
 │  Per-exchange packages                                           │
 │  Binance · Bybit · OKX · Bitget                                  │
 │  Exchange-specific HTTP client, services, DTO mapping, signing   │
+│  Add*Exchange() DI registration method (per ADR-001)             │
 └────────────┬────────────────────────────────────────────────────┘
              │ depends on Core + per-exchange packages
 ┌────────────▼────────────────────────────────────────────────────┐
 │  CryptoExchanges.Net.DependencyInjection                         │
-│  AddCryptoExchanges() · AddBinanceExchange() · …                 │
-│  IExchangeClientFactory · keyed-singleton registration           │
+│  AddCryptoExchanges() — aggregator that delegates to Add*Exchange │
+│  keyed-singleton registration                                    │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -53,7 +56,7 @@ No exchange implementation detail leaks here.
 | `IMarketDataService` | Public-data operations: price, tickers, order book, candles, recent trades, exchange info, symbol validation. |
 | `ITradingService` | Order lifecycle: place, cancel, query open/historical orders. |
 | `IAccountService` | Account state: balances, single asset balance, trade history. |
-| `IExchangeClientFactory` | Resolves a registered `IExchangeClient` by `ExchangeId`. |
+| `IExchangeClientFactory` | Resolves a registered `IExchangeClient` by `ExchangeId`. Interface in Core; implementation in Http. |
 | `ISymbolMapper` | Translates between the typed `Symbol` domain model and each exchange's wire format. |
 
 ### Domain models
@@ -69,8 +72,8 @@ Consumer code depends on models in `Core.Models`, never on exchange-specific DTO
 | `OrderBook` | `LastUpdateId`, `Bids` (list of `OrderBookEntry`), `Asks` |
 | `OrderBookEntry` | `Price`, `Quantity` |
 | `Candlestick` | `OpenTime`, `Open`, `High`, `Low`, `Close`, `Volume`, `CloseTime` |
-| `Trade` | `TradeId`, `Price`, `Quantity`, `Timestamp`, `IsBuyerMaker` |
-| `Order` | `OrderId`, `Symbol`, `Side`, `Type`, `Status`, `Price`, `Quantity`, `FilledQuantity`, `CreatedAt` |
+| `Trade` | `Id`, `Price`, `Quantity`, `Timestamp`, `IsBuyerMaker` |
+| `Order` | `OrderId`, `Symbol`, `Side`, `Type`, `Status`, `Price`, `OriginalQuantity`, `ExecutedQuantity`, `CreatedAt` |
 | `AssetBalance` | `Asset`, `Free`, `Locked`, `Total` |
 | `ExchangeInfo` | `ExchangeName`, `Symbols` (list of `SymbolInfo`), `RateLimits` |
 
@@ -93,18 +96,18 @@ ExchangeException                     (abstract)
 Shared, exchange-agnostic HTTP infrastructure. Exchange packages build their resilient
 `HttpClient` by composing this layer.
 
-### Handler chain (innermost → outermost)
+### Handler chain (outermost → innermost, request flows top-to-bottom)
 
 ```
-ErrorTranslationHandler       — maps 4xx to typed ExchangeException via IExchangeErrorTranslator
-  ↑
-BinanceSigningHandler         — adds timestamp + HMAC-SHA256 signature (per-exchange impl)
-  ↑
-ResilienceHandler (Polly)     — retry (GET only) + per-attempt timeout
-  ↑
-TransientExhaustionHandler    — detects transient exhaustion, throws ExchangeConnectivityException
-  ↑
 RateLimitThrottleHandler      — proactive back-pressure from ReactiveRateLimitGate
+  ↓
+TransientExhaustionHandler    — detects transient exhaustion, throws ExchangeConnectivityException
+  ↓
+ResilienceHandler (Polly)     — retry (GET only) + per-attempt timeout
+  ↓
+*SigningHandler (per-exchange) — adds timestamp + HMAC-SHA256 signature (injected by each exchange package)
+  ↓
+ErrorTranslationHandler       — maps 4xx to typed ExchangeException via IExchangeErrorTranslator
 ```
 
 The handler chain is assembled by `HttpClientPipelineBuilder.Build()` and is shared by both the

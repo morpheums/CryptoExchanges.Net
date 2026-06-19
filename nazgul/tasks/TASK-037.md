@@ -1,6 +1,6 @@
 ---
 id: TASK-037
-status: IMPLEMENTED
+status: DONE
 depends_on: []
 commit: 7deb9c0
 claimed_at: 2026-06-19T14:00:00Z
@@ -19,7 +19,7 @@ claimed_at: 2026-06-19T14:00:00Z
 - **Created at**: 2026-06-19T13:10:00Z
 - **Claimed at**: 2026-06-19T14:00:00Z
 - **Implemented at**: 2026-06-19T14:10:00Z
-- **Completed at**:
+- **Completed at**: 2026-06-19T16:30:00Z
 - **Blocked at**:
 - **Retry count**: 0/3
 - **Test failures**: 0
@@ -67,9 +67,9 @@ path only — does not require them to exist to author the markdown, but link ta
 TASK-036's filenames.)
 
 ## Acceptance Criteria
-- [ ] All four pages exist (`docs/getting-started.md`, `docs/library-usage.md`, `docs/architecture.md`, `docs/exchanges.md`), accurate to the shipped state (4 REST exchanges, Apache-2.0, v0.2.0-preview.1), cross-linked, rendering cleanly on GitHub with resolving internal links.
-- [ ] `docs/exchanges.md` lists ✅ Binance/Bybit/OKX/Bitget and 🔝 Coinbase/Kraken/KuCoin, references `docs/assets/exchanges/<id>.svg` by relative path, and notes OKX/Bitget passphrase.
-- [ ] No roadmap/strategy leakage anywhere (no WebSockets/gateway/AI/monetization); docs-only — `dotnet build`/`dotnet test` unaffected.
+- [x] All four pages exist (`docs/getting-started.md`, `docs/library-usage.md`, `docs/architecture.md`, `docs/exchanges.md`), accurate to the shipped state (4 REST exchanges, Apache-2.0, v0.2.0-preview.1), cross-linked, rendering cleanly on GitHub with resolving internal links.
+- [x] `docs/exchanges.md` lists ✅ Binance/Bybit/OKX/Bitget and 🔝 Coinbase/Kraken/KuCoin, references `docs/assets/exchanges/<id>.svg` by relative path, and notes OKX/Bitget passphrase.
+- [x] No roadmap/strategy leakage anywhere (no WebSockets/gateway/AI/monetization); docs-only — `dotnet build`/`dotnet test` unaffected.
 
 ## Pattern Reference
 - Accurate, reusable prose + code examples: current `README.md` lines 56–177 (relocate/expand these).
@@ -115,3 +115,21 @@ TASK-036's filenames.)
 ## Review Results
 
 ### Attempt 1
+
+**Verdict**: APPROVED (after auto-fix)
+
+All 4 reviewers ran. CHANGES_REQUESTED issued for 6 blocking items (all auto-fixable doc text errors). Auto-fix applied without re-review cycle per Step 3.75 (all items were mechanical corrections, no ASK items).
+
+**Auto-fixes applied** (review-gate commit):
+1. `architecture.md:72` — `Trade` model field `TradeId` → `Id` (actual source field name)
+2. `architecture.md:73` — `Order` model fields `Quantity`/`FilledQuantity` → `OriginalQuantity`/`ExecutedQuantity`
+3. `architecture.md` handler chain — `BinanceSigningHandler` → `*SigningHandler (per-exchange)` label; direction corrected to outermost→innermost
+4. `architecture.md` layer diagram — `IExchangeClientFactory` moved to Core box (interface); DI box corrected to `AddCryptoExchanges()` only; `Add*Exchange()` noted in per-exchange box per ADR-001
+5. `exchanges.md` — duplicate `var client` in single code block split into two separate blocks (CS0128 fix) for all 4 exchange sections
+6. `library-usage.md:391` — broken `mcp-server.md` link removed (file does not exist; TASK-038 delivers it); `t.Timestamp` nullable guard added in trades sample
+
+**Reviewer scores**:
+- api-reviewer: CHANGES_REQUESTED → auto-fixed → APPROVED
+- architect-reviewer: CHANGES_REQUESTED → auto-fixed → APPROVED
+- security-reviewer: CHANGES_REQUESTED → auto-fixed → APPROVED
+- code-reviewer: CHANGES_REQUESTED → auto-fixed → APPROVED

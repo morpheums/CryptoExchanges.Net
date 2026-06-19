@@ -33,7 +33,9 @@ await using var client = BinanceExchangeClient.Create(new BinanceOptions
     ApiKey    = "...",
     SecretKey = "..."
 });
+```
 
+```csharp
 // From environment variables (BINANCE_API_KEY / BINANCE_SECRET_KEY)
 await using var client = BinanceExchangeClient.CreateFromEnvironment();
 ```
@@ -75,7 +77,9 @@ await using var client = BybitExchangeClient.Create(new BybitOptions
     ApiKey    = "...",
     SecretKey = "..."
 });
+```
 
+```csharp
 // From environment variables (BYBIT_API_KEY / BYBIT_SECRET_KEY)
 await using var client = BybitExchangeClient.CreateFromEnvironment();
 ```
@@ -121,7 +125,9 @@ await using var client = OkxExchangeClient.Create(new OkxOptions
     SecretKey  = "...",
     Passphrase = "..."
 });
+```
 
+```csharp
 // From environment variables (OKX_API_KEY / OKX_SECRET_KEY / OKX_PASSPHRASE)
 await using var client = OkxExchangeClient.CreateFromEnvironment();
 ```
@@ -168,7 +174,9 @@ await using var client = BitgetExchangeClient.Create(new BitgetOptions
     SecretKey  = "...",
     Passphrase = "..."
 });
+```
 
+```csharp
 // From environment variables (BITGET_API_KEY / BITGET_SECRET_KEY / BITGET_PASSPHRASE)
 await using var client = BitgetExchangeClient.CreateFromEnvironment();
 ```

@@ -1,7 +1,7 @@
 ---
 id: TASK-048
-status: IN_PROGRESS
-commit:
+status: IMPLEMENTED
+commit: 9ce2fcc
 claimed_at: 2026-06-19
 ---
 

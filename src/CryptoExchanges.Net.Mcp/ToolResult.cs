@@ -1,8 +1,5 @@
 namespace CryptoExchanges.Net.Mcp;
 
-/// <summary>A structured, agent-legible error returned by a tool.</summary>
-public sealed record ToolError(string Category, string Message);
-
 /// <summary>Envelope returned by every tool so failures never throw across the MCP boundary.</summary>
 public sealed record ToolResult<T>(bool Ok, T? Data, ToolError? Error)
 {

@@ -109,6 +109,7 @@ Every tool returns a structured result envelope. On failure the `error.category`
 | `Connectivity`       | Network / exchange reachability issue               |
 | `SymbolNotSupported` | Unrecognised symbol format                          |
 | `BadInterval`        | Unrecognised kline interval string                  |
+| `BadRequest`         | Invalid argument (e.g. non-positive depth/limit, unknown asset) |
 | `ExchangeError`      | Exchange returned an API-level error                |
 | `Unknown`            | Unexpected error                                    |
 

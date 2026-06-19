@@ -13,7 +13,6 @@ public class MarketDataToolsTests
     private static IExchangeClientFactory FactoryReturning(IExchangeClient client, ExchangeId id = ExchangeId.Binance)
     {
         var factory = Substitute.For<IExchangeClientFactory>();
-        factory.GetClient(id).Returns(client);
         factory.TryGet(id, out Arg.Any<IExchangeClient?>())
             .Returns(ci => { ci[1] = client; return true; });
         return factory;

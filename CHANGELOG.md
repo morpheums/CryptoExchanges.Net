@@ -17,7 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - 6 market-data tools (no credentials required): price, ticker, order book, candles, recent trades, exchange info
   - 6 account-scoped tools (read-only API keys): balances, single balance, open orders, order history, single order details, trade history
   - Environment variable credential management for each exchange
-  - Structured `ToolResult<T>` response envelope with error categories (InvalidSymbol, BadRequest, InsufficientBalance, etc.)
+  - Structured `ToolResult<T>` response envelope with error categories (`AuthRequired`, `RateLimited`, `Connectivity`, `SymbolNotSupported`, `ExchangeUnavailable`, `BadRequest`, `BadInterval`, `ExchangeError`, `Unknown`)
   - All tools return canonical models — one agent vocabulary works identically across all venues
   - **No trading/write operations** — read-only by design
   - Count parameters (`depth`, `limit`) reject non-positive values with a `BadRequest` tool error instead of forwarding an opaque exchange error

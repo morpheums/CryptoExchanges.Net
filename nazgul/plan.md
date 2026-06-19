@@ -60,9 +60,9 @@ REUSE existing discovery — do NOT re-run.
 | TASK-036 | ✦ DONE   | 1    | Exchange brand SVG assets (7) under `docs/assets/exchanges/`       |
 | TASK-037 | ✦ DONE   | 1    | Core library docs (getting-started, library-usage, architecture, exchanges) |
 | TASK-038 | ✦ DONE   | 1    | MCP docs (mcp-server.md + mcp-clients.md, major clients)           |
-| TASK-039 | ✦ IMPLEMENTED | 2 | README rewrite (lean) — links into docs/, uses icons, status table |
+| TASK-039 | ✦ DONE   | 2    | README rewrite (lean) — links into docs/, uses icons, status table |
 
-Tasks: 3/4 DONE + 1 IMPLEMENTED (awaiting review)
+Tasks: 4/4 DONE
 
 ## Wave Groups
 
@@ -72,12 +72,12 @@ The loop orchestrator reads this section to determine parallel execution order.
 - **TASK-036**, **TASK-037**, **TASK-038** — all independent (no dependencies) and file-disjoint:
   - TASK-036 → only `docs/assets/exchanges/*.svg` (+ attribution note). ✦ DONE
   - TASK-037 → only `docs/getting-started.md`, `docs/library-usage.md`, `docs/architecture.md`, `docs/exchanges.md`. ✦ DONE
-  - TASK-038 → only `docs/mcp-server.md`, `docs/mcp-clients.md`.
+  - TASK-038 → only `docs/mcp-server.md`, `docs/mcp-clients.md`. ✦ DONE
   - No shared files → safe to run in parallel.
 
 ### Wave 2
 - **TASK-039** — README rewrite. Depends on TASK-036 (icons), TASK-037 (core docs to link),
-  and TASK-038 (MCP docs to link). Modifies only repo-root `README.md`.
+  and TASK-038 (MCP docs to link). Modifies only repo-root `README.md`. ✦ DONE
 
 ## Dependency Order
 
@@ -95,14 +95,14 @@ field points to the specific spec section it fulfills. Coverage check:
 
 - Spec §Scope-In "Assets" / curated SVG set → **TASK-036** ✦ DONE.
 - Spec §Scope-In "New public docs/ folder" (getting-started, library-usage, architecture, exchanges) → **TASK-037** ✦ DONE.
-- Spec §Scope-In "mcp-server.md" + "mcp-clients.md" (major clients) → **TASK-038**.
-- Spec §Scope-In "Lean README" (tagline+badges, 60s quick-start, exchange status table, MCP blurb, links into docs/) → **TASK-039**.
+- Spec §Scope-In "mcp-server.md" + "mcp-clients.md" (major clients) → **TASK-038** ✦ DONE.
+- Spec §Scope-In "Lean README" (tagline+badges, 60s quick-start, exchange status table, MCP blurb, links into docs/) → **TASK-039** ✦ DONE.
 
 Objective-level acceptance (verified across the task set):
-- Renders cleanly on GitHub; all internal links resolve; exchange icons display for all 7 → TASK-036 (icons) + TASK-039 (table) + TASK-037/038 (link targets).
-- README visibly leaner; accurate to shipped state; **no roadmap/strategy leakage** → TASK-039 (+ all tasks bound by the opsec constraint).
-- Per-client MCP configs correct and copy-pasteable → TASK-038.
-- Docs-only: build/test still green; no source edits → all tasks (Blast radius: docs only).
+- Renders cleanly on GitHub; all internal links resolve; exchange icons display for all 7 → TASK-036 (icons) + TASK-039 (table) + TASK-037/038 (link targets). ✦ DONE
+- README visibly leaner; accurate to shipped state; **no roadmap/strategy leakage** → TASK-039 (+ all tasks bound by the opsec constraint). ✦ DONE
+- Per-client MCP configs correct and copy-pasteable → TASK-038. ✦ DONE
+- Docs-only: build/test still green; no source edits → all tasks (Blast radius: docs only). ✦ DONE
 
 Every spec scope item maps to at least one task; nothing in Scope-Out (roadmap, source changes,
 docs-site generator, WebSockets) is planned.
@@ -120,16 +120,19 @@ docs-site generator, WebSockets) is planned.
   auto-fixed 3 trivial doc errors: "24 h"→"24h", Claude Code `--env` moved before `--` separator
   (verified vs `claude mcp add --help`), added .NET SDK prerequisite cross-link. Build green.
   Commits: e588512 + 9a2f291 + review-gate auto-fix/DONE commit.
+- **TASK-039** — README rewrite (lean). All 4 reviewers APPROVED (architect 9.5, code 10,
+  security 10, api 9.5). Simplifier removed 3 redundant phrases. No blocking findings.
+  Build green (0 errors). Tests: 50/50. Commits: 6030fa2 + c976e7d + review-gate DONE commit.
 
 ## Recovery Pointer
 
-- **Current stage**: Wave 2 complete — TASK-039 IMPLEMENTED (commit 6030fa2). Awaiting review gate.
-- **Next action**: Review gate — all 4 reviewers must APPROVE TASK-039.
-- **Active task**: TASK-039 (IMPLEMENTED, in review).
+- **Current stage**: ALL TASKS DONE — post-loop phase (documentation + release-manager agents pending).
+- **Next action**: Post-loop agents → PR to main.
+- **Active task**: none (all complete).
 - **Files are truth**: task manifests in `nazgul/tasks/TASK-036..039.md` carry full state;
   frontmatter `status:` is canonical.
 
 ─── ◈ NEXT ─────────────────────────────────────────────
-  Wave 2 — TASK-039 (README rewrite — lean, links into docs/, icons, status table)
+  Post-loop phase: documentation + release-manager agents → PR to main
   /nazgul:start to continue
 ────────────────────────────────────────────────────────

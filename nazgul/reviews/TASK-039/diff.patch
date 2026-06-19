@@ -1,8 +1,8 @@
 diff --git a/README.md b/README.md
-index 4a2efda..ce05c9a 100644
+index 4a2efda..3440225 100644
 --- a/README.md
 +++ b/README.md
-@@ -1,240 +1,84 @@
+@@ -1,240 +1,82 @@
  # CryptoExchanges.Net
  
  > **A unified .NET SDK for cryptocurrency exchanges — one interface, every exchange.**
@@ -62,7 +62,7 @@ index 4a2efda..ce05c9a 100644
 +| <img src="docs/assets/exchanges/kucoin.svg" width="20"> KuCoin | 🔝 Coming soon | — |
  
 -### Design Principles
-+REST, spot market data and account — read and write. All exchanges share one typed interface.
++REST, spot market data and account — read and write.
  
 -- **SOLID** — Interface segregation: market data, trading, and account are separate contracts
 -- **Clean Architecture** — Core abstractions have zero dependencies on exchange implementations
@@ -88,12 +88,16 @@ index 4a2efda..ce05c9a 100644
  {
 -    ApiKey = "your-api-key",
 -    SecretKey = "your-secret-key"
--});
--
++    ApiKey    = "your-api-key",
++    SecretKey = "your-secret-key",
+ });
+ 
 -var btcPrice = await exchange.MarketData.GetPriceAsync(new Symbol(Asset.Btc, Asset.Usdt));
 -Console.WriteLine($"BTC: ${btcPrice}");
--```
--
++var price = await exchange.MarketData.GetPriceAsync(new Symbol(Asset.Btc, Asset.Usdt));
++Console.WriteLine($"BTC/USDT: ${price}");
+ ```
+ 
 -### 3. Use with ASP.NET Core DI
 -
 -```csharp
@@ -146,7 +150,8 @@ index 4a2efda..ce05c9a 100644
 -```csharp
 -var ethusdt = new Symbol(Asset.Eth, Asset.Usdt);
 -var btcusdt = new Symbol(Asset.Btc, Asset.Usdt);
--
++### MCP Server (AI agents)
+ 
 -// Tickers
 -var tickers = await exchange.MarketData.GetTickersAsync(ethusdt);
 -
@@ -172,19 +177,15 @@ index 4a2efda..ce05c9a 100644
 -{
 -    Symbol = btcusdt, Side = OrderSide.Buy, Type = OrderType.Limit,
 -    Quantity = 0.001m, Price = 50000m
-+    ApiKey    = "your-api-key",
-+    SecretKey = "your-secret-key",
- });
- 
+-});
+-
 -// Cancel order
 -await exchange.Trading.CancelOrderAsync(btcusdt, order.OrderId);
 -
 -// Get open orders
 -var open = await exchange.Trading.GetOpenOrdersAsync();
-+var price = await exchange.MarketData.GetPriceAsync(new Symbol(Asset.Btc, Asset.Usdt));
-+Console.WriteLine($"BTC/USDT: ${price}");
- ```
- 
+-```
+-
 -### Account
 -```csharp
 -// Balances — balance.Asset is a typed Asset (e.g. Asset.Btc)
@@ -194,8 +195,7 @@ index 4a2efda..ce05c9a 100644
 -
 -// Balance for a single asset
 -var btc = await exchange.Account.GetBalanceAsync(Asset.Btc);
-+### MCP Server (AI agents)
- 
+-
 -// Trade history
 -var trades = await exchange.Account.GetTradeHistoryAsync(
 -    new Symbol(Asset.Btc, Asset.Usdt), limit: 100);
@@ -215,8 +215,7 @@ index 4a2efda..ce05c9a 100644
 -| OKX       | 🔜 Planned  | `CryptoExchanges.Net.Okx`        |
 -
 -## Project Structure
-+That's it — your MCP-capable agent can now query live prices, order books, candles, and account balances across all four exchanges.
- 
+-
 -```
 -CryptoExchanges.Net/
 -├── src/
@@ -231,10 +230,10 @@ index 4a2efda..ce05c9a 100644
 -│   └── BasicUsage/
 -└── docs/                                      # [planned]
 -```
-+---
++Your MCP-capable agent can now query live prices, order books, candles, and account balances across all four exchanges.
  
 -## Roadmap
-+## MCP Server
++---
  
 -- [x] Core abstractions (interfaces, models, enums)
 -- [x] Binance REST implementation
@@ -247,12 +246,12 @@ index 4a2efda..ce05c9a 100644
 -- [ ] Rate limiting middleware
 -- [ ] Caching layer
 -- [ ] Audit trail (Vigilex DNA)
++## MCP Server
+ 
+-## MCP Server (AI-Agent-Native Access)
 +`CryptoExchanges.Net.Mcp` is a **read-only** [Model Context Protocol](https://modelcontextprotocol.io) stdio server.
 +It exposes **12 tools** — six market-data tools (no credentials required) and six account tools (read-scoped API keys).
 +All four supported exchanges share the same tool vocabulary; no agent-side changes needed when switching exchanges.
- 
--## MCP Server (AI-Agent-Native Access)
-+**Read-only — no order placement or write operations.**
  
 -`CryptoExchanges.Net.Mcp` is a **read-only** [Model Context Protocol](https://modelcontextprotocol.io)
 -stdio server — install it as a global .NET tool and point any MCP-capable agent at it:
@@ -286,7 +285,7 @@ index 4a2efda..ce05c9a 100644
  
  ## Building
  
-@@ -245,6 +89,8 @@ dotnet test
+@@ -245,6 +87,8 @@ dotnet test
  
  Requires .NET 10.0 SDK.
  
@@ -295,55 +294,3 @@ index 4a2efda..ce05c9a 100644
  ## License
  
  Apache-2.0 — see [LICENSE](LICENSE).
-diff --git a/nazgul/plan.md b/nazgul/plan.md
-index 5aa602c..24a8a08 100644
---- a/nazgul/plan.md
-+++ b/nazgul/plan.md
-@@ -60,7 +60,7 @@ REUSE existing discovery — do NOT re-run.
- | TASK-036 | ✦ DONE   | 1    | Exchange brand SVG assets (7) under `docs/assets/exchanges/`       |
- | TASK-037 | ✦ DONE   | 1    | Core library docs (getting-started, library-usage, architecture, exchanges) |
- | TASK-038 | ✦ DONE   | 1    | MCP docs (mcp-server.md + mcp-clients.md, major clients)           |
--| TASK-039 | ◇ PLANNED| 2    | README rewrite (lean) — links into docs/, uses icons, status table |
-+| TASK-039 | ◆ IN_PROGRESS | 2 | README rewrite (lean) — links into docs/, uses icons, status table |
- 
- Tasks: 3/4 DONE
- 
-@@ -123,9 +123,9 @@ docs-site generator, WebSockets) is planned.
- 
- ## Recovery Pointer
- 
--- **Current stage**: Wave 1 COMPLETE — TASK-036, TASK-037, TASK-038 all DONE. Wave 2 ready.
--- **Next action**: Implement TASK-039 (README rewrite — final task, Wave 2).
--- **Active task**: none.
-+- **Current stage**: Wave 2 — TASK-039 IN_PROGRESS (final task).
-+- **Next action**: Complete README rewrite, commit, set IMPLEMENTED.
-+- **Active task**: TASK-039.
- - **Files are truth**: task manifests in `nazgul/tasks/TASK-036..039.md` carry full state;
-   frontmatter `status:` is canonical.
- 
-diff --git a/nazgul/tasks/TASK-039.md b/nazgul/tasks/TASK-039.md
-index 51effef..004a9d4 100644
---- a/nazgul/tasks/TASK-039.md
-+++ b/nazgul/tasks/TASK-039.md
-@@ -1,9 +1,9 @@
- ---
- id: TASK-039
--status: PLANNED
-+status: IN_PROGRESS
- depends_on: [TASK-036, TASK-037, TASK-038]
- commit:
--claimed_at:
-+claimed_at: 2026-06-19T13:30:00Z
- ---
- # TASK-039: README rewrite (lean) — links into docs/, uses icons, status table
- 
-@@ -17,7 +17,8 @@ claimed_at:
- - **Wave**: 2
- - **Traces to**: FEAT-003 spec §Scope-In "Lean README" (tagline+badges, 60s quick-start, supported-exchanges icon/status table, MCP blurb, links into docs/)
- - **Created at**: 2026-06-19T13:10:00Z
--- **Claimed at**:
-+- **Claimed at**: 2026-06-19T13:30:00Z
-+- **Base SHA**: 2bc2fa5
- - **Implemented at**:
- - **Completed at**:
- - **Blocked at**:

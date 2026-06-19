@@ -1,9 +1,10 @@
 ---
 id: TASK-039
-status: IMPLEMENTED
+status: DONE
 depends_on: [TASK-036, TASK-037, TASK-038]
 commit: 6030fa2
 claimed_at: 2026-06-19T13:30:00Z
+completed_at: 2026-06-19T14:00:00Z
 ---
 # TASK-039: README rewrite (lean) — links into docs/, uses icons, status table
 
@@ -20,7 +21,7 @@ claimed_at: 2026-06-19T13:30:00Z
 - **Claimed at**: 2026-06-19T13:30:00Z
 - **Base SHA**: 2bc2fa5
 - **Implemented at**: 2026-06-19T13:35:00Z
-- **Completed at**:
+- **Completed at**: 2026-06-19T14:00:00Z
 - **Blocked at**:
 - **Retry count**: 0/3
 - **Test failures**: 0
@@ -68,9 +69,9 @@ Constraints:
 - Keep the License + attribution footer.
 
 ## Acceptance Criteria
-- [ ] README is visibly leaner and scannable: tagline + badges, 60-second quick-start (install + one library call + one-line MCP install), and clear links into all six `docs/` pages — all internal links resolve on GitHub.
-- [ ] Supported-exchanges table renders the TASK-036 icons for all 7 with correct status (✅ Binance/Bybit/OKX/Bitget · 🔝 Coinbase/Kraken/KuCoin); MCP blurb links to `docs/mcp-server.md` + `docs/mcp-clients.md`.
-- [ ] No roadmap/strategy leakage (Roadmap section removed; no WebSockets/gateway/AI/monetization); facts accurate (4 REST exchanges, Apache-2.0, v0.2.0-preview.1, read-only MCP); docs-only — `dotnet build`/`dotnet test` unaffected.
+- [x] README is visibly leaner and scannable: tagline + badges, 60-second quick-start (install + one library call + one-line MCP install), and clear links into all six `docs/` pages — all internal links resolve on GitHub.
+- [x] Supported-exchanges table renders the TASK-036 icons for all 7 with correct status (✅ Binance/Bybit/OKX/Bitget · 🔝 Coinbase/Kraken/KuCoin); MCP blurb links to `docs/mcp-server.md` + `docs/mcp-clients.md`.
+- [x] No roadmap/strategy leakage (Roadmap section removed; no WebSockets/gateway/AI/monetization); facts accurate (4 REST exchanges, Apache-2.0, v0.2.0-preview.1, read-only MCP); docs-only — `dotnet build`/`dotnet test` unaffected.
 
 ## Pattern Reference
 - File to rewrite: current `README.md` (full file) — keep the tagline (lines 1–9), the accurate
@@ -110,7 +111,20 @@ Constraints:
 ## Commits
 
 - 6030fa2 — feat(FEAT-003): lean README rewrite with exchange icon table + docs links (TASK-039)
+- c976e7d — feat(FEAT-003): simplify TASK-039
 
 ## Review Results
 
 ### Attempt 1
+
+| Reviewer | Verdict | Score |
+|---|---|---|
+| architect-reviewer | APPROVED | 9.5/10 |
+| code-reviewer | APPROVED | 10/10 |
+| security-reviewer | APPROVED | 10/10 |
+| api-reviewer | APPROVED | 9.5/10 |
+
+All 4 reviewers APPROVED. Non-blocking concerns only:
+- architect: emoji `🔝` vs `🔜` (confidence 55, non-blocking)
+- code: missing using directives in snippet (confidence 70, non-blocking)
+- api: "read and write" caption proximity to MCP context (confidence 85, LOW severity, non-blocking)

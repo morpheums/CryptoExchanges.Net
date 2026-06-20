@@ -17,13 +17,14 @@
     <PackageTags>crypto;exchange;trading;sdk;binance;coinbase;bybit;bitcoin;ethereum</PackageTags>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageIcon>icon.png</PackageIcon>
-    <Version>0.3.0-preview.1</Version>
+    <Version>0.3.0-preview.2</Version>
   </PropertyGroup>
 
-  <!-- Pack the repo-root README into every library package so the NuGet listing has a description.
-       The Mcp tool bundles its own README, so it is excluded here to avoid a duplicate root entry. -->
+  <!-- NuGet does not render raw HTML in READMEs, so the rich GitHub README.md (centered banner,
+       logo table) would show as escaped text. Pack a dedicated markdown-only NUGET_README.md as the
+       package readme instead (mirrors the DeltaMapper convention). The Mcp tool keeps its own README. -->
   <ItemGroup Condition="'$(IsPackable)' != 'false' and '$(MSBuildProjectName)' != 'CryptoExchanges.Net.Mcp'">
-    <None Include="$(MSBuildThisFileDirectory)README.md" Pack="true" PackagePath="\" Visible="false" />
+    <None Include="$(MSBuildThisFileDirectory)NUGET_README.md" Pack="true" PackagePath="README.md" Visible="false" />
   </ItemGroup>
 
   <!-- Pack the shared package icon into every package (the Mcp tool included). -->

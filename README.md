@@ -6,7 +6,7 @@
 
 > **A unified .NET SDK for cryptocurrency exchanges — one typed interface across every exchange, with a read-only MCP server for AI agents.**
 
-[![NuGet](https://img.shields.io/badge/nuget-v0.3.0--preview.1-blue)](https://www.nuget.org/profiles/OrodruinLabs)
+[![NuGet](https://img.shields.io/nuget/v/CryptoExchanges.Net.DependencyInjection.svg)](https://www.nuget.org/packages/CryptoExchanges.Net.DependencyInjection)
 [![License](https://img.shields.io/badge/license-Apache--2.0-green)](LICENSE)
 [![.NET](https://img.shields.io/badge/.NET-10.0-512BD4)](https://dotnet.microsoft.com/)
 

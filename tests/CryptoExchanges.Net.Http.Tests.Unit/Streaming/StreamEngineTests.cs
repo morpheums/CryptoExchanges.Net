@@ -1,6 +1,6 @@
 using System.Collections.Concurrent;
 using System.Text;
-using FluentAssertions;
+using AwesomeAssertions;
 using Xunit;
 using CryptoExchanges.Net.Core.Streaming;
 using CryptoExchanges.Net.Http.Streaming;
@@ -129,7 +129,7 @@ public sealed class StreamEngineTests
         var sched = new BackoffSchedule(TimeSpan.FromMilliseconds(10), TimeSpan.FromMilliseconds(50), 100.0);
         // After a few calls the delay should be capped at 50 ms.
         for (var i = 0; i < 5; i++) sched.Next();
-        sched.Next().Should().BeLessOrEqualTo(TimeSpan.FromMilliseconds(60)); // allow small jitter
+        sched.Next().Should().BeLessThanOrEqualTo(TimeSpan.FromMilliseconds(60)); // allow small jitter
     }
 
     [Fact]

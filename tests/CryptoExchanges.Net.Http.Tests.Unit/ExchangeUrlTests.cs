@@ -1,5 +1,5 @@
 using Xunit;
-using FluentAssertions;
+using AwesomeAssertions;
 
 namespace CryptoExchanges.Net.Http.Tests.Unit;
 

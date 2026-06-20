@@ -1,5 +1,5 @@
 using Xunit;
-using FluentAssertions;
+using AwesomeAssertions;
 using CryptoExchanges.Net.Binance.Internal;
 
 namespace CryptoExchanges.Net.Binance.Tests.Integration;

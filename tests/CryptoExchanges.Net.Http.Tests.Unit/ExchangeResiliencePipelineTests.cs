@@ -1,6 +1,6 @@
 using System.Net;
 using Xunit;
-using FluentAssertions;
+using AwesomeAssertions;
 using CryptoExchanges.Net.Core.Exceptions;
 using CryptoExchanges.Net.Core.Interfaces;
 using CryptoExchanges.Net.Core.Resilience;

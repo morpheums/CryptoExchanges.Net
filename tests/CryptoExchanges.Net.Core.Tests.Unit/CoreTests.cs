@@ -1,6 +1,6 @@
 using CryptoExchanges.Net.Core.Interfaces;
 using CryptoExchanges.Net.Core.Models;
-using FluentAssertions;
+using AwesomeAssertions;
 using Xunit;
 
 namespace CryptoExchanges.Net.Core.Tests.Unit;

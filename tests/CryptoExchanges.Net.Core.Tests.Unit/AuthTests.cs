@@ -1,7 +1,7 @@
 using System.Security.Cryptography;
 using System.Text;
 using Xunit;
-using FluentAssertions;
+using AwesomeAssertions;
 using CryptoExchanges.Net.Core.Auth;
 
 namespace CryptoExchanges.Net.Core.Tests.Unit;

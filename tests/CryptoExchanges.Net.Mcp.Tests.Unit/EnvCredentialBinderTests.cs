@@ -1,5 +1,5 @@
 using Xunit;
-using FluentAssertions;
+using AwesomeAssertions;
 using CryptoExchanges.Net.DependencyInjection;
 using CryptoExchanges.Net.Mcp;
 

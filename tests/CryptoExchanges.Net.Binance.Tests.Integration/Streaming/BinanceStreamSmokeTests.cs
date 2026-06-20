@@ -1,6 +1,6 @@
 using System.Net.WebSockets;
 using Xunit;
-using FluentAssertions;
+using AwesomeAssertions;
 using CryptoExchanges.Net.Binance;
 using CryptoExchanges.Net.Core.Enums;
 using CryptoExchanges.Net.Core.Interfaces;

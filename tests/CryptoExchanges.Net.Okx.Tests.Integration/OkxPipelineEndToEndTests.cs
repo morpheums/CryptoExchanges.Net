@@ -1,6 +1,6 @@
 using System.Net;
 using Xunit;
-using FluentAssertions;
+using AwesomeAssertions;
 using CryptoExchanges.Net.Okx;
 using CryptoExchanges.Net.Okx.Auth;
 using CryptoExchanges.Net.Okx.Resilience;

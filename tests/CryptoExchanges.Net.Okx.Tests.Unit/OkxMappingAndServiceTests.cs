@@ -1,5 +1,5 @@
 using Xunit;
-using FluentAssertions;
+using AwesomeAssertions;
 using NSubstitute;
 using DeltaMapper;
 using Microsoft.Extensions.DependencyInjection;

@@ -1,5 +1,5 @@
 using Xunit;
-using FluentAssertions;
+using AwesomeAssertions;
 using CryptoExchanges.Net.Binance;
 using CryptoExchanges.Net.Core.Exceptions;
 using CryptoExchanges.Net.Core.Models;
@@ -119,7 +119,7 @@ public class BinanceMarketDataIntegrationTests : IAsyncLifetime
         foreach (var c in candles)
         {
             c.Open.Should().BeGreaterThan(0);
-            c.High.Should().BeGreaterOrEqualTo(c.Low);
+            c.High.Should().BeGreaterThanOrEqualTo(c.Low);
             c.Close.Should().BeGreaterThan(0);
             c.Volume.Should().BeGreaterThan(0);
         }

@@ -1,7 +1,7 @@
 using System.ComponentModel;
 using System.Reflection;
 using Xunit;
-using FluentAssertions;
+using AwesomeAssertions;
 using ModelContextProtocol.Server;
 using CryptoExchanges.Net.Mcp.Tools;
 

@@ -1,6 +1,6 @@
 using System.Net;
 using Xunit;
-using FluentAssertions;
+using AwesomeAssertions;
 using CryptoExchanges.Net.Bitget;
 using CryptoExchanges.Net.Bitget.Auth;
 using CryptoExchanges.Net.Bitget.Internal;

@@ -1,11 +1,11 @@
 ---
 id: TASK-055
-status: IMPLEMENTED
+status: DONE
 ---
 
 # TASK-055: README — convert supported-exchange package cells to NuGet badges
 
-**Status**: IMPLEMENTED
+**Status**: DONE — merged to `main` via PR #33; reviewed on GitHub.
 
 **Blast radius**: NONE (GitHub README only).
 

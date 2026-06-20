@@ -1,11 +1,11 @@
 ---
 id: TASK-052
-status: IMPLEMENTED
+status: DONE
 ---
 
 # TASK-052: Finish org rebrand — README + LICENSE attribution → Orodruin Labs
 
-**Status**: IMPLEMENTED
+**Status**: DONE — merged to `main` via PR #30; reviewed on GitHub.
 
 **Blast radius**: NONE (attribution text only; the README is packed into all NuGet listings).
 

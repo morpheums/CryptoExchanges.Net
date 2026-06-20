@@ -166,11 +166,13 @@ other exchanges, `IAsyncEnumerable`, System.Reactive) is planned.
 ## Recovery Pointer
 
 - **Current stage**: ✦ OBJECTIVE COMPLETE — **NAZGUL_COMPLETE**. FEAT-005 WebSocket streaming v1
-  shipped via PR #26 (squash `5a50a8b` on `main`); closeout bookkeeping in this branch.
-- **Next action**: none — all 9 tasks (042–050) DONE. Tag the release and delete the feature branch.
+  shipped via PR #26 (squash `5a50a8b` on `main`). All closeout bookkeeping tasks (051–055) also
+  shipped to `main` via PRs #28/#30/#31/#32/#33 and reviewed on GitHub.
+- **Next action**: none — all tasks (042–055) DONE. Objective fully closed; ready for next objective
+  (`/nazgul:plan`).
 - **Active task**: none.
-- **Files are truth**: task manifests in `nazgul/tasks/TASK-042..050.md` carry full state;
-  frontmatter `status:` is canonical (all DONE).
+- **Files are truth**: task manifests in `nazgul/tasks/TASK-042..055.md` carry full state;
+  frontmatter `status:` is canonical (all DONE). 051–055 reconciled to DONE from merged-PR evidence.
 
 ─── ◈ NEXT ─────────────────────────────────────────────
   ✦ TASK-042 — Core streaming abstractions. DONE.

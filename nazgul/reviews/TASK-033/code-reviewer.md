@@ -1,12 +1,12 @@
 ---
 verdict: APPROVE
-reviewer: api-reviewer
-task: TASK-028
+reviewer: code-reviewer
+task: TASK-033
 materialized: true
 source: github-pr-review
 ---
 
-# api-reviewer — TASK-028 (materialized review evidence)
+# code-reviewer — TASK-033 (materialized review evidence)
 
 This task was reviewed and **approved via its GitHub pull request** (M2 exchange-expansion PRs) and
 squash-merged to `main`. The local Nazgul review-gate was not run for it; this file

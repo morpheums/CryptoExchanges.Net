@@ -237,5 +237,5 @@
     "max_active_rules": 50,
     "auto_distill_post_loop": true
   },
-  "default_mode": null
+  "default_mode": "yolo"
 }

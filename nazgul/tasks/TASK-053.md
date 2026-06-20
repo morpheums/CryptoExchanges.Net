@@ -1,11 +1,11 @@
 ---
 id: TASK-053
-status: IMPLEMENTED
+status: DONE
 ---
 
 # TASK-053: NuGet listing polish — transparent icon, markdown NuGet README, badge fix (v0.3.0-preview.2)
 
-**Status**: IMPLEMENTED
+**Status**: DONE — merged to `main` via PR #31; reviewed on GitHub.
 
 **Blast radius**: LOW — packaging/docs only. No product code change. Ships as 0.3.0-preview.2
 (0.3.0-preview.1 is already public and immutable).

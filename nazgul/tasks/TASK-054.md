@@ -1,11 +1,11 @@
 ---
 id: TASK-054
-status: IMPLEMENTED
+status: DONE
 ---
 
 # TASK-054: Drop FluentAssertions (v8+ is paid) → AwesomeAssertions; remove unused Newtonsoft.Json
 
-**Status**: IMPLEMENTED
+**Status**: DONE — merged to `main` via PR #32; reviewed on GitHub.
 
 **Blast radius**: TEST-ONLY. No product code or package change.
 

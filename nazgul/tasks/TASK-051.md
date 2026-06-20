@@ -1,11 +1,11 @@
 ---
 id: TASK-051
-status: IMPLEMENTED
+status: DONE
 ---
 
 # TASK-051: NuGet publish setup — fix library packaging, version bump, release workflow
 
-**Status**: IMPLEMENTED
+**Status**: DONE — merged to `main` via PR #28; reviewed on GitHub.
 
 **Blast radius**: LOW — packaging/release config only. No product code change.
 

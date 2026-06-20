@@ -160,7 +160,7 @@ new Symbol(Asset.Btc, Asset.Usdt)
 ## DTO mapping (`DeltaMapper`)
 
 Exchange REST responses are deserialized into exchange-specific DTO types and then mapped to
-canonical `Core.Models` via [DeltaMapper](https://github.com/morpheums/DeltaMapper). Each
+canonical `Core.Models` via [DeltaMapper](https://github.com/OrodruinLabs/DeltaMapper). Each
 exchange package declares a `*MappingProfiles` class (e.g. `BinanceMappingProfiles`) that
 registers all DTO → model conversions.
 

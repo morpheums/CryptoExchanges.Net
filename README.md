@@ -1,8 +1,12 @@
+<p align="center">
+  <img src="https://raw.githubusercontent.com/OrodruinLabs/CryptoExchanges.Net/main/docs/assets/banner.png" alt="CryptoExchanges.Net — one typed .NET interface across every exchange, with a read-only MCP server for AI agents" width="100%">
+</p>
+
 # CryptoExchanges.Net
 
 > **A unified .NET SDK for cryptocurrency exchanges — one typed interface across every exchange, with a read-only MCP server for AI agents.**
 
-[![NuGet](https://img.shields.io/badge/nuget-v0.2.0--preview.1-blue)](https://www.nuget.org/)
+[![NuGet](https://img.shields.io/badge/nuget-v0.3.0--preview.1-blue)](https://www.nuget.org/profiles/OrodruinLabs)
 [![License](https://img.shields.io/badge/license-Apache--2.0-green)](LICENSE)
 [![.NET](https://img.shields.io/badge/.NET-10.0-512BD4)](https://dotnet.microsoft.com/)
 
@@ -21,6 +25,8 @@
 | <img src="docs/assets/exchanges/kucoin.svg?v=2" width="20"> KuCoin | 🕓 Coming soon | — |
 
 REST, spot market data and account — read and write.
+
+<sub>Exchange names and logos are trademarks of their respective owners. CryptoExchanges.Net is an independent open-source project and is not affiliated with, endorsed by, or sponsored by any listed exchange.</sub>
 
 ---
 
@@ -96,4 +102,4 @@ Apache-2.0 — see [LICENSE](LICENSE).
 
 ---
 
-Built by [Morpheums](https://github.com/morpheums).
+Built by [Orodruin Labs](https://github.com/OrodruinLabs).

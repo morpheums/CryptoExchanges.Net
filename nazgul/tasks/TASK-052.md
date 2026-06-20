@@ -1,6 +1,6 @@
 ---
 id: TASK-052
-status: IMPLEMENTED
+status: IN_PROGRESS
 ---
 
 # TASK-052: Finish org rebrand — README + LICENSE attribution → Orodruin Labs
@@ -17,5 +17,13 @@ status: IMPLEMENTED
 ## Acceptance
 - No `morpheums` references remain in README.md / LICENSE / docs; build unaffected; merge before tagging the release.
 
+## Brand assets
+- `icon.png` (512×512, 129 KB) — package icon (candlestick-convergence), wired via `<PackageIcon>` +
+  pack-include in `Directory.Build.props`; embedded in all 8 packages.
+- `docs/assets/banner.png` (2560×800) — README hero composited from the real exchange SVGs in
+  `docs/assets/exchanges/` on a dark Orodruin-style background; referenced via absolute raw URL so it
+  renders on both GitHub and the NuGet listing. Added a trademark/non-affiliation disclaimer.
+
 ## Commits
 - `01fc5ff` — README/LICENSE/DeltaMapper-link attribution → Orodruin Labs.
+- (brand assets) — package icon + README banner + NuGet badge bump to 0.3.0-preview.1.

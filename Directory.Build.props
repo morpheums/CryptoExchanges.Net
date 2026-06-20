@@ -16,6 +16,7 @@
     <RepositoryType>git</RepositoryType>
     <PackageTags>crypto;exchange;trading;sdk;binance;coinbase;bybit;bitcoin;ethereum</PackageTags>
     <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageIcon>icon.png</PackageIcon>
     <Version>0.3.0-preview.1</Version>
   </PropertyGroup>
 
@@ -23,5 +24,10 @@
        The Mcp tool bundles its own README, so it is excluded here to avoid a duplicate root entry. -->
   <ItemGroup Condition="'$(IsPackable)' != 'false' and '$(MSBuildProjectName)' != 'CryptoExchanges.Net.Mcp'">
     <None Include="$(MSBuildThisFileDirectory)README.md" Pack="true" PackagePath="\" Visible="false" />
+  </ItemGroup>
+
+  <!-- Pack the shared package icon into every package (the Mcp tool included). -->
+  <ItemGroup Condition="'$(IsPackable)' != 'false'">
+    <None Include="$(MSBuildThisFileDirectory)icon.png" Pack="true" PackagePath="\" Visible="false" />
   </ItemGroup>
 </Project>

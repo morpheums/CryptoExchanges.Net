@@ -16,10 +16,10 @@
 
 | Exchange | Status | Package |
 |----------|--------|---------|
-| <img src="docs/assets/exchanges/binance.svg?v=2" width="20"> Binance | ✅ Supported | `CryptoExchanges.Net.Binance` |
-| <picture><source media="(prefers-color-scheme: dark)" srcset="docs/assets/exchanges/bybit-dark.svg?v=2"><img src="docs/assets/exchanges/bybit-light.svg?v=2" width="20"></picture> Bybit | ✅ Supported | `CryptoExchanges.Net.Bybit` |
-| <picture><source media="(prefers-color-scheme: dark)" srcset="docs/assets/exchanges/okx-dark.svg?v=2"><img src="docs/assets/exchanges/okx-light.svg?v=2" width="20"></picture> OKX | ✅ Supported | `CryptoExchanges.Net.Okx` |
-| <img src="docs/assets/exchanges/bitget.svg?v=2" width="20"> Bitget | ✅ Supported | `CryptoExchanges.Net.Bitget` |
+| <img src="docs/assets/exchanges/binance.svg?v=2" width="20"> Binance | ✅ Supported | [![Binance package](https://img.shields.io/nuget/v/CryptoExchanges.Net.Binance?logo=nuget&label=CryptoExchanges.Net.Binance)](https://www.nuget.org/packages/CryptoExchanges.Net.Binance) |
+| <picture><source media="(prefers-color-scheme: dark)" srcset="docs/assets/exchanges/bybit-dark.svg?v=2"><img src="docs/assets/exchanges/bybit-light.svg?v=2" width="20"></picture> Bybit | ✅ Supported | [![Bybit package](https://img.shields.io/nuget/v/CryptoExchanges.Net.Bybit?logo=nuget&label=CryptoExchanges.Net.Bybit)](https://www.nuget.org/packages/CryptoExchanges.Net.Bybit) |
+| <picture><source media="(prefers-color-scheme: dark)" srcset="docs/assets/exchanges/okx-dark.svg?v=2"><img src="docs/assets/exchanges/okx-light.svg?v=2" width="20"></picture> OKX | ✅ Supported | [![OKX package](https://img.shields.io/nuget/v/CryptoExchanges.Net.Okx?logo=nuget&label=CryptoExchanges.Net.Okx)](https://www.nuget.org/packages/CryptoExchanges.Net.Okx) |
+| <img src="docs/assets/exchanges/bitget.svg?v=2" width="20"> Bitget | ✅ Supported | [![Bitget package](https://img.shields.io/nuget/v/CryptoExchanges.Net.Bitget?logo=nuget&label=CryptoExchanges.Net.Bitget)](https://www.nuget.org/packages/CryptoExchanges.Net.Bitget) |
 | <img src="docs/assets/exchanges/coinbase.svg?v=2" width="20"> Coinbase | 🕓 Coming soon | — |
 | <img src="docs/assets/exchanges/kraken.svg?v=2" width="20"> Kraken | 🕓 Coming soon | — |
 | <img src="docs/assets/exchanges/kucoin.svg?v=2" width="20"> KuCoin | 🕓 Coming soon | — |

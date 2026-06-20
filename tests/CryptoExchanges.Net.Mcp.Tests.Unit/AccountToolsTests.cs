@@ -1,5 +1,5 @@
 using Xunit;
-using FluentAssertions;
+using AwesomeAssertions;
 using NSubstitute;
 using CryptoExchanges.Net.Core.Enums;
 using CryptoExchanges.Net.Core.Exceptions;

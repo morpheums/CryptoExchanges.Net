@@ -1,7 +1,7 @@
 using System.Net.WebSockets;
 using System.Reflection;
 using System.Text;
-using FluentAssertions;
+using AwesomeAssertions;
 using Xunit;
 using CryptoExchanges.Net.Http.Streaming;
 

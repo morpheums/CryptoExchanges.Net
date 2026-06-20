@@ -1,6 +1,6 @@
 using System.Text.Json;
 using Xunit;
-using FluentAssertions;
+using AwesomeAssertions;
 using CryptoExchanges.Net.Core.Models;
 
 namespace CryptoExchanges.Net.Core.Tests.Unit;

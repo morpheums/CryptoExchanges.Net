@@ -1,7 +1,7 @@
 using System.Text;
 using System.Text.Json;
 using Xunit;
-using FluentAssertions;
+using AwesomeAssertions;
 using CryptoExchanges.Net.Binance;
 using CryptoExchanges.Net.Binance.Streaming;
 using CryptoExchanges.Net.Http.Streaming;

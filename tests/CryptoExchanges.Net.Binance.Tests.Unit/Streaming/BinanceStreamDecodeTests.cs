@@ -1,6 +1,6 @@
 using System.Text;
 using Xunit;
-using FluentAssertions;
+using AwesomeAssertions;
 using DeltaMapper;
 using CryptoExchanges.Net.Binance;
 using CryptoExchanges.Net.Binance.Internal;

@@ -1,6 +1,6 @@
 using System.Net;
 using Xunit;
-using FluentAssertions;
+using AwesomeAssertions;
 using CryptoExchanges.Net.Bybit;
 using CryptoExchanges.Net.Bybit.Auth;
 using CryptoExchanges.Net.Bybit.Resilience;

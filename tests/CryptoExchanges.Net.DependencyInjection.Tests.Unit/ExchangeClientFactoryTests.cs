@@ -1,6 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
-using FluentAssertions;
+using AwesomeAssertions;
 using CryptoExchanges.Net.Binance;
 using CryptoExchanges.Net.Core.Enums;
 using CryptoExchanges.Net.Core.Exceptions;

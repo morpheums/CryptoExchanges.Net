@@ -1,6 +1,6 @@
 using System.Net;
 using Xunit;
-using FluentAssertions;
+using AwesomeAssertions;
 using CryptoExchanges.Net.Binance.Auth;
 using CryptoExchanges.Net.Binance.Resilience;
 

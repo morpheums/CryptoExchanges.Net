@@ -1,6 +1,6 @@
 using CryptoExchanges.Net.Core.Models;
 using CryptoExchanges.Net.Core.Streaming;
-using FluentAssertions;
+using AwesomeAssertions;
 using Xunit;
 
 namespace CryptoExchanges.Net.Core.Tests.Unit.Streaming;

@@ -1,6 +1,6 @@
 ---
 id: TASK-052
-status: IN_PROGRESS
+status: IMPLEMENTED
 ---
 
 # TASK-052: Finish org rebrand — README + LICENSE attribution → Orodruin Labs
@@ -26,4 +26,4 @@ status: IN_PROGRESS
 
 ## Commits
 - `01fc5ff` — README/LICENSE/DeltaMapper-link attribution → Orodruin Labs.
-- (brand assets) — package icon + README banner + NuGet badge bump to 0.3.0-preview.1.
+- `ac4e6f7` — package icon + README banner + NuGet badge bump to 0.3.0-preview.1.

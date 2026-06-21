@@ -1,1232 +1,3 @@
-diff --git a/nazgul/plan.md b/nazgul/plan.md
-index fff953e..4192407 100644
---- a/nazgul/plan.md
-+++ b/nazgul/plan.md
-@@ -56,7 +56,7 @@ Authoritative inputs (read fully before any task):
- |----------|------------|------|------------------------------------------------------------------------------|
- | TASK-056 | ✦ DONE     | 1    | Scaffold `CryptoExchanges.Net.Kucoin` + Unit/Integration test projects (OKX clone) |
- | TASK-061 | ✦ DONE     | 1    | ADR-002 streaming endpoint seam → async `ResolveConnectionAsync` + migrate Binance |
--| TASK-057 | ◇ READY    | 2    | KC-API passphrase-v2 signing service + mark-and-strip signing handler        |
-+| TASK-057 | ✦ IMPL     | 2    | KC-API passphrase-v2 signing service + mark-and-strip signing handler        |
- | TASK-058 | ◇ READY    | 2    | Bespoke `ISymbolMapper` + REST wire DTOs + DeltaMapper profiles + parsers    |
- | TASK-059 | ◇ PLANNED  | 3    | REST services (market/account/trading) + http client + composer + entry     |
- | TASK-060 | ◇ PLANNED  | 4    | `AddKucoinExchange` DI + `AddCryptoExchanges` + MCP wiring                   |
-@@ -134,17 +134,17 @@ Nothing in PRD "Out of Scope" (futures/margin, private streams, order-book maint
- 
- ## Recovery Pointer
- 
--- **Current stage**: ◆ TASK-057 IN_PROGRESS — implementing KC-API passphrase-v2 signing service + mark-and-strip handler.
--- **Next action**: Complete implementation of KucoinSignatureService, KucoinSigningHandler, KucoinSigningRequest, KucoinErrorTranslator + tests.
--- **Active task**: TASK-057 (base SHA 9da0981).
-+- **Current stage**: ⚠ TASK-057 CHANGES_REQUESTED (retry 1/3) — review board 2/4 approved (security, code); 2/4 CHANGES_REQUESTED (architect, api-reviewer). Blocking: `KucoinSigningHandler` takes concrete `KucoinSignatureService` instead of `IKucoinSignatureService` interface (DIP violation). Fix: add `IKucoinSignatureService : ISignatureService` in `Auth/`, implement it in `KucoinSignatureService`, update handler constructor type.
-+- **Next action**: Implementer fixes TASK-057 — CREATE `Auth/IKucoinSignatureService.cs`; EDIT `KucoinSignatureService.cs:12`; EDIT `KucoinSigningHandler.cs:21`; update test `BuildHandler` helper. Re-run review gate.
-+- **Active task**: TASK-057 (CHANGES_REQUESTED).
- - **Files are truth**: the task manifests under `nazgul/tasks/` carry full state; each manifest's
-   frontmatter is the canonical record.
- 
- ─── ◈ NEXT ─────────────────────────────────────────────
-   ✦ TASK-056 — Scaffold complete; DONE (reviewed 4/4, commit 2b9c308).
-   ✦ TASK-061 — ADR-002 seam generalization DONE (reviewed 4/4, commit f04dfc4).
--  ◆ TASK-057 — KC-API passphrase-v2 signing service + handler (Wave 2, READY — 056 unblocked).
--  ◆ TASK-058 — Symbol mapper + DTOs + DeltaMapper profiles (Wave 2, READY — 056 unblocked).
-+  ⚠ TASK-057 — CHANGES_REQUESTED (retry 1/3). Fix: IKucoinSignatureService interface.
-+  ◇ TASK-058 — Symbol mapper + DTOs + DeltaMapper profiles (Wave 2, READY — 056 unblocked).
- ────────────────────────────────────────────────────────
- 
- ## Completed
-diff --git a/nazgul/reviews/TASK-057/api-reviewer.md b/nazgul/reviews/TASK-057/api-reviewer.md
-new file mode 100644
-index 0000000..d58778e
---- /dev/null
-+++ b/nazgul/reviews/TASK-057/api-reviewer.md
-@@ -0,0 +1,89 @@
-+---
-+verdict: CHANGES_REQUESTED
-+---
-+# API Review — TASK-057
-+
-+## Verdict
-+CHANGES_REQUESTED
-+
-+## Summary
-+All four new source types are correctly `internal`, and both interfaces are correctly implemented. One blocking issue: `KucoinSigningHandler` takes `KucoinSignatureService` (the concrete type) as its `signatureService` parameter instead of `ISignatureService`, deviating from the established OKX, Bybit, and Bitget pattern and coupling the handler to the concrete class. This needs to be resolved before merging.
-+
-+## API Surface Check
-+- [x] All types are internal (no public leakage): PASS
-+- [x] ISignatureService implemented correctly: PASS
-+- [x] IExchangeErrorTranslator implemented correctly: PASS
-+- [x] Static method signatures clean: PASS
-+- [x] Namespace consistency: PASS
-+- [ ] Constructor parameter types consistent with OKX pattern: FAIL — `KucoinSigningHandler` takes `KucoinSignatureService` not `ISignatureService`
-+
-+## Findings
-+
-+### Finding: KucoinSigningHandler takes concrete `KucoinSignatureService` instead of `ISignatureService`
-+- **Severity**: MEDIUM
-+- **Confidence**: 95
-+- **File**: `src/CryptoExchanges.Net.Kucoin/Resilience/KucoinSigningHandler.cs:209-210`
-+- **Category**: API Design
-+- **Verdict**: REJECT (blocking)
-+- **Issue**: The handler's primary constructor parameter is typed as `KucoinSignatureService signatureService` rather than `ISignatureService signatureService`. Every other exchange signing handler (`OkxSigningHandler`, `BybitSigningHandler`, `BitgetSigningHandler`) uses `ISignatureService` for this parameter. This introduces a concrete-type dependency that prevents substitution (e.g. in unit tests with a mock or stub) and deviates from the established pattern without a justifying comment.
-+- **Root cause**: `KucoinSignatureService` carries an additional method `SignPassphrase(string)` that is not on `ISignatureService`. The handler calls `signatureService.SignPassphrase(passphrase)` at line 258, which forces the concrete type to be visible at the call site.
-+- **Fix**: Extend `ISignatureService` with a default interface method (DIM) `SignPassphrase` that throws `NotSupportedException` (keeping it non-breaking for existing implementors), then use `ISignatureService` in the constructor. Alternatively — and more conservatively — define a narrower `IPassphraseSignatureService : ISignatureService` that adds `SignPassphrase(string passphrase)`, have `KucoinSignatureService` implement it, and type the handler parameter as `IPassphraseSignatureService`. Either approach restores interface-based injection while accommodating the KuCoin-specific passphrase signing requirement.
-+- **Pattern reference**: `src/CryptoExchanges.Net.Okx/Resilience/OkxSigningHandler.cs:19` — `ISignatureService signatureService`; `src/CryptoExchanges.Net.Bitget/Resilience/BitgetSigningHandler.cs:19` — `ISignatureService signatureService`
-+
-+---
-+
-+### Finding: `SignPassphrase` is a KuCoin-specific method that extends beyond `ISignatureService` with no interface contract
-+- **Severity**: LOW
-+- **Confidence**: 85
-+- **File**: `src/CryptoExchanges.Net.Kucoin/Auth/KucoinSignatureService.cs:35-39`
-+- **Category**: API Design
-+- **Verdict**: CONCERN (non-blocking on its own; resolved by the REJECT fix above)
-+- **Issue**: `SignPassphrase` is a KuCoin-specific capability that has no home on `ISignatureService`. This is by design (OKX, Bybit, Bitget do not need it), but leaving it as an uncontracted method on the concrete class means the handler is implicitly unable to use the abstraction layer. The method itself is well-formed and correctly validated.
-+- **Fix**: Address via the interface strategy described in the REJECT finding above (DIM or a new narrower interface).
-+
-+---
-+
-+### Finding: `ISignatureService.Sign` parameter name mismatch — minor doc inconsistency
-+- **Severity**: LOW
-+- **Confidence**: 70
-+- **File**: `src/CryptoExchanges.Net.Kucoin/Auth/KucoinSignatureService.cs:23`
-+- **Category**: API Design
-+- **Verdict**: CONCERN (non-blocking)
-+- **Issue**: The interface defines `string Sign(string payload)` but the implementation's `<inheritdoc/>` inherits from a method named `Sign(string prehash)`. The parameter name `prehash` vs `payload` is not a compile error and not visible to callers since this is `internal`, but it is a minor doc inconsistency that is visible in VS tooling when browsing the inherited documentation. OKX also names the parameter `prehash` — so this is consistent within the exchange implementations but inconsistent with the interface declaration.
-+- **Fix**: Rename the local parameter to `payload` to match the interface definition, or update the interface. Low priority.
-+
-+---
-+
-+### Finding: `public static` methods on `internal` classes — pattern is consistent, no leakage
-+- **Severity**: INFO
-+- **Confidence**: 99
-+- **File**: `src/CryptoExchanges.Net.Kucoin/Auth/KucoinSignatureService.cs:59,75`; `src/CryptoExchanges.Net.Kucoin/Resilience/KucoinSigningRequest.cs:289,296`
-+- **Category**: API Design
-+- **Verdict**: PASS
-+- **Issue**: None. `public static` on an `internal` type is the correct C# pattern: the accessibility of a member is bounded by the accessibility of its declaring type, so these are effectively `internal static`. Consistent with `OkxSignatureService`, `OkxSigningRequest`, and `BitgetSignatureService`.
-+
-+---
-+
-+### Finding: `KucoinErrorTranslator.Translate` — `ArgumentNullException.ThrowIfNull(response)` guards `response` but not `body`
-+- **Severity**: LOW
-+- **Confidence**: 75
-+- **File**: `src/CryptoExchanges.Net.Kucoin/Resilience/KucoinErrorTranslator.cs:109-111`
-+- **Category**: API Design
-+- **Verdict**: CONCERN (non-blocking)
-+- **Issue**: `body` is not explicitly null-guarded before `Parse(body)`. `Parse` handles `string.IsNullOrWhiteSpace(body)` which returns `(null, null)` for null input, so no exception surfaces at runtime. However the interface contract `Translate(HttpResponseMessage response, string body)` implies `body` is a non-null `string`. The OKX counterpart has the same omission. Low risk but minor inconsistency with the guard style used elsewhere in this task (`ArgumentNullException.ThrowIfNull` is used throughout).
-+- **Fix**: Add `ArgumentNullException.ThrowIfNull(body);` after the `response` guard, or explicitly note in the method comment that null body is treated as empty. Low priority.
-+
-+---
-+
-+## Summary Table
-+
-+| Item | Result | Note |
-+|---|---|---|
-+| All source types are `internal` | PASS | `KucoinSignatureService`, `KucoinSigningHandler`, `KucoinSigningRequest`, `KucoinErrorTranslator` are all `internal sealed` |
-+| `ISignatureService` correctly implemented | PASS | `Sign(string)` member present and returns `string`; `KucoinSignatureService` also adds `SignPassphrase` |
-+| `IExchangeErrorTranslator` correctly implemented | PASS | `Translate(HttpResponseMessage, string)` signature matches interface |
-+| `BuildPrehash` / `FormatTimestamp` static signatures | PASS | Same shape as OKX counterparts; `FormatTimestamp` correctly uses Unix-ms not ISO-8601 |
-+| Namespace consistency | PASS | `Auth/` → `CryptoExchanges.Net.Kucoin.Auth`; `Resilience/` → `CryptoExchanges.Net.Kucoin.Resilience` — matches OKX/Bybit/Bitget layout |
-+| `KucoinSigningRequest` pattern | PASS | `MarkSigned`/`IsSigned` signatures and option key naming (`"kucoin.signed"`) match `OkxSigningRequest` pattern |
-+| Handler constructor parameter type | REJECT | `KucoinSignatureService` (concrete) used instead of `ISignatureService` (interface); see blocking finding above |
-+| LR-004 compliance (array null+length guards) | N/A | No array parameters in these files |
-diff --git a/nazgul/reviews/TASK-057/architect-reviewer.md b/nazgul/reviews/TASK-057/architect-reviewer.md
-new file mode 100644
-index 0000000..2765ee4
---- /dev/null
-+++ b/nazgul/reviews/TASK-057/architect-reviewer.md
-@@ -0,0 +1,70 @@
-+---
-+verdict: CHANGES_REQUESTED
-+---
-+# Architect Review — TASK-057
-+
-+## Verdict
-+CHANGES_REQUESTED
-+
-+## Summary
-+The KuCoin signing infrastructure is functionally correct and the mark-and-strip DelegatingHandler pattern is faithfully replicated from OKX. However, `KucoinSigningHandler` accepts `KucoinSignatureService` (the concrete class) rather than `ISignatureService` (the interface), breaking the DIP mandate (Architectural Rule #11) that all other exchange signing handlers follow. Because `SignPassphrase()` does not exist on `ISignatureService`, the fix is to introduce a narrow `IKucoinSignatureService : ISignatureService` interface that adds `SignPassphrase(string)`.
-+
-+---
-+
-+## Findings
-+
-+### Finding: KucoinSigningHandler takes concrete KucoinSignatureService instead of an interface
-+- **Severity**: MEDIUM
-+- **Confidence**: 95
-+- **File**: `src/CryptoExchanges.Net.Kucoin/Resilience/KucoinSigningHandler.cs:21`
-+- **Category**: Architecture (DIP — Invariant #11)
-+- **Verdict**: REJECT (blocking — confidence 95, severity MEDIUM)
-+- **Issue**: The handler constructor declares `KucoinSignatureService signatureService` (concrete). Every other exchange signing handler (OKX, Bybit, Bitget, Binance) uses `ISignatureService signatureService` (interface). The concrete binding bakes the implementation into the handler, makes the handler untestable via a mock implementing `SignPassphrase`, and violates the maintainer's 2026-06-18 DIP mandate: "Any type representing behavior the maintainer might swap … must be an interface resolved via DI, not a static class / concrete type that bakes the implementation in."
-+- **Fix**: Introduce `internal interface IKucoinSignatureService : ISignatureService` in `Auth/` with the additional `string SignPassphrase(string passphrase)` method. Have `KucoinSignatureService` implement that interface. Change the `KucoinSigningHandler` constructor parameter from `KucoinSignatureService` to `IKucoinSignatureService`. Update the test `BuildHandler` helper accordingly.
-+- **Pattern reference**: `src/CryptoExchanges.Net.Okx/Resilience/OkxSigningHandler.cs:19` — `ISignatureService signatureService`; `src/CryptoExchanges.Net.Bybit/Resilience/BybitSigningHandler.cs:19` — same; `src/CryptoExchanges.Net.Bitget/Resilience/BitgetSigningHandler.cs:19` — same.
-+
-+---
-+
-+## Layering Check
-+
-+**CLEAN — K1 invariant is not violated.**
-+
-+- `CryptoExchanges.Net.Core` has no reference to KuCoin (only the pre-existing `ExchangeId.Kucoin` enum value, which is a scalar — not a type dependency).
-+- `CryptoExchanges.Net.Http` has no reference to KuCoin (one code comment in `StreamConnectionInfo.cs` is the only occurrence, not a using/reference).
-+- `KucoinSignatureService` imports only `CryptoExchanges.Net.Core.Auth`.
-+- `KucoinSigningHandler` imports `CryptoExchanges.Net.Core.Auth` and `CryptoExchanges.Net.Kucoin.Auth` — both correct.
-+- `KucoinErrorTranslator` imports `CryptoExchanges.Net.Core.Exceptions` and `CryptoExchanges.Net.Http` (for `RetryAfterReader`) — both correct within the Core → Http → Exchange chain.
-+- `KucoinSigningRequest` has no external imports — correct.
-+- The `CryptoExchanges.Net.Kucoin.csproj` `<ProjectReference>` nodes are `Core` and `Http` only — correct.
-+
-+---
-+
-+## Pattern Parity
-+
-+| Aspect | OKX (reference) | KuCoin (this diff) | Match? |
-+|---|---|---|---|
-+| Handler base class | `DelegatingHandler` | `DelegatingHandler` | YES |
-+| `internal sealed` | Yes | Yes | YES |
-+| `SendAsync` override | `protected override async Task<HttpResponseMessage>` | Identical | YES |
-+| Unsigned pass-through | `if (!IsSigned) → base.SendAsync immediately` | Identical | YES |
-+| Per-attempt timestamp | Fresh `DateTimeOffset.UtcNow.AddMilliseconds(timeOffset())` in `ResignAsync` | Identical | YES |
-+| Strip-then-add headers | Remove all auth headers before re-adding | Strips all 5 KC-API-* headers before re-adding | YES |
-+| Request options marker | `HttpRequestOptionsKey<bool>("okx.signed")` | `HttpRequestOptionsKey<bool>("kucoin.signed")` | YES |
-+| Marker class name | `OkxSigningRequest` (internal static) | `KucoinSigningRequest` (internal static) | YES |
-+| File layout | `Auth/` for service, `Resilience/` for handler/marker/translator | Same | YES |
-+| Signature service type in handler | `ISignatureService` (interface) | `KucoinSignatureService` (concrete) | **DEVIATION** |
-+| POST body reading | `ReadAsStringAsync` on POST/PUT | Identical | YES |
-+| `ConfigureAwait(false)` | Present throughout | Present throughout | YES |
-+| Passphrase handling | Raw passphrase placed on header directly | HMAC-signed via `SignPassphrase` (KuCoin-specific passphrase-v2) | Justified exchange difference |
-+
-+**One deviation identified**: the signature service constructor parameter is the concrete class, not an interface. All other exchanges pass `ISignatureService`. This is the blocking finding above.
-+
-+**Timestamp format deviation is correct**: KuCoin uses Unix epoch milliseconds (`FormatTimestamp` returns numeric string), not ISO-8601 as OKX does. This is a genuine KuCoin API requirement and is correctly implemented.
-+
-+**Five vs. four headers**: KuCoin requires an extra `KC-API-KEY-VERSION: 2` header that OKX does not have. The implementation strips and re-adds all five headers in the retry path — correct.
-+
-+---
-+
-+## Build & Test
-+- `dotnet build` (Release): **0 warnings, 0 errors**
-+- `dotnet test`: **44/44 tests pass** (KuCoinSigningTests: 40 new tests; ScaffoldSmokeTests: 5 existing)
-diff --git a/nazgul/reviews/TASK-057/code-reviewer.md b/nazgul/reviews/TASK-057/code-reviewer.md
-new file mode 100644
-index 0000000..9fa6ded
---- /dev/null
-+++ b/nazgul/reviews/TASK-057/code-reviewer.md
-@@ -0,0 +1,60 @@
-+---
-+verdict: APPROVE
-+---
-+# Code Review — TASK-057
-+
-+## Verdict
-+APPROVE
-+
-+## Summary
-+The KuCoin KC-API passphrase-v2 signing service, mark-and-strip handler, signing request marker, error translator, and unit tests are all correct, clean, and consistent with the OKX reference pattern. Build is clean (0 warnings, 0 errors with `TreatWarningsAsErrors=true`). All 44 tests pass.
-+
-+## Findings
-+
-+### Finding: `KucoinSigningHandler` takes concrete `KucoinSignatureService`, not `ISignatureService`
-+- **Severity**: LOW
-+- **Confidence**: 65
-+- **File**: `src/CryptoExchanges.Net.Kucoin/Resilience/KucoinSigningHandler.cs:21`
-+- **Category**: Code Quality
-+- **Verdict**: PASS (non-blocking, confidence < 80)
-+- **Issue**: The OKX analogue (`OkxSigningHandler`) accepts `ISignatureService`. `KucoinSigningHandler` must accept the concrete type because `SignPassphrase` is not on `ISignatureService`. This is the correct design given the KuCoin-specific passphrase-v2 contract. The security reviewer also noted this as INFO. No change needed — the constraint is real.
-+- **Fix**: N/A — justified by the exchange-specific passphrase signing requirement.
-+- **Pattern reference**: `src/CryptoExchanges.Net.Okx/Resilience/OkxSigningHandler.cs:19`
-+
-+### Finding: `<remarks>` block on `KucoinErrorTranslator`
-+- **Severity**: LOW
-+- **Confidence**: 55
-+- **File**: `src/CryptoExchanges.Net.Kucoin/Resilience/KucoinErrorTranslator.cs:12-16`
-+- **Category**: Style
-+- **Verdict**: PASS (non-blocking)
-+- **Issue**: The `<remarks>` block adds implementation rationale ("Internal per ADR-001..."). The LEAN mandate says `<remarks>` essays are a reviewable defect, but `OkxErrorTranslator` carries an identical `<remarks>` block (same pattern, already in the codebase). This is a pre-existing pattern, not introduced here. Confidence is low that this specific instance violates the mandate given the precedent.
-+- **Fix**: No change required given the established pattern.
-+- **Pattern reference**: `src/CryptoExchanges.Net.Okx/Resilience/OkxErrorTranslator.cs:13-17`
-+
-+### Finding: Banner separators in test file (`// ── ... ──`)
-+- **Severity**: LOW
-+- **Confidence**: 40
-+- **File**: `tests/CryptoExchanges.Net.Kucoin.Tests.Unit/KucoinSigningTests.cs:18,62,109,148,165,291`
-+- **Category**: Style
-+- **Verdict**: PASS (non-blocking)
-+- **Issue**: The code convention says "No banner separators." However, these section separators are present in every other test file in the codebase (`BybitSigningTests.cs`, `OkxSigningTests.cs`, `CoreTests.cs`, etc.) and appear to be an established team norm specifically in test files for navigability. Not a new introduction.
-+- **Fix**: No change required — consistent with existing test files.
-+- **Pattern reference**: `tests/CryptoExchanges.Net.Bybit.Tests.Unit/BybitSigningTests.cs:21`
-+
-+### Finding: `Handler_MissingApiKey_Throws` / `Handler_MissingPassphrase_Throws` — `request.Dispose()` after `Assert.ThrowsAsync`
-+- **Severity**: LOW
-+- **Confidence**: 50
-+- **File**: `tests/CryptoExchanges.Net.Kucoin.Tests.Unit/KucoinSigningTests.cs:576-596`
-+- **Category**: Style
-+- **Verdict**: PASS (non-blocking)
-+- **Issue**: In these two tests `request` is not inside a `using` declaration — instead `request.Dispose()` is called manually at the end of the test body. This works correctly (the exception path means `SendAsync` never completes normally so the request object is still accessible), but it is inconsistent with all other tests in the file and codebase which use `using var`. The `HttpClient.SendAsync` wraps the exception in an `HttpRequestException`, so `Assert.ThrowsAsync<InvalidOperationException>` actually throws — meaning `request.Dispose()` is still reached because `Assert.ThrowsAsync` catches it. However, the style divergence is minor.
-+- **Fix**: Consider `using var request = ...` with a try/finally, or restructure with `using var` and let the test framework handle disposal after the fact. Non-blocking.
-+
-+## Convention Checklist
-+- [x] One type per file: PASS — each file contains exactly one top-level type
-+- [x] `internal sealed`: PASS — all four production types are `internal sealed`
-+- [x] XML docs: PASS — `<summary>/<param>/<returns>/<exception>` present on all public/internal methods; `<inheritdoc/>` on `Sign`, `Translate`, `SendAsync` (interface members)
-+- [x] Argument guards (LR-001): PASS — `ThrowIfNullOrWhiteSpace` on all non-optional string params (`timestamp`, `method`, `requestPath`, `passphrase`, `secretKey`); `ThrowIfNull` on `body` (empty-ok), `request`, `response`; runtime guard on `apiKey`/`passphrase` inside `ResignAsync` is intentional lazy validation for the no-credentials path
-+- [x] Test coverage (LR-005): PASS — 44 tests covering `Sign`, `SignPassphrase`, `BuildPrehash`, `FormatTimestamp`, `KucoinSigningRequest`, `KucoinSigningHandler`, and `KucoinErrorTranslator`, all with golden values
-+- [x] AwesomeAssertions used: PASS — `using AwesomeAssertions;` and `.Should()` throughout; no FluentAssertions
-+- [x] LEAN comments: PASS — comments explain non-obvious reasoning (prehash byte-for-byte consistency, passphrase-v2 signing rationale, mark-and-strip behavior); no code-restating comments
-diff --git a/nazgul/reviews/TASK-057/consolidated-feedback.md b/nazgul/reviews/TASK-057/consolidated-feedback.md
-new file mode 100644
-index 0000000..663d485
---- /dev/null
-+++ b/nazgul/reviews/TASK-057/consolidated-feedback.md
-@@ -0,0 +1,130 @@
-+# Consolidated Review Feedback: TASK-057
-+
-+## Summary
-+- **Verdict**: CHANGES_REQUESTED
-+- **Total findings**: 10 (7 unique after deduplication)
-+- **Blocking**: 1 finding requiring fix
-+- **Non-blocking**: 6 concerns for awareness
-+- **Reviewers**: 4/4 submitted
-+- **Missing reviewers**: none
-+
-+---
-+
-+## Blocking Issues (MUST FIX)
-+
-+### 1. KucoinSigningHandler takes concrete KucoinSignatureService instead of IKucoinSignatureService (Architecture / DIP)
-+- **Severity**: MEDIUM | **Confidence**: 95/100
-+- **Flagged by**: architect-reviewer (REJECT), api-reviewer (REJECT)
-+- **File(s)**: `src/CryptoExchanges.Net.Kucoin/Resilience/KucoinSigningHandler.cs:21`
-+- **Issue**: The handler's primary constructor parameter is typed as `KucoinSignatureService signatureService` (the concrete class). Every other exchange signing handler (`OkxSigningHandler`, `BybitSigningHandler`, `BitgetSigningHandler`) uses `ISignatureService signatureService`. This breaks the DIP mandate (Architectural Rule #11). The concrete binding also makes the handler untestable with a mock `SignPassphrase` double. Root cause: `SignPassphrase(string)` is not on `ISignatureService`, so the concrete type was used as a workaround.
-+- **Fix**: 3 small file changes:
-+  1. **CREATE** `src/CryptoExchanges.Net.Kucoin/Auth/IKucoinSignatureService.cs` — a narrow internal interface extending `ISignatureService` with the passphrase method:
-+     ```csharp
-+     using CryptoExchanges.Net.Core.Auth;
-+
-+     namespace CryptoExchanges.Net.Kucoin.Auth;
-+
-+     /// <summary>
-+     /// Extends <see cref="ISignatureService"/> with the KuCoin passphrase-v2 signing capability.
-+     /// </summary>
-+     internal interface IKucoinSignatureService : ISignatureService
-+     {
-+         /// <summary>Signs <paramref name="passphrase"/> with HMAC-SHA256 and returns it base64-encoded.</summary>
-+         string SignPassphrase(string passphrase);
-+     }
-+     ```
-+  2. **EDIT** `src/CryptoExchanges.Net.Kucoin/Auth/KucoinSignatureService.cs:12` — add `IKucoinSignatureService` to the implements list:
-+     Change `internal sealed class KucoinSignatureService(string secretKey) : ISignatureService`
-+     to `internal sealed class KucoinSignatureService(string secretKey) : IKucoinSignatureService`
-+  3. **EDIT** `src/CryptoExchanges.Net.Kucoin/Resilience/KucoinSigningHandler.cs:21` — change the constructor parameter type from `KucoinSignatureService` to `IKucoinSignatureService`. Also update the `<param>` XML doc on line 18 to reference `IKucoinSignatureService`. Update the test helper `BuildHandler` at `tests/CryptoExchanges.Net.Kucoin.Tests.Unit/KucoinSigningTests.cs:167-177` to declare `var svc` as `IKucoinSignatureService svc = new KucoinSignatureService(secret);` (or keep as-is — the var binding works since `KucoinSignatureService` still satisfies the interface; the `new KucoinSigningHandler(...)` call may need no change since `KucoinSignatureService` implements `IKucoinSignatureService`).
-+- **Pattern reference**: `src/CryptoExchanges.Net.Okx/Resilience/OkxSigningHandler.cs:19` — `ISignatureService signatureService`; `src/CryptoExchanges.Net.Core/Auth/ISignatureService.cs:4` — the base interface shape to extend.
-+
-+---
-+
-+## Non-Blocking Concerns (AWARENESS ONLY)
-+
-+### 1. SignPassphrase has no interface contract on ISignatureService (design)
-+- **Severity**: LOW | **Confidence**: 85/100
-+- **Flagged by**: api-reviewer
-+- **File(s)**: `src/CryptoExchanges.Net.Kucoin/Auth/KucoinSignatureService.cs:29-33`
-+- **Concern**: `SignPassphrase` is a KuCoin-specific capability with no home on `ISignatureService`. Addressed fully by the blocking fix (the new `IKucoinSignatureService` gives it an interface home). No separate action needed beyond implementing the blocking fix.
-+- **Suggestion**: Resolved by Blocking Issue #1.
-+
-+### 2. ISignatureService.Sign parameter name mismatch in KucoinSignatureService (doc inconsistency)
-+- **Severity**: LOW | **Confidence**: 70/100
-+- **Flagged by**: api-reviewer
-+- **File(s)**: `src/CryptoExchanges.Net.Kucoin/Auth/KucoinSignatureService.cs:17`
-+- **Concern**: The interface defines `string Sign(string payload)` but the implementation's `<inheritdoc/>` inherits from a `Sign(string prehash)` — the parameter is named `prehash` rather than `payload`. Not a compile error (internal type), but VS tooling shows the mismatch when browsing inherited docs. OKX has the same deviation, so this is consistent within exchange implementations.
-+- **Suggestion**: Consider renaming the local implementation parameter to `payload` to match the interface definition, or updating the `ISignatureService` interface's parameter name to `prehash`. Low priority.
-+
-+### 3. KucoinErrorTranslator.Translate — body parameter not explicitly null-guarded (guard style)
-+- **Severity**: LOW | **Confidence**: 75/100
-+- **Flagged by**: api-reviewer
-+- **File(s)**: `src/CryptoExchanges.Net.Kucoin/Resilience/KucoinErrorTranslator.cs` (Translate method, after the `response` guard)
-+- **Concern**: `body` is not explicitly null-guarded before `Parse(body)`. Practically safe because `Parse` handles null via `string.IsNullOrWhiteSpace(body)` returning `(null, null)`. However, the method contract implies a non-null `string body`, and `ArgumentNullException.ThrowIfNull` is used throughout the rest of this task. OKX counterpart has the same omission.
-+- **Suggestion**: Add `ArgumentNullException.ThrowIfNull(body);` after the `response` guard for guard-style consistency.
-+
-+### 4. remarks block on KucoinErrorTranslator (LEAN comment mandate)
-+- **Severity**: LOW | **Confidence**: 55/100
-+- **Flagged by**: code-reviewer
-+- **File(s)**: `src/CryptoExchanges.Net.Kucoin/Resilience/KucoinErrorTranslator.cs:12-16`
-+- **Concern**: The `<remarks>` block adds implementation rationale. The LEAN mandate discourages `<remarks>` essays. However, `OkxErrorTranslator` carries an identical block — this is a pre-existing pattern, not introduced here. Confidence below threshold.
-+- **Suggestion**: No change required given the established pattern.
-+
-+### 5. Banner separators in test file (style)
-+- **Severity**: LOW | **Confidence**: 40/100
-+- **Flagged by**: code-reviewer
-+- **File(s)**: `tests/CryptoExchanges.Net.Kucoin.Tests.Unit/KucoinSigningTests.cs:18,62,109,148,165,291`
-+- **Concern**: `// ── ... ──` section separators appear in test files. Code convention says no banner separators. However, every existing test file in the codebase uses them (`BybitSigningTests.cs`, `OkxSigningTests.cs`, `CoreTests.cs`). This is an established norm in test files. Confidence below threshold.
-+- **Suggestion**: No change required — consistent with existing test files.
-+
-+### 6. request.Dispose() pattern inconsistency in two tests (style)
-+- **Severity**: LOW | **Confidence**: 50/100
-+- **Flagged by**: code-reviewer
-+- **File(s)**: `tests/CryptoExchanges.Net.Kucoin.Tests.Unit/KucoinSigningTests.cs:576-596`
-+- **Concern**: `Handler_MissingApiKey_Throws` and `Handler_MissingPassphrase_Throws` call `request.Dispose()` manually instead of using `using var`. All other tests in the file use `using var`. Works correctly, but style-divergent.
-+- **Suggestion**: Consider `using var request = ...` and let the test framework handle disposal. Non-blocking.
-+
-+---
-+
-+## AUTO-FIX Items
-+
-+None. The single blocking issue is an architecture/design change (new interface file, two class edits, one test update) and is classified ASK per fix-first heuristic: interface introductions affect DI registration, testing contracts, and assembly-internal API surface. It requires judgment on the exact interface strategy chosen (narrow `IKucoinSignatureService` vs. DIM on `ISignatureService`).
-+
-+---
-+
-+## ASK Items
-+
-+### ASK-1 — Introduce IKucoinSignatureService and update KucoinSigningHandler constructor (BLOCKING)
-+- **File(s)**: 
-+  - CREATE `src/CryptoExchanges.Net.Kucoin/Auth/IKucoinSignatureService.cs`
-+  - EDIT `src/CryptoExchanges.Net.Kucoin/Auth/KucoinSignatureService.cs:12`
-+  - EDIT `src/CryptoExchanges.Net.Kucoin/Resilience/KucoinSigningHandler.cs:21`
-+  - EDIT `tests/CryptoExchanges.Net.Kucoin.Tests.Unit/KucoinSigningTests.cs:173-174` (BuildHandler helper — update `svc` declaration if needed)
-+- **Severity**: MEDIUM | **Confidence**: 95/100
-+- **Flagged by**: architect-reviewer, api-reviewer
-+- **Why ASK**: Introduces a new internal interface into the Auth/ layer. The architect-reviewer and api-reviewer both flag the narrow-interface strategy (`IKucoinSignatureService : ISignatureService`) as the preferred resolution. The api-reviewer also surfaces an alternative (DIM on `ISignatureService` itself). The narrow-interface approach is recommended: it is non-breaking for all other exchange implementations, keeps the contract self-contained in the Kucoin assembly, and is the lowest-risk option. DI registration is not affected because `KucoinSigningHandler` is composed internally (not registered via DI as an open generic).
-+- **Recommended approach**: Create `internal interface IKucoinSignatureService : ISignatureService` in `src/CryptoExchanges.Net.Kucoin/Auth/`, have `KucoinSignatureService` implement it, update `KucoinSigningHandler` constructor parameter to `IKucoinSignatureService`, update `BuildHandler` in tests to declare the concrete instantiation as the interface type.
-+
-+---
-+
-+## Contradictions Resolved
-+
-+One contradiction exists between the code-reviewer and the architect/api-reviewers on Blocking Issue #1:
-+
-+- **architect-reviewer**: REJECT at confidence 95 — concrete type in handler violates DIP, fix required.
-+- **api-reviewer**: REJECT at confidence 95 — same deviation, same fix required.
-+- **code-reviewer**: PASS at confidence 65 — notes the concrete type is justified by the `SignPassphrase` requirement, no change needed.
-+- **security-reviewer**: PASS (INFO) at confidence 90 — not a security concern but notes the design coupling.
-+
-+**Resolution (AFK — AUTO-RESOLVED)**: The architect-reviewer and api-reviewer both REJECT at confidence 95 (above the 80 threshold). The code-reviewer PASS is at confidence 65 (below the 80 threshold) and is therefore non-blocking per the classification table. Majority of above-threshold findings (2 REJECT vs. 0 above-threshold PASS) mandates REJECT. The blocking finding stands. The code-reviewer's argument — that the concrete type is "justified by the exchange-specific passphrase-v2 contract" — is addressed by the narrow-interface fix, which accommodates the KuCoin-specific method while restoring interface-based injection. Chose narrow `IKucoinSignatureService : ISignatureService` over DIM on `ISignatureService` because it avoids adding `NotSupportedException`-throwing behavior to the shared Core contract.
-+
-+---
-+
-+## Reviewer Verdicts
-+| Reviewer | Verdict | Blocking Findings | Concerns |
-+|----------|---------|-------------------|----------|
-+| architect-reviewer | CHANGES_REQUESTED | 1 | 0 |
-+| code-reviewer | APPROVE | 0 | 4 |
-+| security-reviewer | APPROVE | 0 | 0 (all INFO/PASS) |
-+| api-reviewer | CHANGES_REQUESTED | 1 | 3 |
-diff --git a/nazgul/reviews/TASK-057/diff.patch b/nazgul/reviews/TASK-057/diff.patch
-new file mode 100644
-index 0000000..0f1e01e
---- /dev/null
-+++ b/nazgul/reviews/TASK-057/diff.patch
-@@ -0,0 +1,661 @@
-+diff --git a/src/CryptoExchanges.Net.Kucoin/Auth/KucoinSignatureService.cs b/src/CryptoExchanges.Net.Kucoin/Auth/KucoinSignatureService.cs
-+new file mode 100644
-+index 0000000..964609b
-+--- /dev/null
-++++ b/src/CryptoExchanges.Net.Kucoin/Auth/KucoinSignatureService.cs
-+@@ -0,0 +1,77 @@
-++using CryptoExchanges.Net.Core.Auth;
-++
-++namespace CryptoExchanges.Net.Kucoin.Auth;
-++
-++/// <summary>
-++/// Creates HMAC-SHA256 signatures for KuCoin KC-API passphrase-v2 requests, rendered as base64
-++/// for the <c>KC-API-SIGN</c> header. Also signs the passphrase itself (KC-API passphrase-v2 scheme)
-++/// for the <c>KC-API-PASSPHRASE</c> header. Signs a prehash of
-++/// <c>timestamp + METHOD + requestPath + body</c>, identical in structure to OKX, but with a Unix
-++/// epoch <strong>millisecond</strong> timestamp (not ISO-8601) and an HMAC-signed passphrase.
-++/// </summary>
-++internal sealed class KucoinSignatureService(string secretKey) : ISignatureService
-++{
-++    private readonly string _secretKey = InitializeSecretKey(secretKey);
-++
-++    /// <inheritdoc />
-++    public string Sign(string prehash) =>
-++        HmacSignature.Compute(_secretKey, prehash, SignatureEncoding.Base64);
-++
-++    /// <summary>
-++    /// Signs the <paramref name="passphrase"/> using HMAC-SHA256 with the secret key and returns it
-++    /// base64-encoded for the <c>KC-API-PASSPHRASE</c> header. This is the KC-API passphrase-v2
-++    /// requirement: the passphrase header carries <c>base64(HMAC-SHA256(secret, passphrase))</c>,
-++    /// not the raw passphrase as in OKX.
-++    /// </summary>
-++    /// <param name="passphrase">The raw API passphrase. Must be non-null, non-empty, and non-whitespace.</param>
-++    /// <returns>The base64-encoded HMAC-SHA256 of the passphrase.</returns>
-++    /// <exception cref="ArgumentException"><paramref name="passphrase"/> is null/empty/whitespace.</exception>
-++    public string SignPassphrase(string passphrase)
-++    {
-++        ArgumentException.ThrowIfNullOrWhiteSpace(passphrase);
-++        return HmacSignature.Compute(_secretKey, passphrase, SignatureEncoding.Base64);
-++    }
-++
-++    /// <summary>
-++    /// Builds the canonical KuCoin prehash string: <c>timestamp + METHOD + requestPath + body</c>.
-++    /// The format is identical to OKX except the timestamp must be Unix epoch milliseconds (see
-++    /// <see cref="FormatTimestamp"/>), not ISO-8601.
-++    /// </summary>
-++    /// <param name="timestamp">
-++    /// The request timestamp as Unix epoch <strong>milliseconds</strong> (string, e.g.
-++    /// <c>"1750000000000"</c>). Use <see cref="FormatTimestamp"/> to produce this form.
-++    /// </param>
-++    /// <param name="method">The HTTP verb; upper-cased before assembly (e.g. <c>GET</c>, <c>POST</c>, <c>DELETE</c>).</param>
-++    /// <param name="requestPath">
-++    /// The request path including the leading <c>/</c> and, for GET requests, the query string
-++    /// (e.g. <c>/api/v1/market/allTickers</c>).
-++    /// </param>
-++    /// <param name="body">The raw JSON body for POST requests, or an empty string when there is no body.</param>
-++    /// <returns>The canonical prehash string, with no signature appended.</returns>
-++    /// <exception cref="ArgumentException"><paramref name="timestamp"/>, <paramref name="method"/>, or <paramref name="requestPath"/> is null/empty/whitespace.</exception>
-++    /// <exception cref="ArgumentNullException"><paramref name="body"/> is null.</exception>
-++    public static string BuildPrehash(string timestamp, string method, string requestPath, string body)
-++    {
-++        ArgumentException.ThrowIfNullOrWhiteSpace(timestamp);
-++        ArgumentException.ThrowIfNullOrWhiteSpace(method);
-++        ArgumentException.ThrowIfNullOrWhiteSpace(requestPath);
-++        ArgumentNullException.ThrowIfNull(body);
-++        return $"{timestamp}{method.ToUpperInvariant()}{requestPath}{body}";
-++    }
-++
-++    /// <summary>
-++    /// Formats a <see cref="DateTimeOffset"/> as the Unix epoch milliseconds string KuCoin expects
-++    /// (e.g. <c>"1750000000000"</c>). This differs from OKX, which uses ISO-8601 UTC with
-++    /// milliseconds and a trailing <c>Z</c>.
-++    /// </summary>
-++    /// <param name="timestamp">The instant to format.</param>
-++    /// <returns>The Unix epoch milliseconds as a string.</returns>
-++    public static string FormatTimestamp(DateTimeOffset timestamp) =>
-++        timestamp.ToUniversalTime().ToUnixTimeMilliseconds().ToString(System.Globalization.CultureInfo.InvariantCulture);
-++
-++    private static string InitializeSecretKey(string secretKey)
-++    {
-++        ArgumentException.ThrowIfNullOrWhiteSpace(secretKey);
-++        return secretKey;
-++    }
-++}
-+diff --git a/src/CryptoExchanges.Net.Kucoin/Resilience/KucoinErrorTranslator.cs b/src/CryptoExchanges.Net.Kucoin/Resilience/KucoinErrorTranslator.cs
-+new file mode 100644
-+index 0000000..353a0b0
-+--- /dev/null
-++++ b/src/CryptoExchanges.Net.Kucoin/Resilience/KucoinErrorTranslator.cs
-+@@ -0,0 +1,94 @@
-++using System.Net;
-++using CryptoExchanges.Net.Core.Exceptions;
-++using CryptoExchanges.Net.Http;
-++
-++namespace CryptoExchanges.Net.Kucoin.Resilience;
-++
-++/// <summary>
-++/// Maps KuCoin V1 error responses (HTTP status + <c>{code,msg}</c> envelope) to the SDK's typed
-++/// exceptions. KuCoin returns a string <c>code</c> at the top level; success is
-++/// <c>code == "200000"</c> (a string), which must NEVER be treated as an error.
-++/// </summary>
-++/// <remarks>
-++/// Internal per ADR-001 conv #2: the in-assembly composer/AddKucoinExchange construct this
-++/// directly, so there is no cross-assembly need for it to be public. KuCoin error codes are
-++/// documented as strings; the mappings below use real KuCoin codes and map conservatively.
-++/// </remarks>
-++internal sealed class KucoinErrorTranslator : IExchangeErrorTranslator
-++{
-++    /// <inheritdoc />
-++    public ExchangeException Translate(HttpResponseMessage response, string body)
-++    {
-++        ArgumentNullException.ThrowIfNull(response);
-++        var (code, msg) = Parse(body);
-++        var text = msg is null ? $"KuCoin HTTP {(int)response.StatusCode}" : $"KuCoin error {code}: {msg}";
-++
-++        // Translate always returns an exception (it is only invoked on a failed/error response). When the
-++        // JSON envelope still reports code "200000" (e.g. an HTTP-level error with a success-shaped body),
-++        // we return the generic ExchangeApiException rather than mapping to a more specific typed exception.
-++        if (code == "200000")
-++            return new ExchangeApiException(text, ParseCode(code), body);
-++
-++        var numeric = ParseCode(code);
-++
-++        // Rate limiting: HTTP 429. KuCoin returns 429 directly for rate limit breaches.
-++        if (response.StatusCode == HttpStatusCode.TooManyRequests)
-++            return new RateLimitExceededException(text, RetryAfterReader.GetDelay(response), numeric, body);
-++
-++        // Authentication / signature / permission / timestamp failures: HTTP 401/403, and KuCoin
-++        // auth family: 400001 = timestamp expired; 400002 = invalid timestamp; 400003 = invalid
-++        // API key; 400004 = invalid passphrase; 400005 = invalid signature; 400006 = invalid IP;
-++        // 400007 = endpoint access forbidden; 411100 = account is frozen.
-++        if (response.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden
-++            || code is "400001" or "400002" or "400003" or "400004" or "400005"
-++                or "400006" or "400007" or "411100")
-++            return new AuthenticationException(text, numeric, body);
-++
-++        // Insufficient balance: 900014 = insufficient balance.
-++        if (code is "900014")
-++            return new InsufficientBalanceException(text, numeric, body);
-++
-++        // Order errors: 900001 = invalid symbol; 900002 = invalid price; 900003 = invalid amount;
-++        // 900004 = invalid order type; 900005 = invalid order side; 900006 = amount too small;
-++        // 900007 = price out of range; 900008 = order does not exist; 900009 = order already
-++        // cancelled; 900010 = order already closed.
-++        if (code is "900001" or "900002" or "900003" or "900004" or "900005"
-++            or "900006" or "900007" or "900008" or "900009" or "900010")
-++            return new InvalidOrderException(text, numeric, body);
-++
-++        // Unknown / unmapped error codes: surface the venue code + raw body for diagnostics.
-++        return new ExchangeApiException(text, numeric, body);
-++    }
-++
-++    /// <summary>
-++    /// Extracts the KuCoin error code + message from the <c>{"code","msg"}</c> envelope.
-++    /// </summary>
-++    private static (string? code, string? msg) Parse(string body)
-++    {
-++        if (string.IsNullOrWhiteSpace(body))
-++            return (null, null);
-++        try
-++        {
-++            using var doc = JsonDocument.Parse(body);
-++            var root = doc.RootElement;
-++            var code = ReadString(root, "code");
-++            var msg = ReadString(root, "msg");
-++            return (code, msg);
-++        }
-++        catch (JsonException)
-++        {
-++            return (null, null);
-++        }
-++    }
-++
-++    /// <summary>Reads a string property, tolerating non-string value kinds (returns null) so a
-++    /// malformed body never throws InvalidOperationException out of the catch.</summary>
-++    private static string? ReadString(JsonElement element, string name)
-++        => element.TryGetProperty(name, out var v) && v.ValueKind == JsonValueKind.String
-++            ? v.GetString()
-++            : null;
-++
-++    /// <summary>Parses the KuCoin string code into the numeric code carried on the typed exception, or null.</summary>
-++    private static int? ParseCode(string? code)
-++        => int.TryParse(code, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out var n) ? n : null;
-++}
-+diff --git a/src/CryptoExchanges.Net.Kucoin/Resilience/KucoinSigningHandler.cs b/src/CryptoExchanges.Net.Kucoin/Resilience/KucoinSigningHandler.cs
-+new file mode 100644
-+index 0000000..ee384f8
-+--- /dev/null
-++++ b/src/CryptoExchanges.Net.Kucoin/Resilience/KucoinSigningHandler.cs
-+@@ -0,0 +1,84 @@
-++using CryptoExchanges.Net.Core.Auth;
-++using CryptoExchanges.Net.Kucoin.Auth;
-++
-++namespace CryptoExchanges.Net.Kucoin.Resilience;
-++
-++/// <summary>
-++/// For signed KuCoin requests, (re)computes the Unix-ms timestamp + base64 HMAC signature ON EACH
-++/// ATTEMPT and sets the five KuCoin KC-API credential headers: <c>KC-API-KEY</c>,
-++/// <c>KC-API-SIGN</c>, <c>KC-API-TIMESTAMP</c>, <c>KC-API-PASSPHRASE</c>, and
-++/// <c>KC-API-KEY-VERSION</c> (always <c>2</c>). Sits below the retry strategy so a retried,
-++/// delayed request is re-signed with a fresh timestamp (avoids KuCoin timestamp-expiry
-++/// rejections). Unlike OKX, KuCoin passphrase-v2 requires the passphrase itself to be
-++/// HMAC-SHA256-signed and base64-encoded; see <see cref="KucoinSignatureService.SignPassphrase"/>.
-++/// Unsigned (public) requests pass through untouched with no KC-API-* headers added.
-++/// </summary>
-++/// <param name="apiKey">The KuCoin API key set on the <c>KC-API-KEY</c> header for signed requests.</param>
-++/// <param name="passphrase">The KuCoin API passphrase; will be HMAC-signed and base64-encoded before being set on <c>KC-API-PASSPHRASE</c>.</param>
-++/// <param name="signatureService">Computes the base64 HMAC-SHA256 signature over the KuCoin prehash string and signs the passphrase.</param>
-++/// <param name="timeOffset">Returns the current server-time offset in milliseconds, applied to each timestamp.</param>
-++internal sealed class KucoinSigningHandler(
-++    string apiKey, string passphrase, KucoinSignatureService signatureService, Func<long> timeOffset)
-++    : DelegatingHandler
-++{
-++    /// <inheritdoc />
-++    protected override async Task<HttpResponseMessage> SendAsync(
-++        HttpRequestMessage request, CancellationToken cancellationToken)
-++    {
-++        ArgumentNullException.ThrowIfNull(request);
-++
-++        if (KucoinSigningRequest.IsSigned(request))
-++            await ResignAsync(request, cancellationToken).ConfigureAwait(false);
-++
-++        return await base.SendAsync(request, cancellationToken).ConfigureAwait(false);
-++    }
-++
-++    private async Task ResignAsync(HttpRequestMessage request, CancellationToken ct)
-++    {
-++        // A signed KuCoin request needs all three credentials: key, secret (held by the signature
-++        // service), and passphrase. Guard here even though the composer's secret-gated finalizer
-++        // should normally prevent constructing a signing handler without full credentials.
-++        if (string.IsNullOrEmpty(apiKey))
-++            throw new InvalidOperationException(
-++                "KuCoin signed request requires an API key (KC-API-KEY); none was configured.");
-++        if (string.IsNullOrEmpty(passphrase))
-++            throw new InvalidOperationException(
-++                "KuCoin signed request requires a passphrase (KC-API-PASSPHRASE); none was configured.");
-++
-++        // Fresh timestamp per attempt: UtcNow shifted by the server-time offset, then Unix epoch ms.
-++        var instant = DateTimeOffset.UtcNow.AddMilliseconds(timeOffset());
-++        var timestamp = KucoinSignatureService.FormatTimestamp(instant);
-++
-++        // Sign the ACTUAL outgoing path+query. Using RequestUri.PathAndQuery (rather than
-++        // reconstructing it) guarantees byte-for-byte consistency with whatever KucoinHttpClient
-++        // built, so the signed prehash matches exactly what KuCoin receives.
-++        var requestPath = request.RequestUri!.PathAndQuery;
-++        var method = request.Method.Method;
-++
-++        var body = string.Empty;
-++        if ((request.Method == HttpMethod.Post || request.Method == HttpMethod.Put)
-++            && request.Content is not null)
-++        {
-++            body = await request.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
-++        }
-++
-++        var prehash = KucoinSignatureService.BuildPrehash(timestamp, method, requestPath, body);
-++        var signature = signatureService.Sign(prehash);
-++
-++        // KuCoin passphrase-v2: sign the passphrase itself with HMAC-SHA256 + base64.
-++        var signedPassphrase = signatureService.SignPassphrase(passphrase);
-++
-++        // Strip any signing headers from a prior attempt so a retried request re-signs cleanly
-++        // (exactly one set of KC-API-* headers with a fresh timestamp/signature).
-++        request.Headers.Remove("KC-API-KEY");
-++        request.Headers.Remove("KC-API-SIGN");
-++        request.Headers.Remove("KC-API-TIMESTAMP");
-++        request.Headers.Remove("KC-API-PASSPHRASE");
-++        request.Headers.Remove("KC-API-KEY-VERSION");
-++        request.Headers.Add("KC-API-KEY", apiKey);
-++        request.Headers.Add("KC-API-SIGN", signature);
-++        request.Headers.Add("KC-API-TIMESTAMP", timestamp);
-++        request.Headers.Add("KC-API-PASSPHRASE", signedPassphrase);
-++        request.Headers.Add("KC-API-KEY-VERSION", "2");
-++    }
-++}
-+diff --git a/src/CryptoExchanges.Net.Kucoin/Resilience/KucoinSigningRequest.cs b/src/CryptoExchanges.Net.Kucoin/Resilience/KucoinSigningRequest.cs
-+new file mode 100644
-+index 0000000..707970a
-+--- /dev/null
-++++ b/src/CryptoExchanges.Net.Kucoin/Resilience/KucoinSigningRequest.cs
-+@@ -0,0 +1,22 @@
-++namespace CryptoExchanges.Net.Kucoin.Resilience;
-++
-++/// <summary>Marks an outgoing request as requiring KuCoin KC-API signing (Unix-ms timestamp +
-++/// HMAC-SHA256 + signed passphrase), applied per attempt by the KuCoin signing handler.</summary>
-++internal static class KucoinSigningRequest
-++{
-++    private static readonly HttpRequestOptionsKey<bool> SignedKey = new("kucoin.signed");
-++
-++    /// <summary>Flags the request as signed.</summary>
-++    public static void MarkSigned(HttpRequestMessage request)
-++    {
-++        ArgumentNullException.ThrowIfNull(request);
-++        request.Options.Set(SignedKey, true);
-++    }
-++
-++    /// <summary>True when the request was flagged as signed.</summary>
-++    public static bool IsSigned(HttpRequestMessage request)
-++    {
-++        ArgumentNullException.ThrowIfNull(request);
-++        return request.Options.TryGetValue(SignedKey, out var v) && v;
-++    }
-++}
-+diff --git a/tests/CryptoExchanges.Net.Kucoin.Tests.Unit/KucoinSigningTests.cs b/tests/CryptoExchanges.Net.Kucoin.Tests.Unit/KucoinSigningTests.cs
-+new file mode 100644
-+index 0000000..4ebbd3a
-+--- /dev/null
-++++ b/tests/CryptoExchanges.Net.Kucoin.Tests.Unit/KucoinSigningTests.cs
-+@@ -0,0 +1,354 @@
-++using System.Net;
-++using Xunit;
-++using AwesomeAssertions;
-++using CryptoExchanges.Net.Kucoin.Auth;
-++using CryptoExchanges.Net.Kucoin.Resilience;
-++using CryptoExchanges.Net.Core.Auth;
-++using CryptoExchanges.Net.Core.Exceptions;
-++
-++namespace CryptoExchanges.Net.Kucoin.Tests.Unit;
-++
-++/// <summary>
-++/// No-network unit tests for the KuCoin KC-API passphrase-v2 signature service (base64
-++/// HMAC-SHA256 + prehash assembly + passphrase signing), Unix-ms timestamp format, signing
-++/// handler mark-and-strip behavior, and error mapping.
-++/// </summary>
-++public class KucoinSigningTests
-++{
-++    // ── base64 HMAC-SHA256 signature: FIXED known vectors ──
-++
-++    [Fact]
-++    public void Sign_ProducesExpectedBase64ForFixedVector()
-++    {
-++        // HMAC-SHA256("hello", key="secret") rendered as base64. Same underlying primitive as OKX.
-++        // Computed independently: base64(HMAC-SHA256(b"secret", b"hello")).
-++        var sig = new KucoinSignatureService("secret").Sign("hello");
-++        sig.Should().Be("iKqz7ejTrflNJquQ07r9SiCDBww7zOnAFO4EpEOEfAs=");
-++    }
-++
-++    [Fact]
-++    public void Sign_MatchesCoreHmacBase64()
-++    {
-++        // KucoinSignatureService.Sign is exactly Core HmacSignature with base64 output.
-++        var viaService = new KucoinSignatureService("mysecret").Sign("some-prehash");
-++        var viaCore = HmacSignature.Compute("mysecret", "some-prehash", SignatureEncoding.Base64);
-++        viaService.Should().Be(viaCore);
-++    }
-++
-++    [Fact]
-++    public void SignPassphrase_ProducesExpectedBase64ForFixedVector()
-++    {
-++        // KuCoin passphrase-v2: KC-API-PASSPHRASE = base64(HMAC-SHA256(secret, passphrase)).
-++        // Computed independently: base64(HMAC-SHA256(b"secret", b"mypassphrase")).
-++        var signed = new KucoinSignatureService("secret").SignPassphrase("mypassphrase");
-++        signed.Should().Be("jrrTuwAqT2eYfpU/Rg8OhXN4674gVXo5b7JJOivIAP0=");
-++    }
-++
-++    [Fact]
-++    public void SignPassphrase_DiffersFromRawPassphrase()
-++    {
-++        // The signed passphrase must NEVER equal the raw passphrase — it is always HMAC-SHA256 + base64.
-++        var signed = new KucoinSignatureService("secret").SignPassphrase("mypassphrase");
-++        signed.Should().NotBe("mypassphrase");
-++    }
-++
-++    [Fact]
-++    public void SignPassphrase_RejectsBlankPassphrase()
-++    {
-++        var act = () => new KucoinSignatureService("secret").SignPassphrase(" ");
-++        act.Should().Throw<ArgumentException>();
-++    }
-++
-++    // ── BuildPrehash ──
-++
-++    [Fact]
-++    public void BuildPrehash_Get_AssemblesTimestampMethodPathQuery()
-++    {
-++        // Unix-ms timestamp + METHOD + requestPath (with query) + empty body.
-++        // Known instant: 2026-06-17T12:00:00Z → 1781697600000 ms.
-++        const string timestamp = "1781697600000";
-++        var prehash = KucoinSignatureService.BuildPrehash(timestamp, "GET", "/api/v1/market/allTickers", string.Empty);
-++        prehash.Should().Be("1781697600000GET/api/v1/market/allTickers");
-++
-++        // Verify the signature over this prehash is stable (golden value computed independently).
-++        var sig = new KucoinSignatureService("secret").Sign(prehash);
-++        sig.Should().Be("VytcCBIRyebyHbVlPizpbkRvLymxUb19cMRy1WAmZpw=");
-++    }
-++
-++    [Fact]
-++    public void BuildPrehash_Post_AssemblesTimestampMethodPathBody()
-++    {
-++        const string timestamp = "1781697600000";
-++        const string body = "{\"symbol\":\"BTC-USDT\"}";
-++        // POST prehash: timestamp + METHOD + requestPath + jsonBody (no query string on the path).
-++        var prehash = KucoinSignatureService.BuildPrehash(timestamp, "POST", "/api/v1/orders", body);
-++        prehash.Should().Be("1781697600000POST/api/v1/orders{\"symbol\":\"BTC-USDT\"}");
-++
-++        var sig = new KucoinSignatureService("secret").Sign(prehash);
-++        sig.Should().Be("MsBAr9T4phZdosux5u9t3rILTNkahjP5/MoV7UrnHU0=");
-++    }
-++
-++    [Fact]
-++    public void BuildPrehash_UpperCasesMethod()
-++        => KucoinSignatureService.BuildPrehash("1", "get", "/p", string.Empty).Should().Be("1GET/p");
-++
-++    [Fact]
-++    public void BuildPrehash_RejectsBlankRequiredFields()
-++    {
-++        var act = () => KucoinSignatureService.BuildPrehash(" ", "GET", "/p", string.Empty);
-++        act.Should().Throw<ArgumentException>();
-++    }
-++
-++    [Fact]
-++    public void BuildPrehash_RejectsNullBody()
-++    {
-++        var act = () => KucoinSignatureService.BuildPrehash("1", "GET", "/p", null!);
-++        act.Should().Throw<ArgumentNullException>();
-++    }
-++
-++    // ── FormatTimestamp: Unix epoch milliseconds (NOT ISO-8601) ──
-++
-++    [Fact]
-++    public void FormatTimestamp_ProducesUnixEpochMillisecondsNotIso8601()
-++    {
-++        var instant = new DateTimeOffset(2026, 6, 17, 12, 0, 0, 0, TimeSpan.Zero);
-++        var result = KucoinSignatureService.FormatTimestamp(instant);
-++
-++        // Must be the exact Unix epoch ms value — NOT an ISO-8601 string.
-++        result.Should().Be("1781697600000");
-++        result.Should().NotContain("T");
-++        result.Should().NotContain("Z");
-++        result.Should().NotContain("-");
-++    }
-++
-++    [Fact]
-++    public void FormatTimestamp_ConvertsToUtc()
-++    {
-++        // A +05:00 instant must be converted to UTC before computing Unix ms.
-++        var instant = new DateTimeOffset(2026, 6, 17, 17, 0, 0, 0, TimeSpan.FromHours(5));
-++        // 2026-06-17T12:00:00Z in UTC → same epoch ms.
-++        KucoinSignatureService.FormatTimestamp(instant).Should().Be("1781697600000");
-++    }
-++
-++    [Fact]
-++    public void FormatTimestamp_ReturnsNumericString()
-++    {
-++        var result = KucoinSignatureService.FormatTimestamp(DateTimeOffset.UtcNow);
-++        long.TryParse(result, out var parsed).Should().BeTrue("FormatTimestamp must return a parseable long string");
-++        parsed.Should().BeGreaterThan(0);
-++    }
-++
-++    [Fact]
-++    public void SignatureService_RejectsBlankSecret()
-++    {
-++        var act = () => new KucoinSignatureService(" ");
-++        act.Should().Throw<ArgumentException>();
-++    }
-++
-++    // ── KucoinSigningRequest mark-and-strip marker ──
-++
-++    [Fact]
-++    public void SigningRequest_MarkSigned_SetsFlag()
-++    {
-++        using var request = new HttpRequestMessage(HttpMethod.Get, "https://api.kucoin.com/api/v1/market/tickers");
-++        KucoinSigningRequest.MarkSigned(request);
-++        KucoinSigningRequest.IsSigned(request).Should().BeTrue();
-++    }
-++
-++    [Fact]
-++    public void SigningRequest_UnmarkedRequest_IsNotSigned()
-++    {
-++        using var request = new HttpRequestMessage(HttpMethod.Get, "https://api.kucoin.com/api/v1/market/tickers");
-++        KucoinSigningRequest.IsSigned(request).Should().BeFalse();
-++    }
-++
-++    // ── KucoinSigningHandler behavior ──
-++
-++    private static KucoinSigningHandler BuildHandler(
-++        string apiKey = "my-api-key",
-++        string passphrase = "my-passphrase",
-++        string secret = "my-secret",
-++        Func<long>? timeOffset = null)
-++    {
-++        var svc = new KucoinSignatureService(secret);
-++        var handler = new KucoinSigningHandler(apiKey, passphrase, svc, timeOffset ?? (() => 0L));
-++        handler.InnerHandler = new NoOpHandler();
-++        return handler;
-++    }
-++
-++    [Fact]
-++    public async Task Handler_UnsignedRequest_PassesThroughWithNoKcApiHeaders()
-++    {
-++        using var handler = BuildHandler();
-++        using var client = new HttpClient(handler);
-++        using var request = new HttpRequestMessage(HttpMethod.Get, "https://api.kucoin.com/api/v1/time");
-++        // NOT marked as signed.
-++
-++        using var _ = await client.SendAsync(request);
-++
-++        request.Headers.Contains("KC-API-KEY").Should().BeFalse();
-++        request.Headers.Contains("KC-API-SIGN").Should().BeFalse();
-++        request.Headers.Contains("KC-API-TIMESTAMP").Should().BeFalse();
-++        request.Headers.Contains("KC-API-PASSPHRASE").Should().BeFalse();
-++        request.Headers.Contains("KC-API-KEY-VERSION").Should().BeFalse();
-++    }
-++
-++    [Fact]
-++    public async Task Handler_SignedRequest_SetsAllFiveKcApiHeaders()
-++    {
-++        using var handler = BuildHandler();
-++        using var client = new HttpClient(handler);
-++        using var request = new HttpRequestMessage(HttpMethod.Get, "https://api.kucoin.com/api/v1/accounts");
-++        KucoinSigningRequest.MarkSigned(request);
-++
-++        using var _ = await client.SendAsync(request);
-++
-++        request.Headers.Contains("KC-API-KEY").Should().BeTrue();
-++        request.Headers.Contains("KC-API-SIGN").Should().BeTrue();
-++        request.Headers.Contains("KC-API-TIMESTAMP").Should().BeTrue();
-++        request.Headers.Contains("KC-API-PASSPHRASE").Should().BeTrue();
-++        request.Headers.Contains("KC-API-KEY-VERSION").Should().BeTrue();
-++
-++        request.Headers.GetValues("KC-API-KEY").Single().Should().Be("my-api-key");
-++        request.Headers.GetValues("KC-API-KEY-VERSION").Single().Should().Be("2");
-++    }
-++
-++    [Fact]
-++    public async Task Handler_SignedRequest_PassphraseHeaderIsSignedNotRaw()
-++    {
-++        using var handler = BuildHandler(passphrase: "testpassphrase", secret: "testsecret");
-++        using var client = new HttpClient(handler);
-++        using var request = new HttpRequestMessage(HttpMethod.Get, "https://api.kucoin.com/api/v1/accounts");
-++        KucoinSigningRequest.MarkSigned(request);
-++
-++        using var _ = await client.SendAsync(request);
-++
-++        var passphraseHeader = request.Headers.GetValues("KC-API-PASSPHRASE").Single();
-++        // The passphrase header must NOT be the raw passphrase.
-++        passphraseHeader.Should().NotBe("testpassphrase");
-++        // It should be the base64 HMAC-SHA256 of the passphrase under the secret.
-++        var expected = HmacSignature.Compute("testsecret", "testpassphrase", SignatureEncoding.Base64);
-++        passphraseHeader.Should().Be(expected);
-++    }
-++
-++    [Fact]
-++    public async Task Handler_RetrySimulation_YieldsDifferentTimestampsAndNoDuplicateHeaders()
-++    {
-++        // Simulate two separate attempts with different time offsets to verify: (a) timestamps differ,
-++        // (b) no duplicate KC-API-* headers (mark-and-strip ensures clean re-sign).
-++        long offsetMs = 0L;
-++        using var handler = BuildHandler(timeOffset: () => offsetMs);
-++        using var client = new HttpClient(handler);
-++
-++        // First attempt — offset 0
-++        using var request1 = new HttpRequestMessage(HttpMethod.Get, "https://api.kucoin.com/api/v1/accounts");
-++        KucoinSigningRequest.MarkSigned(request1);
-++        using var _1 = await client.SendAsync(request1);
-++        var ts1 = request1.Headers.GetValues("KC-API-TIMESTAMP").Single();
-++
-++        // Second attempt — offset 60,000 ms (simulated delay)
-++        offsetMs = 60_000L;
-++        using var request2 = new HttpRequestMessage(HttpMethod.Get, "https://api.kucoin.com/api/v1/accounts");
-++        KucoinSigningRequest.MarkSigned(request2);
-++        using var _2 = await client.SendAsync(request2);
-++        var ts2 = request2.Headers.GetValues("KC-API-TIMESTAMP").Single();
-++
-++        // Timestamps must differ.
-++        ts1.Should().NotBe(ts2);
-++
-++        // No header should appear more than once (mark-and-strip).
-++        request2.Headers.GetValues("KC-API-KEY").Should().HaveCount(1);
-++        request2.Headers.GetValues("KC-API-SIGN").Should().HaveCount(1);
-++        request2.Headers.GetValues("KC-API-TIMESTAMP").Should().HaveCount(1);
-++        request2.Headers.GetValues("KC-API-PASSPHRASE").Should().HaveCount(1);
-++        request2.Headers.GetValues("KC-API-KEY-VERSION").Should().HaveCount(1);
-++    }
-++
-++    [Fact]
-++    public async Task Handler_MissingApiKey_Throws()
-++    {
-++        using var handler = BuildHandler(apiKey: "");
-++        using var client = new HttpClient(handler);
-++        var request = new HttpRequestMessage(HttpMethod.Get, "https://api.kucoin.com/api/v1/accounts");
-++        KucoinSigningRequest.MarkSigned(request);
-++
-++        await Assert.ThrowsAsync<InvalidOperationException>(() => client.SendAsync(request));
-++        request.Dispose();
-++    }
-++
-++    [Fact]
-++    public async Task Handler_MissingPassphrase_Throws()
-++    {
-++        using var handler = BuildHandler(passphrase: "");
-++        using var client = new HttpClient(handler);
-++        var request = new HttpRequestMessage(HttpMethod.Get, "https://api.kucoin.com/api/v1/accounts");
-++        KucoinSigningRequest.MarkSigned(request);
-++
-++        await Assert.ThrowsAsync<InvalidOperationException>(() => client.SendAsync(request));
-++        request.Dispose();
-++    }
-++
-++    // ── KucoinErrorTranslator: code / HTTP-status → exception type ──
-++
-++    private static ExchangeException Translate(HttpStatusCode status, string body)
-++    {
-++        using var resp = new HttpResponseMessage(status);
-++        return new KucoinErrorTranslator().Translate(resp, body);
-++    }
-++
-++    [Theory]
-++    [InlineData(HttpStatusCode.OK, "{\"code\":\"400003\",\"msg\":\"invalid key\"}", typeof(AuthenticationException))]
-++    [InlineData(HttpStatusCode.OK, "{\"code\":\"400005\",\"msg\":\"invalid signature\"}", typeof(AuthenticationException))]
-++    [InlineData(HttpStatusCode.OK, "{\"code\":\"400004\",\"msg\":\"invalid passphrase\"}", typeof(AuthenticationException))]
-++    [InlineData(HttpStatusCode.Unauthorized, "{\"code\":\"1\",\"msg\":\"unauth\"}", typeof(AuthenticationException))]
-++    [InlineData(HttpStatusCode.Forbidden, "{\"code\":\"1\",\"msg\":\"forbidden\"}", typeof(AuthenticationException))]
-++    [InlineData(HttpStatusCode.OK, "{\"code\":\"900014\",\"msg\":\"insufficient\"}", typeof(InsufficientBalanceException))]
-++    [InlineData(HttpStatusCode.OK, "{\"code\":\"900001\",\"msg\":\"invalid symbol\"}", typeof(InvalidOrderException))]
-++    [InlineData(HttpStatusCode.OK, "{\"code\":\"900006\",\"msg\":\"amount too small\"}", typeof(InvalidOrderException))]
-++    [InlineData(HttpStatusCode.OK, "{\"code\":\"999999\",\"msg\":\"weird\"}", typeof(ExchangeApiException))]
-++    public void ErrorTranslator_MapsCodes(HttpStatusCode status, string body, Type expected)
-++        => Translate(status, body).Should().BeOfType(expected);
-++
-++    [Fact]
-++    public void ErrorTranslator_Maps429_ToRateLimitWithRetryAfter()
-++    {
-++        using var resp = new HttpResponseMessage(HttpStatusCode.TooManyRequests);
-++        resp.Headers.Add("Retry-After", "7");
-++        var ex = new KucoinErrorTranslator().Translate(resp, "{\"code\":\"429000\",\"msg\":\"too many\"}");
-++        ex.Should().BeOfType<RateLimitExceededException>();
-++        ((RateLimitExceededException)ex).RetryAfter.Should().Be(TimeSpan.FromSeconds(7));
-++    }
-++
-++    [Fact]
-++    public void ErrorTranslator_SuccessEnvelope_IsNotATypedError()
-++    {
-++        // code == "200000" (a STRING) is a success envelope: must NOT become a typed subtype.
-++        var ex = Translate(HttpStatusCode.OK, "{\"code\":\"200000\",\"msg\":\"\"}");
-++        ex.Should().BeOfType<ExchangeApiException>();
-++        ex.Should().NotBeOfType<RateLimitExceededException>();
-++        ex.Should().NotBeOfType<AuthenticationException>();
-++    }
-++
-++    [Fact]
-++    public void ErrorTranslator_NonJsonBody_FallsBackToApiException()
-++        => Translate(HttpStatusCode.BadGateway, "<html>502</html>")
-++            .Should().BeOfType<ExchangeApiException>();
-++
-++    [Theory]
-++    [InlineData("{\"code\":400003,\"msg\":\"num code\"}")] // code as a number -> unparsed -> ApiException
-++    [InlineData("{\"code\":\"400003\",\"msg\":12345}")]      // msg as a number
-++    [InlineData("{\"code\":\"400003\",\"msg\":null}")]        // msg null
-++    public void ErrorTranslator_MalformedFields_DoNotThrow(string body)
-++    {
-++        var act = () => Translate(HttpStatusCode.OK, body);
-++        act.Should().NotThrow();
-++    }
-++
-++    /// <summary>Minimal inner handler that returns a 200 OK without touching the network.</summary>
-++    private sealed class NoOpHandler : HttpMessageHandler
-++    {
-++        protected override Task<HttpResponseMessage> SendAsync(
-++            HttpRequestMessage request, CancellationToken cancellationToken)
-++            => Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK));
-++    }
-++}
-diff --git a/nazgul/reviews/TASK-057/security-reviewer.md b/nazgul/reviews/TASK-057/security-reviewer.md
-new file mode 100644
-index 0000000..1b4b558
---- /dev/null
-+++ b/nazgul/reviews/TASK-057/security-reviewer.md
-@@ -0,0 +1,71 @@
-+---
-+verdict: APPROVE
-+---
-+# Security Review — TASK-057
-+
-+## Verdict
-+APPROVE
-+
-+## Summary
-+The KuCoin KC-API passphrase-v2 signing implementation is correct and consistent with the OKX reference pattern. All five KC-API headers are stripped and re-added on every attempt, the passphrase is HMAC-SHA256-signed (not sent raw), the timestamp uses Unix epoch milliseconds, and secrets never appear in exception messages or serialization paths.
-+
-+## Security Checklist
-+- [x] Prehash order correct (timestamp+method+path+body): PASS
-+- [x] base64 HMAC-SHA256 used (not hex): PASS
-+- [x] Passphrase-v2: passphrase is signed (not raw): PASS
-+- [x] Unix-ms timestamp (not ISO-8601): PASS
-+- [x] Per-attempt re-sign (fresh timestamp each SendAsync): PASS
-+- [x] Mark-and-strip: all 5 headers removed before re-add: PASS
-+- [x] Marker uses request Options (not header): PASS
-+- [x] No retry policy in handler (GET-only enforced elsewhere): PASS
-+- [x] Secrets not in exception messages / logs: PASS
-+- [x] Success code "200000" compared as string: PASS
-+- [x] JSON exceptions caught in error translator: PASS
-+
-+## Findings
-+
-+### Finding: KucoinSigningHandler accepts concrete KucoinSignatureService, not ISignatureService
-+- **Severity**: INFO
-+- **Confidence**: 90
-+- **File**: `src/CryptoExchanges.Net.Kucoin/Resilience/KucoinSigningHandler.cs:21`
-+- **Category**: Design
-+- **Verdict**: PASS
-+- **Issue**: The handler takes `KucoinSignatureService` (concrete type) as its constructor parameter rather than `ISignatureService`. OKX's `OkxSigningHandler` uses `ISignatureService`. This is not a security issue — the concrete type is `internal sealed` and is never accessible from outside the assembly. However, it ties test setup to the concrete type and could make future extension (e.g., swapping in a test double) slightly harder.
-+- **Fix**: Consider widening the parameter to `ISignatureService` for interface-driven testability parity with OKX. Not blocking.
-+- **Pattern reference**: `src/CryptoExchanges.Net.Okx/Resilience/OkxSigningHandler.cs:19`
-+
-+### Finding: All five KC-API headers stripped before re-add on retry
-+- **Severity**: INFO
-+- **Confidence**: 99
-+- **File**: `src/CryptoExchanges.Net.Kucoin/Resilience/KucoinSigningHandler.cs:73-82`
-+- **Category**: Signing integrity
-+- **Verdict**: PASS
-+- **Issue**: None. All five headers (`KC-API-KEY`, `KC-API-SIGN`, `KC-API-TIMESTAMP`, `KC-API-PASSPHRASE`, `KC-API-KEY-VERSION`) are removed before being added. The test `Handler_RetrySimulation_YieldsDifferentTimestampsAndNoDuplicateHeaders` verifies no duplicates on re-sign. Correct.
-+- **Fix**: N/A
-+
-+### Finding: Passphrase-v2 signing verified by test with known vector
-+- **Severity**: INFO
-+- **Confidence**: 99
-+- **File**: `tests/CryptoExchanges.Net.Kucoin.Tests.Unit/KucoinSigningTests.cs:43-45`
-+- **Category**: Signing integrity
-+- **Verdict**: PASS
-+- **Issue**: None. `SignPassphrase_ProducesExpectedBase64ForFixedVector` asserts the exact base64 HMAC-SHA256 output against an independently computed value. `Handler_SignedRequest_PassphraseHeaderIsSignedNotRaw` further confirms the header is the HMAC result, not the raw passphrase.
-+- **Fix**: N/A
-+
-+### Finding: Success code "200000" compared as string literal
-+- **Severity**: INFO
-+- **Confidence**: 99
-+- **File**: `src/CryptoExchanges.Net.Kucoin/Resilience/KucoinErrorTranslator.cs:29`
-+- **Category**: Error translator safety
-+- **Verdict**: PASS
-+- **Issue**: None. `if (code == "200000")` is a string equality check. The `ReadString` helper returns `null` for any non-string JSON value kind, so a numeric `200000` in the JSON body would return `null` from `ReadString` and therefore never match the string `"200000"`. Correct.
-+- **Fix**: N/A
-+
-+### Finding: JSON malformed body handled correctly
-+- **Severity**: INFO
-+- **Confidence**: 99
-+- **File**: `src/CryptoExchanges.Net.Kucoin/Resilience/KucoinErrorTranslator.cs:67-81`
-+- **Category**: JSON deserialization safety
-+- **Verdict**: PASS
-+- **Issue**: None. `Parse` catches `JsonException` and returns `(null, null)`, which causes `Translate` to fall back to `ExchangeApiException`. Test `ErrorTranslator_NonJsonBody_FallsBackToApiException` confirms this.
-+- **Fix**: N/A
-diff --git a/nazgul/tasks/TASK-057.md b/nazgul/tasks/TASK-057.md
-index 1c511cf..18a68fd 100644
---- a/nazgul/tasks/TASK-057.md
-+++ b/nazgul/tasks/TASK-057.md
-@@ -1,6 +1,6 @@
- ---
- id: TASK-057
--status: IN_PROGRESS
-+status: IMPLEMENTED
- depends_on: [TASK-056]
- ---
- # TASK-057: KC-API passphrase-v2 signing service + mark-and-strip signing handler
-@@ -17,10 +17,10 @@ depends_on: [TASK-056]
- - **Created at**: 2026-06-20T19:00:00Z
- - **Claimed at**: 2026-06-21T00:00:00Z
- - **Base SHA**: 9da0981
--- **Implemented at**:
-+- **Implemented at**: 2026-06-21T08:00:00Z
- - **Completed at**:
- - **Blocked at**:
--- **Retry count**: 0/3
-+- **Retry count**: 1/3
- - **Test failures**: 0
- 
- ## Description
-@@ -87,8 +87,49 @@ Tests (`KucoinSigningTests.cs`) — golden-value + behavior, no network:
- 
- ## Commits
- 
--<!-- implementer fills SHAs -->
-+- a754e9f feat(FEAT-006): TASK-057 IMPLEMENTED (KC-API passphrase-v2 signing + handler)
- 
- ## Implementation Log
- 
-+### 2026-06-21 — Retry 1: DIP fix (IKucoinSignatureService)
-+
-+- Blocking finding resolved: introduced `IKucoinSignatureService : ISignatureService` in `Auth/`
-+  with `string SignPassphrase(string passphrase)` (full XML docs).
-+- `KucoinSignatureService` now implements `IKucoinSignatureService` (instead of `ISignatureService`
-+  directly); all member implementations use `<inheritdoc/>` unchanged.
-+- `KucoinSigningHandler` primary constructor parameter changed from concrete `KucoinSignatureService`
-+  to `IKucoinSignatureService` — DIP satisfied, handler is now testable with any mock that
-+  implements the interface.
-+- Test helper `BuildHandler` compiles unchanged: `new KucoinSignatureService(secret)` satisfies
-+  `IKucoinSignatureService` via the new inheritance chain.
-+- Build: 0W/0E. KuCoin unit tests: 44/44 passed.
-+
-+### 2026-06-21 — Initial implementation
-+
-+- Cloned OKX signing pattern; adjusted for KuCoin passphrase-v2 differences:
-+  - `KucoinSignatureService`: added `SignPassphrase()` (HMAC-SHA256 + base64 of the passphrase itself);
-+    `FormatTimestamp()` returns Unix epoch milliseconds string (not ISO-8601).
-+  - `KucoinSigningHandler`: strips/re-adds 5 headers on each attempt including `KC-API-KEY-VERSION: 2`;
-+    passphrase passed through `SignPassphrase()` before being placed on the wire.
-+  - `KucoinSigningRequest`: identical mark-and-strip marker pattern to OKX.
-+  - `KucoinErrorTranslator`: maps `{"code","msg"}` (success `"200000"`) to typed exceptions.
-+- `KucoinSigningTests`: 44 tests total (38 new) — all passing; golden values independently verified with Python.
-+- Build: 0W/0E across full solution.
-+
- ## Review Results
-+
-+- architect-reviewer: CHANGES_REQUESTED — KucoinSigningHandler takes concrete KucoinSignatureService instead of ISignatureService (DIP violation, Architectural Rule #11)
-+- code-reviewer: APPROVE — all conventions pass (LR-001, LR-005 satisfied); minor non-blocking style notes
-+- security-reviewer: APPROVE — all 11 security checks pass; prehash order, base64 HMAC, passphrase-v2 signing, per-attempt re-sign, mark-and-strip, Unix-ms timestamp all confirmed correct
-+- api-reviewer: CHANGES_REQUESTED — same blocking finding as architect: concrete type in handler constructor
-+
-+## Consolidated Feedback
-+
-+**Blocking fix required** (1 item):
-+
-+Introduce `internal interface IKucoinSignatureService : ISignatureService` in `Auth/` with `string SignPassphrase(string passphrase)`. Three file changes:
-+1. CREATE `src/CryptoExchanges.Net.Kucoin/Auth/IKucoinSignatureService.cs`
-+2. EDIT `src/CryptoExchanges.Net.Kucoin/Auth/KucoinSignatureService.cs:12` — implement `IKucoinSignatureService` instead of `ISignatureService`
-+3. EDIT `src/CryptoExchanges.Net.Kucoin/Resilience/KucoinSigningHandler.cs:21` — change parameter type from `KucoinSignatureService` to `IKucoinSignatureService`; update test `BuildHandler` helper type accordingly
-+
-+Full feedback: `nazgul/reviews/TASK-057/consolidated-feedback.md`
 diff --git a/src/CryptoExchanges.Net.Kucoin/Auth/IKucoinSignatureService.cs b/src/CryptoExchanges.Net.Kucoin/Auth/IKucoinSignatureService.cs
 new file mode 100644
 index 0000000..8710626
@@ -1255,28 +26,658 @@ index 0000000..8710626
 +    string SignPassphrase(string passphrase);
 +}
 diff --git a/src/CryptoExchanges.Net.Kucoin/Auth/KucoinSignatureService.cs b/src/CryptoExchanges.Net.Kucoin/Auth/KucoinSignatureService.cs
-index 964609b..3a7725d 100644
---- a/src/CryptoExchanges.Net.Kucoin/Auth/KucoinSignatureService.cs
+new file mode 100644
+index 0000000..f2ba707
+--- /dev/null
 +++ b/src/CryptoExchanges.Net.Kucoin/Auth/KucoinSignatureService.cs
-@@ -9,7 +9,7 @@ namespace CryptoExchanges.Net.Kucoin.Auth;
- /// <c>timestamp + METHOD + requestPath + body</c>, identical in structure to OKX, but with a Unix
- /// epoch <strong>millisecond</strong> timestamp (not ISO-8601) and an HMAC-signed passphrase.
- /// </summary>
--internal sealed class KucoinSignatureService(string secretKey) : ISignatureService
+@@ -0,0 +1,70 @@
++using System.Globalization;
++using CryptoExchanges.Net.Core.Auth;
++
++namespace CryptoExchanges.Net.Kucoin.Auth;
++
++/// <summary>
++/// Creates HMAC-SHA256 signatures for KuCoin KC-API passphrase-v2 requests, rendered as base64
++/// for the <c>KC-API-SIGN</c> header. Also signs the passphrase itself (KC-API passphrase-v2 scheme)
++/// for the <c>KC-API-PASSPHRASE</c> header. Signs a prehash of
++/// <c>timestamp + METHOD + requestPath + body</c>, identical in structure to OKX, but with a Unix
++/// epoch <strong>millisecond</strong> timestamp (not ISO-8601) and an HMAC-signed passphrase.
++/// </summary>
 +internal sealed class KucoinSignatureService(string secretKey) : IKucoinSignatureService
- {
-     private readonly string _secretKey = InitializeSecretKey(secretKey);
- 
++{
++    private readonly string _secretKey = InitializeSecretKey(secretKey);
++
++    /// <inheritdoc />
++    public string Sign(string prehash) =>
++        HmacSignature.Compute(_secretKey, prehash, SignatureEncoding.Base64);
++
++    /// <inheritdoc />
++    public string SignPassphrase(string passphrase)
++    {
++        ArgumentException.ThrowIfNullOrWhiteSpace(passphrase);
++        return HmacSignature.Compute(_secretKey, passphrase, SignatureEncoding.Base64);
++    }
++
++    /// <summary>
++    /// Builds the canonical KuCoin prehash string: <c>timestamp + METHOD + requestPath + body</c>.
++    /// The format is identical to OKX except the timestamp must be Unix epoch milliseconds (see
++    /// <see cref="FormatTimestamp"/>), not ISO-8601.
++    /// </summary>
++    /// <param name="timestamp">
++    /// The request timestamp as Unix epoch <strong>milliseconds</strong> (string, e.g.
++    /// <c>"1750000000000"</c>). Use <see cref="FormatTimestamp"/> to produce this form.
++    /// </param>
++    /// <param name="method">The HTTP verb; upper-cased before assembly (e.g. <c>GET</c>, <c>POST</c>, <c>DELETE</c>).</param>
++    /// <param name="requestPath">
++    /// The request path including the leading <c>/</c> and, for GET requests, the query string
++    /// (e.g. <c>/api/v1/market/allTickers</c>).
++    /// </param>
++    /// <param name="body">The raw JSON body for POST requests, or an empty string when there is no body.</param>
++    /// <returns>The canonical prehash string, with no signature appended.</returns>
++    /// <exception cref="ArgumentException"><paramref name="timestamp"/>, <paramref name="method"/>, or <paramref name="requestPath"/> is null/empty/whitespace.</exception>
++    /// <exception cref="ArgumentNullException"><paramref name="body"/> is null.</exception>
++    public static string BuildPrehash(string timestamp, string method, string requestPath, string body)
++    {
++        ArgumentException.ThrowIfNullOrWhiteSpace(timestamp);
++        ArgumentException.ThrowIfNullOrWhiteSpace(method);
++        ArgumentException.ThrowIfNullOrWhiteSpace(requestPath);
++        ArgumentNullException.ThrowIfNull(body);
++        return $"{timestamp}{method.ToUpperInvariant()}{requestPath}{body}";
++    }
++
++    /// <summary>
++    /// Formats a <see cref="DateTimeOffset"/> as the Unix epoch milliseconds string KuCoin expects
++    /// (e.g. <c>"1750000000000"</c>). This differs from OKX, which uses ISO-8601 UTC with
++    /// milliseconds and a trailing <c>Z</c>.
++    /// </summary>
++    /// <param name="timestamp">The instant to format.</param>
++    /// <returns>The Unix epoch milliseconds as a string.</returns>
++    public static string FormatTimestamp(DateTimeOffset timestamp) =>
++        timestamp.ToUnixTimeMilliseconds().ToString(CultureInfo.InvariantCulture);
++
++    private static string InitializeSecretKey(string secretKey)
++    {
++        ArgumentException.ThrowIfNullOrWhiteSpace(secretKey);
++        return secretKey;
++    }
++}
+diff --git a/src/CryptoExchanges.Net.Kucoin/Resilience/KucoinErrorTranslator.cs b/src/CryptoExchanges.Net.Kucoin/Resilience/KucoinErrorTranslator.cs
+new file mode 100644
+index 0000000..e7a7e8c
+--- /dev/null
++++ b/src/CryptoExchanges.Net.Kucoin/Resilience/KucoinErrorTranslator.cs
+@@ -0,0 +1,95 @@
++using System.Globalization;
++using System.Net;
++using CryptoExchanges.Net.Core.Exceptions;
++using CryptoExchanges.Net.Http;
++
++namespace CryptoExchanges.Net.Kucoin.Resilience;
++
++/// <summary>
++/// Maps KuCoin V1 error responses (HTTP status + <c>{code,msg}</c> envelope) to the SDK's typed
++/// exceptions. KuCoin returns a string <c>code</c> at the top level; success is
++/// <c>code == "200000"</c> (a string), which must NEVER be treated as an error.
++/// </summary>
++/// <remarks>
++/// Internal per ADR-001 conv #2: the in-assembly composer/AddKucoinExchange construct this
++/// directly, so there is no cross-assembly need for it to be public. KuCoin error codes are
++/// documented as strings; the mappings below use real KuCoin codes and map conservatively.
++/// </remarks>
++internal sealed class KucoinErrorTranslator : IExchangeErrorTranslator
++{
++    /// <inheritdoc />
++    public ExchangeException Translate(HttpResponseMessage response, string body)
++    {
++        ArgumentNullException.ThrowIfNull(response);
++        var (code, msg) = Parse(body);
++        var text = msg is null ? $"KuCoin HTTP {(int)response.StatusCode}" : $"KuCoin error {code}: {msg}";
++
++        // Translate always returns an exception (it is only invoked on a failed/error response). When the
++        // JSON envelope still reports code "200000" (e.g. an HTTP-level error with a success-shaped body),
++        // we return the generic ExchangeApiException rather than mapping to a more specific typed exception.
++        if (code == "200000")
++            return new ExchangeApiException(text, ParseCode(code), body);
++
++        var numeric = ParseCode(code);
++
++        // Rate limiting: HTTP 429. KuCoin returns 429 directly for rate limit breaches.
++        if (response.StatusCode == HttpStatusCode.TooManyRequests)
++            return new RateLimitExceededException(text, RetryAfterReader.GetDelay(response), numeric, body);
++
++        // Authentication / signature / permission / timestamp failures: HTTP 401/403, and KuCoin
++        // auth family: 400001 = timestamp expired; 400002 = invalid timestamp; 400003 = invalid
++        // API key; 400004 = invalid passphrase; 400005 = invalid signature; 400006 = invalid IP;
++        // 400007 = endpoint access forbidden; 411100 = account is frozen.
++        if (response.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden
++            || code is "400001" or "400002" or "400003" or "400004" or "400005"
++                or "400006" or "400007" or "411100")
++            return new AuthenticationException(text, numeric, body);
++
++        // Insufficient balance: 900014 = insufficient balance.
++        if (code is "900014")
++            return new InsufficientBalanceException(text, numeric, body);
++
++        // Order errors: 900001 = invalid symbol; 900002 = invalid price; 900003 = invalid amount;
++        // 900004 = invalid order type; 900005 = invalid order side; 900006 = amount too small;
++        // 900007 = price out of range; 900008 = order does not exist; 900009 = order already
++        // cancelled; 900010 = order already closed.
++        if (code is "900001" or "900002" or "900003" or "900004" or "900005"
++            or "900006" or "900007" or "900008" or "900009" or "900010")
++            return new InvalidOrderException(text, numeric, body);
++
++        // Unknown / unmapped error codes: surface the venue code + raw body for diagnostics.
++        return new ExchangeApiException(text, numeric, body);
++    }
++
++    /// <summary>
++    /// Extracts the KuCoin error code + message from the <c>{"code","msg"}</c> envelope.
++    /// </summary>
++    private static (string? code, string? msg) Parse(string body)
++    {
++        if (string.IsNullOrWhiteSpace(body))
++            return (null, null);
++        try
++        {
++            using var doc = JsonDocument.Parse(body);
++            var root = doc.RootElement;
++            var code = ReadString(root, "code");
++            var msg = ReadString(root, "msg");
++            return (code, msg);
++        }
++        catch (JsonException)
++        {
++            return (null, null);
++        }
++    }
++
++    /// <summary>Reads a string property, tolerating non-string value kinds (returns null) so a
++    /// malformed body never throws InvalidOperationException out of the catch.</summary>
++    private static string? ReadString(JsonElement element, string name)
++        => element.TryGetProperty(name, out var v) && v.ValueKind == JsonValueKind.String
++            ? v.GetString()
++            : null;
++
++    /// <summary>Parses the KuCoin string code into the numeric code carried on the typed exception, or null.</summary>
++    private static int? ParseCode(string? code)
++        => int.TryParse(code, NumberStyles.Integer, CultureInfo.InvariantCulture, out var n) ? n : null;
++}
 diff --git a/src/CryptoExchanges.Net.Kucoin/Resilience/KucoinSigningHandler.cs b/src/CryptoExchanges.Net.Kucoin/Resilience/KucoinSigningHandler.cs
-index ee384f8..e045734 100644
---- a/src/CryptoExchanges.Net.Kucoin/Resilience/KucoinSigningHandler.cs
+new file mode 100644
+index 0000000..fc41d67
+--- /dev/null
 +++ b/src/CryptoExchanges.Net.Kucoin/Resilience/KucoinSigningHandler.cs
-@@ -18,7 +18,7 @@ namespace CryptoExchanges.Net.Kucoin.Resilience;
- /// <param name="signatureService">Computes the base64 HMAC-SHA256 signature over the KuCoin prehash string and signs the passphrase.</param>
- /// <param name="timeOffset">Returns the current server-time offset in milliseconds, applied to each timestamp.</param>
- internal sealed class KucoinSigningHandler(
--    string apiKey, string passphrase, KucoinSignatureService signatureService, Func<long> timeOffset)
+@@ -0,0 +1,85 @@
++using CryptoExchanges.Net.Core.Auth;
++using CryptoExchanges.Net.Kucoin.Auth;
++
++namespace CryptoExchanges.Net.Kucoin.Resilience;
++
++/// <summary>
++/// For signed KuCoin requests, (re)computes the Unix-ms timestamp + base64 HMAC signature ON EACH
++/// ATTEMPT and sets the five KuCoin KC-API credential headers: <c>KC-API-KEY</c>,
++/// <c>KC-API-SIGN</c>, <c>KC-API-TIMESTAMP</c>, <c>KC-API-PASSPHRASE</c>, and
++/// <c>KC-API-KEY-VERSION</c> (always <c>2</c>). Sits below the retry strategy so a retried,
++/// delayed request is re-signed with a fresh timestamp (avoids KuCoin timestamp-expiry
++/// rejections). Unlike OKX, KuCoin passphrase-v2 requires the passphrase itself to be
++/// HMAC-SHA256-signed and base64-encoded; see <see cref="KucoinSignatureService.SignPassphrase"/>.
++/// Unsigned (public) requests pass through untouched with no KC-API-* headers added.
++/// </summary>
++/// <param name="apiKey">The KuCoin API key set on the <c>KC-API-KEY</c> header for signed requests.</param>
++/// <param name="passphrase">The KuCoin API passphrase; will be HMAC-signed and base64-encoded before being set on <c>KC-API-PASSPHRASE</c>.</param>
++/// <param name="signatureService">Computes the base64 HMAC-SHA256 signature over the KuCoin prehash string and signs the passphrase.</param>
++/// <param name="timeOffset">Returns the current server-time offset in milliseconds, applied to each timestamp.</param>
++internal sealed class KucoinSigningHandler(
 +    string apiKey, string passphrase, IKucoinSignatureService signatureService, Func<long> timeOffset)
-     : DelegatingHandler
- {
-     /// <inheritdoc />
++    : DelegatingHandler
++{
++    private const string KeyVersion = "2";
++    /// <inheritdoc />
++    protected override async Task<HttpResponseMessage> SendAsync(
++        HttpRequestMessage request, CancellationToken cancellationToken)
++    {
++        ArgumentNullException.ThrowIfNull(request);
++
++        if (KucoinSigningRequest.IsSigned(request))
++            await ResignAsync(request, cancellationToken).ConfigureAwait(false);
++
++        return await base.SendAsync(request, cancellationToken).ConfigureAwait(false);
++    }
++
++    private async Task ResignAsync(HttpRequestMessage request, CancellationToken ct)
++    {
++        // A signed KuCoin request needs all three credentials: key, secret (held by the signature
++        // service), and passphrase. Guard here even though the composer's secret-gated finalizer
++        // should normally prevent constructing a signing handler without full credentials.
++        if (string.IsNullOrEmpty(apiKey))
++            throw new InvalidOperationException(
++                "KuCoin signed request requires an API key (KC-API-KEY); none was configured.");
++        if (string.IsNullOrEmpty(passphrase))
++            throw new InvalidOperationException(
++                "KuCoin signed request requires a passphrase (KC-API-PASSPHRASE); none was configured.");
++
++        // Fresh timestamp per attempt: UtcNow shifted by the server-time offset, then Unix epoch ms.
++        var instant = DateTimeOffset.UtcNow.AddMilliseconds(timeOffset());
++        var timestamp = KucoinSignatureService.FormatTimestamp(instant);
++
++        // Sign the ACTUAL outgoing path+query. Using RequestUri.PathAndQuery (rather than
++        // reconstructing it) guarantees byte-for-byte consistency with whatever KucoinHttpClient
++        // built, so the signed prehash matches exactly what KuCoin receives.
++        var requestPath = request.RequestUri!.PathAndQuery;
++        var method = request.Method.Method;
++
++        var body = string.Empty;
++        if ((request.Method == HttpMethod.Post || request.Method == HttpMethod.Put)
++            && request.Content is not null)
++        {
++            body = await request.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
++        }
++
++        var prehash = KucoinSignatureService.BuildPrehash(timestamp, method, requestPath, body);
++        var signature = signatureService.Sign(prehash);
++
++        // KuCoin passphrase-v2: sign the passphrase itself with HMAC-SHA256 + base64.
++        var signedPassphrase = signatureService.SignPassphrase(passphrase);
++
++        // Strip any signing headers from a prior attempt so a retried request re-signs cleanly
++        // (exactly one set of KC-API-* headers with a fresh timestamp/signature).
++        request.Headers.Remove("KC-API-KEY");
++        request.Headers.Remove("KC-API-SIGN");
++        request.Headers.Remove("KC-API-TIMESTAMP");
++        request.Headers.Remove("KC-API-PASSPHRASE");
++        request.Headers.Remove("KC-API-KEY-VERSION");
++        request.Headers.Add("KC-API-KEY", apiKey);
++        request.Headers.Add("KC-API-SIGN", signature);
++        request.Headers.Add("KC-API-TIMESTAMP", timestamp);
++        request.Headers.Add("KC-API-PASSPHRASE", signedPassphrase);
++        request.Headers.Add("KC-API-KEY-VERSION", KeyVersion);
++    }
++}
+diff --git a/src/CryptoExchanges.Net.Kucoin/Resilience/KucoinSigningRequest.cs b/src/CryptoExchanges.Net.Kucoin/Resilience/KucoinSigningRequest.cs
+new file mode 100644
+index 0000000..707970a
+--- /dev/null
++++ b/src/CryptoExchanges.Net.Kucoin/Resilience/KucoinSigningRequest.cs
+@@ -0,0 +1,22 @@
++namespace CryptoExchanges.Net.Kucoin.Resilience;
++
++/// <summary>Marks an outgoing request as requiring KuCoin KC-API signing (Unix-ms timestamp +
++/// HMAC-SHA256 + signed passphrase), applied per attempt by the KuCoin signing handler.</summary>
++internal static class KucoinSigningRequest
++{
++    private static readonly HttpRequestOptionsKey<bool> SignedKey = new("kucoin.signed");
++
++    /// <summary>Flags the request as signed.</summary>
++    public static void MarkSigned(HttpRequestMessage request)
++    {
++        ArgumentNullException.ThrowIfNull(request);
++        request.Options.Set(SignedKey, true);
++    }
++
++    /// <summary>True when the request was flagged as signed.</summary>
++    public static bool IsSigned(HttpRequestMessage request)
++    {
++        ArgumentNullException.ThrowIfNull(request);
++        return request.Options.TryGetValue(SignedKey, out var v) && v;
++    }
++}
+diff --git a/tests/CryptoExchanges.Net.Kucoin.Tests.Unit/KucoinSigningTests.cs b/tests/CryptoExchanges.Net.Kucoin.Tests.Unit/KucoinSigningTests.cs
+new file mode 100644
+index 0000000..4ebbd3a
+--- /dev/null
++++ b/tests/CryptoExchanges.Net.Kucoin.Tests.Unit/KucoinSigningTests.cs
+@@ -0,0 +1,354 @@
++using System.Net;
++using Xunit;
++using AwesomeAssertions;
++using CryptoExchanges.Net.Kucoin.Auth;
++using CryptoExchanges.Net.Kucoin.Resilience;
++using CryptoExchanges.Net.Core.Auth;
++using CryptoExchanges.Net.Core.Exceptions;
++
++namespace CryptoExchanges.Net.Kucoin.Tests.Unit;
++
++/// <summary>
++/// No-network unit tests for the KuCoin KC-API passphrase-v2 signature service (base64
++/// HMAC-SHA256 + prehash assembly + passphrase signing), Unix-ms timestamp format, signing
++/// handler mark-and-strip behavior, and error mapping.
++/// </summary>
++public class KucoinSigningTests
++{
++    // ── base64 HMAC-SHA256 signature: FIXED known vectors ──
++
++    [Fact]
++    public void Sign_ProducesExpectedBase64ForFixedVector()
++    {
++        // HMAC-SHA256("hello", key="secret") rendered as base64. Same underlying primitive as OKX.
++        // Computed independently: base64(HMAC-SHA256(b"secret", b"hello")).
++        var sig = new KucoinSignatureService("secret").Sign("hello");
++        sig.Should().Be("iKqz7ejTrflNJquQ07r9SiCDBww7zOnAFO4EpEOEfAs=");
++    }
++
++    [Fact]
++    public void Sign_MatchesCoreHmacBase64()
++    {
++        // KucoinSignatureService.Sign is exactly Core HmacSignature with base64 output.
++        var viaService = new KucoinSignatureService("mysecret").Sign("some-prehash");
++        var viaCore = HmacSignature.Compute("mysecret", "some-prehash", SignatureEncoding.Base64);
++        viaService.Should().Be(viaCore);
++    }
++
++    [Fact]
++    public void SignPassphrase_ProducesExpectedBase64ForFixedVector()
++    {
++        // KuCoin passphrase-v2: KC-API-PASSPHRASE = base64(HMAC-SHA256(secret, passphrase)).
++        // Computed independently: base64(HMAC-SHA256(b"secret", b"mypassphrase")).
++        var signed = new KucoinSignatureService("secret").SignPassphrase("mypassphrase");
++        signed.Should().Be("jrrTuwAqT2eYfpU/Rg8OhXN4674gVXo5b7JJOivIAP0=");
++    }
++
++    [Fact]
++    public void SignPassphrase_DiffersFromRawPassphrase()
++    {
++        // The signed passphrase must NEVER equal the raw passphrase — it is always HMAC-SHA256 + base64.
++        var signed = new KucoinSignatureService("secret").SignPassphrase("mypassphrase");
++        signed.Should().NotBe("mypassphrase");
++    }
++
++    [Fact]
++    public void SignPassphrase_RejectsBlankPassphrase()
++    {
++        var act = () => new KucoinSignatureService("secret").SignPassphrase(" ");
++        act.Should().Throw<ArgumentException>();
++    }
++
++    // ── BuildPrehash ──
++
++    [Fact]
++    public void BuildPrehash_Get_AssemblesTimestampMethodPathQuery()
++    {
++        // Unix-ms timestamp + METHOD + requestPath (with query) + empty body.
++        // Known instant: 2026-06-17T12:00:00Z → 1781697600000 ms.
++        const string timestamp = "1781697600000";
++        var prehash = KucoinSignatureService.BuildPrehash(timestamp, "GET", "/api/v1/market/allTickers", string.Empty);
++        prehash.Should().Be("1781697600000GET/api/v1/market/allTickers");
++
++        // Verify the signature over this prehash is stable (golden value computed independently).
++        var sig = new KucoinSignatureService("secret").Sign(prehash);
++        sig.Should().Be("VytcCBIRyebyHbVlPizpbkRvLymxUb19cMRy1WAmZpw=");
++    }
++
++    [Fact]
++    public void BuildPrehash_Post_AssemblesTimestampMethodPathBody()
++    {
++        const string timestamp = "1781697600000";
++        const string body = "{\"symbol\":\"BTC-USDT\"}";
++        // POST prehash: timestamp + METHOD + requestPath + jsonBody (no query string on the path).
++        var prehash = KucoinSignatureService.BuildPrehash(timestamp, "POST", "/api/v1/orders", body);
++        prehash.Should().Be("1781697600000POST/api/v1/orders{\"symbol\":\"BTC-USDT\"}");
++
++        var sig = new KucoinSignatureService("secret").Sign(prehash);
++        sig.Should().Be("MsBAr9T4phZdosux5u9t3rILTNkahjP5/MoV7UrnHU0=");
++    }
++
++    [Fact]
++    public void BuildPrehash_UpperCasesMethod()
++        => KucoinSignatureService.BuildPrehash("1", "get", "/p", string.Empty).Should().Be("1GET/p");
++
++    [Fact]
++    public void BuildPrehash_RejectsBlankRequiredFields()
++    {
++        var act = () => KucoinSignatureService.BuildPrehash(" ", "GET", "/p", string.Empty);
++        act.Should().Throw<ArgumentException>();
++    }
++
++    [Fact]
++    public void BuildPrehash_RejectsNullBody()
++    {
++        var act = () => KucoinSignatureService.BuildPrehash("1", "GET", "/p", null!);
++        act.Should().Throw<ArgumentNullException>();
++    }
++
++    // ── FormatTimestamp: Unix epoch milliseconds (NOT ISO-8601) ──
++
++    [Fact]
++    public void FormatTimestamp_ProducesUnixEpochMillisecondsNotIso8601()
++    {
++        var instant = new DateTimeOffset(2026, 6, 17, 12, 0, 0, 0, TimeSpan.Zero);
++        var result = KucoinSignatureService.FormatTimestamp(instant);
++
++        // Must be the exact Unix epoch ms value — NOT an ISO-8601 string.
++        result.Should().Be("1781697600000");
++        result.Should().NotContain("T");
++        result.Should().NotContain("Z");
++        result.Should().NotContain("-");
++    }
++
++    [Fact]
++    public void FormatTimestamp_ConvertsToUtc()
++    {
++        // A +05:00 instant must be converted to UTC before computing Unix ms.
++        var instant = new DateTimeOffset(2026, 6, 17, 17, 0, 0, 0, TimeSpan.FromHours(5));
++        // 2026-06-17T12:00:00Z in UTC → same epoch ms.
++        KucoinSignatureService.FormatTimestamp(instant).Should().Be("1781697600000");
++    }
++
++    [Fact]
++    public void FormatTimestamp_ReturnsNumericString()
++    {
++        var result = KucoinSignatureService.FormatTimestamp(DateTimeOffset.UtcNow);
++        long.TryParse(result, out var parsed).Should().BeTrue("FormatTimestamp must return a parseable long string");
++        parsed.Should().BeGreaterThan(0);
++    }
++
++    [Fact]
++    public void SignatureService_RejectsBlankSecret()
++    {
++        var act = () => new KucoinSignatureService(" ");
++        act.Should().Throw<ArgumentException>();
++    }
++
++    // ── KucoinSigningRequest mark-and-strip marker ──
++
++    [Fact]
++    public void SigningRequest_MarkSigned_SetsFlag()
++    {
++        using var request = new HttpRequestMessage(HttpMethod.Get, "https://api.kucoin.com/api/v1/market/tickers");
++        KucoinSigningRequest.MarkSigned(request);
++        KucoinSigningRequest.IsSigned(request).Should().BeTrue();
++    }
++
++    [Fact]
++    public void SigningRequest_UnmarkedRequest_IsNotSigned()
++    {
++        using var request = new HttpRequestMessage(HttpMethod.Get, "https://api.kucoin.com/api/v1/market/tickers");
++        KucoinSigningRequest.IsSigned(request).Should().BeFalse();
++    }
++
++    // ── KucoinSigningHandler behavior ──
++
++    private static KucoinSigningHandler BuildHandler(
++        string apiKey = "my-api-key",
++        string passphrase = "my-passphrase",
++        string secret = "my-secret",
++        Func<long>? timeOffset = null)
++    {
++        var svc = new KucoinSignatureService(secret);
++        var handler = new KucoinSigningHandler(apiKey, passphrase, svc, timeOffset ?? (() => 0L));
++        handler.InnerHandler = new NoOpHandler();
++        return handler;
++    }
++
++    [Fact]
++    public async Task Handler_UnsignedRequest_PassesThroughWithNoKcApiHeaders()
++    {
++        using var handler = BuildHandler();
++        using var client = new HttpClient(handler);
++        using var request = new HttpRequestMessage(HttpMethod.Get, "https://api.kucoin.com/api/v1/time");
++        // NOT marked as signed.
++
++        using var _ = await client.SendAsync(request);
++
++        request.Headers.Contains("KC-API-KEY").Should().BeFalse();
++        request.Headers.Contains("KC-API-SIGN").Should().BeFalse();
++        request.Headers.Contains("KC-API-TIMESTAMP").Should().BeFalse();
++        request.Headers.Contains("KC-API-PASSPHRASE").Should().BeFalse();
++        request.Headers.Contains("KC-API-KEY-VERSION").Should().BeFalse();
++    }
++
++    [Fact]
++    public async Task Handler_SignedRequest_SetsAllFiveKcApiHeaders()
++    {
++        using var handler = BuildHandler();
++        using var client = new HttpClient(handler);
++        using var request = new HttpRequestMessage(HttpMethod.Get, "https://api.kucoin.com/api/v1/accounts");
++        KucoinSigningRequest.MarkSigned(request);
++
++        using var _ = await client.SendAsync(request);
++
++        request.Headers.Contains("KC-API-KEY").Should().BeTrue();
++        request.Headers.Contains("KC-API-SIGN").Should().BeTrue();
++        request.Headers.Contains("KC-API-TIMESTAMP").Should().BeTrue();
++        request.Headers.Contains("KC-API-PASSPHRASE").Should().BeTrue();
++        request.Headers.Contains("KC-API-KEY-VERSION").Should().BeTrue();
++
++        request.Headers.GetValues("KC-API-KEY").Single().Should().Be("my-api-key");
++        request.Headers.GetValues("KC-API-KEY-VERSION").Single().Should().Be("2");
++    }
++
++    [Fact]
++    public async Task Handler_SignedRequest_PassphraseHeaderIsSignedNotRaw()
++    {
++        using var handler = BuildHandler(passphrase: "testpassphrase", secret: "testsecret");
++        using var client = new HttpClient(handler);
++        using var request = new HttpRequestMessage(HttpMethod.Get, "https://api.kucoin.com/api/v1/accounts");
++        KucoinSigningRequest.MarkSigned(request);
++
++        using var _ = await client.SendAsync(request);
++
++        var passphraseHeader = request.Headers.GetValues("KC-API-PASSPHRASE").Single();
++        // The passphrase header must NOT be the raw passphrase.
++        passphraseHeader.Should().NotBe("testpassphrase");
++        // It should be the base64 HMAC-SHA256 of the passphrase under the secret.
++        var expected = HmacSignature.Compute("testsecret", "testpassphrase", SignatureEncoding.Base64);
++        passphraseHeader.Should().Be(expected);
++    }
++
++    [Fact]
++    public async Task Handler_RetrySimulation_YieldsDifferentTimestampsAndNoDuplicateHeaders()
++    {
++        // Simulate two separate attempts with different time offsets to verify: (a) timestamps differ,
++        // (b) no duplicate KC-API-* headers (mark-and-strip ensures clean re-sign).
++        long offsetMs = 0L;
++        using var handler = BuildHandler(timeOffset: () => offsetMs);
++        using var client = new HttpClient(handler);
++
++        // First attempt — offset 0
++        using var request1 = new HttpRequestMessage(HttpMethod.Get, "https://api.kucoin.com/api/v1/accounts");
++        KucoinSigningRequest.MarkSigned(request1);
++        using var _1 = await client.SendAsync(request1);
++        var ts1 = request1.Headers.GetValues("KC-API-TIMESTAMP").Single();
++
++        // Second attempt — offset 60,000 ms (simulated delay)
++        offsetMs = 60_000L;
++        using var request2 = new HttpRequestMessage(HttpMethod.Get, "https://api.kucoin.com/api/v1/accounts");
++        KucoinSigningRequest.MarkSigned(request2);
++        using var _2 = await client.SendAsync(request2);
++        var ts2 = request2.Headers.GetValues("KC-API-TIMESTAMP").Single();
++
++        // Timestamps must differ.
++        ts1.Should().NotBe(ts2);
++
++        // No header should appear more than once (mark-and-strip).
++        request2.Headers.GetValues("KC-API-KEY").Should().HaveCount(1);
++        request2.Headers.GetValues("KC-API-SIGN").Should().HaveCount(1);
++        request2.Headers.GetValues("KC-API-TIMESTAMP").Should().HaveCount(1);
++        request2.Headers.GetValues("KC-API-PASSPHRASE").Should().HaveCount(1);
++        request2.Headers.GetValues("KC-API-KEY-VERSION").Should().HaveCount(1);
++    }
++
++    [Fact]
++    public async Task Handler_MissingApiKey_Throws()
++    {
++        using var handler = BuildHandler(apiKey: "");
++        using var client = new HttpClient(handler);
++        var request = new HttpRequestMessage(HttpMethod.Get, "https://api.kucoin.com/api/v1/accounts");
++        KucoinSigningRequest.MarkSigned(request);
++
++        await Assert.ThrowsAsync<InvalidOperationException>(() => client.SendAsync(request));
++        request.Dispose();
++    }
++
++    [Fact]
++    public async Task Handler_MissingPassphrase_Throws()
++    {
++        using var handler = BuildHandler(passphrase: "");
++        using var client = new HttpClient(handler);
++        var request = new HttpRequestMessage(HttpMethod.Get, "https://api.kucoin.com/api/v1/accounts");
++        KucoinSigningRequest.MarkSigned(request);
++
++        await Assert.ThrowsAsync<InvalidOperationException>(() => client.SendAsync(request));
++        request.Dispose();
++    }
++
++    // ── KucoinErrorTranslator: code / HTTP-status → exception type ──
++
++    private static ExchangeException Translate(HttpStatusCode status, string body)
++    {
++        using var resp = new HttpResponseMessage(status);
++        return new KucoinErrorTranslator().Translate(resp, body);
++    }
++
++    [Theory]
++    [InlineData(HttpStatusCode.OK, "{\"code\":\"400003\",\"msg\":\"invalid key\"}", typeof(AuthenticationException))]
++    [InlineData(HttpStatusCode.OK, "{\"code\":\"400005\",\"msg\":\"invalid signature\"}", typeof(AuthenticationException))]
++    [InlineData(HttpStatusCode.OK, "{\"code\":\"400004\",\"msg\":\"invalid passphrase\"}", typeof(AuthenticationException))]
++    [InlineData(HttpStatusCode.Unauthorized, "{\"code\":\"1\",\"msg\":\"unauth\"}", typeof(AuthenticationException))]
++    [InlineData(HttpStatusCode.Forbidden, "{\"code\":\"1\",\"msg\":\"forbidden\"}", typeof(AuthenticationException))]
++    [InlineData(HttpStatusCode.OK, "{\"code\":\"900014\",\"msg\":\"insufficient\"}", typeof(InsufficientBalanceException))]
++    [InlineData(HttpStatusCode.OK, "{\"code\":\"900001\",\"msg\":\"invalid symbol\"}", typeof(InvalidOrderException))]
++    [InlineData(HttpStatusCode.OK, "{\"code\":\"900006\",\"msg\":\"amount too small\"}", typeof(InvalidOrderException))]
++    [InlineData(HttpStatusCode.OK, "{\"code\":\"999999\",\"msg\":\"weird\"}", typeof(ExchangeApiException))]
++    public void ErrorTranslator_MapsCodes(HttpStatusCode status, string body, Type expected)
++        => Translate(status, body).Should().BeOfType(expected);
++
++    [Fact]
++    public void ErrorTranslator_Maps429_ToRateLimitWithRetryAfter()
++    {
++        using var resp = new HttpResponseMessage(HttpStatusCode.TooManyRequests);
++        resp.Headers.Add("Retry-After", "7");
++        var ex = new KucoinErrorTranslator().Translate(resp, "{\"code\":\"429000\",\"msg\":\"too many\"}");
++        ex.Should().BeOfType<RateLimitExceededException>();
++        ((RateLimitExceededException)ex).RetryAfter.Should().Be(TimeSpan.FromSeconds(7));
++    }
++
++    [Fact]
++    public void ErrorTranslator_SuccessEnvelope_IsNotATypedError()
++    {
++        // code == "200000" (a STRING) is a success envelope: must NOT become a typed subtype.
++        var ex = Translate(HttpStatusCode.OK, "{\"code\":\"200000\",\"msg\":\"\"}");
++        ex.Should().BeOfType<ExchangeApiException>();
++        ex.Should().NotBeOfType<RateLimitExceededException>();
++        ex.Should().NotBeOfType<AuthenticationException>();
++    }
++
++    [Fact]
++    public void ErrorTranslator_NonJsonBody_FallsBackToApiException()
++        => Translate(HttpStatusCode.BadGateway, "<html>502</html>")
++            .Should().BeOfType<ExchangeApiException>();
++
++    [Theory]
++    [InlineData("{\"code\":400003,\"msg\":\"num code\"}")] // code as a number -> unparsed -> ApiException
++    [InlineData("{\"code\":\"400003\",\"msg\":12345}")]      // msg as a number
++    [InlineData("{\"code\":\"400003\",\"msg\":null}")]        // msg null
++    public void ErrorTranslator_MalformedFields_DoNotThrow(string body)
++    {
++        var act = () => Translate(HttpStatusCode.OK, body);
++        act.Should().NotThrow();
++    }
++
++    /// <summary>Minimal inner handler that returns a 200 OK without touching the network.</summary>
++    private sealed class NoOpHandler : HttpMessageHandler
++    {
++        protected override Task<HttpResponseMessage> SendAsync(
++            HttpRequestMessage request, CancellationToken cancellationToken)
++            => Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK));
++    }
++}

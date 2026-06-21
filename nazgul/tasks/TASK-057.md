@@ -1,6 +1,6 @@
 ---
 id: TASK-057
-status: IN_PROGRESS
+status: IMPLEMENTED
 depends_on: [TASK-056]
 ---
 # TASK-057: KC-API passphrase-v2 signing service + mark-and-strip signing handler

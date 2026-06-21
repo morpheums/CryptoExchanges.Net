@@ -54,17 +54,17 @@ Authoritative inputs (read fully before any task):
 
 | Task     | Status     | Wave | Description                                                                  |
 |----------|------------|------|------------------------------------------------------------------------------|
-| TASK-056 | ✦ IMPLEMENTED | 1    | Scaffold `CryptoExchanges.Net.Kucoin` + Unit/Integration test projects (OKX clone) |
+| TASK-056 | ✦ DONE     | 1    | Scaffold `CryptoExchanges.Net.Kucoin` + Unit/Integration test projects (OKX clone) |
 | TASK-061 | ◇ READY    | 1    | ADR-002 streaming endpoint seam → async `ResolveConnectionAsync` + migrate Binance |
-| TASK-057 | ◇ PLANNED  | 2    | KC-API passphrase-v2 signing service + mark-and-strip signing handler        |
-| TASK-058 | ◇ PLANNED  | 2    | Bespoke `ISymbolMapper` + REST wire DTOs + DeltaMapper profiles + parsers    |
+| TASK-057 | ◇ READY    | 2    | KC-API passphrase-v2 signing service + mark-and-strip signing handler        |
+| TASK-058 | ◇ READY    | 2    | Bespoke `ISymbolMapper` + REST wire DTOs + DeltaMapper profiles + parsers    |
 | TASK-059 | ◇ PLANNED  | 3    | REST services (market/account/trading) + http client + composer + entry     |
 | TASK-060 | ◇ PLANNED  | 4    | `AddKucoinExchange` DI + `AddCryptoExchanges` + MCP wiring                   |
 | TASK-062 | ◇ PLANNED  | 5    | `KucoinStreamProtocol` + bullet-public + 4 decoders + `AddKucoinStreams`     |
 | TASK-063 | ◇ PLANNED  | 6    | Live integration smokes — REST + one streaming (self-skip)                   |
 | TASK-064 | ◇ PLANNED  | 6    | Docs — README KuCoin row → supported + MCP/exchanges/streaming reference     |
 
-Tasks: 0/9 DONE.
+Tasks: 1/9 DONE.
 
 ## Wave Groups
 
@@ -134,17 +134,24 @@ Nothing in PRD "Out of Scope" (futures/margin, private streams, order-book maint
 
 ## Recovery Pointer
 
-- **Current stage**: ✦ TASK-056 IMPLEMENTED (commit 2b9c308) — awaiting review gate.
-- **Next action**: Review TASK-056; then begin TASK-061 (ADR-002 seam, Wave 1, READY).
-- **Active task**: none (TASK-056 at IMPLEMENTED, pending review).
+- **Current stage**: ✦ TASK-056 DONE (reviewed 4/4 APPROVED, completion SHA 40ab130).
+- **Next action**: Begin Wave 1 remainder (TASK-061) + Wave 2 (TASK-057 / TASK-058) in parallel — both
+  TASK-057 and TASK-058 are now READY (TASK-056 dependency satisfied).
+- **Active task**: none.
 - **Files are truth**: the task manifests under `nazgul/tasks/` carry full state; each manifest's
   frontmatter is the canonical record.
 
 ─── ◈ NEXT ─────────────────────────────────────────────
-  ✦ TASK-056 — Scaffold complete; IMPLEMENTED (commit 2b9c308). Awaiting review.
-  ◇ TASK-061 — ADR-002 streaming endpoint seam + migrate Binance (Wave 1, no deps, READY).
-  ◇ TASK-057 / TASK-058 — signing + data layer (Wave 2, after 056 APPROVED).
+  ✦ TASK-056 — Scaffold complete; DONE (reviewed 4/4, commit 2b9c308).
+  ◆ TASK-061 — ADR-002 streaming endpoint seam + migrate Binance (Wave 1, READY).
+  ◆ TASK-057 — KC-API passphrase-v2 signing service + handler (Wave 2, READY — 056 unblocked).
+  ◆ TASK-058 — Symbol mapper + DTOs + DeltaMapper profiles (Wave 2, READY — 056 unblocked).
 ────────────────────────────────────────────────────────
+
+## Completed
+
+- **TASK-056** — DONE (2026-06-21T01:30:00Z). KuCoin scaffold approved unanimously (4/4).
+  Impl commit: `2b9c308`. Completion SHA: `40ab130`. Review artifacts: `nazgul/reviews/TASK-056/`.
 
 
 ## Archived — FEAT-005 (WebSocket streaming v1) — COMPLETE

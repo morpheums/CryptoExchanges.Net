@@ -1,6 +1,6 @@
 ---
 id: TASK-062
-status: DONE
+status: IMPLEMENTED
 depends_on: [TASK-058, TASK-060, TASK-061]
 ---
 # TASK-062: `KucoinStreamProtocol` + bullet-public negotiation + 4 decoders + `AddKucoinStreams`
@@ -109,6 +109,7 @@ Tests (`Streaming/` in the Kucoin unit project), no network:
 - `af4d08a` — feat(FEAT-006): TASK-062 — KucoinStreamProtocol + bullet-public negotiation + 4 decoders + AddKucoinStreams
 - `d6988f7` — feat(FEAT-006): simplify TASK-062 (6 fixes: XML-doc corrections + per-frame decoder allocation removal)
 - `2039654` — feat(FEAT-006): TASK-062 DONE — RestBaseUrl wiring fix (cycle 2 review 4/4)
+- `32f75f7` — feat(FEAT-006): TASK-062 bugfix — ticker channel → /market/snapshot (real live wire)
 
 ## Implementation Log
 
@@ -182,3 +183,42 @@ Pre-checks (final): `dotnet build` 0W/0E; `dotnet test --filter 'Category!=Integ
 (Kucoin.Tests.Unit 200/200, Http.Tests.Unit 87/87 — no parallel-run flake this run).
 Simplify pass (Step 0): commit `d6988f7` — 6 fixes applied, tests green.
 Review artifacts: `nazgul/reviews/TASK-062/{architect,code,security,api}-reviewer.md`, `consolidated-feedback.md`.
+
+### Bugfix — live-wire ticker deserialization (CI timeout fix)
+
+**Root cause (verified against live KuCoin WS):**
+- `/market/ticker` sends no `symbol`, no 24h stats, and `time` as a JSON *number* — `string` typed
+  `StreamTickerDto.Time` threw on deserialize; fallback gave empty `Symbol` → `symbolMapper.FromWire("")`
+  threw → every ticker frame was dropped → integration tests timed out at 30s.
+- `/market/candles` sends `time` as a JSON *number* — `string` typed `StreamKlineDto.Time` threw (latent).
+- `/market/snapshot` is the correct canonical ticker source: double-nested `data.data`, all numeric fields,
+  includes `symbol`, has 24h open/high/low/vol/changeRate.
+
+**Changes (commit `32f75f7`):**
+
+A. **Ticker channel**: `KucoinStreamProtocol.BuildTopic` `StreamKind.Ticker → /market/snapshot:{wire}`.
+   Protocol + decoder + routing key all self-consistent via `BuildTopic` — no routing regression.
+
+B. **`StreamTickerDto`**: fully rewritten for snapshot `data.data` shape — `lastTradedPrice`, `buy`/`sell`,
+   `high`/`low`/`open`, `vol`/`volValue`, `changePrice`/`changeRate`, `datetime` (long ms). All fields
+   use native CLR types (decimal/long) matching JSON numbers.
+
+C. **`KucoinStreamDecoders`**: new `DeserializeSnapshotData<T>` navigates double-nested `data.data`
+   (outer data → inner data → payload). Ticker decoder uses it; Trade/OrderBook/Kline unchanged.
+
+D. **`KucoinMappingProfiles`** `StreamTickerDto→Ticker`: mapped to new fields — `lastTradedPrice`,
+   `open/high/low`, `vol/volValue`, `changePrice`, `changeRate*100` (fraction→percent), `datetime` (ms,
+   direct `FromUnixTimeMilliseconds`). Removed now-unused `ParseNsTimestamp` helper.
+
+E. **`StreamKlineDto.Time`**: `string → long` — fixes latent deserialization throw on real wire.
+
+F. **Unit test fixtures**: Ticker tests rewritten with real captured snapshot frame (double-nested,
+   numeric fields). Kline fixture updated with numeric `time`. Protocol topic assertions updated to
+   `/market/snapshot:`. RoutingKeyFor round-trip updated with real snapshot topic+frame.
+
+G. **`ci.yml`**: added `--filter 'Category!=Integration'` to Test step — prevents live-exchange smoke
+   tests from running on GitHub runners where KuCoin is unreachable.
+
+**Build:** `dotnet build CryptoExchanges.Net.sln` → 0 Warning(s), 0 Error(s).
+**Tests:** `dotnet test --filter 'Category!=Integration'` → all projects green (Kucoin.Tests.Unit 200/200,
+Http.Tests.Unit 87/87, all other suites passing).

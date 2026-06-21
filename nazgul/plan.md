@@ -60,7 +60,7 @@ Authoritative inputs (read fully before any task):
 | TASK-058 | ✦ DONE     | 2    | Bespoke `ISymbolMapper` + REST wire DTOs + DeltaMapper profiles + parsers    |
 | TASK-059 | ✦ DONE     | 3    | REST services (market/account/trading) + http client + composer + entry     |
 | TASK-060 | ✦ DONE     | 4    | `AddKucoinExchange` DI + `AddCryptoExchanges` + MCP wiring                   |
-| TASK-062 | ✦ DONE     | 5    | `KucoinStreamProtocol` + bullet-public + 4 decoders + `AddKucoinStreams`     |
+| TASK-062 | ◆ IMPLEMENTED | 5 | `KucoinStreamProtocol` + bullet-public + 4 decoders + `AddKucoinStreams` (bugfix: snapshot channel) |
 | TASK-063 | ✦ DONE     | 6    | Live integration smokes — REST + one streaming (self-skip)                   |
 | TASK-064 | ✦ DONE     | 6    | Docs — README KuCoin row → supported + MCP/exchanges/streaming reference     |
 
@@ -134,9 +134,9 @@ Nothing in PRD "Out of Scope" (futures/margin, private streams, order-book maint
 
 ## Recovery Pointer
 
-- **Current stage**: ✦ ALL TASKS DONE — FEAT-006 complete. TASK-064 DONE (commit 76a2798). Awaiting post-loop.
-- **Next action**: Post-loop phase (documentation, release-manager agents) → PR to main.
-- **Active task**: none (all 9/9 DONE).
+- **Current stage**: TASK-062 IMPLEMENTED (bugfix commit 32f75f7) — ticker channel corrected to /market/snapshot, kline time fixed, CI filter added. Awaiting review gate.
+- **Next action**: Review board evaluates TASK-062 bugfix; upon approval, post-loop → PR to main.
+- **Active task**: TASK-062 (IMPLEMENTED — bugfix round).
 - **Files are truth**: the task manifests under `nazgul/tasks/` carry full state; each manifest's
   frontmatter is the canonical record.
 

@@ -1,8 +1,8 @@
 # Nazgul Plan — FEAT-007
 
 ## Recovery Pointer
-**Active task**: TASK-069 (PLANNED) — Docs + CHANGELOG + version bump → `0.5.0-preview.1`
-**Next action**: Claim TASK-069, update README/NUGET_README/docs/*.md + CHANGELOG + Directory.Build.props.
+**Active task**: TASK-069 (IN_PROGRESS) — Docs + CHANGELOG + version bump → `0.5.0-preview.1`
+**Next action**: Edit all consumer-facing docs + CHANGELOG + Directory.Build.props; then set IMPLEMENTED.
 
 ─── ◈ NAZGUL ▸ PLANNING ────────────────────────────────
 

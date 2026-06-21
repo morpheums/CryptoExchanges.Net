@@ -31,10 +31,10 @@ dotnet add package CryptoExchanges.Net.Okx
 dotnet add package CryptoExchanges.Net.Bitget
 ```
 
-To register all four exchanges in one call (ASP.NET Core / hosted services):
+To register all exchanges in one call (ASP.NET Core / hosted services):
 
 ```bash
-dotnet add package CryptoExchanges.Net.DependencyInjection
+dotnet add package CryptoExchanges.Net
 ```
 
 ---

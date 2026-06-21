@@ -1,6 +1,6 @@
 ---
 id: TASK-069
-status: PLANNED
+status: IN_PROGRESS
 depends_on: [TASK-068]
 ---
 # TASK-069: Docs + CHANGELOG + version bump to `0.5.0-preview.1`
@@ -15,8 +15,8 @@ depends_on: [TASK-068]
 - **Wave**: 5
 - **Traces to**: PRD-FEAT-007 AC-1, AC-8; TRD-FEAT-007 §"Step 5 — Docs and version"; FEAT-007 spec §"Scope — In" #5, #6
 - **Created at**: 2026-06-21T18:00:00Z
-- **Claimed at**:
-- **Base SHA**:
+- **Claimed at**: 2026-06-21T19:30:00Z
+- **Base SHA**: 3756e53
 - **Implemented at**:
 - **Completed at**:
 - **Blocked at**:

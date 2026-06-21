@@ -35,7 +35,7 @@ This page describes the shipped design only.
 └────────────┬────────────────────────────────────────────────────┘
              │ depends on Core + per-exchange packages
 ┌────────────▼────────────────────────────────────────────────────┐
-│  CryptoExchanges.Net.DependencyInjection                         │
+│  CryptoExchanges.Net                                             │
 │  AddCryptoExchanges() — aggregator that delegates to Add*Exchange │
 │  keyed-singleton registration                                    │
 └─────────────────────────────────────────────────────────────────┘
@@ -186,7 +186,7 @@ OKX and Bitget additionally include the passphrase in the signed headers.
 
 ## Dependency injection
 
-`AddCryptoExchanges()` (in `CryptoExchanges.Net.DependencyInjection`) is a convenience aggregator
+`AddCryptoExchanges()` (in `CryptoExchanges.Net`) is a convenience aggregator
 that delegates to each exchange's own `Add*Exchange()` method (defined in the exchange's package,
 per ADR-001). Each exchange is registered as a keyed singleton under its `ExchangeId`.
 

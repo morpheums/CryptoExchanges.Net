@@ -73,6 +73,8 @@ internal static class KucoinClientComposer
     {
         ArgumentNullException.ThrowIfNull(options);
         ArgumentNullException.ThrowIfNull(offsetHolder);
+        if (offsetHolder.Length < 1)
+            throw new ArgumentException("offsetHolder must have at least one element.", nameof(offsetHolder));
 
         var inner = new SocketsHttpHandler { PooledConnectionLifetime = TimeSpan.FromMinutes(2) };
         var resilienceOptions = new CryptoExchanges.Net.Core.Resilience.ResilienceOptions();

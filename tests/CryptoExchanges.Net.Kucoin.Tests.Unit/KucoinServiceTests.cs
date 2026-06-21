@@ -751,6 +751,14 @@ public class KucoinServiceTests
     }
 
     [Fact]
+    public void ClientComposer_BuildResilientHttpClient_ZeroLengthOffsetHolder_ThrowsArgumentException()
+    {
+        // LR-004: Both null AND zero-length array guards are required before indexed access.
+        var act = () => KucoinClientComposer.BuildResilientHttpClient(new KucoinOptions(), Array.Empty<long>());
+        act.Should().Throw<ArgumentException>().WithMessage("*offsetHolder*");
+    }
+
+    [Fact]
     public async Task ExchangeClient_PingAsync_ReturnsFalseOnException()
     {
         // Verify PingAsync returns false on exchange exceptions (not rethrow).

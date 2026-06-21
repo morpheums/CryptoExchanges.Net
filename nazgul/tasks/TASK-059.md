@@ -20,7 +20,7 @@ depends_on: [TASK-057, TASK-058]
 - **Implemented at**: 2026-06-21T00:30:00Z
 - **Completed at**:
 - **Blocked at**:
-- **Retry count**: 0/3
+- **Retry count**: 1/3
 - **Test failures**: 0
 
 ## Description
@@ -111,4 +111,18 @@ Tests (`KucoinServiceTests.cs`) — stub HTTP handler returning canned KuCoin JS
 - Added `KucoinServiceTests.cs` with 40 new stub-HTTP tests.
 - Build: 0W/0E. Tests: 149/149 KuCoin unit pass; full suite 726+ pass.
 
+### Cycle 1 fix — 2026-06-21
+
+- LR-004: Added missing array length guard in `KucoinClientComposer.BuildResilientHttpClient` after null guard.
+  (`if (offsetHolder.Length < 1) throw new ArgumentException(...)`)
+- Added `ClientComposer_BuildResilientHttpClient_ZeroLengthOffsetHolder_ThrowsArgumentException` test.
+- Build: 0W/0E. Tests: 150/150 KuCoin unit pass.
+
 ## Review Results
+
+### Cycle 1 — CHANGES_REQUESTED (2026-06-21)
+
+Reviewers: architect-reviewer (APPROVE), code-reviewer (APPROVE), security-reviewer (APPROVE), api-reviewer (CHANGES_REQUESTED).
+
+**Blocking finding (api-reviewer, LR-004, HIGH/95)**:
+`KucoinClientComposer.BuildResilientHttpClient` had `ArgumentNullException.ThrowIfNull(offsetHolder)` (null guard) but was missing the required minimum-length guard before `offsetHolder[0]` indexed access. Fixed in Cycle 1.

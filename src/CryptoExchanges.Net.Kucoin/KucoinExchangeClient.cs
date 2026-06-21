@@ -118,10 +118,10 @@ public sealed class KucoinExchangeClient : IExchangeClient, IAsyncDisposable
     }
 
     /// <inheritdoc />
-    public async ValueTask DisposeAsync()
+    public ValueTask DisposeAsync()
     {
         if (_ownsHttpClient && _httpClient is not null)
             _httpClient.Dispose();
-        await Task.CompletedTask.ConfigureAwait(false);
+        return ValueTask.CompletedTask;
     }
 }

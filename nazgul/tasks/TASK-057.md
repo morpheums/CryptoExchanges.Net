@@ -94,7 +94,7 @@ Tests (`KucoinSigningTests.cs`) — golden-value + behavior, no network:
 
 ## Completion
 
-- **Completion SHA**: (see git commit after state write)
+- **Completion SHA**: ffc7e3f
 - **Review cycle**: 2/2 (Cycle 1 CHANGES_REQUESTED; Cycle 2 APPROVED unanimously 4/4)
 - **Reviewers**: architect-reviewer ✦, code-reviewer ✦, security-reviewer ✦, api-reviewer ✦
 

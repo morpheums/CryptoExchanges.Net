@@ -1,6 +1,6 @@
 ---
 id: TASK-064
-status: IN_PROGRESS
+status: DONE
 depends_on: [TASK-060, TASK-062]
 ---
 # TASK-064: Docs — README KuCoin row → supported + MCP/exchanges reference
@@ -18,7 +18,7 @@ depends_on: [TASK-060, TASK-062]
 - **Claimed at**: 2026-06-21T00:00:00Z
 - **Base SHA**: b6a59569331a0d09eb409ef4daa8c15fd1c2bd27
 - **Implemented at**: 2026-06-21T00:15:00Z
-- **Completed at**:
+- **Completed at**: 2026-06-21T16:00:00Z
 - **Blocked at**:
 - **Retry count**: 1/3
 - **Test failures**: 0
@@ -42,16 +42,14 @@ Modify:
   valid exchange key for the existing 12-tool vocabulary (no tool-schema change).
 - **`docs/streaming.md`** — add KuCoin to the list of exchanges with public streaming (ticker / trade /
   order book / kline) via `AddKucoinStreams`.
-- **`src/CryptoExchanges.Net.Mcp/ToolInputs.cs`** — add `["kucoin"] = ExchangeId.Kucoin` to Exchanges dict (Fix-First: MCP gap from TASK-060).
-- **`src/CryptoExchanges.Net.Mcp/EnvCredentialBinder.cs`** — add `KUCOIN_*` env var bindings (Fix-First: MCP gap from TASK-060).
-
-No additional source/test changes beyond the MCP wiring fix.
+- **`src/CryptoExchanges.Net.Mcp/ToolInputs.cs`** — add `["kucoin"] = ExchangeId.Kucoin` (Fix-First: TASK-060 gap).
+- **`src/CryptoExchanges.Net.Mcp/EnvCredentialBinder.cs`** — add `KUCOIN_*` env var bindings (Fix-First: TASK-060 gap).
 
 ## Acceptance Criteria
 - [x] README KuCoin row shows ✅ Supported + the `CryptoExchanges.Net.Kucoin` NuGet version badge (mirroring the Bitget row); the supported-exchange count/prose updated to include KuCoin.
 - [x] `docs/exchanges.md` has a KuCoin section (credentials `KUCOIN_API_KEY`/`KUCOIN_SECRET_KEY`/`KUCOIN_PASSPHRASE`, operations, `BTC-USDT` symbol format, streaming note); `docs/mcp-server.md` lists `kucoin` as a valid exchange key (no tool-schema change); `docs/streaming.md` lists KuCoin under public streaming.
 - [x] All edits are strictly technical (no roadmap/gateway/competitive/monetization leakage); solution still builds 0W/0E.
-- [ ] `ToolInputs.cs` maps `kucoin` → `ExchangeId.Kucoin`; `EnvCredentialBinder.cs` reads `KUCOIN_*` env vars.
+- [x] `ToolInputs.cs` maps `kucoin` → `ExchangeId.Kucoin`; `EnvCredentialBinder.cs` reads `KUCOIN_*` env vars.
 
 ## Pattern Reference
 - README Supported Exchanges table + badges: `README.md` lines 15–25 (Bitget row at line 22 is the exact template; KuCoin "Coming soon" row at line 25).
@@ -80,6 +78,7 @@ No additional source/test changes beyond the MCP wiring fix.
 ## Commits
 
 - `425b66b` — feat(FEAT-006): TASK-064 — docs: KuCoin row → supported + MCP/exchanges/streaming refs
+- `d54e9f1` — feat(FEAT-006): TASK-064 fix — wire kucoin into MCP ToolInputs + EnvCredentialBinder
 
 ## Implementation Log
 
@@ -88,7 +87,8 @@ No additional source/test changes beyond the MCP wiring fix.
 - docs/exchanges.md: Added full KuCoin section (credentials, KC-API passphrase-v2 signing, BTC-USDT symbol format, streaming note, DI + AddKucoinStreams snippets). Removed KuCoin from "Coming soon" table. Updated opening prose (four → five) and AddCryptoExchanges/GetClient blocks to include KuCoin credentials/resolver.
 - docs/mcp-server.md: Added `kucoin` to introductory exchange list, supported-exchanges line, and credentials table (KUCOIN_API_KEY/KUCOIN_SECRET_KEY/KUCOIN_PASSPHRASE). Updated passphrase note to include KuCoin.
 - docs/streaming.md: Updated scope note to name Binance and KuCoin. Added KuCoin DI streaming section (AddKucoinStreams, bullet-public note, full subscribe snippet). Updated without-DI section to mention KuCoin.
-- Fix-First Cycle 1 (2026-06-21): code-reviewer REJECT@95% — mcp-server.md claimed kucoin as valid exchange key but ToolInputs.cs + EnvCredentialBinder.cs missing KuCoin wiring (gap from TASK-060). Applied mechanical fix: added ["kucoin"] = ExchangeId.Kucoin to ToolInputs.Exchanges dict; added KUCOIN_API_KEY/SECRET_KEY/PASSPHRASE bindings to EnvCredentialBinder.Apply.
+- Fix-First Cycle 1 (2026-06-21): code-reviewer REJECT@95% — mcp-server.md claimed kucoin as valid exchange key but ToolInputs.cs + EnvCredentialBinder.cs missing KuCoin wiring (gap from TASK-060). Applied mechanical fix (commit d54e9f1); build 0W/0E; 783 tests pass.
+- Cycle 2: code-reviewer APPROVED (fix confirmed). Gate: 4/4 APPROVE.
 
 ## Review Results
 
@@ -97,4 +97,11 @@ No additional source/test changes beyond the MCP wiring fix.
 - code-reviewer: CHANGES_REQUESTED (REJECT@95% — ToolInputs.cs + EnvCredentialBinder.cs missing kucoin wiring)
 - security-reviewer: APPROVE
 - api-reviewer: APPROVE
-- Fix-First: Applied mechanical MCP source fix; proceeding to Cycle 2.
+- Fix-First: Applied mechanical MCP source fix (d54e9f1); pre-checks pass.
+
+### Cycle 2 (ALL APPROVE — DONE)
+- architect-reviewer: APPROVE (Cycle 1, still valid)
+- code-reviewer: APPROVE (Cycle 2 — fix confirmed at ToolInputs.cs:16 + EnvCredentialBinder.cs:24-26)
+- security-reviewer: APPROVE (Cycle 1, still valid)
+- api-reviewer: APPROVE (Cycle 1, still valid)
+- **Gate: 4/4 APPROVE → DONE**

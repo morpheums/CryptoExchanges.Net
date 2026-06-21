@@ -262,3 +262,28 @@ index 7cd0d85..c84e9d9 100644
  
  ---
  
+diff --git a/src/CryptoExchanges.Net.Mcp/EnvCredentialBinder.cs b/src/CryptoExchanges.Net.Mcp/EnvCredentialBinder.cs
+index b236158..3f9c3e7 100644
+--- a/src/CryptoExchanges.Net.Mcp/EnvCredentialBinder.cs
++++ b/src/CryptoExchanges.Net.Mcp/EnvCredentialBinder.cs
+@@ -21,5 +21,8 @@ public static class EnvCredentialBinder
+         options.BitgetApiKey = getEnv("BITGET_API_KEY");
+         options.BitgetSecretKey = getEnv("BITGET_SECRET_KEY");
+         options.BitgetPassphrase = getEnv("BITGET_PASSPHRASE");
++        options.KucoinApiKey = getEnv("KUCOIN_API_KEY");
++        options.KucoinSecretKey = getEnv("KUCOIN_SECRET_KEY");
++        options.KucoinPassphrase = getEnv("KUCOIN_PASSPHRASE");
+     }
+ }
+diff --git a/src/CryptoExchanges.Net.Mcp/ToolInputs.cs b/src/CryptoExchanges.Net.Mcp/ToolInputs.cs
+index 41eb0af..8506c6d 100644
+--- a/src/CryptoExchanges.Net.Mcp/ToolInputs.cs
++++ b/src/CryptoExchanges.Net.Mcp/ToolInputs.cs
+@@ -13,6 +13,7 @@ public static class ToolInputs
+             ["bybit"] = ExchangeId.Bybit,
+             ["okx"] = ExchangeId.Okx,
+             ["bitget"] = ExchangeId.Bitget,
++            ["kucoin"] = ExchangeId.Kucoin,
+         };
+ 
+     private static readonly Dictionary<string, KlineInterval> Intervals =

@@ -1,6 +1,6 @@
 ---
 id: TASK-066
-status: IMPLEMENTED
+status: DONE
 depends_on: [TASK-065]
 ---
 # TASK-066: Rename + consolidate aggregator test project → `CryptoExchanges.Net.Tests.Unit`
@@ -18,7 +18,7 @@ depends_on: [TASK-065]
 - **Claimed at**: 2026-06-21T20:00:00Z
 - **Base SHA**: 6658ca32d147f97f7f658585bd251461c9198b0c
 - **Implemented at**: 2026-06-21T20:05:00Z
-- **Completed at**:
+- **Completed at**: 2026-06-21T21:00:00Z
 - **Blocked at**:
 - **Retry count**: 0/3
 - **Test failures**: 0
@@ -120,3 +120,5 @@ including the two new facts.
 - Build: 0W/0E. Tests: 15/15 passed (13 existing + 2 new).
 
 ## Review Results
+
+- **Consolidated FEAT-007 review** — 2026-06-21: architect-reviewer APPROVED, code-reviewer APPROVED, security-reviewer APPROVED, api-reviewer APPROVED. Gate: ✦ APPROVED (all 4/4). Task → DONE.

@@ -1,8 +1,8 @@
 # Nazgul Plan — FEAT-007
 
 ## Recovery Pointer
-**Active task**: TASK-070 (PLANNED) — Final gate: build 0W/0E, suite green, `dotnet pack` 9-package swap
-**Next action**: Claim TASK-070 and run the final verification gate.
+**Active task**: FEAT-007 COMPLETE — all 6/6 tasks DONE; consolidated review approved 4/4; post-loop PR pending.
+**Next action**: Create PR `feat/FEAT-007-root-metapackage` → `main`.
 
 ─── ◈ NAZGUL ▸ PLANNING ────────────────────────────────
 
@@ -31,8 +31,7 @@ Authoritative inputs (read fully before any task):
 ## Branch
 
 - **Base**: `main` (protected — ship via PR).
-- **Feature**: `feat/FEAT-007-root-metapackage` (to be created; current working branch is
-  `feat/FEAT-006-kucoin`).
+- **Feature**: `feat/FEAT-007-root-metapackage`.
 
 ## Hard Constraints (recorded for implementer + reviewers)
 
@@ -73,14 +72,14 @@ Authoritative inputs (read fully before any task):
 
 | Task     | Status     | Wave | Description                                                                  |
 |----------|------------|------|------------------------------------------------------------------------------|
-| TASK-065 | ✦ IMPLEMENTED | 1    | Rename aggregator project → `CryptoExchanges.Net` (folder/csproj/ids/namespace + 2 src files + sln) |
-| TASK-066 | ✦ IMPLEMENTED | 2    | Rename + consolidate aggregator test project → `CryptoExchanges.Net.Tests.Unit` (+ `AddCryptoExchangesTests`) |
-| TASK-067 | ✦ IMPLEMENTED | 3    | Decouple the 5 per-exchange `.Tests.Unit` projects (drop ref + using + moved tests) |
-| TASK-068 | ✦ IMPLEMENTED | 4    | Repoint consumers — MCP (src+tests), samples/BasicUsage, sln                  |
-| TASK-069 | ✦ IMPLEMENTED | 5    | Docs (README/NUGET/docs/*) + CHANGELOG + version bump → `0.5.0-preview.1`     |
-| TASK-070 | ◇ PLANNED  | 6    | Final gate — build 0W/0E, suite green, `dotnet pack` 9-package swap verified  |
+| TASK-065 | ✦ DONE     | 1    | Rename aggregator project → `CryptoExchanges.Net` (folder/csproj/ids/namespace + 2 src files + sln) |
+| TASK-066 | ✦ DONE     | 2    | Rename + consolidate aggregator test project → `CryptoExchanges.Net.Tests.Unit` (+ `AddCryptoExchangesTests`) |
+| TASK-067 | ✦ DONE     | 3    | Decouple the 5 per-exchange `.Tests.Unit` projects (drop ref + using + moved tests) |
+| TASK-068 | ✦ DONE     | 4    | Repoint consumers — MCP (src+tests), samples/BasicUsage, sln                  |
+| TASK-069 | ✦ DONE     | 5    | Docs (README/NUGET/docs/*) + CHANGELOG + version bump → `0.5.0-preview.1`     |
+| TASK-070 | ✦ DONE     | 6    | Final gate — build 0W/0E, suite green, `dotnet pack` 9-package swap verified  |
 
-Tasks: 0/6 DONE.
+Tasks: 6/6 DONE. ✦ FEAT-007 COMPLETE.
 
 ## Wave Groups
 
@@ -152,24 +151,24 @@ changes, plugin auto-discovery, method/options-shape change, the manual nuget.or
 
 ## Recovery Pointer
 
-- **Current stage**: TASK-067 IMPLEMENTED (commit `31207d5`). Awaiting review gate.
-- **Next action**: Review gate for TASK-067; then begin TASK-068 (repoint MCP + samples + sln).
-- **Active task**: TASK-067 (IMPLEMENTED — pending review).
+- **Current stage**: FEAT-007 COMPLETE — all 6 tasks DONE. Consolidated review: 4/4 APPROVED.
+- **Next action**: Post-loop — create PR `feat/FEAT-007-root-metapackage` → `main`.
+- **Active task**: (none — all DONE)
 - **Files are truth**: the task manifests under `nazgul/tasks/TASK-065..070.md` carry full state; each
   manifest's frontmatter `status:` is the canonical record.
 
 ─── ◈ NEXT ─────────────────────────────────────────────
-  ◆ TASK-065 — Rename aggregator project → CryptoExchanges.Net (Wave 1, no deps).
-  ◇ TASK-066 — Rename + consolidate aggregator test project (Wave 2, after 065).
-  ◇ TASK-067 — Decouple 5 per-exchange test projects (Wave 3, after 066).
-  ◇ TASK-068 — Repoint MCP + samples + sln (Wave 4, after 066).
-  ◇ TASK-069 — Docs + CHANGELOG + version 0.5.0-preview.1 (Wave 5, after 068).
-  ◇ TASK-070 — Final build/test/pack verification gate (Wave 6, after 067+068+069).
+  ✦ FEAT-007 COMPLETE — all 6 tasks DONE; PR ready.
 ────────────────────────────────────────────────────────
 
 ## Completed
 
-- (none yet for FEAT-007)
+- **TASK-065** — DONE. `961df87` — rename aggregator project to CryptoExchanges.Net.
+- **TASK-066** — DONE. `998525f` — rename + consolidate aggregator test project → CryptoExchanges.Net.Tests.Unit.
+- **TASK-067** — DONE. `31207d5` — decouple 5 per-exchange test projects from aggregator.
+- **TASK-068** — DONE. `58f6313` — repoint MCP + samples consumers to renamed CryptoExchanges.Net.
+- **TASK-069** — DONE. `5d0ec52` — docs + CHANGELOG + version 0.5.0-preview.1.
+- **TASK-070** — DONE. Consolidated review 4/4 APPROVED (2026-06-21). Build 0W/0E; 778 tests passed; 9-package swap confirmed.
 
 ---
 

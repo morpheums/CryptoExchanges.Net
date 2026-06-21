@@ -1,6 +1,6 @@
 ---
 id: TASK-067
-status: IMPLEMENTED
+status: DONE
 depends_on: [TASK-066]
 ---
 # TASK-067: Decouple the 5 per-exchange `.Tests.Unit` projects from the aggregator
@@ -18,7 +18,7 @@ depends_on: [TASK-066]
 - **Claimed at**: 2026-06-21T22:00:00Z
 - **Base SHA**: d447033a93962404ef834e780da093abee014460
 - **Implemented at**: 2026-06-21T22:10:00Z
-- **Completed at**:
+- **Completed at**: 2026-06-21T21:00:00Z
 - **Blocked at**:
 - **Retry count**: 0/3
 - **Test failures**: 0
@@ -120,3 +120,5 @@ any path containing `DependencyInjection`.
 - All 5 per-exchange test projects: build 0W/0E, retained tests green (Binance 22, Bybit 76, Okx 92, Bitget 89, Kucoin 197).
 
 ## Review Results
+
+- **Consolidated FEAT-007 review** — 2026-06-21: architect-reviewer APPROVED, code-reviewer APPROVED, security-reviewer APPROVED, api-reviewer APPROVED. Gate: ✦ APPROVED (all 4/4). Task → DONE.

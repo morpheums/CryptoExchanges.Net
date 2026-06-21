@@ -1,6 +1,6 @@
 ---
 id: TASK-069
-status: IMPLEMENTED
+status: DONE
 depends_on: [TASK-068]
 ---
 # TASK-069: Docs + CHANGELOG + version bump to `0.5.0-preview.1`
@@ -18,7 +18,7 @@ depends_on: [TASK-068]
 - **Claimed at**: 2026-06-21T19:30:00Z
 - **Base SHA**: 3756e53
 - **Implemented at**: 2026-06-21T19:45:00Z
-- **Completed at**:
+- **Completed at**: 2026-06-21T21:00:00Z
 - **Blocked at**:
 - **Retry count**: 0/3
 - **Test failures**: 0
@@ -112,3 +112,5 @@ otherwise omit). No source/test code changes in this task.
 - Build: 0W/0E. Non-integration suite: all passed.
 
 ## Review Results
+
+- **Consolidated FEAT-007 review** — 2026-06-21: architect-reviewer APPROVED, code-reviewer APPROVED, security-reviewer APPROVED, api-reviewer APPROVED. Gate: ✦ APPROVED (all 4/4). Task → DONE.

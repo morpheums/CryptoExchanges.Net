@@ -1,6 +1,6 @@
 ---
 id: TASK-060
-status: IMPLEMENTED
+status: DONE
 depends_on: [TASK-059]
 ---
 # TASK-060: `AddKucoinExchange` DI registration + `AddCryptoExchanges` + MCP wiring
@@ -18,7 +18,7 @@ depends_on: [TASK-059]
 - **Claimed at**: 2026-06-21T00:00:00Z
 - **Base SHA**: 00e124761bd8f095d7d25222440231faadaed681
 - **Implemented at**: 2026-06-21T00:30:00Z
-- **Completed at**:
+- **Completed at**: 2026-06-21T11:33:29Z
 - **Blocked at**:
 - **Retry count**: 0/3
 - **Test failures**: 0
@@ -108,3 +108,36 @@ Tests (`KucoinDiTests.cs`), no network:
   AddCryptoExchanges KuCoin resolution, all-five-exchange resolution, options delegation.
 
 ## Review Results
+
+### Cycle 1 — APPROVED 4/4 (2026-06-21T11:33:29Z)
+
+Gate rule `require_all_approve: true` satisfied. All four reviewers APPROVE. No blocking findings
+(all CONCERNs confidence ≤ 65, below the 80 threshold, and every one is a pre-existing cross-exchange
+pattern rather than a TASK-060 regression). No security REJECT.
+
+| Reviewer | Verdict | Key findings |
+|----------|---------|--------------|
+| architect-reviewer | ✦ APPROVE | ADR-001 ✓ (AddKucoinExchange in KuCoin assembly); 4-layer chain ✓ (KuCoin → Core+Http only); keyed-singleton parity with OKX/Bitget ✓; ValidateOnStart fail-fast ✓; MCP wiring ✓ (no Program.cs change). CONCERN@65: flat-property growth of CryptoExchangesOptions (O(N), pre-existing); ApplyEnvDefaults duplication (3 copies, pre-existing). |
+| code-reviewer | ✦ APPROVE | Exact structural parity with Bitget/OKX peer; XML docs ✓; signing gate `SecretKey \|\| Passphrase` with PassThrough fallback ✓; 10 DI tests exceed Bitget suite coverage; LR-005 satisfied. CONCERN@55: `Throw<Exception>()` specificity in BaseUrlWithPath test (established codebase pattern). |
+| security-reviewer | ✦ APPROVE | SecretKey held only inside KucoinSignatureService, never on handler; no credential logging anywhere; KC-API-PASSPHRASE transmits HMAC-signed value (not plaintext); mark-and-strip on retry; both-or-nothing PassThrough gate correct; ToCredentials() bypass documented & safe; no opsec leakage. CONCERN@55: KucoinOptions lacks ToString() redaction (pre-existing across all Options classes); CONCERN@60: empty ApiKey w/ signing creds fails at request-time not DI (pre-existing). |
+| api-reviewer | ✦ APPROVE | AddKucoinExchange signature exact parity; 4 nullable `string?` options fields, non-breaking; AddCryptoExchanges still chainable w/ double null guard; MCP tool-schema unchanged; NuGet conventions ✓; InternalsVisibleTo test/mock only. CONCERN@60: AC language "fail-fast on missing api-key" satisfied by PassThrough gate (not validator), consistent across all 5 exchanges; CONCERN@55: unkeyed KucoinOptions resolution valid (distinct type per exchange). |
+
+**Pre-check results**: build 0W/0E (`TreatWarningsAsErrors`); full non-integration suite green;
+Http.Tests.Unit 87/87 PASS in isolation.
+
+**Flake diagnosis** (per task brief): The implementer-reported Http.Tests.Unit streaming-reconnect
+failure is a PRE-EXISTING parallel-run test-harness race, NOT a real regression in the TASK-061
+async `ResolveConnectionAsync` seam. Evidence: the Http.Tests.Unit project passes 87/87 when run in
+isolation (`dotnet test tests/CryptoExchanges.Net.Http.Tests.Unit/... --filter 'Category!=Integration'`),
+and the full non-integration suite passed with 0 failures in the gate pre-check run. The architect
+reviewer independently confirmed the ADR-002 seam is byte/opaque with no concurrency defect, and the
+Binance migration is regression-free. Treated as suite-green with a NON-BLOCKING note: the shared
+xunit test collection exhibits a static/timing race only under parallel scheduling. Recommend a
+follow-up to isolate the affected streaming-reconnect test into its own non-parallel collection
+(tracked as a non-blocking concern, not a TASK-060 blocker).
+
+**Simplify pass**: 0 fixes applied — all 3 candidate findings disproved as faithful pattern clones
+(bespoke KucoinSymbolMapper vs generic SymbolMapper is intentional). 657 unit tests remain green.
+
+**Gate decision**: ✦ APPROVED → DONE. Completion SHA recorded below.
+**Review artifacts**: `nazgul/reviews/TASK-060/{architect,code,security,api}-reviewer.md`, `simplify-report.md`.

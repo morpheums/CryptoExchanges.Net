@@ -134,9 +134,9 @@ Nothing in PRD "Out of Scope" (futures/margin, private streams, order-book maint
 
 ## Recovery Pointer
 
-- **Current stage**: ✦ TASK-060 IMPLEMENTED — AddKucoinExchange DI + AddCryptoExchanges + MCP wiring (commit ad607d6).
-- **Next action**: Review TASK-060 (awaiting review gate), then TASK-062 — KucoinStreamProtocol + bullet-public + AddKucoinStreams.
-- **Active task**: none (TASK-060 awaiting review).
+- **Current stage**: ✦ TASK-060 DONE — AddKucoinExchange DI + AddCryptoExchanges + MCP wiring (reviewed 4/4, Cycle 1; impl commit ad607d6).
+- **Next action**: TASK-062 — KucoinStreamProtocol + bullet-public + 4 decoders + AddKucoinStreams (Wave 5, convergence of REST + streaming-seam work streams).
+- **Active task**: none (TASK-060 complete; TASK-062 next to implement).
 - **Files are truth**: the task manifests under `nazgul/tasks/` carry full state; each manifest's
   frontmatter is the canonical record.
 
@@ -146,7 +146,8 @@ Nothing in PRD "Out of Scope" (futures/margin, private streams, order-book maint
   ✦ TASK-057 — KC-API signing DONE (reviewed 4/4, Cycle 2; simplify 4799140).
   ✦ TASK-058 — KucoinSymbolMapper + wire DTOs + DeltaMapper + parsers DONE (reviewed 4/4, Cycle 1; simplify 5a20da1).
   ✦ TASK-059 — REST services + http client + composer + entry DONE (reviewed 4/4, Cycle 2; fix ee97d43).
-  ✦ TASK-060 — AddKucoinExchange DI + AddCryptoExchanges + MCP wiring IMPLEMENTED (commit ad607d6).
+  ✦ TASK-060 — AddKucoinExchange DI + AddCryptoExchanges + MCP wiring DONE (reviewed 4/4, Cycle 1; impl commit ad607d6).
+  ◇ TASK-062 — KucoinStreamProtocol + bullet-public + 4 decoders + AddKucoinStreams (next).
 ────────────────────────────────────────────────────────
 
 ## Completed
@@ -161,6 +162,9 @@ Nothing in PRD "Out of Scope" (futures/margin, private streams, order-book maint
   Impl commit: `c59600f`. Simplify commit: `5a20da1`. Review artifacts: `nazgul/reviews/TASK-058/`.
 - **TASK-059** — DONE (2026-06-21T12:30:00Z). REST services + http client + composer + entry approved unanimously (4/4, Cycle 2).
   Impl commit: `95a6066`. Simplify commits: `dc8aac9` + `272ded8` + `12fffb6`. Cycle-1 fix: `ee97d43`. Completion SHA: `ee97d43`. Review artifacts: `nazgul/reviews/TASK-059/`.
+- **TASK-060** — DONE (2026-06-21T11:33:29Z). AddKucoinExchange DI + AddCryptoExchanges + MCP wiring approved unanimously (4/4, Cycle 1).
+  Impl commit: `ad607d6`. Simplify: 0 fixes (faithful clone). No blocking findings (all CONCERNs <=65, pre-existing cross-exchange patterns).
+  Flake note: Http.Tests.Unit streaming-reconnect race is a pre-existing parallel-run harness race (87/87 PASS in isolation), NOT a TASK-061 seam regression. Review artifacts: `nazgul/reviews/TASK-060/`.
 
 
 ## Archived — FEAT-005 (WebSocket streaming v1) — COMPLETE

@@ -27,7 +27,7 @@ error rather than a clean `ArgumentException` at the call boundary.
 - **Status**: active
 - **Scope-Agents**: implementer, code-reviewer, api-reviewer
 - **Scope-Globs**: src/**/Services/*.cs
-- **Hits**: 0
+- **Hits**: 1
 - **Added**: 2026-06-18
 - **Evidence**: TASK-006 (code-reviewer REJECT@98 + api-reviewer REJECT@95 — BybitTradingService.GetOrderHistoryAsync and BybitAccountService.GetTradeHistoryAsync with limit=500 default always threw via ValidateHistoryWindow), TASK-013 (code-reviewer LOW@45 reminder that future OKX services must clamp before calling), TASK-015 (code-reviewer verified OkxTradingService/OkxAccountService clamp correctly)
 
@@ -64,7 +64,7 @@ a REJECT. Correct reference: `OkxValueParsers.ParseMs` / `BitgetValueParsers.Par
 - **Status**: active
 - **Scope-Agents**: implementer, api-reviewer
 - **Scope-Globs**: src/**/*.cs
-- **Hits**: 2
+- **Hits**: 3
 - **Added**: 2026-06-18
 - **Evidence**: TASK-007 (api-reviewer REJECT@95 — BybitTimeSync.ApplyOffset null-checked offsetHolder but did not guard Length, causing IndexOutOfRangeException on new long[0]), TASK-015 (code-reviewer PASS@100 — OkxTimeSync.ApplyOffset correctly adds zero-length guard; unit test ApplyOffset_RejectsZeroLengthHolder), TASK-022 (code-reviewer PASS@100 — BitgetTimeSync.ApplyOffset zero-length guard confirmed present)
 
@@ -83,7 +83,7 @@ OKX, and Bitget `TimeSync.ApplyOffset`.
 - **Status**: active
 - **Scope-Agents**: implementer, code-reviewer
 - **Scope-Globs**: src/**/Services/*.cs, tests/**/*.cs
-- **Hits**: 5
+- **Hits**: 6
 - **Added**: 2026-06-18
 - **Evidence**: TASK-015 (code-reviewer REJECT@95 — GetCandlesticksAsync had zero test coverage; the missing test was paired with and hid the unguarded long.Parse bug at the exact same site), TASK-006 (api-reviewer/code-reviewer blocked on service methods with broken default-parameter behaviour that was undetected by insufficient test coverage)
 

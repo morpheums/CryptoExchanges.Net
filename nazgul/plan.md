@@ -154,7 +154,7 @@ Nothing in PRD "Out of Scope" (futures/margin, private streams, order-book maint
 - **TASK-061** — DONE (2026-06-21T05:00:00Z). ADR-002 streaming endpoint seam approved unanimously (4/4).
   Impl commit: `f25dc9d`. Simplify commit: `f04dfc4`. Completion SHA: `f04dfc4`. Review artifacts: `nazgul/reviews/TASK-061/`.
 - **TASK-057** — DONE (2026-06-21T09:48:13Z). KC-API passphrase-v2 signing approved unanimously (4/4, Cycle 2).
-  Impl commits: `a754e9f` (initial) + `d3bf817` (DIP fix) + `4799140` (simplify). Completion SHA: (set after commit). Review artifacts: `nazgul/reviews/TASK-057/`.
+  Impl commits: `a754e9f` (initial) + `d3bf817` (DIP fix) + `4799140` (simplify). Completion SHA: ffc7e3f. Review artifacts: `nazgul/reviews/TASK-057/`.
 
 
 ## Archived — FEAT-005 (WebSocket streaming v1) — COMPLETE

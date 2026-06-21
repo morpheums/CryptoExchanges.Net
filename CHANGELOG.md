@@ -7,6 +7,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **KuCoin REST exchange client** — Full parity implementation for spot trading and market data
+  - `CryptoExchanges.Net.Kucoin` NuGet package with `AddKucoinExchange()` DI entry (ADR-001 compliant)
+  - Market data services: ticker, order book, candlestick, exchange info
+  - Trading services: place/cancel orders, view open orders
+  - Account services: balances, trade history
+  - KC-API passphrase-v2 signing with per-attempt re-signature and retry-on-GET-only strategy
+  - Bespoke `ISymbolMapper` for KuCoin's `BTC-USDT` dash-separated format
+  - DeltaMapper DTO→`Core.Models` profiles for canonical cross-exchange vocabulary
+  - Environment variable credential support (`KUCOIN_API_KEY`, `KUCOIN_SECRET_KEY`, `KUCOIN_PASSPHRASE`)
+- **KuCoin WebSocket streaming** — Public market-data streaming via `AddKucoinStreams()`
+  - Token-negotiated `bullet-public` connection with auto-reconnect and auto-resubscribe
+  - Four decoder pipelines: ticker, trade, order-book (depth), kline (candlestick)
+  - Streams deliver canonical `Core.Models` through the same `IStreamClient` interface as Binance
+  - Configurable base URL and stream options with fail-fast validation
+- **ADR-002: Generalized streaming endpoint seam** — Internal architectural improvement
+  - `IStreamProtocol` now features async `ResolveConnectionAsync(ct)` for per-exchange connection resolution
+  - Binance migration to the seam with zero behavior change (static URL path unchanged)
+  - Enables token-negotiated endpoints (KuCoin) and future dynamic-URL protocols
+  - Internal change only (not breaking; `IStreamProtocol` is internal)
+- **MCP wiring** — KuCoin surface automatically exposed via MCP server
+  - 6 market-data tools (no credentials required)
+  - 6 account-scoped tools (read-only API keys)
+  - Identical `ToolResult<T>` envelope and error categorization as other exchanges
+
+### Changed
+
+- (No breaking changes in this release)
+
+### Fixed
+
+- (No bug fixes in this release)
+
+---
+
 ## [0.3.0-preview.1] - 2026-06-19
 
 ### Added

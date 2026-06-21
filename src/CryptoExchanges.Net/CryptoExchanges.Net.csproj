@@ -1,9 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <RootNamespace>CryptoExchanges.Net.DependencyInjection</RootNamespace>
-    <AssemblyName>CryptoExchanges.Net.DependencyInjection</AssemblyName>
-    <Description>Dependency injection extensions for CryptoExchanges.Net.</Description>
-    <PackageId>CryptoExchanges.Net.DependencyInjection</PackageId>
+    <RootNamespace>CryptoExchanges.Net</RootNamespace>
+    <AssemblyName>CryptoExchanges.Net</AssemblyName>
+    <Description>All-exchanges meta-package for CryptoExchanges.Net. Registers all available exchange clients in one call via AddCryptoExchanges().</Description>
+    <PackageId>CryptoExchanges.Net</PackageId>
     <NoWarn>$(NoWarn);CA1812;CA1056;CA1031;CA2000;CA1305;CA1032</NoWarn>
   </PropertyGroup>
 

@@ -1,6 +1,6 @@
 ---
 id: TASK-065
-status: READY
+status: IN_PROGRESS
 depends_on: []
 ---
 # TASK-065: Rename aggregator project → `CryptoExchanges.Net` (folder, csproj, ids, namespace, sln)
@@ -15,8 +15,8 @@ depends_on: []
 - **Wave**: 1
 - **Traces to**: PRD-FEAT-007 AC-3, AC-6; TRD-FEAT-007 §"Step 1 — Rename the aggregator project"; ADR-003 (Decision); FEAT-007 spec §"Scope — In" #1; design §"Scope — In" #1
 - **Created at**: 2026-06-21T18:00:00Z
-- **Claimed at**:
-- **Base SHA**:
+- **Claimed at**: 2026-06-21T18:10:00Z
+- **Base SHA**: 60d00a7
 - **Implemented at**:
 - **Completed at**:
 - **Blocked at**:

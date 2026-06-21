@@ -5,7 +5,7 @@ using CryptoExchanges.Net.Bitget;
 using CryptoExchanges.Net.Kucoin;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace CryptoExchanges.Net.DependencyInjection;
+namespace CryptoExchanges.Net;
 
 /// <summary>
 /// Convenience extension that registers every available exchange at once. Per-exchange

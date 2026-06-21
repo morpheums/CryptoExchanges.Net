@@ -1,4 +1,4 @@
-namespace CryptoExchanges.Net.DependencyInjection;
+namespace CryptoExchanges.Net;
 
 /// <summary>
 /// Top-level configuration for all exchange clients registered via

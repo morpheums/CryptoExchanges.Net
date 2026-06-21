@@ -1,6 +1,6 @@
 ---
 id: TASK-062
-status: IMPLEMENTED
+status: IN_PROGRESS
 depends_on: [TASK-058, TASK-060, TASK-061]
 ---
 # TASK-062: `KucoinStreamProtocol` + bullet-public negotiation + 4 decoders + `AddKucoinStreams`

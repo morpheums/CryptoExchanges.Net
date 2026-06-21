@@ -7,7 +7,7 @@ namespace CryptoExchanges.Net.Kucoin.Dtos.Streaming;
 /// </summary>
 internal sealed record StreamKlineDto
 {
-    /// <summary>The kline interval wire string (e.g. <c>"1min"</c>, <c>"1hour"</c>).</summary>
+    /// <summary>Trading symbol wire string (e.g. <c>BTC-USDT</c>).</summary>
     [JsonPropertyName("symbol")]
     public string Symbol { get; init; } = string.Empty;
 

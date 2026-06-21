@@ -20,7 +20,7 @@ internal sealed record StreamDepthDto
     public string Symbol { get; init; } = string.Empty;
 
     /// <summary>
-    /// Changed bid levels: each inner list is <c>[price, size]</c> as strings.
+    /// Changed bid and ask levels: each inner list is <c>[price, size, sequence]</c> as strings.
     /// A size of <c>"0"</c> means the level was removed.
     /// </summary>
     [JsonPropertyName("changes")]

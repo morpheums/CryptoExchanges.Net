@@ -1,0 +1,270 @@
+diff --git a/nazgul/plan.md b/nazgul/plan.md
+index fbfad47..cc700d0 100644
+--- a/nazgul/plan.md
++++ b/nazgul/plan.md
+@@ -148,9 +148,9 @@ changes, plugin auto-discovery, method/options-shape change, the manual nuget.or
+ 
+ ## Recovery Pointer
+ 
+-- **Current stage**: TASK-066 IMPLEMENTED (commit `998525f`). Awaiting review gate.
+-- **Next action**: Review gate for TASK-066; then begin TASK-067 (decouple 5 per-exchange test projects).
+-- **Active task**: TASK-066 (IMPLEMENTED — pending review).
++- **Current stage**: TASK-067 IN_PROGRESS (base SHA `d447033`). Decoupling 5 per-exchange test projects.
++- **Next action**: Implement TASK-067 — remove aggregator ProjectReference + using + tests from 5 csprojs.
++- **Active task**: TASK-067 (IN_PROGRESS).
+ - **Files are truth**: the task manifests under `nazgul/tasks/TASK-065..070.md` carry full state; each
+   manifest's frontmatter `status:` is the canonical record.
+ 
+diff --git a/nazgul/tasks/TASK-067.md b/nazgul/tasks/TASK-067.md
+index 8502922..c028c2b 100644
+--- a/nazgul/tasks/TASK-067.md
++++ b/nazgul/tasks/TASK-067.md
+@@ -1,6 +1,6 @@
+ ---
+ id: TASK-067
+-status: PLANNED
++status: IN_PROGRESS
+ depends_on: [TASK-066]
+ ---
+ # TASK-067: Decouple the 5 per-exchange `.Tests.Unit` projects from the aggregator
+@@ -15,8 +15,8 @@ depends_on: [TASK-066]
+ - **Wave**: 3
+ - **Traces to**: PRD-FEAT-007 AC-4, AC-6, AC-7; TRD-FEAT-007 §"Step 3 — Decouple the five per-exchange test projects"; TEST-PLAN-FEAT-007 §"Regression Coverage"; ADR-003 (test isolation); FEAT-007 spec §"Scope — In" #3
+ - **Created at**: 2026-06-21T18:00:00Z
+-- **Claimed at**:
+-- **Base SHA**:
++- **Claimed at**: 2026-06-21T22:00:00Z
++- **Base SHA**: d447033a93962404ef834e780da093abee014460
+ - **Implemented at**:
+ - **Completed at**:
+ - **Blocked at**:
+diff --git a/tests/CryptoExchanges.Net.Binance.Tests.Unit/CryptoExchanges.Net.Binance.Tests.Unit.csproj b/tests/CryptoExchanges.Net.Binance.Tests.Unit/CryptoExchanges.Net.Binance.Tests.Unit.csproj
+index 37b1e7f..abb13e4 100644
+--- a/tests/CryptoExchanges.Net.Binance.Tests.Unit/CryptoExchanges.Net.Binance.Tests.Unit.csproj
++++ b/tests/CryptoExchanges.Net.Binance.Tests.Unit/CryptoExchanges.Net.Binance.Tests.Unit.csproj
+@@ -12,7 +12,6 @@
+     <ProjectReference Include="..\..\src\CryptoExchanges.Net.Core\CryptoExchanges.Net.Core.csproj" />
+     <ProjectReference Include="..\..\src\CryptoExchanges.Net.Binance\CryptoExchanges.Net.Binance.csproj" />
+     <ProjectReference Include="..\..\src\CryptoExchanges.Net.Http\CryptoExchanges.Net.Http.csproj" />
+-    <ProjectReference Include="..\..\src\CryptoExchanges.Net.DependencyInjection\CryptoExchanges.Net.DependencyInjection.csproj" />
+   </ItemGroup>
+ 
+   <ItemGroup>
+diff --git a/tests/CryptoExchanges.Net.Bitget.Tests.Unit/BitgetMappingAndServiceTests.cs b/tests/CryptoExchanges.Net.Bitget.Tests.Unit/BitgetMappingAndServiceTests.cs
+index e07c6b0..3e8e894 100644
+--- a/tests/CryptoExchanges.Net.Bitget.Tests.Unit/BitgetMappingAndServiceTests.cs
++++ b/tests/CryptoExchanges.Net.Bitget.Tests.Unit/BitgetMappingAndServiceTests.cs
+@@ -10,7 +10,6 @@ using CryptoExchanges.Net.Core;
+ using CryptoExchanges.Net.Core.Interfaces;
+ using CryptoExchanges.Net.Core.Models;
+ using CryptoExchanges.Net.Core.Enums;
+-using CryptoExchanges.Net.DependencyInjection;
+ 
+ namespace CryptoExchanges.Net.Bitget.Tests.Unit;
+ 
+@@ -524,19 +523,6 @@ public class BitgetMappingAndServiceTests
+         act.Should().Throw<Microsoft.Extensions.Options.OptionsValidationException>();
+     }
+ 
+-    [Fact]
+-    public async Task Di_AddCryptoExchanges_ResolvesBitgetOkxBybitAndBinance()
+-    {
+-        var services = new ServiceCollection();
+-        services.AddCryptoExchanges();
+-        await using var sp = services.BuildServiceProvider();
+-
+-        sp.GetRequiredKeyedService<IExchangeClient>(ExchangeId.Bitget).ExchangeId.Should().Be(ExchangeId.Bitget);
+-        sp.GetRequiredKeyedService<IExchangeClient>(ExchangeId.Okx).ExchangeId.Should().Be(ExchangeId.Okx);
+-        sp.GetRequiredKeyedService<IExchangeClient>(ExchangeId.Bybit).ExchangeId.Should().Be(ExchangeId.Bybit);
+-        sp.GetRequiredKeyedService<IExchangeClient>(ExchangeId.Binance).ExchangeId.Should().Be(ExchangeId.Binance);
+-    }
+-
+     [Fact]
+     public async Task Di_AddBitgetExchange_IsScopeClean()
+     {
+diff --git a/tests/CryptoExchanges.Net.Bitget.Tests.Unit/CryptoExchanges.Net.Bitget.Tests.Unit.csproj b/tests/CryptoExchanges.Net.Bitget.Tests.Unit/CryptoExchanges.Net.Bitget.Tests.Unit.csproj
+index c77e97e..b7dc592 100644
+--- a/tests/CryptoExchanges.Net.Bitget.Tests.Unit/CryptoExchanges.Net.Bitget.Tests.Unit.csproj
++++ b/tests/CryptoExchanges.Net.Bitget.Tests.Unit/CryptoExchanges.Net.Bitget.Tests.Unit.csproj
+@@ -12,7 +12,6 @@
+     <ProjectReference Include="..\..\src\CryptoExchanges.Net.Core\CryptoExchanges.Net.Core.csproj" />
+     <ProjectReference Include="..\..\src\CryptoExchanges.Net.Bitget\CryptoExchanges.Net.Bitget.csproj" />
+     <ProjectReference Include="..\..\src\CryptoExchanges.Net.Http\CryptoExchanges.Net.Http.csproj" />
+-    <ProjectReference Include="..\..\src\CryptoExchanges.Net.DependencyInjection\CryptoExchanges.Net.DependencyInjection.csproj" />
+   </ItemGroup>
+ 
+   <ItemGroup>
+diff --git a/tests/CryptoExchanges.Net.Bybit.Tests.Unit/BybitMappingAndServiceTests.cs b/tests/CryptoExchanges.Net.Bybit.Tests.Unit/BybitMappingAndServiceTests.cs
+index dc58ac4..50e877b 100644
+--- a/tests/CryptoExchanges.Net.Bybit.Tests.Unit/BybitMappingAndServiceTests.cs
++++ b/tests/CryptoExchanges.Net.Bybit.Tests.Unit/BybitMappingAndServiceTests.cs
+@@ -11,7 +11,6 @@ using CryptoExchanges.Net.Core;
+ using CryptoExchanges.Net.Core.Interfaces;
+ using CryptoExchanges.Net.Core.Models;
+ using CryptoExchanges.Net.Core.Enums;
+-using CryptoExchanges.Net.DependencyInjection;
+ 
+ namespace CryptoExchanges.Net.Bybit.Tests.Unit;
+ 
+@@ -335,17 +334,6 @@ public class BybitMappingAndServiceTests
+         act.Should().Throw<Microsoft.Extensions.Options.OptionsValidationException>();
+     }
+ 
+-    [Fact]
+-    public async Task Di_AddCryptoExchanges_ResolvesBybitAndBinance()
+-    {
+-        var services = new ServiceCollection();
+-        services.AddCryptoExchanges();
+-        await using var sp = services.BuildServiceProvider();
+-
+-        sp.GetRequiredKeyedService<IExchangeClient>(ExchangeId.Bybit).ExchangeId.Should().Be(ExchangeId.Bybit);
+-        sp.GetRequiredKeyedService<IExchangeClient>(ExchangeId.Binance).ExchangeId.Should().Be(ExchangeId.Binance);
+-    }
+-
+     [Fact]
+     public async Task Di_AddBybitExchange_IsScopeClean()
+     {
+diff --git a/tests/CryptoExchanges.Net.Bybit.Tests.Unit/CryptoExchanges.Net.Bybit.Tests.Unit.csproj b/tests/CryptoExchanges.Net.Bybit.Tests.Unit/CryptoExchanges.Net.Bybit.Tests.Unit.csproj
+index 24751fa..88de9f5 100644
+--- a/tests/CryptoExchanges.Net.Bybit.Tests.Unit/CryptoExchanges.Net.Bybit.Tests.Unit.csproj
++++ b/tests/CryptoExchanges.Net.Bybit.Tests.Unit/CryptoExchanges.Net.Bybit.Tests.Unit.csproj
+@@ -12,7 +12,6 @@
+     <ProjectReference Include="..\..\src\CryptoExchanges.Net.Core\CryptoExchanges.Net.Core.csproj" />
+     <ProjectReference Include="..\..\src\CryptoExchanges.Net.Bybit\CryptoExchanges.Net.Bybit.csproj" />
+     <ProjectReference Include="..\..\src\CryptoExchanges.Net.Http\CryptoExchanges.Net.Http.csproj" />
+-    <ProjectReference Include="..\..\src\CryptoExchanges.Net.DependencyInjection\CryptoExchanges.Net.DependencyInjection.csproj" />
+   </ItemGroup>
+ 
+   <ItemGroup>
+diff --git a/tests/CryptoExchanges.Net.Kucoin.Tests.Unit/CryptoExchanges.Net.Kucoin.Tests.Unit.csproj b/tests/CryptoExchanges.Net.Kucoin.Tests.Unit/CryptoExchanges.Net.Kucoin.Tests.Unit.csproj
+index d51ce61..01f5509 100644
+--- a/tests/CryptoExchanges.Net.Kucoin.Tests.Unit/CryptoExchanges.Net.Kucoin.Tests.Unit.csproj
++++ b/tests/CryptoExchanges.Net.Kucoin.Tests.Unit/CryptoExchanges.Net.Kucoin.Tests.Unit.csproj
+@@ -12,7 +12,6 @@
+     <ProjectReference Include="..\..\src\CryptoExchanges.Net.Core\CryptoExchanges.Net.Core.csproj" />
+     <ProjectReference Include="..\..\src\CryptoExchanges.Net.Kucoin\CryptoExchanges.Net.Kucoin.csproj" />
+     <ProjectReference Include="..\..\src\CryptoExchanges.Net.Http\CryptoExchanges.Net.Http.csproj" />
+-    <ProjectReference Include="..\..\src\CryptoExchanges.Net.DependencyInjection\CryptoExchanges.Net.DependencyInjection.csproj" />
+   </ItemGroup>
+ 
+   <ItemGroup>
+diff --git a/tests/CryptoExchanges.Net.Kucoin.Tests.Unit/KucoinDiTests.cs b/tests/CryptoExchanges.Net.Kucoin.Tests.Unit/KucoinDiTests.cs
+index fdf1072..01c81dd 100644
+--- a/tests/CryptoExchanges.Net.Kucoin.Tests.Unit/KucoinDiTests.cs
++++ b/tests/CryptoExchanges.Net.Kucoin.Tests.Unit/KucoinDiTests.cs
+@@ -4,14 +4,13 @@ using Microsoft.Extensions.DependencyInjection;
+ using Xunit;
+ using CryptoExchanges.Net.Core.Enums;
+ using CryptoExchanges.Net.Core.Interfaces;
+-using CryptoExchanges.Net.DependencyInjection;
+ using CryptoExchanges.Net.Kucoin;
+ 
+ namespace CryptoExchanges.Net.Kucoin.Tests.Unit;
+ 
+ /// <summary>
+-/// No-network unit tests for KuCoin DI registration, keyed service resolution, ValidateOnStart
+-/// fail-fast, and AddCryptoExchanges aggregator coverage.
++/// No-network unit tests for KuCoin DI registration, keyed service resolution, and ValidateOnStart
++/// fail-fast.
+ /// </summary>
+ [Trait("Category", "Unit")]
+ public class KucoinDiTests
+@@ -116,55 +115,4 @@ public class KucoinDiTests
+         sp.GetRequiredKeyedService<IExchangeClient>(ExchangeId.Kucoin).Should().NotBeNull();
+     }
+ 
+-    // ── AddCryptoExchanges aggregator ──
+-
+-    [Fact]
+-    public async Task AddCryptoExchanges_ResolvesKucoinClient()
+-    {
+-        var services = new ServiceCollection();
+-        services.AddCryptoExchanges();
+-        await using var sp = services.BuildServiceProvider();
+-
+-        sp.GetRequiredKeyedService<IExchangeClient>(ExchangeId.Kucoin).ExchangeId
+-            .Should().Be(ExchangeId.Kucoin);
+-    }
+-
+-    [Fact]
+-    public async Task AddCryptoExchanges_ResolvesAllFiveExchanges()
+-    {
+-        var services = new ServiceCollection();
+-        services.AddCryptoExchanges();
+-        await using var sp = services.BuildServiceProvider();
+-
+-        sp.GetRequiredKeyedService<IExchangeClient>(ExchangeId.Binance).ExchangeId
+-            .Should().Be(ExchangeId.Binance);
+-        sp.GetRequiredKeyedService<IExchangeClient>(ExchangeId.Bybit).ExchangeId
+-            .Should().Be(ExchangeId.Bybit);
+-        sp.GetRequiredKeyedService<IExchangeClient>(ExchangeId.Okx).ExchangeId
+-            .Should().Be(ExchangeId.Okx);
+-        sp.GetRequiredKeyedService<IExchangeClient>(ExchangeId.Bitget).ExchangeId
+-            .Should().Be(ExchangeId.Bitget);
+-        sp.GetRequiredKeyedService<IExchangeClient>(ExchangeId.Kucoin).ExchangeId
+-            .Should().Be(ExchangeId.Kucoin);
+-    }
+-
+-    [Fact]
+-    public async Task AddCryptoExchanges_KucoinOptions_AppliesViaAggregator()
+-    {
+-        // Validates the delegation path: CryptoExchangesOptions.KucoinApiKey flows through
+-        // AddCryptoExchanges → AddKucoinExchange configure delegate → KucoinOptions.ApiKey.
+-        var services = new ServiceCollection();
+-        services.AddCryptoExchanges(o =>
+-        {
+-            o.KucoinApiKey = "test-api-key";
+-            o.KucoinSecretKey = "test-secret";
+-            o.KucoinPassphrase = "test-passphrase";
+-        });
+-        await using var sp = services.BuildServiceProvider();
+-
+-        var resolvedOptions = sp.GetRequiredService<KucoinOptions>();
+-        resolvedOptions.ApiKey.Should().Be("test-api-key");
+-        resolvedOptions.SecretKey.Should().Be("test-secret");
+-        resolvedOptions.Passphrase.Should().Be("test-passphrase");
+-    }
+ }
+diff --git a/tests/CryptoExchanges.Net.Okx.Tests.Unit/CryptoExchanges.Net.Okx.Tests.Unit.csproj b/tests/CryptoExchanges.Net.Okx.Tests.Unit/CryptoExchanges.Net.Okx.Tests.Unit.csproj
+index 7d0d21a..5c990c2 100644
+--- a/tests/CryptoExchanges.Net.Okx.Tests.Unit/CryptoExchanges.Net.Okx.Tests.Unit.csproj
++++ b/tests/CryptoExchanges.Net.Okx.Tests.Unit/CryptoExchanges.Net.Okx.Tests.Unit.csproj
+@@ -12,7 +12,6 @@
+     <ProjectReference Include="..\..\src\CryptoExchanges.Net.Core\CryptoExchanges.Net.Core.csproj" />
+     <ProjectReference Include="..\..\src\CryptoExchanges.Net.Okx\CryptoExchanges.Net.Okx.csproj" />
+     <ProjectReference Include="..\..\src\CryptoExchanges.Net.Http\CryptoExchanges.Net.Http.csproj" />
+-    <ProjectReference Include="..\..\src\CryptoExchanges.Net.DependencyInjection\CryptoExchanges.Net.DependencyInjection.csproj" />
+   </ItemGroup>
+ 
+   <ItemGroup>
+diff --git a/tests/CryptoExchanges.Net.Okx.Tests.Unit/OkxMappingAndServiceTests.cs b/tests/CryptoExchanges.Net.Okx.Tests.Unit/OkxMappingAndServiceTests.cs
+index b3942e6..5c6cf83 100644
+--- a/tests/CryptoExchanges.Net.Okx.Tests.Unit/OkxMappingAndServiceTests.cs
++++ b/tests/CryptoExchanges.Net.Okx.Tests.Unit/OkxMappingAndServiceTests.cs
+@@ -10,7 +10,6 @@ using CryptoExchanges.Net.Core;
+ using CryptoExchanges.Net.Core.Interfaces;
+ using CryptoExchanges.Net.Core.Models;
+ using CryptoExchanges.Net.Core.Enums;
+-using CryptoExchanges.Net.DependencyInjection;
+ 
+ namespace CryptoExchanges.Net.Okx.Tests.Unit;
+ 
+@@ -517,18 +516,6 @@ public class OkxMappingAndServiceTests
+         act.Should().Throw<Microsoft.Extensions.Options.OptionsValidationException>();
+     }
+ 
+-    [Fact]
+-    public async Task Di_AddCryptoExchanges_ResolvesOkxBybitAndBinance()
+-    {
+-        var services = new ServiceCollection();
+-        services.AddCryptoExchanges();
+-        await using var sp = services.BuildServiceProvider();
+-
+-        sp.GetRequiredKeyedService<IExchangeClient>(ExchangeId.Okx).ExchangeId.Should().Be(ExchangeId.Okx);
+-        sp.GetRequiredKeyedService<IExchangeClient>(ExchangeId.Bybit).ExchangeId.Should().Be(ExchangeId.Bybit);
+-        sp.GetRequiredKeyedService<IExchangeClient>(ExchangeId.Binance).ExchangeId.Should().Be(ExchangeId.Binance);
+-    }
+-
+     [Fact]
+     public async Task Di_AddOkxExchange_IsScopeClean()
+     {

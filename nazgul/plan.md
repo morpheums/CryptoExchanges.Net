@@ -71,7 +71,7 @@ Authoritative inputs (read fully before any task):
 |----------|------------|------|------------------------------------------------------------------------------|
 | TASK-065 | ✦ IMPLEMENTED | 1    | Rename aggregator project → `CryptoExchanges.Net` (folder/csproj/ids/namespace + 2 src files + sln) |
 | TASK-066 | ✦ IMPLEMENTED | 2    | Rename + consolidate aggregator test project → `CryptoExchanges.Net.Tests.Unit` (+ `AddCryptoExchangesTests`) |
-| TASK-067 | ◇ PLANNED  | 3    | Decouple the 5 per-exchange `.Tests.Unit` projects (drop ref + using + moved tests) |
+| TASK-067 | ✦ IMPLEMENTED | 3    | Decouple the 5 per-exchange `.Tests.Unit` projects (drop ref + using + moved tests) |
 | TASK-068 | ◇ PLANNED  | 4    | Repoint consumers — MCP (src+tests), samples/BasicUsage, sln                  |
 | TASK-069 | ◇ PLANNED  | 5    | Docs (README/NUGET/docs/*) + CHANGELOG + version bump → `0.5.0-preview.1`     |
 | TASK-070 | ◇ PLANNED  | 6    | Final gate — build 0W/0E, suite green, `dotnet pack` 9-package swap verified  |
@@ -148,9 +148,9 @@ changes, plugin auto-discovery, method/options-shape change, the manual nuget.or
 
 ## Recovery Pointer
 
-- **Current stage**: TASK-067 IN_PROGRESS (base SHA `d447033`). Decoupling 5 per-exchange test projects.
-- **Next action**: Implement TASK-067 — remove aggregator ProjectReference + using + tests from 5 csprojs.
-- **Active task**: TASK-067 (IN_PROGRESS).
+- **Current stage**: TASK-067 IMPLEMENTED (commit `31207d5`). Awaiting review gate.
+- **Next action**: Review gate for TASK-067; then begin TASK-068 (repoint MCP + samples + sln).
+- **Active task**: TASK-067 (IMPLEMENTED — pending review).
 - **Files are truth**: the task manifests under `nazgul/tasks/TASK-065..070.md` carry full state; each
   manifest's frontmatter `status:` is the canonical record.
 

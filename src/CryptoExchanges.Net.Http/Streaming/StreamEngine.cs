@@ -285,12 +285,7 @@ internal sealed class StreamEngine : IAsyncDisposable
         var info = await _protocol.ResolveConnectionAsync(ct).ConfigureAwait(false);
         _socket = _connectionFactory();
         await _socket.ConnectAsync(info.Endpoint, ct).ConfigureAwait(false);
-
-        _pumpCts = CancellationTokenSource.CreateLinkedTokenSource(_disposeCts.Token);
-        _pumpTask = Task.Run(() => PumpLoopAsync(_pumpCts.Token), _pumpCts.Token);
-
-        StartHeartbeat(info.Heartbeat, _pumpCts.Token);
-        _backoff.Reset();
+        StartPump(info.Heartbeat);
     }
 
     private async Task CloseSocketAsync()
@@ -504,8 +499,8 @@ internal sealed class StreamEngine : IAsyncDisposable
             await _gate.WaitAsync(_disposeCts.Token).ConfigureAwait(false);
             try
             {
-                StreamConnectionInfo? info = null;
                 IWebSocketConnection? newSocket = null;
+                StreamConnectionInfo info;
                 try
                 {
                     info = await _protocol.ResolveConnectionAsync(_disposeCts.Token).ConfigureAwait(false);
@@ -530,10 +525,7 @@ internal sealed class StreamEngine : IAsyncDisposable
                 _socket = newSocket;
 
                 // Connected — restart pump and heartbeat.
-                _pumpCts = CancellationTokenSource.CreateLinkedTokenSource(_disposeCts.Token);
-                _pumpTask = Task.Run(() => PumpLoopAsync(_pumpCts.Token), _pumpCts.Token);
-                StartHeartbeat(info.Heartbeat, _pumpCts.Token);
-                _backoff.Reset();
+                StartPump(info.Heartbeat);
 
                 // K2: replay the stored subscribe set.
                 foreach (var (routingKey, request) in _subscribeSet)
@@ -584,6 +576,16 @@ internal sealed class StreamEngine : IAsyncDisposable
         {
             _gate.Release();
         }
+    }
+
+    // ── Pump + heartbeat wiring (shared by OpenSocketAsync and ReconnectCoreAsync) ─
+
+    private void StartPump(HeartbeatPolicy heartbeat)
+    {
+        _pumpCts = CancellationTokenSource.CreateLinkedTokenSource(_disposeCts.Token);
+        _pumpTask = Task.Run(() => PumpLoopAsync(_pumpCts.Token), _pumpCts.Token);
+        StartHeartbeat(heartbeat, _pumpCts.Token);
+        _backoff.Reset();
     }
 
     // ── Heartbeat (C1 — timers/watchdog in the engine, not in the protocol) ───

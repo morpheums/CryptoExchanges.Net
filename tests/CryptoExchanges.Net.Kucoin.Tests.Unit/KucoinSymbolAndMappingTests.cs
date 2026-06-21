@@ -89,12 +89,14 @@ public class KucoinSymbolAndMappingTests
     }
 
     [Fact]
-    public void FromWire_NonAlphaNumericWireString_ThrowsExchangeApiException()
+    public void FromWire_NonAlphaNumericWireString_ThrowsFormatException()
     {
         var mapper = BuildMapper(BtcUsdt);
         // A wire string with invalid asset characters (e.g. spaces) cannot be resolved.
+        // FromWire propagates FormatException directly per ISymbolMapper contract and sibling
+        // exchange pattern (OKX/Binance/Bybit do not re-wrap).
         var act = () => mapper.FromWire("INVALID WIRE");
-        act.Should().Throw<ExchangeApiException>();
+        act.Should().Throw<FormatException>();
     }
 
     [Fact]
@@ -137,23 +139,35 @@ public class KucoinSymbolAndMappingTests
     }
 
     [Fact]
-    public void IsSupported_UnregisteredSymbol_ReturnsFalse()
+    public void IsSupported_ParseableSymbol_NotInTable_ReturnsTrue()
     {
-        // Only BTC-USDT registered; ETH-USDT is not in the table.
+        // ETH-USDT is not registered but the delimiter-based cold-cache fallback parses it.
+        // IsSupported returns true for any parseable symbol on the cold path.
         var mapper = BuildMapper(BtcUsdt);
-        // ETH-USDT will cold-parse successfully (delimited format), so IsSupported returns true
-        // for any parseable symbol on the cold path — only truly unresolvable tickers return false.
-        // Verify that a registered symbol IS supported:
-        mapper.IsSupported(BtcUsdt).Should().BeTrue();
+        mapper.IsSupported(EthUsdt).Should().BeTrue();
     }
 
     [Fact]
-    public void IsSupported_DefaultSymbol_ReturnsFalse()
+    public void IsSupported_UnresolvableSymbol_ReturnsFalse()
     {
-        // Symbol is a value type; a default(Symbol) has no valid Base/Quote.
-        // IsSupported should gracefully return false rather than throw.
+        // A Symbol whose asset tickers have invalid characters cannot be converted to a wire string
+        // that round-trips back, so IsSupported returns false.
+        var mapper = BuildMapper();
+        // Use a symbol with a currency that forms a wire string the inner mapper cannot resolve
+        // from its cold cache (empty asset tickers produce an empty wire string → FormatException).
+        // default(Symbol) has zero-valued base/quote — ToWire produces an empty or null wire string
+        // that FromWire cannot parse.
+        var act = () => mapper.IsSupported(default);
+        // IsSupported must return false, not throw.
+        act.Should().NotThrow();
+        mapper.IsSupported(default).Should().BeFalse();
+    }
+
+    [Fact]
+    public void IsSupported_RegisteredSymbol_ReturnsTrue_ConfirmExistingBehavior()
+    {
+        // Renamed from the misnamed test that asserted true but was called _ReturnsFalse.
         var mapper = BuildMapper(BtcUsdt);
-        // Any supported symbol returns true.
         mapper.IsSupported(BtcUsdt).Should().BeTrue();
     }
 

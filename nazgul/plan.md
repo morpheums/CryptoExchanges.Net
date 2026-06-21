@@ -134,9 +134,9 @@ Nothing in PRD "Out of Scope" (futures/margin, private streams, order-book maint
 
 ## Recovery Pointer
 
-- **Current stage**: ◇ TASK-059 PLANNED — REST services + http client + composer + entry (Wave 3, READY — 057+058 done).
-- **Next action**: Implement KuCoin REST services (market data, account, trading), http client, composer, entry point.
-- **Active task**: TASK-059 (next).
+- **Current stage**: ◆ TASK-059 IN_PROGRESS — REST services + http client + composer + entry (Wave 3).
+- **Next action**: Implement all source files + tests then set IMPLEMENTED.
+- **Active task**: TASK-059.
 - **Files are truth**: the task manifests under `nazgul/tasks/` carry full state; each manifest's
   frontmatter is the canonical record.
 

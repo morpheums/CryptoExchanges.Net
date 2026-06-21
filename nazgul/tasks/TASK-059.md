@@ -1,6 +1,6 @@
 ---
 id: TASK-059
-status: PLANNED
+status: IN_PROGRESS
 depends_on: [TASK-057, TASK-058]
 ---
 # TASK-059: REST client — market-data / account / trading service methods + HTTP client + composer
@@ -15,8 +15,8 @@ depends_on: [TASK-057, TASK-058]
 - **Wave**: 3
 - **Traces to**: PRD-FEAT-006 AC-1, AC-2; TRD-FEAT-006 §"Project Layout", §"Signing"; FEAT-006 spec §"REST" (market/account/trading surface), §"Build approach" step 4; TEST-PLAN-FEAT-006 §"stub-HTTP service methods"
 - **Created at**: 2026-06-20T19:00:00Z
-- **Claimed at**:
-- **Base SHA**:
+- **Claimed at**: 2026-06-21T00:00:00Z
+- **Base SHA**: b0bbb902c3c16f3ccd73aa1ae070959bfd3448a5
 - **Implemented at**:
 - **Completed at**:
 - **Blocked at**:

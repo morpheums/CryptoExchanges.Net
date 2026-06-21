@@ -61,7 +61,7 @@ Authoritative inputs (read fully before any task):
 | TASK-059 | ✦ DONE     | 3    | REST services (market/account/trading) + http client + composer + entry     |
 | TASK-060 | ✦ DONE     | 4    | `AddKucoinExchange` DI + `AddCryptoExchanges` + MCP wiring                   |
 | TASK-062 | ✦ DONE     | 5    | `KucoinStreamProtocol` + bullet-public + 4 decoders + `AddKucoinStreams`     |
-| TASK-063 | ◇ PLANNED  | 6    | Live integration smokes — REST + one streaming (self-skip)                   |
+| TASK-063 | ✦ IMPLEMENTED | 6 | Live integration smokes — REST + one streaming (self-skip)                   |
 | TASK-064 | ◇ PLANNED  | 6    | Docs — README KuCoin row → supported + MCP/exchanges/streaming reference     |
 
 Tasks: 7/9 DONE.

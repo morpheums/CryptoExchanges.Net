@@ -1,6 +1,6 @@
 ---
 id: TASK-058
-status: PLANNED
+status: IN_PROGRESS
 depends_on: [TASK-056]
 ---
 # TASK-058: Bespoke `ISymbolMapper` + REST wire DTOs + DeltaMapper profiles + value parsers
@@ -15,8 +15,8 @@ depends_on: [TASK-056]
 - **Wave**: 2
 - **Traces to**: PRD-FEAT-006 AC-1; TRD-FEAT-006 §"Symbol Mapping", §"DeltaMapper Profiles", §"Project Layout"; FEAT-006 spec §"Symbol mapping", §"Mapping", §"Build approach" step 3; TEST-PLAN-FEAT-006 §3, §4, §5
 - **Created at**: 2026-06-20T19:00:00Z
-- **Claimed at**:
-- **Base SHA**:
+- **Claimed at**: 2026-06-21T10:00:00Z
+- **Base SHA**: 60f184af0de06efe199e497d2be2a7d519825286
 - **Implemented at**:
 - **Completed at**:
 - **Blocked at**:

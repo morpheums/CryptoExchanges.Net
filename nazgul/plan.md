@@ -57,7 +57,7 @@ Authoritative inputs (read fully before any task):
 | TASK-056 | ✦ DONE     | 1    | Scaffold `CryptoExchanges.Net.Kucoin` + Unit/Integration test projects (OKX clone) |
 | TASK-061 | ✦ DONE     | 1    | ADR-002 streaming endpoint seam → async `ResolveConnectionAsync` + migrate Binance |
 | TASK-057 | ✦ DONE     | 2    | KC-API passphrase-v2 signing service + mark-and-strip signing handler        |
-| TASK-058 | ◇ READY    | 2    | Bespoke `ISymbolMapper` + REST wire DTOs + DeltaMapper profiles + parsers    |
+| TASK-058 | ◆ IN_PROGRESS | 2 | Bespoke `ISymbolMapper` + REST wire DTOs + DeltaMapper profiles + parsers    |
 | TASK-059 | ◇ PLANNED  | 3    | REST services (market/account/trading) + http client + composer + entry     |
 | TASK-060 | ◇ PLANNED  | 4    | `AddKucoinExchange` DI + `AddCryptoExchanges` + MCP wiring                   |
 | TASK-062 | ◇ PLANNED  | 5    | `KucoinStreamProtocol` + bullet-public + 4 decoders + `AddKucoinStreams`     |
@@ -134,9 +134,9 @@ Nothing in PRD "Out of Scope" (futures/margin, private streams, order-book maint
 
 ## Recovery Pointer
 
-- **Current stage**: ✦ TASK-057 DONE — approved unanimously (4/4, Cycle 2). Completion SHA: (see commit below). Wave 2 now has TASK-058 READY to claim.
-- **Next action**: Claim TASK-058 (Symbol mapper + REST wire DTOs + DeltaMapper profiles + parsers). Depends on TASK-056 (DONE). No file overlap with TASK-057. Wave 2.
-- **Active task**: TASK-058 (READY).
+- **Current stage**: ◆ TASK-058 IN_PROGRESS — Symbol mapper + DTOs + DeltaMapper profiles. Claimed 2026-06-21T10:00:00Z.
+- **Next action**: Implement KucoinSymbolMapper, wire DTOs, KucoinValueParsers, KucoinMappingProfiles, tests.
+- **Active task**: TASK-058 (IN_PROGRESS).
 - **Files are truth**: the task manifests under `nazgul/tasks/` carry full state; each manifest's
   frontmatter is the canonical record.
 

@@ -1,6 +1,6 @@
 ---
 id: TASK-063
-status: IN_PROGRESS
+status: DONE
 depends_on: [TASK-060, TASK-062]
 ---
 # TASK-063: Live integration smokes — REST + one streaming (self-skip without credentials)
@@ -18,7 +18,7 @@ depends_on: [TASK-060, TASK-062]
 - **Claimed at**: 2026-06-21T00:00:00Z
 - **Base SHA**: 120d8542708acbba1e85737669e9027a0a1329cc
 - **Implemented at**: 2026-06-21T00:30:00Z
-- **Completed at**:
+- **Completed at**: 2026-06-21T15:00:00Z
 - **Blocked at**:
 - **Retry count**: 0/3
 - **Test failures**: 0
@@ -74,6 +74,7 @@ calls.
 ## Commits
 
 - `5dc88fa` — feat(FEAT-006): TASK-063 — KuCoin live integration smokes (REST + streaming, self-skip)
+- `b365dbb` — feat(FEAT-006): TASK-063 fix — remove <remarks> noise + dead reconnect booleans (Fix-First auto-remediation, Cycle 1)
 
 ## Implementation Log
 
@@ -85,5 +86,12 @@ calls.
 
 - Fix 1: Removed redundant `<remarks>` block from `KucoinStreamingSmokeTests` (LEAN comment violation — restated what code shows).
 - Fix 2: Removed dead `reconnectingFired`/`reconnectedFired` boolean locals and `_ =` discards; wired `OnReconnecting`/`OnReconnected` as no-ops (`() => ValueTask.CompletedTask`).
+- Build after fix: 0W/0E. Tests: all green. No ASK items remain.
 
 ## Review Results
+
+- **architect-reviewer**: APPROVE — Layer discipline clean; pattern faithful; AC-4 coverage gap noted as non-blocking CONCERN (two-client proxy is the accepted approach per Binance precedent).
+- **code-reviewer**: CHANGES_REQUESTED (Cycle 1) → DONE via Fix-First auto-remediation (both REJECTs mechanical: <remarks> noise + dead booleans).
+- **security-reviewer**: APPROVE — No hardcoded credentials; no opsec leakage; order safety acceptable; env vars sourced correctly.
+- **api-reviewer**: APPROVE — All Core.Models contracts verified; IStreamClient/PlaceOrderRequest/CancelOrderAsync signatures exact match; AC coverage confirmed.
+- **Completion SHA**: `b365dbb`

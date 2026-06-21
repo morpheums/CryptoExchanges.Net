@@ -134,9 +134,9 @@ Nothing in PRD "Out of Scope" (futures/margin, private streams, order-book maint
 
 ## Recovery Pointer
 
-- **Current stage**: ✦ TASK-061 DONE (reviewed 4/4 APPROVED, completion SHA f04dfc4). Wave 1 complete — both TASK-056 and TASK-061 are DONE.
-- **Next action**: Begin Wave 2 in parallel — TASK-057 (signing service + handler) and TASK-058 (symbol mapper + DTOs) are both READY (TASK-056 dependency satisfied; TASK-061 no deps).
-- **Active task**: none.
+- **Current stage**: ◆ TASK-057 IN_PROGRESS — implementing KC-API passphrase-v2 signing service + mark-and-strip handler.
+- **Next action**: Complete implementation of KucoinSignatureService, KucoinSigningHandler, KucoinSigningRequest, KucoinErrorTranslator + tests.
+- **Active task**: TASK-057 (base SHA 9da0981).
 - **Files are truth**: the task manifests under `nazgul/tasks/` carry full state; each manifest's
   frontmatter is the canonical record.
 

@@ -1,6 +1,6 @@
 ---
 id: TASK-057
-status: PLANNED
+status: IN_PROGRESS
 depends_on: [TASK-056]
 ---
 # TASK-057: KC-API passphrase-v2 signing service + mark-and-strip signing handler
@@ -15,8 +15,8 @@ depends_on: [TASK-056]
 - **Wave**: 2
 - **Traces to**: PRD-FEAT-006 AC-2; TRD-FEAT-006 §"Signing — KC-API Passphrase-v2"; FEAT-006 spec §"Signing", §"Build approach" step 2; TEST-PLAN-FEAT-006 §1, §2
 - **Created at**: 2026-06-20T19:00:00Z
-- **Claimed at**:
-- **Base SHA**:
+- **Claimed at**: 2026-06-21T00:00:00Z
+- **Base SHA**: 9da0981
 - **Implemented at**:
 - **Completed at**:
 - **Blocked at**:

@@ -139,5 +139,5 @@ follow-up to isolate the affected streaming-reconnect test into its own non-para
 **Simplify pass**: 0 fixes applied — all 3 candidate findings disproved as faithful pattern clones
 (bespoke KucoinSymbolMapper vs generic SymbolMapper is intentional). 657 unit tests remain green.
 
-**Gate decision**: ✦ APPROVED → DONE. Completion SHA recorded below.
+**Gate decision**: ✦ APPROVED → DONE. **Completion SHA**: `0940957`.
 **Review artifacts**: `nazgul/reviews/TASK-060/{architect,code,security,api}-reviewer.md`, `simplify-report.md`.

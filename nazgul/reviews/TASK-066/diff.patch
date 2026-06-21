@@ -1,0 +1,207 @@
+diff --git a/CryptoExchanges.Net.sln b/CryptoExchanges.Net.sln
+index 346e7aa..77fd6f5 100644
+--- a/CryptoExchanges.Net.sln
++++ b/CryptoExchanges.Net.sln
+@@ -25,7 +25,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{0AB3BF05
+ EndProject
+ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CryptoExchanges.Net.Http.Tests.Unit", "tests\CryptoExchanges.Net.Http.Tests.Unit\CryptoExchanges.Net.Http.Tests.Unit.csproj", "{4FEED444-D856-4DFE-8A57-20E54F638C77}"
+ EndProject
+-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CryptoExchanges.Net.DependencyInjection.Tests.Unit", "tests\CryptoExchanges.Net.DependencyInjection.Tests.Unit\CryptoExchanges.Net.DependencyInjection.Tests.Unit.csproj", "{A552E3A1-3728-4BA3-8DB8-8EC84EF8288E}"
++Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CryptoExchanges.Net.Tests.Unit", "tests\CryptoExchanges.Net.Tests.Unit\CryptoExchanges.Net.Tests.Unit.csproj", "{A552E3A1-3728-4BA3-8DB8-8EC84EF8288E}"
+ EndProject
+ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CryptoExchanges.Net.Bybit.Tests.Unit", "tests\CryptoExchanges.Net.Bybit.Tests.Unit\CryptoExchanges.Net.Bybit.Tests.Unit.csproj", "{B1C2D3E4-F5A6-4789-9ABC-DEF012345601}"
+ EndProject
+diff --git a/nazgul/plan.md b/nazgul/plan.md
+index d7c76fc..c597953 100644
+--- a/nazgul/plan.md
++++ b/nazgul/plan.md
+@@ -70,7 +70,7 @@ Authoritative inputs (read fully before any task):
+ | Task     | Status     | Wave | Description                                                                  |
+ |----------|------------|------|------------------------------------------------------------------------------|
+ | TASK-065 | ✦ IMPLEMENTED | 1    | Rename aggregator project → `CryptoExchanges.Net` (folder/csproj/ids/namespace + 2 src files + sln) |
+-| TASK-066 | ◇ PLANNED  | 2    | Rename + consolidate aggregator test project → `CryptoExchanges.Net.Tests.Unit` (+ `AddCryptoExchangesTests`) |
++| TASK-066 | ◆ IN_PROGRESS | 2    | Rename + consolidate aggregator test project → `CryptoExchanges.Net.Tests.Unit` (+ `AddCryptoExchangesTests`) |
+ | TASK-067 | ◇ PLANNED  | 3    | Decouple the 5 per-exchange `.Tests.Unit` projects (drop ref + using + moved tests) |
+ | TASK-068 | ◇ PLANNED  | 4    | Repoint consumers — MCP (src+tests), samples/BasicUsage, sln                  |
+ | TASK-069 | ◇ PLANNED  | 5    | Docs (README/NUGET/docs/*) + CHANGELOG + version bump → `0.5.0-preview.1`     |
+@@ -148,9 +148,9 @@ changes, plugin auto-discovery, method/options-shape change, the manual nuget.or
+ 
+ ## Recovery Pointer
+ 
+-- **Current stage**: TASK-065 IMPLEMENTED (commit `961df87`). Awaiting review gate.
+-- **Next action**: Review gate for TASK-065; then begin TASK-066 (rename + consolidate aggregator test project).
+-- **Active task**: TASK-065 (IMPLEMENTED — pending review).
++- **Current stage**: TASK-066 IN_PROGRESS (implementing rename + consolidate aggregator test project).
++- **Next action**: Complete TASK-066 implementation — git mv, update csproj/namespaces, add AddCryptoExchangesTests.cs, update sln.
++- **Active task**: TASK-066 (IN_PROGRESS).
+ - **Files are truth**: the task manifests under `nazgul/tasks/TASK-065..070.md` carry full state; each
+   manifest's frontmatter `status:` is the canonical record.
+ 
+diff --git a/nazgul/tasks/TASK-066.md b/nazgul/tasks/TASK-066.md
+index e2c1a51..0e394ce 100644
+--- a/nazgul/tasks/TASK-066.md
++++ b/nazgul/tasks/TASK-066.md
+@@ -1,6 +1,6 @@
+ ---
+ id: TASK-066
+-status: PLANNED
++status: IMPLEMENTED
+ depends_on: [TASK-065]
+ ---
+ # TASK-066: Rename + consolidate aggregator test project → `CryptoExchanges.Net.Tests.Unit`
+@@ -15,9 +15,9 @@ depends_on: [TASK-065]
+ - **Wave**: 2
+ - **Traces to**: PRD-FEAT-007 AC-2, AC-3, AC-6, AC-7; TRD-FEAT-007 §"Step 2 — Rename and consolidate the aggregator test project"; TEST-PLAN-FEAT-007 §"New and Modified Tests"; ADR-003 (test isolation); FEAT-007 spec §"Scope — In" #2
+ - **Created at**: 2026-06-21T18:00:00Z
+-- **Claimed at**:
+-- **Base SHA**:
+-- **Implemented at**:
++- **Claimed at**: 2026-06-21T20:00:00Z
++- **Base SHA**: 6658ca32d147f97f7f658585bd251461c9198b0c
++- **Implemented at**: 2026-06-21T20:05:00Z
+ - **Completed at**:
+ - **Blocked at**:
+ - **Retry count**: 0/3
+@@ -72,9 +72,9 @@ Run `dotnet test tests/CryptoExchanges.Net.Tests.Unit/ --filter 'Category!=Integ
+ including the two new facts.
+ 
+ ## Acceptance Criteria
+-- [ ] Test project is `tests/CryptoExchanges.Net.Tests.Unit/` with `AssemblyName`/`RootNamespace` = `CryptoExchanges.Net.Tests.Unit`, referencing `..\..\src\CryptoExchanges.Net\CryptoExchanges.Net.csproj`; `DiRegistrationTests`/`ExchangeClientFactoryTests` keep every existing test, now under `namespace CryptoExchanges.Net.Tests.Unit;` with `using CryptoExchanges.Net;`.
+-- [ ] `AddCryptoExchangesTests.cs` contains `AddCryptoExchanges_ResolvesAllFiveExchanges` (asserts a working keyed `IExchangeClient` for Binance/Bybit/Okx/Bitget/Kucoin) and `AddCryptoExchanges_OptionsFlow_ReachesExchangeOptions`; both pass with no network.
+-- [ ] `CryptoExchanges.Net.sln` references `tests\CryptoExchanges.Net.Tests.Unit\…` (same GUID); `dotnet test tests/CryptoExchanges.Net.Tests.Unit/ --filter 'Category!=Integration'` is green and `dotnet build` of this project is 0W/0E.
++- [x] Test project is `tests/CryptoExchanges.Net.Tests.Unit/` with `AssemblyName`/`RootNamespace` = `CryptoExchanges.Net.Tests.Unit`, referencing `..\..\src\CryptoExchanges.Net\CryptoExchanges.Net.csproj`; `DiRegistrationTests`/`ExchangeClientFactoryTests` keep every existing test, now under `namespace CryptoExchanges.Net.Tests.Unit;` with `using CryptoExchanges.Net;`.
++- [x] `AddCryptoExchangesTests.cs` contains `AddCryptoExchanges_ResolvesAllFiveExchanges` (asserts a working keyed `IExchangeClient` for Binance/Bybit/Okx/Bitget/Kucoin) and `AddCryptoExchanges_OptionsFlow_ReachesExchangeOptions`; both pass with no network.
++- [x] `CryptoExchanges.Net.sln` references `tests\CryptoExchanges.Net.Tests.Unit\…` (same GUID); `dotnet test tests/CryptoExchanges.Net.Tests.Unit/ --filter 'Category!=Integration'` is green and `dotnet build` of this project is 0W/0E.
+ 
+ ## Pattern Reference
+ - Existing aggregator tests to preserve + adapt: `tests/CryptoExchanges.Net.DependencyInjection.Tests.Unit/DiRegistrationTests.cs` (namespace line :12, using :9), `tests/CryptoExchanges.Net.DependencyInjection.Tests.Unit/ExchangeClientFactoryTests.cs` (namespace :10, using :8).
+@@ -108,4 +108,13 @@ including the two new facts.
+ 
+ ## Implementation Log
+ 
++- 2026-06-21T20:05:00Z: Claimed task (base SHA `6658ca3`). Read manifest, existing test files, KuCoin pattern references.
++- `git mv` folder to `tests/CryptoExchanges.Net.Tests.Unit/` and renamed csproj to `CryptoExchanges.Net.Tests.Unit.csproj`.
++- Updated csproj: added `AssemblyName`/`RootNamespace`, repointed `ProjectReference` from `DependencyInjection` → `CryptoExchanges.Net`.
++- Updated `DiRegistrationTests.cs`: swapped `using CryptoExchanges.Net.DependencyInjection;` → `using CryptoExchanges.Net;`, namespace → `CryptoExchanges.Net.Tests.Unit`.
++- Updated `ExchangeClientFactoryTests.cs`: same using/namespace swap.
++- Created `AddCryptoExchangesTests.cs` with `AddCryptoExchanges_ResolvesAllFiveExchanges` and `AddCryptoExchanges_OptionsFlow_ReachesExchangeOptions` (Binance options-flow pattern, mirrors KuCoin test).
++- Updated `CryptoExchanges.Net.sln` line 28: name + path to `CryptoExchanges.Net.Tests.Unit`; GUID `{A552E3A1-3728-4BA3-8DB8-8EC84EF8288E}` preserved.
++- Build: 0W/0E. Tests: 15/15 passed (13 existing + 2 new).
++
+ ## Review Results
+diff --git a/tests/CryptoExchanges.Net.Tests.Unit/AddCryptoExchangesTests.cs b/tests/CryptoExchanges.Net.Tests.Unit/AddCryptoExchangesTests.cs
+new file mode 100644
+index 0000000..6b87057
+--- /dev/null
++++ b/tests/CryptoExchanges.Net.Tests.Unit/AddCryptoExchangesTests.cs
+@@ -0,0 +1,47 @@
++using AwesomeAssertions;
++using CryptoExchanges.Net.Binance;
++using CryptoExchanges.Net.Core.Enums;
++using CryptoExchanges.Net.Core.Interfaces;
++using Microsoft.Extensions.DependencyInjection;
++using Xunit;
++
++namespace CryptoExchanges.Net.Tests.Unit;
++
++/// <summary>Consolidated aggregator resolution tests for <see cref="ServiceCollectionExtensions.AddCryptoExchanges"/>.</summary>
++[Trait("Category", "Unit")]
++public class AddCryptoExchangesTests
++{
++    /// <summary>Asserts that <c>AddCryptoExchanges()</c> registers a resolvable keyed <see cref="IExchangeClient"/> for all five exchanges.</summary>
++    [Fact]
++    public async Task AddCryptoExchanges_ResolvesAllFiveExchanges()
++    {
++        var services = new ServiceCollection();
++        services.AddCryptoExchanges();
++        await using var sp = services.BuildServiceProvider();
++
++        sp.GetRequiredKeyedService<IExchangeClient>(ExchangeId.Binance).ExchangeId
++            .Should().Be(ExchangeId.Binance);
++        sp.GetRequiredKeyedService<IExchangeClient>(ExchangeId.Bybit).ExchangeId
++            .Should().Be(ExchangeId.Bybit);
++        sp.GetRequiredKeyedService<IExchangeClient>(ExchangeId.Okx).ExchangeId
++            .Should().Be(ExchangeId.Okx);
++        sp.GetRequiredKeyedService<IExchangeClient>(ExchangeId.Bitget).ExchangeId
++            .Should().Be(ExchangeId.Bitget);
++        sp.GetRequiredKeyedService<IExchangeClient>(ExchangeId.Kucoin).ExchangeId
++            .Should().Be(ExchangeId.Kucoin);
++    }
++
++    /// <summary>Validates that <c>CryptoExchangesOptions.BinanceApiKey</c> flows through <c>AddCryptoExchanges</c> into the resolved <see cref="BinanceOptions"/>.</summary>
++    [Fact]
++    public async Task AddCryptoExchanges_OptionsFlow_ReachesExchangeOptions()
++    {
++        // Validates the delegation path: CryptoExchangesOptions.BinanceApiKey flows through
++        // AddCryptoExchanges → AddBinanceExchange configure delegate → BinanceOptions.ApiKey.
++        var services = new ServiceCollection();
++        services.AddCryptoExchanges(o => o.BinanceApiKey = "test-key");
++        await using var sp = services.BuildServiceProvider();
++
++        var resolvedOptions = sp.GetRequiredService<BinanceOptions>();
++        resolvedOptions.ApiKey.Should().Be("test-key");
++    }
++}
+diff --git a/tests/CryptoExchanges.Net.DependencyInjection.Tests.Unit/CryptoExchanges.Net.DependencyInjection.Tests.Unit.csproj b/tests/CryptoExchanges.Net.Tests.Unit/CryptoExchanges.Net.Tests.Unit.csproj
+similarity index 75%
+rename from tests/CryptoExchanges.Net.DependencyInjection.Tests.Unit/CryptoExchanges.Net.DependencyInjection.Tests.Unit.csproj
+rename to tests/CryptoExchanges.Net.Tests.Unit/CryptoExchanges.Net.Tests.Unit.csproj
+index 4ec5f7e..2b57ca6 100644
+--- a/tests/CryptoExchanges.Net.DependencyInjection.Tests.Unit/CryptoExchanges.Net.DependencyInjection.Tests.Unit.csproj
++++ b/tests/CryptoExchanges.Net.Tests.Unit/CryptoExchanges.Net.Tests.Unit.csproj
+@@ -1,13 +1,15 @@
+ <Project Sdk="Microsoft.NET.Sdk">
+   <PropertyGroup>
+     <OutputType>Exe</OutputType>
++    <AssemblyName>CryptoExchanges.Net.Tests.Unit</AssemblyName>
++    <RootNamespace>CryptoExchanges.Net.Tests.Unit</RootNamespace>
+     <IsPackable>false</IsPackable>
+     <IsTestProject>true</IsTestProject>
+     <NoWarn>$(NoWarn);CA1707;CA2007;CA1515;CS1591;xUnit1051</NoWarn>
+   </PropertyGroup>
+   <ItemGroup>
+     <ProjectReference Include="..\..\src\CryptoExchanges.Net.Core\CryptoExchanges.Net.Core.csproj" />
+-    <ProjectReference Include="..\..\src\CryptoExchanges.Net.DependencyInjection\CryptoExchanges.Net.DependencyInjection.csproj" />
++    <ProjectReference Include="..\..\src\CryptoExchanges.Net\CryptoExchanges.Net.csproj" />
+   </ItemGroup>
+   <ItemGroup>
+     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.6.0" />
+diff --git a/tests/CryptoExchanges.Net.DependencyInjection.Tests.Unit/DiRegistrationTests.cs b/tests/CryptoExchanges.Net.Tests.Unit/DiRegistrationTests.cs
+similarity index 97%
+rename from tests/CryptoExchanges.Net.DependencyInjection.Tests.Unit/DiRegistrationTests.cs
+rename to tests/CryptoExchanges.Net.Tests.Unit/DiRegistrationTests.cs
+index a400073..f0f2adb 100644
+--- a/tests/CryptoExchanges.Net.DependencyInjection.Tests.Unit/DiRegistrationTests.cs
++++ b/tests/CryptoExchanges.Net.Tests.Unit/DiRegistrationTests.cs
+@@ -6,10 +6,10 @@ using CryptoExchanges.Net.Bybit;
+ using CryptoExchanges.Net.Core.Enums;
+ using CryptoExchanges.Net.Core.Interfaces;
+ using CryptoExchanges.Net.Core.Resilience;
+-using CryptoExchanges.Net.DependencyInjection;
++using CryptoExchanges.Net;
+ using Microsoft.Extensions.DependencyInjection.Extensions;
+ 
+-namespace CryptoExchanges.Net.DependencyInjection.Tests.Unit;
++namespace CryptoExchanges.Net.Tests.Unit;
+ 
+ public class DiRegistrationTests
+ {
+diff --git a/tests/CryptoExchanges.Net.DependencyInjection.Tests.Unit/ExchangeClientFactoryTests.cs b/tests/CryptoExchanges.Net.Tests.Unit/ExchangeClientFactoryTests.cs
+similarity index 94%
+rename from tests/CryptoExchanges.Net.DependencyInjection.Tests.Unit/ExchangeClientFactoryTests.cs
+rename to tests/CryptoExchanges.Net.Tests.Unit/ExchangeClientFactoryTests.cs
+index 7ac365a..8255f07 100644
+--- a/tests/CryptoExchanges.Net.DependencyInjection.Tests.Unit/ExchangeClientFactoryTests.cs
++++ b/tests/CryptoExchanges.Net.Tests.Unit/ExchangeClientFactoryTests.cs
+@@ -5,9 +5,9 @@ using CryptoExchanges.Net.Binance;
+ using CryptoExchanges.Net.Core.Enums;
+ using CryptoExchanges.Net.Core.Exceptions;
+ using CryptoExchanges.Net.Core.Interfaces;
+-using CryptoExchanges.Net.DependencyInjection;
++using CryptoExchanges.Net;
+ 
+-namespace CryptoExchanges.Net.DependencyInjection.Tests.Unit;
++namespace CryptoExchanges.Net.Tests.Unit;
+ 
+ public class ExchangeClientFactoryTests
+ {

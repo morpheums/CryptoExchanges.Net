@@ -106,6 +106,8 @@ including the two new facts.
 
 ## Commits
 
+- `998525f` feat(FEAT-007): TASK-066 — rename + consolidate aggregator test project → CryptoExchanges.Net.Tests.Unit
+
 ## Implementation Log
 
 - 2026-06-21T20:05:00Z: Claimed task (base SHA `6658ca3`). Read manifest, existing test files, KuCoin pattern references.

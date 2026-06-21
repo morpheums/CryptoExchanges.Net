@@ -188,7 +188,7 @@ index 0000000..80fabef
 +}
 diff --git a/src/CryptoExchanges.Net.Kucoin/Dtos/OrderDto.cs b/src/CryptoExchanges.Net.Kucoin/Dtos/OrderDto.cs
 new file mode 100644
-index 0000000..85d4f88
+index 0000000..c64ee60
 --- /dev/null
 +++ b/src/CryptoExchanges.Net.Kucoin/Dtos/OrderDto.cs
 @@ -0,0 +1,57 @@
@@ -233,7 +233,7 @@ index 0000000..85d4f88
 +    [JsonPropertyName("type")]
 +    public string Type { get; init; } = "limit";
 +
-+    /// <summary>Order status: <c>open</c>, <c>done</c>, or <c>cancelled</c>.</summary>
++    /// <summary><see langword="true"/> when the order is still resting (open or partially filled); <see langword="false"/> when it has completed or been cancelled.</summary>
 +    [JsonPropertyName("isActive")]
 +    public bool IsActive { get; init; }
 +
@@ -391,10 +391,10 @@ index 0000000..8bed2cb
 +}
 diff --git a/src/CryptoExchanges.Net.Kucoin/Internal/KucoinSymbolMapper.cs b/src/CryptoExchanges.Net.Kucoin/Internal/KucoinSymbolMapper.cs
 new file mode 100644
-index 0000000..9df006f
+index 0000000..2b0dd79
 --- /dev/null
 +++ b/src/CryptoExchanges.Net.Kucoin/Internal/KucoinSymbolMapper.cs
-@@ -0,0 +1,79 @@
+@@ -0,0 +1,76 @@
 +using CryptoExchanges.Net.Core;
 +using CryptoExchanges.Net.Core.Exceptions;
 +
@@ -417,10 +417,7 @@ index 0000000..9df006f
 +        _inner = new SymbolMapper(KucoinSymbolFormat.Instance);
 +    }
 +
-+    /// <summary>
-+    /// Formats a <see cref="Symbol"/> as the KuCoin wire string (e.g. <c>BTC-USDT</c>).
-+    /// Returns the formatted wire string; never throws (any well-formed symbol can be encoded).
-+    /// </summary>
++    /// <inheritdoc />
 +    public string ToWire(Symbol symbol) => _inner.ToWire(symbol);
 +
 +    /// <inheritdoc />
@@ -476,10 +473,10 @@ index 0000000..9df006f
 +}
 diff --git a/src/CryptoExchanges.Net.Kucoin/Internal/KucoinValueParsers.cs b/src/CryptoExchanges.Net.Kucoin/Internal/KucoinValueParsers.cs
 new file mode 100644
-index 0000000..7314fc2
+index 0000000..ea00002
 --- /dev/null
 +++ b/src/CryptoExchanges.Net.Kucoin/Internal/KucoinValueParsers.cs
-@@ -0,0 +1,112 @@
+@@ -0,0 +1,111 @@
 +namespace CryptoExchanges.Net.Kucoin.Internal;
 +
 +/// <summary>
@@ -578,7 +575,7 @@ index 0000000..7314fc2
 +    /// KuCoin encodes most timestamps as epoch-millisecond strings throughout the V1/V2 API.
 +    /// </summary>
 +    public static long ParseMs(string value)
-+        => long.TryParse(value, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out var ms) ? ms : 0L;
++        => TryParseLong(value, out var ms) ? ms : 0L;
 +
 +    /// <summary>
 +    /// Parses a KuCoin string-encoded unix-nanosecond timestamp into milliseconds.
@@ -586,18 +583,17 @@ index 0000000..7314fc2
 +    /// Returns <c>0</c> for null/empty/malformed input.
 +    /// </summary>
 +    public static long ParseNsToMs(string value)
-+    {
-+        if (!long.TryParse(value, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out var ns))
-+            return 0L;
-+        return ns / 1_000_000L;
-+    }
++        => TryParseLong(value, out var ns) ? ns / 1_000_000L : 0L;
++
++    private static bool TryParseLong(string value, out long result)
++        => long.TryParse(value, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out result);
 +}
 diff --git a/src/CryptoExchanges.Net.Kucoin/Mapping/KucoinMappingProfiles.cs b/src/CryptoExchanges.Net.Kucoin/Mapping/KucoinMappingProfiles.cs
 new file mode 100644
-index 0000000..5a00240
+index 0000000..bbc6e69
 --- /dev/null
 +++ b/src/CryptoExchanges.Net.Kucoin/Mapping/KucoinMappingProfiles.cs
-@@ -0,0 +1,109 @@
+@@ -0,0 +1,105 @@
 +using DeltaMapper;
 +using CryptoExchanges.Net.Kucoin.Dtos;
 +using CryptoExchanges.Net.Kucoin.Internal;
@@ -637,7 +633,7 @@ index 0000000..5a00240
 +            .ForMember(d => d.TimeInForce, o => o.MapFrom(s => KucoinValueParsers.ParseTimeInForce(s.TimeInForce)))
 +            .ForMember(d => d.StopPrice, o => o.Ignore())
 +            .ForMember(d => d.IcebergQuantity, o => o.Ignore())
-+            .ForMember(d => d.CreatedAt, o => o.MapFrom(s => ParseEpochMs(s.CreatedAt)))
++            .ForMember(d => d.CreatedAt, o => o.MapFrom(s => ParseMs(s.CreatedAt)))
 +            .ForMember(d => d.UpdatedAt, o => o.Ignore());
 +
 +        // TickerDto -> Ticker. KuCoin reports open (price 24h ago); price change is last - open,
@@ -686,7 +682,7 @@ index 0000000..5a00240
 +            .ForMember(d => d.Id, o => o.MapFrom(s => s.TradeId))
 +            .ForMember(d => d.Price, o => o.MapFrom(s => KucoinValueParsers.ParseDecimal(s.Price)))
 +            .ForMember(d => d.Quantity, o => o.MapFrom(s => KucoinValueParsers.ParseDecimal(s.Size)))
-+            .ForMember(d => d.Timestamp, o => o.MapFrom(s => ParseEpochMs(s.CreatedAt)))
++            .ForMember(d => d.Timestamp, o => o.MapFrom(s => ParseMs(s.CreatedAt)))
 +            // IsBuyerMaker: a buy fill that is the maker, or a sell fill that is the taker.
 +            .ForMember(d => d.IsBuyerMaker, o => o.MapFrom(s =>
 +                s.Side == "buy" ? s.Liquidity == "maker" : s.Liquidity != "maker"))
@@ -697,14 +693,10 @@ index 0000000..5a00240
 +    private static readonly OrderType[] DefaultSpotOrderTypes = [OrderType.Limit, OrderType.Market];
 +
 +    /// <summary>Parses a KuCoin string-encoded unix-ms timestamp into an optional instant (null when unset/zero).</summary>
-+    private static DateTimeOffset? ParseMs(string value)
-+    {
-+        var ms = KucoinValueParsers.ParseMs(value);
-+        return ms > 0 ? DateTimeOffset.FromUnixTimeMilliseconds(ms) : null;
-+    }
++    private static DateTimeOffset? ParseMs(string value) => ParseMs(KucoinValueParsers.ParseMs(value));
 +
-+    /// <summary>Parses a KuCoin long unix-ms epoch into an optional instant (null when zero).</summary>
-+    private static DateTimeOffset? ParseEpochMs(long ms)
++    /// <summary>Converts a unix-ms epoch long into an optional instant (null when zero).</summary>
++    private static DateTimeOffset? ParseMs(long ms)
 +        => ms > 0 ? DateTimeOffset.FromUnixTimeMilliseconds(ms) : null;
 +}
 diff --git a/tests/CryptoExchanges.Net.Kucoin.Tests.Unit/KucoinSymbolAndMappingTests.cs b/tests/CryptoExchanges.Net.Kucoin.Tests.Unit/KucoinSymbolAndMappingTests.cs

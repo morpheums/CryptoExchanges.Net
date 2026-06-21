@@ -1,6 +1,6 @@
 ---
 id: TASK-061
-status: READY
+status: IN_PROGRESS
 depends_on: []
 ---
 # TASK-061: Generalize streaming endpoint seam (ADR-002) — async `ResolveConnectionAsync` + migrate Binance
@@ -15,8 +15,8 @@ depends_on: []
 - **Wave**: 1
 - **Traces to**: PRD-FEAT-006 AC-4, AC-5; TRD-FEAT-006 §"Work Stream A — Streaming Seam Generalization", §"Dependency Impact"; ADR-002 (full); FEAT-006 spec §"Streaming endpoint-seam generalization", §"Build approach" step 6; TEST-PLAN-FEAT-006 §8 + §"Regression Coverage"
 - **Created at**: 2026-06-20T19:00:00Z
-- **Claimed at**:
-- **Base SHA**:
+- **Claimed at**: 2026-06-21T00:00:00Z
+- **Base SHA**: 8837e79d6fe76bdb30f944dcfce9c56fcfb6ae4a
 - **Implemented at**:
 - **Completed at**:
 - **Blocked at**:

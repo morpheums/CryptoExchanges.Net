@@ -17,6 +17,8 @@ namespace CryptoExchanges.Net.Http.Tests.Unit.Streaming;
 /// </summary>
 internal sealed class FakeStreamProtocol : IStreamProtocol
 {
+    private readonly Uri _endpoint;
+
     /// <summary>
     /// Routing key returned by <see cref="RoutingKeyFor"/> (for registration) and by
     /// <see cref="Classify"/> (for dispatch). Both sides share this value so frames
@@ -27,14 +29,36 @@ internal sealed class FakeStreamProtocol : IStreamProtocol
     /// <summary>The kind all frames are classified as. Defaults to <see cref="FrameKind.Data"/>.</summary>
     public FrameKind DefaultKind { get; set; } = FrameKind.Data;
 
-    /// <summary>Heartbeat policy returned by <see cref="Heartbeat"/>. Defaults to a long ServerPingClientPong.</summary>
+    /// <summary>
+    /// Heartbeat policy embedded in <see cref="ResolveConnectionAsync"/>. Defaults to a long
+    /// <see cref="HeartbeatDirection.ServerPingClientPong"/> policy.
+    /// </summary>
     public HeartbeatPolicy HeartbeatPolicy { get; set; } = new HeartbeatPolicy(
         Direction: HeartbeatDirection.ServerPingClientPong,
         Interval: TimeSpan.FromSeconds(30),
         Timeout: TimeSpan.FromSeconds(60));
 
+    /// <summary>
+    /// Number of times <see cref="ResolveConnectionAsync"/> has been called.
+    /// Use to assert the engine calls resolve on every connect/reconnect.
+    /// </summary>
+    public int ResolveCount { get; private set; }
+
+    /// <summary>
+    /// Initialises the fake with an optional endpoint URI (defaults to <c>wss://fake.test/ws</c>).
+    /// </summary>
+    public FakeStreamProtocol(Uri? endpoint = null)
+    {
+        _endpoint = endpoint ?? new Uri("wss://fake.test/ws");
+    }
+
     /// <inheritdoc/>
-    public Uri Endpoint { get; } = new Uri("wss://fake.test/ws");
+    public ValueTask<StreamConnectionInfo> ResolveConnectionAsync(CancellationToken ct)
+    {
+        ResolveCount++;
+        var info = new StreamConnectionInfo(_endpoint, HeartbeatPolicy);
+        return new ValueTask<StreamConnectionInfo>(info);
+    }
 
     /// <inheritdoc/>
     public string RoutingKeyFor(StreamRequest request)
@@ -51,7 +75,4 @@ internal sealed class FakeStreamProtocol : IStreamProtocol
     /// <inheritdoc/>
     public StreamFrame Classify(ReadOnlySpan<byte> frame)
         => new(DefaultKind, DefaultKind == FrameKind.Data ? NextRoutingKey : null);
-
-    /// <inheritdoc/>
-    public HeartbeatPolicy Heartbeat => HeartbeatPolicy;
 }

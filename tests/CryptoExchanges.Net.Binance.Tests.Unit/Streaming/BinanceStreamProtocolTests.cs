@@ -193,12 +193,23 @@ public class BinanceStreamProtocolTests
             "RoutingKeyFor and Classify must share one keyspace so frames reach their subscription");
     }
 
-    // ── HeartbeatPolicy ───────────────────────────────────────────────────────
+    // ── ResolveConnectionAsync ────────────────────────────────────────────────
 
     [Fact]
-    public void Heartbeat_IsServerPingClientPong()
+    public async Task ResolveConnectionAsync_ReturnsServerPingClientPong()
     {
         var protocol = MakeProtocol();
-        protocol.Heartbeat.Direction.Should().Be(HeartbeatDirection.ServerPingClientPong);
+        var info = await protocol.ResolveConnectionAsync(CancellationToken.None);
+        info.Heartbeat.Direction.Should().Be(HeartbeatDirection.ServerPingClientPong);
+    }
+
+    [Fact]
+    public async Task ResolveConnectionAsync_ReturnsCachedInstance()
+    {
+        var protocol = MakeProtocol();
+        var info1 = await protocol.ResolveConnectionAsync(CancellationToken.None);
+        var info2 = await protocol.ResolveConnectionAsync(CancellationToken.None);
+        // Binance uses a static URL + static policy — same reference on every call.
+        info1.Should().BeSameAs(info2);
     }
 }

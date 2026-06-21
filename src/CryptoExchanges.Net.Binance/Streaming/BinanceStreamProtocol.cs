@@ -11,29 +11,33 @@ namespace CryptoExchanges.Net.Binance.Streaming;
 /// </summary>
 internal sealed class BinanceStreamProtocol : IStreamProtocol
 {
-    private static readonly HeartbeatPolicy HeartbeatPolicyInstance = new(
+    private static readonly HeartbeatPolicy s_heartbeatPolicy = new(
         Direction: HeartbeatDirection.ServerPingClientPong,
         Interval: TimeSpan.FromSeconds(20),
         Timeout: TimeSpan.FromSeconds(60));
+
+    // Cached once in the constructor — Binance uses a static URL and static heartbeat policy.
+    private readonly StreamConnectionInfo _connectionInfo;
 
     private int _nextId;
 
     /// <summary>
     /// Initialises the protocol with the streaming base URL from options.
     /// The combined-stream path (<c>/stream</c>) is appended automatically.
+    /// The resolved <see cref="StreamConnectionInfo"/> is cached in the constructor
+    /// and returned on every <see cref="ResolveConnectionAsync"/> call.
     /// </summary>
     /// <param name="options">Stream options supplying the base URL.</param>
     public BinanceStreamProtocol(BinanceStreamOptions options)
     {
         ArgumentNullException.ThrowIfNull(options);
-        Endpoint = new Uri(options.StreamBaseUrl.TrimEnd('/') + "/stream");
+        var endpoint = new Uri(options.StreamBaseUrl.TrimEnd('/') + "/stream");
+        _connectionInfo = new StreamConnectionInfo(endpoint, s_heartbeatPolicy);
     }
 
     /// <inheritdoc/>
-    public Uri Endpoint { get; }
-
-    /// <inheritdoc/>
-    public HeartbeatPolicy Heartbeat => HeartbeatPolicyInstance;
+    public ValueTask<StreamConnectionInfo> ResolveConnectionAsync(CancellationToken ct)
+        => new(_connectionInfo);
 
     /// <inheritdoc/>
     public string RoutingKeyFor(StreamRequest request)

@@ -3,16 +3,9 @@ using CryptoExchanges.Net.Core;
 namespace CryptoExchanges.Net.Kucoin.Internal;
 
 /// <summary>
-/// Bespoke KuCoin <see cref="ISymbolMapper"/> adapter. Delegates all resolution work to the
-/// shared <see cref="SymbolMapper"/> (KuCoin's hyphen-delimited, upper-case wire format is handled
-/// by <see cref="KucoinSymbolFormat"/>). Exposes <see cref="IsSupported"/> to reflect whether a
-/// symbol is in the registered spot symbol table.
+/// Bespoke KuCoin <see cref="ISymbolMapper"/> adapter backed by <see cref="KucoinSymbolFormat"/>
+/// (hyphen-delimited, upper-case). Delegates to <see cref="SymbolMapper"/>; exposes <see cref="IsSupported"/>.
 /// </summary>
-/// <remarks>
-/// <see cref="FromWire"/> propagates the inner <see cref="FormatException"/> directly, matching the
-/// <see cref="ISymbolMapper"/> XML-doc contract and the pattern established by the shared
-/// <see cref="SymbolMapper"/> and the other exchange implementations (OKX, Binance, Bybit).
-/// </remarks>
 internal sealed class KucoinSymbolMapper : ISymbolMapper
 {
     private readonly SymbolMapper _inner;
@@ -51,10 +44,8 @@ internal sealed class KucoinSymbolMapper : ISymbolMapper
     }
 
     /// <summary>
-    /// Returns <see langword="true"/> when <paramref name="symbol"/> is in the registered spot
-    /// symbol table (i.e., <see cref="UpdateSymbols"/> has been called and the symbol was present),
-    /// or can be resolved via the cold-cache delimiter fallback.
-    /// Returns <see langword="false"/> when the symbol cannot be resolved at all.
+    /// Returns <see langword="true"/> when <paramref name="symbol"/> can be resolved via the registered table
+    /// or the cold-cache delimiter fallback; <see langword="false"/> otherwise.
     /// </summary>
     public bool IsSupported(Symbol symbol)
     {

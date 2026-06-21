@@ -15,11 +15,8 @@ public static class StreamServiceCollectionExtensions
     internal const string KucoinClientName = "kucoin";
 
     /// <summary>
-    /// Registers the KuCoin WebSocket streaming client and all its dependencies as per-exchange
-    /// keyed singletons. Requires <c>AddKucoinExchange</c> to be called first so the keyed
-    /// <c>ISymbolMapper</c> and <c>IMapper</c> are already available in the container. The
-    /// bullet-public HTTP call reuses the named <c>kucoin</c> HttpClient (unauthenticated POST).
-    /// Options are validated with fail-fast (<c>ValidateOnStart</c>).
+    /// Registers the KuCoin WebSocket streaming client as a per-exchange keyed singleton.
+    /// Requires <c>AddKucoinExchange</c> to be called first. Options are validated on startup.
     /// </summary>
     /// <param name="services">The <see cref="IServiceCollection"/> to add services to.</param>
     /// <param name="configure">An optional action to configure <see cref="KucoinStreamOptions"/>.</param>

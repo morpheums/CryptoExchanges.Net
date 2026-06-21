@@ -6,15 +6,9 @@ using CryptoExchanges.Net.Http;
 namespace CryptoExchanges.Net.Kucoin.Resilience;
 
 /// <summary>
-/// Maps KuCoin V1 error responses (HTTP status + <c>{code,msg}</c> envelope) to the SDK's typed
-/// exceptions. KuCoin returns a string <c>code</c> at the top level; success is
-/// <c>code == "200000"</c> (a string), which must NEVER be treated as an error.
+/// Maps KuCoin V1 error responses (HTTP status + <c>{code,msg}</c> envelope) to SDK typed exceptions.
+/// KuCoin string code <c>"200000"</c> is success and must never be treated as an error.
 /// </summary>
-/// <remarks>
-/// Internal per ADR-001 conv #2: the in-assembly composer/AddKucoinExchange construct this
-/// directly, so there is no cross-assembly need for it to be public. KuCoin error codes are
-/// documented as strings; the mappings below use real KuCoin codes and map conservatively.
-/// </remarks>
 internal sealed class KucoinErrorTranslator : IExchangeErrorTranslator
 {
     /// <inheritdoc />

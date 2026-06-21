@@ -14,10 +14,7 @@ internal sealed class KucoinStreamProtocol : IStreamProtocol
     private readonly IKucoinBulletPublicClient _bulletClient;
     private long _nextId;
 
-    /// <summary>
-    /// Initialises the protocol with the injectable bullet-public client used to negotiate
-    /// the WebSocket token on every connection attempt.
-    /// </summary>
+    /// <summary>Initialises the protocol with the bullet-public client used to negotiate the WebSocket token.</summary>
     /// <param name="bulletClient">The bullet-public negotiation client.</param>
     public KucoinStreamProtocol(IKucoinBulletPublicClient bulletClient)
     {
@@ -26,11 +23,6 @@ internal sealed class KucoinStreamProtocol : IStreamProtocol
     }
 
     /// <inheritdoc />
-    /// <remarks>
-    /// Calls <c>POST /api/v1/bullet-public</c> on every connect/reconnect to obtain a fresh
-    /// short-lived token. The returned URI is validated to the expected KuCoin WS host scheme
-    /// (SSRF guard: only <c>wss://</c> URIs pointing to <c>*.kucoin.com</c> are accepted).
-    /// </remarks>
     public async ValueTask<StreamConnectionInfo> ResolveConnectionAsync(CancellationToken ct)
     {
         var bullet = await _bulletClient.NegotiateAsync(ct).ConfigureAwait(false);
@@ -167,11 +159,7 @@ internal sealed class KucoinStreamProtocol : IStreamProtocol
             $"Unsupported interval: {intervalToken}")
     };
 
-    /// <summary>
-    /// SSRF guard: only <c>wss://</c> URIs whose host ends with <c>.kucoin.com</c> or is exactly
-    /// <c>kucoin.com</c> are accepted. Prevents a compromised negotiation endpoint from redirecting
-    /// the client to an attacker-controlled host.
-    /// </summary>
+    /// <summary>SSRF guard: only <c>wss://</c> URIs on <c>*.kucoin.com</c> or <c>kucoin.com</c> are accepted.</summary>
     private static void ValidateWsEndpoint(string endpoint)
     {
         if (!Uri.TryCreate(endpoint, UriKind.Absolute, out var parsed))

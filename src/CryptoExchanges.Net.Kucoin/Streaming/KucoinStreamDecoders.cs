@@ -7,16 +7,10 @@ using DeltaMapper;
 namespace CryptoExchanges.Net.Kucoin.Streaming;
 
 /// <summary>
-/// Builds the <see cref="StreamDecoderRegistry"/> for the KuCoin public WebSocket streams.
-/// Each closure deserializes the KuCoin push-frame <c>data</c> payload into the venue DTO
-/// and maps it to the matching <see cref="CryptoExchanges.Net.Core.Models"/> type, reusing
-/// the keyed <see cref="IMapper"/> and bespoke <see cref="ISymbolMapper"/>.
+/// Builds the <see cref="StreamDecoderRegistry"/> for KuCoin public WebSocket streams.
+/// Each closure deserializes the push-frame payload and maps it to a <c>Core.Models</c> type
+/// via the keyed <see cref="IMapper"/> and <see cref="ISymbolMapper"/>.
 /// </summary>
-/// <remarks>
-/// Binding constraint K1: DTO deserialization, DeltaMapper projection, and symbol resolution
-/// all happen here in the Kucoin package. The Http engine receives only the resulting opaque
-/// <see cref="StreamDecoderRegistry"/> of <c>Func&lt;ReadOnlyMemory&lt;byte&gt;, object&gt;</c>.
-/// </remarks>
 internal static class KucoinStreamDecoders
 {
     private static readonly JsonSerializerOptions JsonOpts = new()
@@ -24,12 +18,9 @@ internal static class KucoinStreamDecoders
         PropertyNameCaseInsensitive = true,
     };
 
-    /// <summary>
-    /// Builds a fully-populated <see cref="StreamDecoderRegistry"/> with decoders for
-    /// all four stream kinds, capturing the provided mapper and symbol mapper as closures.
-    /// </summary>
-    /// <param name="mapper">The keyed DeltaMapper instance from <c>AddKucoinExchange</c>.</param>
-    /// <param name="symbolMapper">The bespoke keyed symbol mapper from <c>AddKucoinExchange</c>.</param>
+    /// <summary>Builds a <see cref="StreamDecoderRegistry"/> with decoders for all four stream kinds.</summary>
+    /// <param name="mapper">The keyed DeltaMapper instance.</param>
+    /// <param name="symbolMapper">The bespoke keyed symbol mapper.</param>
     /// <returns>A registry ready for injection into the engine.</returns>
     public static StreamDecoderRegistry Build(IMapper mapper, ISymbolMapper symbolMapper)
     {
@@ -103,12 +94,7 @@ internal static class KucoinStreamDecoders
         return registry;
     }
 
-    /// <summary>
-    /// Parses the frame once. When a root-level <c>"data"</c> field is present (full push frame),
-    /// deserializes directly from the <see cref="JsonElement"/> — avoids re-serializing to bytes
-    /// and a second full parse. When absent (bare data payload, e.g. in tests), deserializes from
-    /// the raw span directly.
-    /// </summary>
+    /// <summary>Deserializes the <c>data</c> field from a push frame, or the raw bytes when no outer wrapper is present.</summary>
     private static T? DeserializeData<T>(ReadOnlyMemory<byte> frame)
     {
         try
@@ -127,11 +113,8 @@ internal static class KucoinStreamDecoders
     }
 
     /// <summary>
-    /// Deserializes the double-nested snapshot payload (<c>data.data</c>) used by the
-    /// <c>/market/snapshot</c> channel. The outer wrapper is
-    /// <c>{"type":"message","topic":...,"data":{"sequence":...,"data":{...}}}</c>; this method
-    /// navigates to the inner <c>data.data</c> object. When the outer wrapper is absent (bare
-    /// inner payload as used in unit tests) it falls back to deserializing the raw bytes.
+    /// Deserializes the double-nested <c>data.data</c> payload for the <c>/market/snapshot</c> channel.
+    /// Falls back to deserializing the raw bytes when no outer wrapper is present (unit-test fixtures).
     /// </summary>
     private static T? DeserializeSnapshotData<T>(ReadOnlyMemory<byte> frame)
     {

@@ -6,13 +6,8 @@ namespace CryptoExchanges.Net.Kucoin.Services;
 
 /// <summary>
 /// KuCoin implementation of <see cref="ITradingService"/> against the V1 spot REST API.
+/// Place/cancel endpoints return only the order ID, so each mutating method re-fetches the full order.
 /// </summary>
-/// <remarks>
-/// KuCoin place/cancel endpoints return only the order id (inside a minimal ack object), not the
-/// full order, so <see cref="PlaceOrderAsync"/> and the cancel methods re-fetch the order via
-/// <c>/api/v1/orders/{orderId}</c> to honour the <see cref="ITradingService"/> contract of returning
-/// a fully populated <see cref="Order"/>.
-/// </remarks>
 internal sealed class KucoinTradingService(IKucoinHttpClient http, ISymbolMapper mapper, IMapper modelMapper) : ITradingService
 {
     /// <inheritdoc />
@@ -127,11 +122,7 @@ internal sealed class KucoinTradingService(IKucoinHttpClient http, ISymbolMapper
         return modelMapper.Map<OrderDto, Order>(items);
     }
 
-    /// <summary>
-    /// Resolves a full <see cref="Order"/> for a KuCoin order id. KuCoin place/cancel responses carry
-    /// only the id, so we query <c>/api/v1/orders/{orderId}</c> (by orderId, or client-order endpoint
-    /// when the ack omits orderId).
-    /// </summary>
+    /// <summary>Fetches the full <see cref="Order"/> by order ID, falling back to the client-order endpoint when the ID is absent.</summary>
     private async Task<Order> FetchOrderAsync(string orderId, CancellationToken ct, string? clientOrderId = null)
     {
         if (!string.IsNullOrEmpty(orderId))

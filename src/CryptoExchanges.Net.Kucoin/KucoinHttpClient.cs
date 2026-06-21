@@ -6,19 +6,9 @@ using CryptoExchanges.Net.Http;
 namespace CryptoExchanges.Net.Kucoin;
 
 /// <summary>
-/// Internal HTTP wrapper for KuCoin V1/V2 REST. Builds requests and deserializes successful responses.
-/// Signing (Unix-ms timestamp + base64 HMAC + signed passphrase), the KuCoin authentication headers
-/// (<c>KC-API-KEY</c>/<c>KC-API-SIGN</c>/<c>KC-API-TIMESTAMP</c>/<c>KC-API-PASSPHRASE</c>/<c>KC-API-KEY-VERSION</c>),
-/// retries, rate-limit handling, and typed error translation are all provided by the resilience
-/// pipeline on the injected <see cref="HttpClient"/>, so any response that reaches this type is
-/// already a success.
-/// <para>
-/// KuCoin signs the request path (<c>RequestUri.PathAndQuery</c>): the prehash is
-/// <c>timestamp + METHOD + requestPath + body</c>. The configured <see cref="HttpClient.BaseAddress"/>
-/// is the host root only (e.g. <c>https://api.kucoin.com</c>, no path) and this client builds the
-/// full request path beginning with <c>/api/v1/...</c> plus the escaped query string. The resulting
-/// <c>RequestUri.PathAndQuery</c> is therefore exactly the KuCoin <c>requestPath</c> that gets signed.
-/// </para>
+/// Internal HTTP wrapper for KuCoin V1/V2 REST. Builds requests and deserializes responses;
+/// signing, retries, rate-limiting, and error translation are owned by the resilience pipeline
+/// on the injected <see cref="HttpClient"/>, so every response that reaches this type is already a success.
 /// </summary>
 internal sealed class KucoinHttpClient(HttpClient httpClient) : IKucoinHttpClient
 {

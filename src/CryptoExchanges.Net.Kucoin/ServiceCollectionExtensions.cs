@@ -21,9 +21,8 @@ public static class ServiceCollectionExtensions
     private const string KucoinClientName = "kucoin";
 
     /// <summary>
-    /// Registers the KuCoin exchange client and all its dependencies as per-exchange keyed singletons,
-    /// backed by a typed <see cref="System.Net.Http.HttpClient"/> with the full resilience handler chain.
-    /// Options are validated with fail-fast (<c>ValidateOnStart</c>).
+    /// Registers the KuCoin exchange client as a per-exchange keyed singleton with the full resilience
+    /// handler chain. Options are validated with fail-fast (<c>ValidateOnStart</c>).
     /// </summary>
     /// <param name="services">The <see cref="IServiceCollection"/> to add services to.</param>
     /// <param name="configure">An action to configure <see cref="KucoinOptions"/>.</param>

@@ -26,9 +26,7 @@ internal sealed class KucoinBulletPublicClient : IKucoinBulletPublicClient
 {
     private readonly IKucoinHttpClient _http;
 
-    /// <summary>
-    /// Initialises the bullet-public client with the injected resilient HTTP client.
-    /// </summary>
+    /// <summary>Initialises the client with the resilient HTTP client.</summary>
     /// <param name="http">The KuCoin resilient HTTP client.</param>
     public KucoinBulletPublicClient(IKucoinHttpClient http)
     {

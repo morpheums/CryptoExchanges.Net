@@ -4,19 +4,13 @@ using CryptoExchanges.Net.Kucoin.Auth;
 namespace CryptoExchanges.Net.Kucoin.Resilience;
 
 /// <summary>
-/// For signed KuCoin requests, (re)computes the Unix-ms timestamp + base64 HMAC signature ON EACH
-/// ATTEMPT and sets the five KuCoin KC-API credential headers: <c>KC-API-KEY</c>,
-/// <c>KC-API-SIGN</c>, <c>KC-API-TIMESTAMP</c>, <c>KC-API-PASSPHRASE</c>, and
-/// <c>KC-API-KEY-VERSION</c> (always <c>2</c>). Sits below the retry strategy so a retried,
-/// delayed request is re-signed with a fresh timestamp (avoids KuCoin timestamp-expiry
-/// rejections). Unlike OKX, KuCoin passphrase-v2 requires the passphrase itself to be
-/// HMAC-SHA256-signed and base64-encoded; see <see cref="KucoinSignatureService.SignPassphrase"/>.
-/// Unsigned (public) requests pass through untouched with no KC-API-* headers added.
+/// Re-signs KuCoin requests on every attempt: sets the five <c>KC-API-*</c> credential headers
+/// with a fresh Unix-ms timestamp. Unsigned requests pass through untouched.
 /// </summary>
-/// <param name="apiKey">The KuCoin API key set on the <c>KC-API-KEY</c> header for signed requests.</param>
-/// <param name="passphrase">The KuCoin API passphrase; will be HMAC-signed and base64-encoded before being set on <c>KC-API-PASSPHRASE</c>.</param>
-/// <param name="signatureService">Computes the base64 HMAC-SHA256 signature over the KuCoin prehash string and signs the passphrase.</param>
-/// <param name="timeOffset">Returns the current server-time offset in milliseconds, applied to each timestamp.</param>
+/// <param name="apiKey">KuCoin API key for the <c>KC-API-KEY</c> header.</param>
+/// <param name="passphrase">Raw passphrase; HMAC-signed before being set on <c>KC-API-PASSPHRASE</c>.</param>
+/// <param name="signatureService">Computes the HMAC-SHA256 signature and signs the passphrase.</param>
+/// <param name="timeOffset">Returns the server-time offset in milliseconds applied to each timestamp.</param>
 internal sealed class KucoinSigningHandler(
     string apiKey, string passphrase, IKucoinSignatureService signatureService, Func<long> timeOffset)
     : DelegatingHandler

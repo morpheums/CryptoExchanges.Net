@@ -1,6 +1,6 @@
 ---
 id: TASK-070
-status: PLANNED
+status: IMPLEMENTED
 depends_on: [TASK-067, TASK-068, TASK-069]
 ---
 # TASK-070: Final verification gate — build 0W/0E, suite green, `dotnet pack` 9-package swap

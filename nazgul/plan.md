@@ -60,7 +60,7 @@ Authoritative inputs (read fully before any task):
 | TASK-058 | ✦ DONE     | 2    | Bespoke `ISymbolMapper` + REST wire DTOs + DeltaMapper profiles + parsers    |
 | TASK-059 | ✦ DONE     | 3    | REST services (market/account/trading) + http client + composer + entry     |
 | TASK-060 | ✦ DONE     | 4    | `AddKucoinExchange` DI + `AddCryptoExchanges` + MCP wiring                   |
-| TASK-062 | ◆ IMPLEMENTED | 5 | `KucoinStreamProtocol` + bullet-public + 4 decoders + `AddKucoinStreams` (bugfix: snapshot channel) |
+| TASK-062 | ✦ DONE     | 5    | `KucoinStreamProtocol` + bullet-public + 4 decoders + `AddKucoinStreams` (bugfix: snapshot channel) |
 | TASK-063 | ✦ DONE     | 6    | Live integration smokes — REST + one streaming (self-skip)                   |
 | TASK-064 | ✦ DONE     | 6    | Docs — README KuCoin row → supported + MCP/exchanges/streaming reference     |
 
@@ -134,9 +134,9 @@ Nothing in PRD "Out of Scope" (futures/margin, private streams, order-book maint
 
 ## Recovery Pointer
 
-- **Current stage**: TASK-062 IMPLEMENTED (bugfix commit 32f75f7) — ticker channel corrected to /market/snapshot, kline time fixed, CI filter added. Awaiting review gate.
-- **Next action**: Review board evaluates TASK-062 bugfix; upon approval, post-loop → PR to main.
-- **Active task**: TASK-062 (IMPLEMENTED — bugfix round).
+- **Current stage**: ALL 9 TASKS DONE — TASK-062 bugfix re-review APPROVED 4/4 (completion SHA d34f1b8).
+- **Next action**: Post-loop phase complete → PR to main already filed (#35).
+- **Active task**: none (all tasks DONE).
 - **Files are truth**: the task manifests under `nazgul/tasks/` carry full state; each manifest's
   frontmatter is the canonical record.
 
@@ -147,10 +147,10 @@ Nothing in PRD "Out of Scope" (futures/margin, private streams, order-book maint
   ✦ TASK-058 — KucoinSymbolMapper + wire DTOs + DeltaMapper + parsers DONE (reviewed 4/4, Cycle 1; simplify 5a20da1).
   ✦ TASK-059 — REST services + http client + composer + entry DONE (reviewed 4/4, Cycle 2; fix ee97d43).
   ✦ TASK-060 — AddKucoinExchange DI + AddCryptoExchanges + MCP wiring DONE (reviewed 4/4, Cycle 1; impl commit ad607d6).
-  ✦ TASK-062 — KucoinStreamProtocol + bullet-public + 4 decoders + AddKucoinStreams DONE (reviewed 4/4, Cycle 2; completion 2039654).
+  ✦ TASK-062 — KucoinStreamProtocol + bullet-public + 4 decoders + AddKucoinStreams DONE (reviewed 4/4, Bugfix Cycle 3; completion d34f1b8).
   ✦ TASK-063 — Live integration smokes (REST + streaming, self-skip) DONE (reviewed 4/4, Fix-First Cycle 1; completion b365dbb).
   ✦ TASK-064 — Docs (README/MCP/exchanges/streaming) DONE (reviewed 4/4, Fix-First Cycle 1 + Cycle 2; completion 76a2798).
-  ◇ POST-LOOP — documentation + release-manager → PR to main.
+  ✦ POST-LOOP — documentation + release-manager → PR to main (#35).
 ────────────────────────────────────────────────────────
 
 ## Completed
@@ -168,9 +168,9 @@ Nothing in PRD "Out of Scope" (futures/margin, private streams, order-book maint
 - **TASK-060** — DONE (2026-06-21T11:33:29Z). AddKucoinExchange DI + AddCryptoExchanges + MCP wiring approved unanimously (4/4, Cycle 1).
   Impl commit: `ad607d6`. Completion SHA: `0940957`. Simplify: 0 fixes (faithful clone). No blocking findings (all CONCERNs <=65, pre-existing cross-exchange patterns).
   Flake note: Http.Tests.Unit streaming-reconnect race is a pre-existing parallel-run harness race (87/87 PASS in isolation), NOT a TASK-061 seam regression. Review artifacts: `nazgul/reviews/TASK-060/`.
-- **TASK-062** — DONE (2026-06-21T13:15:00Z). KucoinStreamProtocol + bullet-public negotiation + 4 decoders + AddKucoinStreams approved unanimously (4/4, Cycle 2).
-  Impl commit: `af4d08a`. Simplify commit: `d6988f7` (6 fixes). Cycle-1 fix (RestBaseUrl wiring) + completion SHA: `2039654`. Review artifacts: `nazgul/reviews/TASK-062/`.
-  Cycle 1: api-reviewer CHANGES_REQUESTED (RestBaseUrl public option silently ignored, REJECT@98%); Fix-First auto-remediation wired RestBaseUrl→bullet-public HttpClient BaseAddress (LR-001 guards) + 4 no-network wiring tests; api-reviewer Cycle 2 APPROVE@99%. Security SSRF (deferred to this task) RESOLVED — wss:// + *.kucoin.com host allowlist enforced pre-URI. Wave 5 convergence (REST + streaming-seam) complete.
+- **TASK-062** — DONE (2026-06-21T17:30:00Z). KucoinStreamProtocol + bullet-public negotiation + 4 decoders + AddKucoinStreams approved unanimously (4/4, Bugfix Cycle 3).
+  Impl commit: `af4d08a`. Simplify commit: `d6988f7` (6 fixes). Cycle-1 fix (RestBaseUrl wiring): `2039654`. Bugfix commit: `32f75f7` (ticker channel → /market/snapshot). Completion SHA: `d34f1b8`. Review artifacts: `nazgul/reviews/TASK-062/`.
+  Cycle 1: api-reviewer CHANGES_REQUESTED (RestBaseUrl public option silently ignored, REJECT@98%); Fix-First auto-remediation wired RestBaseUrl→bullet-public HttpClient BaseAddress (LR-001 guards) + 4 no-network wiring tests; api-reviewer Cycle 2 APPROVE@99%. Security SSRF RESOLVED — wss:// + *.kucoin.com host allowlist enforced pre-URI. Bugfix (Cycle 3): live integration tests timed out because /market/ticker delivers no symbol/24h-stats; switched to /market/snapshot (double-nested data.data, native numeric fields); rewritten StreamTickerDto + mapping profile + DeserializeSnapshotData; all reviewers APPROVE.
 - **TASK-063** — DONE (2026-06-21T15:00:00Z). Live integration smokes (REST + streaming, self-skip) — 4/4 reviewers, Fix-First Cycle 1.
   Impl commit: `5dc88fa`. Fix commit: `b365dbb` (removed <remarks> noise + dead reconnect booleans). Completion SHA: `b365dbb`. Review artifacts: `nazgul/reviews/TASK-063/`.
   Cycle 1: code-reviewer CHANGES_REQUESTED (2 REJECTs: <remarks> violates LEAN mandate, dead boolean locals); Fix-First auto-remediated both mechanically. Build 0W/0E post-fix; all tests green. architect/security/api all APPROVE in first cycle.

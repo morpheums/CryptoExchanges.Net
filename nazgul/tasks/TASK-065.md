@@ -1,6 +1,6 @@
 ---
 id: TASK-065
-status: IN_PROGRESS
+status: IMPLEMENTED
 depends_on: []
 ---
 # TASK-065: Rename aggregator project → `CryptoExchanges.Net` (folder, csproj, ids, namespace, sln)
@@ -17,7 +17,7 @@ depends_on: []
 - **Created at**: 2026-06-21T18:00:00Z
 - **Claimed at**: 2026-06-21T18:10:00Z
 - **Base SHA**: 60d00a7
-- **Implemented at**:
+- **Implemented at**: 2026-06-21T18:15:00Z
 - **Completed at**:
 - **Blocked at**:
 - **Retry count**: 0/3
@@ -62,9 +62,9 @@ No XML-doc changes beyond the namespace move (LEAN docs already present: short `
 sealed options class implementing no interface (per TRD §Build Requirements).
 
 ## Acceptance Criteria
-- [ ] Folder is `src/CryptoExchanges.Net/` with `CryptoExchanges.Net.csproj` whose `PackageId`/`AssemblyName`/`RootNamespace` are all `CryptoExchanges.Net`; all 7 ProjectReferences + the DI.Abstractions PackageReference + the `<NoWarn>` list are preserved; no folder/file named `*DependencyInjection*` remains under `src/`.
-- [ ] `ServiceCollectionExtensions.cs` and `CryptoExchangesOptions.cs` declare `namespace CryptoExchanges.Net;`; method name `AddCryptoExchanges` and the `CryptoExchangesOptions` property shape are byte-for-byte unchanged otherwise; `dotnet build src/CryptoExchanges.Net/CryptoExchanges.Net.csproj` succeeds 0W/0E.
-- [ ] `CryptoExchanges.Net.sln` references the renamed project at `src\CryptoExchanges.Net\CryptoExchanges.Net.csproj` (same GUID); no `…DependencyInjection` project path remains for the src project entry.
+- [x] Folder is `src/CryptoExchanges.Net/` with `CryptoExchanges.Net.csproj` whose `PackageId`/`AssemblyName`/`RootNamespace` are all `CryptoExchanges.Net`; all 7 ProjectReferences + the DI.Abstractions PackageReference + the `<NoWarn>` list are preserved; no folder/file named `*DependencyInjection*` remains under `src/`.
+- [x] `ServiceCollectionExtensions.cs` and `CryptoExchangesOptions.cs` declare `namespace CryptoExchanges.Net;`; method name `AddCryptoExchanges` and the `CryptoExchangesOptions` property shape are byte-for-byte unchanged otherwise; `dotnet build src/CryptoExchanges.Net/CryptoExchanges.Net.csproj` succeeds 0W/0E.
+- [x] `CryptoExchanges.Net.sln` references the renamed project at `src\CryptoExchanges.Net\CryptoExchanges.Net.csproj` (same GUID); no `…DependencyInjection` project path remains for the src project entry.
 
 ## Pattern Reference
 - Packable lib csproj shape (PackageId/AssemblyName/RootNamespace/NoWarn pattern): `src/CryptoExchanges.Net.Kucoin/CryptoExchanges.Net.Kucoin.csproj`, `src/CryptoExchanges.Net.Okx/CryptoExchanges.Net.Okx.csproj`.
@@ -95,6 +95,15 @@ sealed options class implementing no interface (per TRD §Build Requirements).
 
 ## Commits
 
+- `961df87` — feat(FEAT-007): TASK-065 — rename aggregator project to CryptoExchanges.Net
+
 ## Implementation Log
+
+- 2026-06-21T18:10:00Z — Claimed TASK-065; base SHA 60d00a7.
+- 2026-06-21T18:11:00Z — `git mv src/CryptoExchanges.Net.DependencyInjection/ → src/CryptoExchanges.Net/` and `git mv` csproj → `CryptoExchanges.Net.csproj`. Set `PackageId`/`AssemblyName`/`RootNamespace` to `CryptoExchanges.Net`; updated `<Description>` to all-exchanges meta-bundle wording.
+- 2026-06-21T18:12:00Z — Updated `ServiceCollectionExtensions.cs` and `CryptoExchangesOptions.cs` to `namespace CryptoExchanges.Net;`. Bodies byte-for-byte unchanged.
+- 2026-06-21T18:13:00Z — Updated `CryptoExchanges.Net.sln` line 10: project name → `CryptoExchanges.Net`, path → `src\CryptoExchanges.Net\CryptoExchanges.Net.csproj`; GUID `{C3D4E5F6-A7B8-9012-CDEF-123456789012}` preserved.
+- 2026-06-21T18:14:00Z — `dotnet build src/CryptoExchanges.Net/CryptoExchanges.Net.csproj` → Build succeeded. 0 Warning(s). 0 Error(s).
+- 2026-06-21T18:15:00Z — Committed `961df87`. Status → IMPLEMENTED.
 
 ## Review Results

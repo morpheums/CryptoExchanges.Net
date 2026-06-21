@@ -134,9 +134,9 @@ Nothing in PRD "Out of Scope" (futures/margin, private streams, order-book maint
 
 ## Recovery Pointer
 
-- **Current stage**: ◆ TASK-059 IN_PROGRESS — REST services + http client + composer + entry (Wave 3).
-- **Next action**: Implement all source files + tests then set IMPLEMENTED.
-- **Active task**: TASK-059.
+- **Current stage**: ✦ TASK-059 IMPLEMENTED — REST services + http client + composer + entry (commit 95a6066).
+- **Next action**: Review gate for TASK-059 → then TASK-060 (AddKucoinExchange DI).
+- **Active task**: TASK-059 (awaiting review).
 - **Files are truth**: the task manifests under `nazgul/tasks/` carry full state; each manifest's
   frontmatter is the canonical record.
 
@@ -145,7 +145,7 @@ Nothing in PRD "Out of Scope" (futures/margin, private streams, order-book maint
   ✦ TASK-061 — ADR-002 seam generalization DONE (reviewed 4/4, commit f04dfc4).
   ✦ TASK-057 — KC-API signing DONE (reviewed 4/4, Cycle 2; simplify 4799140).
   ✦ TASK-058 — KucoinSymbolMapper + wire DTOs + DeltaMapper + parsers DONE (reviewed 4/4, Cycle 1; simplify 5a20da1).
-  ◇ TASK-059 — REST services + http client + composer + entry (Wave 3, READY — 057+058 unblocked).
+  ✦ TASK-059 — REST services + http client + composer + entry IMPLEMENTED (commit 95a6066, awaiting review).
 ────────────────────────────────────────────────────────
 
 ## Completed

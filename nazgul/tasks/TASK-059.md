@@ -1,6 +1,6 @@
 ---
 id: TASK-059
-status: IN_PROGRESS
+status: IMPLEMENTED
 depends_on: [TASK-057, TASK-058]
 ---
 # TASK-059: REST client — market-data / account / trading service methods + HTTP client + composer
@@ -17,7 +17,7 @@ depends_on: [TASK-057, TASK-058]
 - **Created at**: 2026-06-20T19:00:00Z
 - **Claimed at**: 2026-06-21T00:00:00Z
 - **Base SHA**: b0bbb902c3c16f3ccd73aa1ae070959bfd3448a5
-- **Implemented at**:
+- **Implemented at**: 2026-06-21T00:30:00Z
 - **Completed at**:
 - **Blocked at**:
 - **Retry count**: 0/3
@@ -91,8 +91,24 @@ Tests (`KucoinServiceTests.cs`) — stub HTTP handler returning canned KuCoin JS
 
 ## Commits
 
-<!-- implementer fills SHAs -->
+- `95a6066` — feat(FEAT-006): TASK-059 — KuCoin REST services + HTTP client + composer + entry point
 
 ## Implementation Log
+
+### 2026-06-21
+
+- Created `IKucoinHttpClient` / `KucoinHttpClient` (GET/POST/DELETE, signed flag, ResponseDto<T> envelope).
+- Created `KucoinMarketDataService` (tickers, orderbook, candles, price, trades, exchangeInfo, isSupportedAsync, resolveSymbolAsync).
+- Created `KucoinAccountService` (getBalances, getBalance, getTradeHistoryAsync via fills/ListDto).
+- Created `KucoinTradingService` (place/cancel/cancelByClientId/cancelAll/get/openOrders/orderHistory).
+- Created `KucoinRequestValidation` (limit 1–500, ordered time window).
+- Created `KucoinClientComposer` (factory-free + DI composition root, BuildResilientHttpClient).
+- Created `KucoinExchangeClient` (Create/CreateFromEnvironment, PingAsync, SyncServerTimeAsync).
+- Added `InternalsVisibleTo` for CryptoExchanges.Net.Kucoin in Http project.
+- Fixed carry-over #1: `SyncServerTimeAsync` uses `ResponseDto<long>` directly (no double-wrap).
+- Fixed carry-over #2: Added `IsSupported_UnresolvableSymbol_ReturnsFalse` test; renamed two misnamed `_ReturnsFalse` tests.
+- Fixed carry-over #3: `KucoinSymbolMapper.FromWire` now propagates `FormatException` directly (matches ISymbolMapper contract).
+- Added `KucoinServiceTests.cs` with 40 new stub-HTTP tests.
+- Build: 0W/0E. Tests: 149/149 KuCoin unit pass; full suite 726+ pass.
 
 ## Review Results

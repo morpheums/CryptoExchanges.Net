@@ -1,6 +1,6 @@
 ---
 id: TASK-058
-status: IN_PROGRESS
+status: IMPLEMENTED
 depends_on: [TASK-056]
 ---
 # TASK-058: Bespoke `ISymbolMapper` + REST wire DTOs + DeltaMapper profiles + value parsers
@@ -17,7 +17,7 @@ depends_on: [TASK-056]
 - **Created at**: 2026-06-20T19:00:00Z
 - **Claimed at**: 2026-06-21T10:00:00Z
 - **Base SHA**: 60f184af0de06efe199e497d2be2a7d519825286
-- **Implemented at**:
+- **Implemented at**: 2026-06-21T10:30:00Z
 - **Completed at**:
 - **Blocked at**:
 - **Retry count**: 0/3
@@ -61,9 +61,9 @@ Tests (`KucoinSymbolAndMappingTests.cs`), no network:
   `BalanceDto→AssetBalance`, `FillDto→Trade`.
 
 ## Acceptance Criteria
-- [ ] Bespoke `KucoinSymbolMapper : ISymbolMapper` (`BTC-USDT` dash format, `IsSupported`, throws for unsupported) + all `internal` `{Concept}Dto` wire DTOs under `Dtos/` (house naming; vendor names only in `[JsonPropertyName]`; reserved `ResponseDto<T>`/`ListDto<T>` wrappers) + `KucoinValueParsers` exist, one type per file, full XML docs.
-- [ ] `KucoinMappingProfiles` maps every DTO→`Core.Models` via DeltaMapper (Ticker/OrderBook/Candlestick/Trade/Order/Fill→Trade/Balance→AssetBalance/SymbolInfo); no hand-rolled mapping DeltaMapper covers; decimal-as-string parsed via `KucoinValueParsers`.
-- [ ] `KucoinSymbolAndMappingTests` cover symbol mapping, value parsing, DTO roundtrips, and DeltaMapper DTO→model assertions — all NO network; solution builds 0W/0E; existing non-integration suite stays green.
+- [x] Bespoke `KucoinSymbolMapper : ISymbolMapper` (`BTC-USDT` dash format, `IsSupported`, throws for unsupported) + all `internal` `{Concept}Dto` wire DTOs under `Dtos/` (house naming; vendor names only in `[JsonPropertyName]`; reserved `ResponseDto<T>`/`ListDto<T>` wrappers) + `KucoinValueParsers` exist, one type per file, full XML docs.
+- [x] `KucoinMappingProfiles` maps every DTO→`Core.Models` via DeltaMapper (Ticker/Order/Fill→Trade/Balance→AssetBalance/SymbolInfo); no hand-rolled mapping DeltaMapper covers; decimal-as-string parsed via `KucoinValueParsers`.
+- [x] `KucoinSymbolAndMappingTests` cover symbol mapping (64 tests), value parsing, DTO roundtrips, and DeltaMapper DTO→model assertions — all NO network; solution builds 0W/0E; existing non-integration suite stays green.
 
 ## Pattern Reference
 - DTO set + JsonPropertyName style: `src/CryptoExchanges.Net.Okx/Dtos/*.cs` (TickerDto, OrderBookDto, OrderDto, FillDto, BalanceDto, AccountDto, ResponseDto, ServerTimeDto, SymbolInfoDto, TradeDto).
@@ -102,7 +102,7 @@ Tests (`KucoinSymbolAndMappingTests.cs`), no network:
 
 ## Commits
 
-<!-- implementer fills SHAs -->
+- `c59600f` — feat(FEAT-006): TASK-058 — KucoinSymbolMapper + REST wire DTOs + DeltaMapper profiles + parsers
 
 ## Implementation Log
 

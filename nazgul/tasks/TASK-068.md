@@ -1,6 +1,6 @@
 ---
 id: TASK-068
-status: PLANNED
+status: IMPLEMENTED
 depends_on: [TASK-066]
 ---
 # TASK-068: Repoint consumers — MCP (src + tests), samples/BasicUsage, and `.sln`
@@ -15,9 +15,9 @@ depends_on: [TASK-066]
 - **Wave**: 4
 - **Traces to**: PRD-FEAT-007 AC-5, AC-6; TRD-FEAT-007 §"Step 4 — Repoint MCP and samples"; FEAT-007 spec §"Scope — In" #4
 - **Created at**: 2026-06-21T18:00:00Z
-- **Claimed at**:
-- **Base SHA**:
-- **Implemented at**:
+- **Claimed at**: 2026-06-21T00:00:00Z
+- **Base SHA**: 41320d1b0cd2002e842f572950ffff912015ae24
+- **Implemented at**: 2026-06-21T00:10:00Z
 - **Completed at**:
 - **Blocked at**:
 - **Retry count**: 0/3
@@ -90,5 +90,12 @@ the MCP and sample projects (full 0W/0E + suite gate is TASK-070); run
 ## Commits
 
 ## Implementation Log
+
+- Swapped `using CryptoExchanges.Net.DependencyInjection;` → `using CryptoExchanges.Net;` in 3 `.cs` files: `Program.cs`, `EnvCredentialBinder.cs`, `EnvCredentialBinderTests.cs`.
+- Repointed `<ProjectReference>` from `…DependencyInjection.csproj` → `…CryptoExchanges.Net.csproj` in 3 `.csproj` files: `CryptoExchanges.Net.Mcp.csproj`, `CryptoExchanges.Net.Mcp.Tests.Unit.csproj`, `BasicUsage.csproj`.
+- `.sln` verified clean — no stale `DependencyInjection` entries remain.
+- `samples/BasicUsage/Program.cs` confirmed unchanged (uses `AddBinanceExchange`, no aggregator using).
+- Build: `dotnet build CryptoExchanges.Net.sln` → 0W/0E.
+- Tests: `dotnet test --filter 'Category!=Integration'` → all green (778 tests passed, 0 failed).
 
 ## Review Results

@@ -1,4 +1,4 @@
-using CryptoExchanges.Net.DependencyInjection;
+using CryptoExchanges.Net;
 
 namespace CryptoExchanges.Net.Mcp;
 

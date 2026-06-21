@@ -8,7 +8,7 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../../src/CryptoExchanges.Net.Mcp/CryptoExchanges.Net.Mcp.csproj" />
-    <ProjectReference Include="../../src/CryptoExchanges.Net.DependencyInjection/CryptoExchanges.Net.DependencyInjection.csproj" />
+    <ProjectReference Include="../../src/CryptoExchanges.Net/CryptoExchanges.Net.csproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.6.0" />

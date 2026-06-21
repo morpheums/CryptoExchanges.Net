@@ -1,4 +1,4 @@
-using CryptoExchanges.Net.DependencyInjection;
+using CryptoExchanges.Net;
 using CryptoExchanges.Net.Mcp;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;

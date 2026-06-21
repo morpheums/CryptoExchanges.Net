@@ -1,6 +1,6 @@
 # Exchanges
 
-CryptoExchanges.Net supports four exchanges today, with three more on the way.
+CryptoExchanges.Net supports five exchanges today.
 All supported exchanges expose the same `IExchangeClient` interface (REST, spot).
 
 ---
@@ -194,10 +194,68 @@ services.AddBitgetExchange(opt =>
 
 ---
 
+### KuCoin
+
+<img src="assets/exchanges/kucoin.svg" alt="KuCoin" width="32" height="32" />
+
+| | |
+|---|---|
+| **Package** | `CryptoExchanges.Net.Kucoin` |
+| **Client class** | `KucoinExchangeClient` |
+| **Credentials** | `ApiKey`, `SecretKey`, **`Passphrase`** |
+| **Env vars** | `KUCOIN_API_KEY`, `KUCOIN_SECRET_KEY`, `KUCOIN_PASSPHRASE` |
+| **Signing** | HMAC-SHA256 + KC-API passphrase-v2 header |
+| **Endpoints** | REST v2 (spot) |
+| **Symbol format** | `BTC-USDT` (dash-separated) |
+| **Streaming** | Public market-data streams (ticker, trade, order book, kline) |
+
+> **Passphrase required.** KuCoin API keys have a mandatory passphrase set at key-creation time.
+> Supply it via the `Passphrase` option or `KUCOIN_PASSPHRASE` environment variable.
+
+```bash
+dotnet add package CryptoExchanges.Net.Kucoin
+```
+
+```csharp
+using CryptoExchanges.Net.Kucoin;
+
+await using var client = KucoinExchangeClient.Create(new KucoinOptions
+{
+    ApiKey     = "...",
+    SecretKey  = "...",
+    Passphrase = "..."
+});
+```
+
+```csharp
+// From environment variables (KUCOIN_API_KEY / KUCOIN_SECRET_KEY / KUCOIN_PASSPHRASE)
+await using var client = KucoinExchangeClient.CreateFromEnvironment();
+```
+
+DI registration:
+
+```csharp
+services.AddKucoinExchange(opt =>
+{
+    opt.ApiKey     = configuration["Kucoin:ApiKey"];
+    opt.SecretKey  = configuration["Kucoin:SecretKey"];
+    opt.Passphrase = configuration["Kucoin:Passphrase"];
+});
+```
+
+Public streaming:
+
+```csharp
+services.AddKucoinExchange(opt => { /* credentials */ });
+services.AddKucoinStreams();  // opt-in — REST-only consumers skip this
+```
+
+---
+
 ## Register all exchanges at once
 
 `CryptoExchanges.Net.DependencyInjection` provides a single `AddCryptoExchanges()` call that
-registers all four exchanges:
+registers all supported exchanges:
 
 ```csharp
 using CryptoExchanges.Net.DependencyInjection;
@@ -217,6 +275,10 @@ services.AddCryptoExchanges(opt =>
     opt.BitgetApiKey     = configuration["Bitget:ApiKey"];
     opt.BitgetSecretKey  = configuration["Bitget:SecretKey"];
     opt.BitgetPassphrase = configuration["Bitget:Passphrase"];
+
+    opt.KucoinApiKey     = configuration["Kucoin:ApiKey"];
+    opt.KucoinSecretKey  = configuration["Kucoin:SecretKey"];
+    opt.KucoinPassphrase = configuration["Kucoin:Passphrase"];
 });
 ```
 
@@ -230,6 +292,7 @@ IExchangeClient binance = factory.GetClient(ExchangeId.Binance);
 IExchangeClient bybit   = factory.GetClient(ExchangeId.Bybit);
 IExchangeClient okx     = factory.GetClient(ExchangeId.Okx);
 IExchangeClient bitget  = factory.GetClient(ExchangeId.Bitget);
+IExchangeClient kucoin  = factory.GetClient(ExchangeId.Kucoin);
 ```
 
 ---
@@ -240,7 +303,6 @@ IExchangeClient bitget  = factory.GetClient(ExchangeId.Bitget);
 |----------|---------|
 | <img src="assets/exchanges/coinbase.svg" alt="Coinbase" width="20" height="20" /> Coinbase | `CryptoExchanges.Net.Coinbase` |
 | <img src="assets/exchanges/kraken.svg" alt="Kraken" width="20" height="20" /> Kraken | `CryptoExchanges.Net.Kraken` |
-| <img src="assets/exchanges/kucoin.svg" alt="KuCoin" width="20" height="20" /> KuCoin | `CryptoExchanges.Net.KuCoin` |
 
 These exchange IDs are present in the `ExchangeId` enum but are not yet implemented.
 

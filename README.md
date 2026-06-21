@@ -22,7 +22,7 @@
 | <img src="docs/assets/exchanges/bitget.svg?v=2" width="20"> Bitget | ✅ Supported | [![Bitget package](https://img.shields.io/nuget/v/CryptoExchanges.Net.Bitget?logo=nuget&label=CryptoExchanges.Net.Bitget)](https://www.nuget.org/packages/CryptoExchanges.Net.Bitget) |
 | <img src="docs/assets/exchanges/coinbase.svg?v=2" width="20"> Coinbase | 🕓 Coming soon | — |
 | <img src="docs/assets/exchanges/kraken.svg?v=2" width="20"> Kraken | 🕓 Coming soon | — |
-| <img src="docs/assets/exchanges/kucoin.svg?v=2" width="20"> KuCoin | 🕓 Coming soon | — |
+| <img src="docs/assets/exchanges/kucoin.svg?v=2" width="20"> KuCoin | ✅ Supported | [![KuCoin package](https://img.shields.io/nuget/v/CryptoExchanges.Net.Kucoin?logo=nuget&label=CryptoExchanges.Net.Kucoin)](https://www.nuget.org/packages/CryptoExchanges.Net.Kucoin) |
 
 REST, spot market data and account — read and write.
 
@@ -56,7 +56,7 @@ dotnet tool install -g CryptoExchanges.Net.Mcp
 claude mcp add crypto -- crypto-mcp
 ```
 
-Your MCP-capable agent can now query live prices, order books, candles, and account balances across all four exchanges.
+Your MCP-capable agent can now query live prices, order books, candles, and account balances across all supported exchanges.
 
 ---
 
@@ -64,7 +64,7 @@ Your MCP-capable agent can now query live prices, order books, candles, and acco
 
 `CryptoExchanges.Net.Mcp` is a **read-only** [Model Context Protocol](https://modelcontextprotocol.io) stdio server.
 It exposes **12 tools** — six market-data tools (no credentials required) and six account tools (read-scoped API keys).
-All four supported exchanges share the same tool vocabulary; no agent-side changes needed when switching exchanges.
+All supported exchanges share the same tool vocabulary; no agent-side changes needed when switching exchanges.
 
 - [MCP server reference](docs/mcp-server.md) — tools, environment variables, error handling
 - [MCP client setup guides](docs/mcp-clients.md) — Claude Desktop, Claude Code, Cursor, Windsurf, and more

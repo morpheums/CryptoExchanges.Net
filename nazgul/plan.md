@@ -59,12 +59,12 @@ Authoritative inputs (read fully before any task):
 | TASK-057 | ✦ DONE     | 2    | KC-API passphrase-v2 signing service + mark-and-strip signing handler        |
 | TASK-058 | ✦ DONE     | 2    | Bespoke `ISymbolMapper` + REST wire DTOs + DeltaMapper profiles + parsers    |
 | TASK-059 | ✦ DONE     | 3    | REST services (market/account/trading) + http client + composer + entry     |
-| TASK-060 | ◇ PLANNED  | 4    | `AddKucoinExchange` DI + `AddCryptoExchanges` + MCP wiring                   |
+| TASK-060 | ✦ DONE     | 4    | `AddKucoinExchange` DI + `AddCryptoExchanges` + MCP wiring                   |
 | TASK-062 | ◇ PLANNED  | 5    | `KucoinStreamProtocol` + bullet-public + 4 decoders + `AddKucoinStreams`     |
 | TASK-063 | ◇ PLANNED  | 6    | Live integration smokes — REST + one streaming (self-skip)                   |
 | TASK-064 | ◇ PLANNED  | 6    | Docs — README KuCoin row → supported + MCP/exchanges/streaming reference     |
 
-Tasks: 5/9 DONE.
+Tasks: 6/9 DONE.
 
 ## Wave Groups
 
@@ -134,9 +134,9 @@ Nothing in PRD "Out of Scope" (futures/margin, private streams, order-book maint
 
 ## Recovery Pointer
 
-- **Current stage**: ◆ TASK-060 IN_PROGRESS — AddKucoinExchange DI + AddCryptoExchanges + MCP wiring.
-- **Next action**: Implement ServiceCollectionExtensions, update DI aggregator, MCP csproj, write KucoinDiTests.
-- **Active task**: TASK-060 (in progress).
+- **Current stage**: ✦ TASK-060 IMPLEMENTED — AddKucoinExchange DI + AddCryptoExchanges + MCP wiring (commit ad607d6).
+- **Next action**: Review TASK-060 (awaiting review gate), then TASK-062 — KucoinStreamProtocol + bullet-public + AddKucoinStreams.
+- **Active task**: none (TASK-060 awaiting review).
 - **Files are truth**: the task manifests under `nazgul/tasks/` carry full state; each manifest's
   frontmatter is the canonical record.
 
@@ -146,7 +146,7 @@ Nothing in PRD "Out of Scope" (futures/margin, private streams, order-book maint
   ✦ TASK-057 — KC-API signing DONE (reviewed 4/4, Cycle 2; simplify 4799140).
   ✦ TASK-058 — KucoinSymbolMapper + wire DTOs + DeltaMapper + parsers DONE (reviewed 4/4, Cycle 1; simplify 5a20da1).
   ✦ TASK-059 — REST services + http client + composer + entry DONE (reviewed 4/4, Cycle 2; fix ee97d43).
-  ◇ TASK-060 — AddKucoinExchange DI + AddCryptoExchanges + MCP wiring (next).
+  ✦ TASK-060 — AddKucoinExchange DI + AddCryptoExchanges + MCP wiring IMPLEMENTED (commit ad607d6).
 ────────────────────────────────────────────────────────
 
 ## Completed

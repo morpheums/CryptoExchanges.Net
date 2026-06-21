@@ -1,6 +1,6 @@
 ---
 id: TASK-060
-status: IN_PROGRESS
+status: IMPLEMENTED
 depends_on: [TASK-059]
 ---
 # TASK-060: `AddKucoinExchange` DI registration + `AddCryptoExchanges` + MCP wiring
@@ -17,7 +17,7 @@ depends_on: [TASK-059]
 - **Created at**: 2026-06-20T19:00:00Z
 - **Claimed at**: 2026-06-21T00:00:00Z
 - **Base SHA**: 00e124761bd8f095d7d25222440231faadaed681
-- **Implemented at**:
+- **Implemented at**: 2026-06-21T00:30:00Z
 - **Completed at**:
 - **Blocked at**:
 - **Retry count**: 0/3
@@ -54,9 +54,9 @@ Tests (`KucoinDiTests.cs`), no network:
 - `AddCryptoExchanges` registers a resolvable KuCoin client (so MCP picks it up unchanged).
 
 ## Acceptance Criteria
-- [ ] `AddKucoinExchange` ships in the KuCoin assembly (ADR-001): named HttpClient + Polly pipeline (retry GET-only), `KucoinSigningHandler`, `IExchangeClient` keyed by `ExchangeId.Kucoin`, `KucoinOptions` with `ValidateOnStart`; full XML docs; mirrors `AddOkxExchange`.
-- [ ] `AddCryptoExchanges` calls `AddKucoinExchange` (DI csproj references KuCoin; `CryptoExchangesOptions` has the KuCoin block) and the MCP csproj references KuCoin so the 12-tool vocabulary resolves KuCoin by `ExchangeId.Kucoin` with no tool-schema change.
-- [ ] `KucoinDiTests` assert keyed `IExchangeClient` resolution + `ValidateOnStart` fail-fast on missing api-key + resolution via `AddCryptoExchanges` — NO network; solution builds 0W/0E; existing non-integration suite stays green.
+- [x] `AddKucoinExchange` ships in the KuCoin assembly (ADR-001): named HttpClient + Polly pipeline (retry GET-only), `KucoinSigningHandler`, `IExchangeClient` keyed by `ExchangeId.Kucoin`, `KucoinOptions` with `ValidateOnStart`; full XML docs; mirrors `AddOkxExchange`.
+- [x] `AddCryptoExchanges` calls `AddKucoinExchange` (DI csproj references KuCoin; `CryptoExchangesOptions` has the KuCoin block) and the MCP csproj references KuCoin so the 12-tool vocabulary resolves KuCoin by `ExchangeId.Kucoin` with no tool-schema change.
+- [x] `KucoinDiTests` assert keyed `IExchangeClient` resolution + `ValidateOnStart` fail-fast on missing api-key + resolution via `AddCryptoExchanges` — NO network; solution builds 0W/0E; existing non-integration suite stays green.
 
 ## Pattern Reference
 - Per-exchange registration to clone: `src/CryptoExchanges.Net.Okx/ServiceCollectionExtensions.cs` (full `AddOkxExchange` — named client, signing handler, keyed client, ValidateOnStart).
@@ -83,8 +83,28 @@ Tests (`KucoinDiTests.cs`), no network:
 
 ## Commits
 
-<!-- implementer fills SHAs -->
+- `ad607d6` — feat(FEAT-006): TASK-060 — AddKucoinExchange DI + AddCryptoExchanges + MCP wiring
 
 ## Implementation Log
+
+- Created `src/CryptoExchanges.Net.Kucoin/ServiceCollectionExtensions.cs` — ADR-001-compliant
+  `AddKucoinExchange` cloning the Bitget/OKX pattern exactly: `ExchangeServiceRegistration.AddExchange`
+  with named HttpClient, Polly resilience pipeline, `KucoinSigningHandler` (secret+passphrase gated,
+  PassThroughHandler if either missing), `IExchangeClient` keyed by `ExchangeId.Kucoin` via
+  `KucoinClientComposer.ComposeForDi`, `KucoinOptions` `ValidateOnStart` (timeout > 0, BaseUrl
+  host-only via `ExchangeUrl.NormalizeHostRoot`). Env-defaults: KUCOIN_API_KEY / KUCOIN_SECRET_KEY
+  / KUCOIN_PASSPHRASE.
+- Modified `src/CryptoExchanges.Net.DependencyInjection/ServiceCollectionExtensions.cs` — added
+  `services.AddKucoinExchange(...)` delegate block mirroring OKX/Bitget blocks.
+- Modified `src/CryptoExchanges.Net.DependencyInjection/CryptoExchangesOptions.cs` — added KuCoin
+  options block (KucoinBaseUrl, KucoinApiKey, KucoinSecretKey, KucoinPassphrase).
+- Modified `src/CryptoExchanges.Net.DependencyInjection/CryptoExchanges.Net.DependencyInjection.csproj`
+  — added KuCoin ProjectReference.
+- Modified `src/CryptoExchanges.Net.Mcp/CryptoExchanges.Net.Mcp.csproj` — added KuCoin
+  ProjectReference (explicit per pattern; transitive from DI but explicit matches sibling exchanges).
+- Created `tests/CryptoExchanges.Net.Kucoin.Tests.Unit/KucoinDiTests.cs` — 11 no-network tests:
+  keyed resolution (full creds, secretless, passphrase-missing), ValidateOnStart fail-fast
+  (timeout=0, BaseUrl with path), mapper singleton, no unkeyed registration, scope-clean graph,
+  AddCryptoExchanges KuCoin resolution, all-five-exchange resolution, options delegation.
 
 ## Review Results

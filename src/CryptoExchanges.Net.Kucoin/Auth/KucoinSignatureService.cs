@@ -1,3 +1,4 @@
+using System.Globalization;
 using CryptoExchanges.Net.Core.Auth;
 
 namespace CryptoExchanges.Net.Kucoin.Auth;
@@ -17,15 +18,7 @@ internal sealed class KucoinSignatureService(string secretKey) : IKucoinSignatur
     public string Sign(string prehash) =>
         HmacSignature.Compute(_secretKey, prehash, SignatureEncoding.Base64);
 
-    /// <summary>
-    /// Signs the <paramref name="passphrase"/> using HMAC-SHA256 with the secret key and returns it
-    /// base64-encoded for the <c>KC-API-PASSPHRASE</c> header. This is the KC-API passphrase-v2
-    /// requirement: the passphrase header carries <c>base64(HMAC-SHA256(secret, passphrase))</c>,
-    /// not the raw passphrase as in OKX.
-    /// </summary>
-    /// <param name="passphrase">The raw API passphrase. Must be non-null, non-empty, and non-whitespace.</param>
-    /// <returns>The base64-encoded HMAC-SHA256 of the passphrase.</returns>
-    /// <exception cref="ArgumentException"><paramref name="passphrase"/> is null/empty/whitespace.</exception>
+    /// <inheritdoc />
     public string SignPassphrase(string passphrase)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(passphrase);
@@ -67,7 +60,7 @@ internal sealed class KucoinSignatureService(string secretKey) : IKucoinSignatur
     /// <param name="timestamp">The instant to format.</param>
     /// <returns>The Unix epoch milliseconds as a string.</returns>
     public static string FormatTimestamp(DateTimeOffset timestamp) =>
-        timestamp.ToUniversalTime().ToUnixTimeMilliseconds().ToString(System.Globalization.CultureInfo.InvariantCulture);
+        timestamp.ToUnixTimeMilliseconds().ToString(CultureInfo.InvariantCulture);
 
     private static string InitializeSecretKey(string secretKey)
     {

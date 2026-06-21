@@ -21,6 +21,7 @@ internal sealed class KucoinSigningHandler(
     string apiKey, string passphrase, IKucoinSignatureService signatureService, Func<long> timeOffset)
     : DelegatingHandler
 {
+    private const string KeyVersion = "2";
     /// <inheritdoc />
     protected override async Task<HttpResponseMessage> SendAsync(
         HttpRequestMessage request, CancellationToken cancellationToken)
@@ -79,6 +80,6 @@ internal sealed class KucoinSigningHandler(
         request.Headers.Add("KC-API-SIGN", signature);
         request.Headers.Add("KC-API-TIMESTAMP", timestamp);
         request.Headers.Add("KC-API-PASSPHRASE", signedPassphrase);
-        request.Headers.Add("KC-API-KEY-VERSION", "2");
+        request.Headers.Add("KC-API-KEY-VERSION", KeyVersion);
     }
 }

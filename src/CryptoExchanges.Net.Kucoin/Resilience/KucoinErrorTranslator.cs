@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Net;
 using CryptoExchanges.Net.Core.Exceptions;
 using CryptoExchanges.Net.Http;
@@ -90,5 +91,5 @@ internal sealed class KucoinErrorTranslator : IExchangeErrorTranslator
 
     /// <summary>Parses the KuCoin string code into the numeric code carried on the typed exception, or null.</summary>
     private static int? ParseCode(string? code)
-        => int.TryParse(code, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out var n) ? n : null;
+        => int.TryParse(code, NumberStyles.Integer, CultureInfo.InvariantCulture, out var n) ? n : null;
 }

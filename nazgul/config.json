@@ -43,7 +43,7 @@
     }
   ],
   "max_iterations": 40,
-  "current_iteration": 8,
+  "current_iteration": 0,
   "paused": false,
   "completion_promise": "NAZGUL_COMPLETE",
   "task_file": "nazgul/plan.md",
@@ -154,8 +154,8 @@
     "block_destructive_commands": true,
     "require_tests_pass_before_review": true,
     "max_consecutive_failures": 5,
-    "consecutive_failures": 7,
-    "_prev_done_count": 9,
+    "consecutive_failures": 0,
+    "_prev_done_count": 0,
     "_review_reset_counts": {}
   },
   "budget": {

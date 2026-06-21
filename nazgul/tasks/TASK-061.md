@@ -1,6 +1,6 @@
 ---
 id: TASK-061
-status: IN_PROGRESS
+status: IMPLEMENTED
 depends_on: []
 ---
 # TASK-061: Generalize streaming endpoint seam (ADR-002) — async `ResolveConnectionAsync` + migrate Binance
@@ -17,7 +17,7 @@ depends_on: []
 - **Created at**: 2026-06-20T19:00:00Z
 - **Claimed at**: 2026-06-21T00:00:00Z
 - **Base SHA**: 8837e79d6fe76bdb30f944dcfce9c56fcfb6ae4a
-- **Implemented at**:
+- **Implemented at**: 2026-06-21T00:00:00Z
 - **Completed at**:
 - **Blocked at**:
 - **Retry count**: 0/3
@@ -93,8 +93,18 @@ Existing `Http.Tests.Unit` streaming tests + Binance streaming regression must p
 
 ## Commits
 
-<!-- implementer fills SHAs -->
+- f25dc9d — feat(FEAT-006): ADR-002 streaming endpoint seam — async ResolveConnectionAsync + migrate Binance
 
 ## Implementation Log
+
+- Created `StreamConnectionInfo.cs` (new `internal sealed record StreamConnectionInfo(Uri, HeartbeatPolicy)`) — K1 preserved: no Core.Models/DeltaMapper.
+- Updated `IStreamProtocol.cs`: removed `Endpoint`/`Heartbeat` properties; added `ValueTask<StreamConnectionInfo> ResolveConnectionAsync(CancellationToken ct)` with full XML docs.
+- Updated `StreamEngine.cs`: `OpenSocketAsync` and `ReconnectCoreAsync` now `await _protocol.ResolveConnectionAsync(ct)` before each `ConnectAsync`; `StartHeartbeat` receives `HeartbeatPolicy` from the resolved info (no longer reads `_protocol.Heartbeat`); C1/K2/K3 behavior preserved.
+- Updated `BinanceStreamProtocol.cs`: constructor caches a `StreamConnectionInfo` built from `BinanceStreamOptions`; `ResolveConnectionAsync` returns it via `new ValueTask<StreamConnectionInfo>(_connectionInfo)` (no-alloc fast path); `Endpoint`/`Heartbeat` properties removed; behavior identical.
+- Updated `FakeStreamProtocol.cs`: implements `ResolveConnectionAsync`, tracks `ResolveCount`, exposes `HeartbeatPolicy` setter; old `Endpoint`/`Heartbeat` members removed.
+- Updated `StreamEngineTests.cs`: `VenueKeyProtocol` inner class updated to implement `ResolveConnectionAsync` and drop `Endpoint`/`Heartbeat`.
+- Updated `BinanceStreamProtocolTests.cs`: replaced `Heartbeat_IsServerPingClientPong` with two async tests: `ResolveConnectionAsync_ReturnsServerPingClientPong` and `ResolveConnectionAsync_ReturnsCachedInstance`.
+- Created `StreamEngineResolveConnectionTests.cs`: 4 new tests — resolve-on-first-connect, resolve-on-each-reconnect, not-cached-from-first-connect, cancellation-propagation.
+- Build: 0W/0E. Test run: 584 passed, 0 failed.
 
 ## Review Results

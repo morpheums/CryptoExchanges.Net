@@ -13,6 +13,7 @@ public static class ToolInputs
             ["bybit"] = ExchangeId.Bybit,
             ["okx"] = ExchangeId.Okx,
             ["bitget"] = ExchangeId.Bitget,
+            ["kucoin"] = ExchangeId.Kucoin,
         };
 
     private static readonly Dictionary<string, KlineInterval> Intervals =

@@ -21,5 +21,8 @@ public static class EnvCredentialBinder
         options.BitgetApiKey = getEnv("BITGET_API_KEY");
         options.BitgetSecretKey = getEnv("BITGET_SECRET_KEY");
         options.BitgetPassphrase = getEnv("BITGET_PASSPHRASE");
+        options.KucoinApiKey = getEnv("KUCOIN_API_KEY");
+        options.KucoinSecretKey = getEnv("KUCOIN_SECRET_KEY");
+        options.KucoinPassphrase = getEnv("KUCOIN_PASSPHRASE");
     }
 }

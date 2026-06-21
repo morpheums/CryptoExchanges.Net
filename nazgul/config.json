@@ -2,9 +2,9 @@
   "schema_version": 11,
   "install_mode": "shared",
   "mode": "afk",
-  "objective": "KuCoin exchange integration (5th exchange) — full parity: REST market data + account + trading with KC-API passphrase-v2 HMAC signing (per-attempt re-sign, retry-only-on-GET), bespoke ISymbolMapper (BTC-USDT), DeltaMapper DTO→model, AddKucoinExchange DI + MCP wiring, plus public WebSocket streaming (ticker/trade/order-book/kline) with auto-reconnect+resubscribe. Generalizes the streaming endpoint seam for KuCoin's token-negotiated bullet-public connection while keeping Binance's static-URL path unchanged. Spot-only, public streams only, no order-book maintenance.",
-  "feat_id": "FEAT-006",
-  "feat_display_id": "FEAT-006",
+  "objective": "Rename the all-exchanges DI aggregator package CryptoExchanges.Net.DependencyInjection → the root meta-package CryptoExchanges.Net (move AddCryptoExchanges + CryptoExchangesOptions to the CryptoExchanges.Net namespace; method/options shape unchanged), and decouple the five per-exchange unit-test projects from the aggregator (consolidate the all-exchanges resolution test into the renamed CryptoExchanges.Net.Tests.Unit). Clean swap — no consumers yet, no shim; version 0.5.0-preview.1, published set stays 9; no runtime behavior change. Refactor.",
+  "feat_id": "FEAT-007",
+  "feat_display_id": "FEAT-007",
   "objectives_history": [
     {
       "objective": "Add three new exchange integrations to CryptoExchanges.Net in strict priority order — (1) Bybit, (2) OKX, (3) Bitget — for a global (non-US) audience. Each exchange clones the verified Binance pattern (Core → Http → Exchange → DI, DeltaMapper DTO→model, bespoke ISymbolMapper, retry-only-on-GET, per-attempt re-signing). The signing/credential abstraction is generalized after Bybit, against OKX, and Bitget then reuses that abstraction.",
@@ -42,6 +42,11 @@
       "started_at": "2026-06-20T18:50:45Z",
       "completed_at": "2026-06-21T14:27:48Z",
       "pr": "#35"
+    },
+    {
+      "feat_id": "FEAT-007",
+      "objective": "Rename the all-exchanges DI aggregator package CryptoExchanges.Net.DependencyInjection → the root meta-package CryptoExchanges.Net (move AddCryptoExchanges + CryptoExchangesOptions to the CryptoExchanges.Net namespace; method/options shape unchanged), and decouple the five per-exchange unit-test projects from the aggregator (consolidate the all-exchanges resolution test into the renamed CryptoExchanges.Net.Tests.Unit). Clean swap — no consumers yet, no shim; version 0.5.0-preview.1, published set stays 9; no runtime behavior change. Refactor.",
+      "started_at": "2026-06-21T17:22:55Z"
     }
   ],
   "max_iterations": 40,
@@ -172,12 +177,12 @@
     }
   },
   "branch": {
-    "feature": "feat/FEAT-006-kucoin",
+    "feature": "feat/FEAT-007-root-metapackage",
     "base": "main",
     "main_worktree_path": "/Users/josemejia/ai-platform/personal/workspace/repos/CryptoExchanges.Net",
     "worktree_dir": null,
     "last_task_branch": null,
-    "created_at": "2026-06-20T19:20:21Z",
+    "created_at": "2026-06-21T17:52:30Z",
     "auto_pr_on_complete": true,
     "sparse_paths": null
   },
@@ -188,7 +193,7 @@
     "timeout_minutes": 90,
     "checkpoint_every_n_iterations": 5,
     "auto_commit": true,
-    "commit_prefix": "feat(FEAT-006):"
+    "commit_prefix": "feat(FEAT-007):"
   },
   "context": {
     "budget_strategy": "aggressive",
@@ -238,7 +243,7 @@
   "notifications": {
     "on_complete": null
   },
-  "objective_set_at": "2026-06-20T18:50:45Z",
+  "objective_set_at": "2026-06-21T17:22:55Z",
   "learning": {
     "enabled": true,
     "rules_doc": "nazgul/learning/learned-rules.md",

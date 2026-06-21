@@ -39,7 +39,7 @@ internal sealed record OrderDto
     [JsonPropertyName("type")]
     public string Type { get; init; } = "limit";
 
-    /// <summary>Order status: <c>open</c>, <c>done</c>, or <c>cancelled</c>.</summary>
+    /// <summary><see langword="true"/> when the order is still resting (open or partially filled); <see langword="false"/> when it has completed or been cancelled.</summary>
     [JsonPropertyName("isActive")]
     public bool IsActive { get; init; }
 

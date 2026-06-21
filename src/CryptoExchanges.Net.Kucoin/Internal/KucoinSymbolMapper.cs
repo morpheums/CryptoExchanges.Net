@@ -20,10 +20,7 @@ internal sealed class KucoinSymbolMapper : ISymbolMapper
         _inner = new SymbolMapper(KucoinSymbolFormat.Instance);
     }
 
-    /// <summary>
-    /// Formats a <see cref="Symbol"/> as the KuCoin wire string (e.g. <c>BTC-USDT</c>).
-    /// Returns the formatted wire string; never throws (any well-formed symbol can be encoded).
-    /// </summary>
+    /// <inheritdoc />
     public string ToWire(Symbol symbol) => _inner.ToWire(symbol);
 
     /// <inheritdoc />

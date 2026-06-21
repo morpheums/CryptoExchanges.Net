@@ -37,7 +37,7 @@ internal sealed class KucoinResponseProfile : Profile
             .ForMember(d => d.TimeInForce, o => o.MapFrom(s => KucoinValueParsers.ParseTimeInForce(s.TimeInForce)))
             .ForMember(d => d.StopPrice, o => o.Ignore())
             .ForMember(d => d.IcebergQuantity, o => o.Ignore())
-            .ForMember(d => d.CreatedAt, o => o.MapFrom(s => ParseEpochMs(s.CreatedAt)))
+            .ForMember(d => d.CreatedAt, o => o.MapFrom(s => ParseMs(s.CreatedAt)))
             .ForMember(d => d.UpdatedAt, o => o.Ignore());
 
         // TickerDto -> Ticker. KuCoin reports open (price 24h ago); price change is last - open,
@@ -86,7 +86,7 @@ internal sealed class KucoinResponseProfile : Profile
             .ForMember(d => d.Id, o => o.MapFrom(s => s.TradeId))
             .ForMember(d => d.Price, o => o.MapFrom(s => KucoinValueParsers.ParseDecimal(s.Price)))
             .ForMember(d => d.Quantity, o => o.MapFrom(s => KucoinValueParsers.ParseDecimal(s.Size)))
-            .ForMember(d => d.Timestamp, o => o.MapFrom(s => ParseEpochMs(s.CreatedAt)))
+            .ForMember(d => d.Timestamp, o => o.MapFrom(s => ParseMs(s.CreatedAt)))
             // IsBuyerMaker: a buy fill that is the maker, or a sell fill that is the taker.
             .ForMember(d => d.IsBuyerMaker, o => o.MapFrom(s =>
                 s.Side == "buy" ? s.Liquidity == "maker" : s.Liquidity != "maker"))
@@ -97,13 +97,9 @@ internal sealed class KucoinResponseProfile : Profile
     private static readonly OrderType[] DefaultSpotOrderTypes = [OrderType.Limit, OrderType.Market];
 
     /// <summary>Parses a KuCoin string-encoded unix-ms timestamp into an optional instant (null when unset/zero).</summary>
-    private static DateTimeOffset? ParseMs(string value)
-    {
-        var ms = KucoinValueParsers.ParseMs(value);
-        return ms > 0 ? DateTimeOffset.FromUnixTimeMilliseconds(ms) : null;
-    }
+    private static DateTimeOffset? ParseMs(string value) => ParseMs(KucoinValueParsers.ParseMs(value));
 
-    /// <summary>Parses a KuCoin long unix-ms epoch into an optional instant (null when zero).</summary>
-    private static DateTimeOffset? ParseEpochMs(long ms)
+    /// <summary>Converts a unix-ms epoch long into an optional instant (null when zero).</summary>
+    private static DateTimeOffset? ParseMs(long ms)
         => ms > 0 ? DateTimeOffset.FromUnixTimeMilliseconds(ms) : null;
 }

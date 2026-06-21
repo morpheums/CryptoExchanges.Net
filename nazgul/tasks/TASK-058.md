@@ -1,6 +1,6 @@
 ---
 id: TASK-058
-status: IMPLEMENTED
+status: IN_REVIEW
 depends_on: [TASK-056]
 ---
 # TASK-058: Bespoke `ISymbolMapper` + REST wire DTOs + DeltaMapper profiles + value parsers

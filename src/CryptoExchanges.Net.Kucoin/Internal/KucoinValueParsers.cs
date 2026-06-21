@@ -96,7 +96,7 @@ internal static class KucoinValueParsers
     /// KuCoin encodes most timestamps as epoch-millisecond strings throughout the V1/V2 API.
     /// </summary>
     public static long ParseMs(string value)
-        => long.TryParse(value, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out var ms) ? ms : 0L;
+        => TryParseLong(value, out var ms) ? ms : 0L;
 
     /// <summary>
     /// Parses a KuCoin string-encoded unix-nanosecond timestamp into milliseconds.
@@ -104,9 +104,8 @@ internal static class KucoinValueParsers
     /// Returns <c>0</c> for null/empty/malformed input.
     /// </summary>
     public static long ParseNsToMs(string value)
-    {
-        if (!long.TryParse(value, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out var ns))
-            return 0L;
-        return ns / 1_000_000L;
-    }
+        => TryParseLong(value, out var ns) ? ns / 1_000_000L : 0L;
+
+    private static bool TryParseLong(string value, out long result)
+        => long.TryParse(value, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out result);
 }

@@ -175,19 +175,3 @@ internal sealed class KucoinTradingService(IKucoinHttpClient http, ISymbolMapper
         _ => "GTC"
     };
 }
-
-/// <summary>Minimal place-order acknowledgement from <c>/api/v1/orders</c>.</summary>
-internal sealed record OrderAckDto
-{
-    /// <summary>The server-assigned order id.</summary>
-    [JsonPropertyName("orderId")]
-    public string OrderId { get; init; } = string.Empty;
-}
-
-/// <summary>Cancel acknowledgement containing the list of cancelled order ids.</summary>
-internal sealed record CancelOrderAckDto
-{
-    /// <summary>List of cancelled order ids.</summary>
-    [JsonPropertyName("cancelledOrderIds")]
-    public List<string> CancelledOrderIds { get; init; } = [];
-}

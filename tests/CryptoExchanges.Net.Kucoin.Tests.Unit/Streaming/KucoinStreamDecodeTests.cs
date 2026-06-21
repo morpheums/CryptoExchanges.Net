@@ -41,8 +41,6 @@ public class KucoinStreamDecodeTests
     private static ReadOnlyMemory<byte> Utf8Bytes(string json) =>
         new ReadOnlyMemory<byte>(Encoding.UTF8.GetBytes(json));
 
-    // ── Ticker ────────────────────────────────────────────────────────────────
-
     [Fact]
     public void Ticker_CannedInnerPayload_MapsAllFields()
     {
@@ -103,8 +101,6 @@ public class KucoinStreamDecodeTests
         result.Timestamp.Should().NotBeNull();
     }
 
-    // ── Trade ─────────────────────────────────────────────────────────────────
-
     [Fact]
     public void Trade_CannedDataFrame_MapsAllFields()
     {
@@ -148,8 +144,6 @@ public class KucoinStreamDecodeTests
         result.IsBuyerMaker.Should().BeTrue();
     }
 
-    // ── OrderBook ─────────────────────────────────────────────────────────────
-
     [Fact]
     public void OrderBook_CannedDataFrame_MapsBidsAndAsks()
     {
@@ -175,8 +169,6 @@ public class KucoinStreamDecodeTests
         result.Asks[0].Quantity.Should().Be(0.3m);
     }
 
-    // ── Kline ─────────────────────────────────────────────────────────────────
-
     [Fact]
     public void Kline_CannedDataFrame_MapsOhlcv()
     {
@@ -200,8 +192,6 @@ public class KucoinStreamDecodeTests
         result.QuoteVolume.Should().Be(9839209.1m);
         result.OpenTime.ToUnixTimeSeconds().Should().Be(1589968800L);
     }
-
-    // ── DI resolution ─────────────────────────────────────────────────────────
 
     [Fact]
     public async Task AddKucoinStreams_AfterAddKucoinExchange_ResolvesKeyedStreamClient()

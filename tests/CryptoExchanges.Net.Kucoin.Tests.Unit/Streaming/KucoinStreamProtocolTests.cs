@@ -17,8 +17,6 @@ namespace CryptoExchanges.Net.Kucoin.Tests.Unit.Streaming;
 [Trait("Category", "Unit")]
 public class KucoinStreamProtocolTests
 {
-    // ── Helpers ───────────────────────────────────────────────────────────────
-
     private static KucoinStreamProtocol MakeProtocol(IKucoinBulletPublicClient? bulletClient = null)
         => new(bulletClient ?? MakeFakeBulletClient());
 
@@ -30,8 +28,6 @@ public class KucoinStreamProtocolTests
         => new FakeBulletPublicClient(wsEndpoint, token, pingInterval, pingTimeout);
 
     private static byte[] Utf8(string json) => Encoding.UTF8.GetBytes(json);
-
-    // ── ResolveConnectionAsync — bullet-public negotiation ─────────────────────
 
     [Fact]
     public async Task ResolveConnectionAsync_FakeClient_ReturnsTokenInUri()
@@ -111,8 +107,6 @@ public class KucoinStreamProtocolTests
         info.Heartbeat.PingFormat.Should().Be(PingFormat.Json);
     }
 
-    // ── SSRF validation ────────────────────────────────────────────────────────
-
     [Fact]
     public async Task ResolveConnectionAsync_NonKucoinHost_Throws()
     {
@@ -132,8 +126,6 @@ public class KucoinStreamProtocolTests
 
         await act.Should().ThrowAsync<InvalidOperationException>();
     }
-
-    // ── BuildSubscribe ─────────────────────────────────────────────────────────
 
     [Fact]
     public void BuildSubscribe_Ticker_ProducesSnapshotTopic()
@@ -199,8 +191,6 @@ public class KucoinStreamProtocolTests
         doc.RootElement.GetProperty("topic").GetString().Should().Be("/market/candles:BTC-USDT_1hour");
     }
 
-    // ── BuildUnsubscribe ───────────────────────────────────────────────────────
-
     [Fact]
     public void BuildUnsubscribe_Ticker_ProducesUnsubscribeType()
     {
@@ -213,8 +203,6 @@ public class KucoinStreamProtocolTests
         doc.RootElement.GetProperty("type").GetString().Should().Be("unsubscribe");
         doc.RootElement.GetProperty("topic").GetString().Should().Be("/market/snapshot:BTC-USDT");
     }
-
-    // ── RoutingKeyFor / Classify round-trip ────────────────────────────────────
 
     [Fact]
     public void RoutingKeyFor_Ticker_MatchesClassifyRoutingKey()
@@ -277,8 +265,6 @@ public class KucoinStreamProtocolTests
         classifiedKey.Should().Be("/market/candles:BTC-USDT_1min");
         subscribeKey.Should().Be(classifiedKey);
     }
-
-    // ── Classify ──────────────────────────────────────────────────────────────
 
     [Fact]
     public void Classify_MessageFrame_ReturnsDataWithTopic()
@@ -371,8 +357,6 @@ public class KucoinStreamProtocolTests
 
         result.Kind.Should().Be(FrameKind.Error);
     }
-
-    // ── Fake helpers ──────────────────────────────────────────────────────────
 
     private sealed class FakeBulletPublicClient : IKucoinBulletPublicClient
     {

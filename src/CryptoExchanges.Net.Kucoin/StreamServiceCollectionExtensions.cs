@@ -32,8 +32,6 @@ public static class StreamServiceCollectionExtensions
             ExchangeId.Kucoin,
             protocolFactory: sp =>
             {
-                // Reuse the named kucoin HttpClient (already registered by AddKucoinExchange).
-                // Bullet-public is unauthenticated (signed: false), so the signing handler is a no-op.
                 var options = sp.GetRequiredService<KucoinStreamOptions>();
                 // LR-001: guard the caller-configurable base URL before consuming it.
                 ArgumentException.ThrowIfNullOrWhiteSpace(options.RestBaseUrl);
@@ -43,8 +41,7 @@ public static class StreamServiceCollectionExtensions
                         $"must be a well-formed absolute URI. Got: '{options.RestBaseUrl}'.");
 
                 var httpClientFactory = sp.GetRequiredService<System.Net.Http.IHttpClientFactory>();
-                // CreateClient returns a fresh HttpClient per call, so overriding its host-only
-                // BaseAddress here only affects the bullet-public negotiation, never the shared REST client.
+                // CreateClient returns a fresh HttpClient per call — BaseAddress override only affects bullet-public, not the shared REST client.
                 var httpClient = httpClientFactory.CreateClient(KucoinClientName);
                 httpClient.BaseAddress = baseUri;
                 IKucoinHttpClient http = new KucoinHttpClient(httpClient);

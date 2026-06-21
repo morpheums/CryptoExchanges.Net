@@ -38,7 +38,6 @@ internal sealed class KucoinMarketDataService(IKucoinHttpClient http, ISymbolMap
     {
         if (symbol.HasValue)
         {
-            // Single-symbol path: /api/v1/market/stats?symbol=BTC-USDT
             var single = new Dictionary<string, string> { ["symbol"] = mapper.ToWire(symbol.Value) };
             var oneResp = await http.GetAsync<ResponseDto<TickerDto>>("/api/v1/market/stats", single, false, ct).ConfigureAwait(false);
             if (oneResp.Data is null)
@@ -46,7 +45,6 @@ internal sealed class KucoinMarketDataService(IKucoinHttpClient http, ISymbolMap
             return [modelMapper.Map<TickerDto, Ticker>(oneResp.Data)];
         }
 
-        // All-tickers path: /api/v1/market/allTickers — returns { time, ticker: [...] }
         var response = await http.GetAsync<ResponseDto<AllTickersDto>>("/api/v1/market/allTickers", null, false, ct).ConfigureAwait(false);
         var items = response.Data?.Ticker ?? [];
 

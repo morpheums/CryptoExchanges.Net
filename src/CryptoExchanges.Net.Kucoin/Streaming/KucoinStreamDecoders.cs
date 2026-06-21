@@ -38,21 +38,18 @@ internal static class KucoinStreamDecoders
 
         var registry = new StreamDecoderRegistry();
 
-        // Ticker uses DeltaMapper (StreamTickerDto -> Ticker profile in KucoinResponseProfile).
-        // The snapshot channel wraps the payload as data.data (double-nested), so we use
-        // DeserializeSnapshotData which navigates both levels.
+        // Ticker: snapshot channel wraps payload as data.data (double-nested).
         registry.Register(StreamKind.Ticker, bytes =>
         {
             var dto = DeserializeSnapshotData<StreamTickerDto>(bytes)!;
             return mapper.Map<StreamTickerDto, Ticker>(dto);
         });
 
-        // Trade is hand-mapped (matches the convention for the match stream).
         registry.Register(StreamKind.Trade, bytes =>
         {
             var dto = DeserializeData<StreamTradeDto>(bytes)!;
             var symbol = symbolMapper.FromWire(dto.Symbol);
-            // The taker side identifies the aggressor: "buy" taker → seller is maker (IsBuyerMaker = false).
+            // "buy" taker → seller is maker (IsBuyerMaker = false).
             var isBuyerMaker = string.Equals(dto.Side, "sell", StringComparison.OrdinalIgnoreCase);
             var tsMs = KucoinValueParsers.ParseNsToMs(dto.Time);
             return new Trade(
@@ -64,7 +61,6 @@ internal static class KucoinStreamDecoders
                 IsBuyerMaker: isBuyerMaker);
         });
 
-        // Hand-mapped following the REST GetOrderBookAsync convention.
         // KuCoin level2 stream delivers incremental diffs; each entry is [price, size, sequence].
         registry.Register(StreamKind.OrderBook, bytes =>
         {
@@ -81,10 +77,7 @@ internal static class KucoinStreamDecoders
             return new OrderBook(symbol, bids, asks, null, dto.SequenceEnd);
         });
 
-        // Hand-mapped. KuCoin candles array: [startAt(s), open, close, high, low, vol, quoteVol].
-        // Indices: 0=startAt, 1=open, 2=close, 3=high, 4=low, 5=volume, 6=quoteVolume.
-        // The interval is encoded in the routing-key topic but not in the data payload;
-        // it is set to null here as the decoder receives only the data bytes.
+        // KuCoin candles array: [startAt(s), open, close, high, low, vol, quoteVol]; interval not in payload.
         registry.Register(StreamKind.Kline, bytes =>
         {
             var dto = DeserializeData<StreamKlineDto>(bytes)!;

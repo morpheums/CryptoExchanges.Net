@@ -31,14 +31,6 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddKucoinExchange(
         this IServiceCollection services,
         Action<KucoinOptions>? configure = null) =>
-        // Delegates to the shared Http registration helper; only the KuCoin variation points differ.
-        // KuCoin sets NO default api-key header (it signs per-request), so configureHttpClient is null,
-        // and KucoinHttpClient's ctor takes (httpClient) only. KuCoin uses the default ResilienceOptions
-        // (no usage-header). The finalizer is ALWAYS registered and gates on BOTH SecretKey AND
-        // Passphrase; if either is missing the client resolves to a no-op PassThroughHandler (mirrors
-        // Create()). Because the gate requires both, secret/passphrase are passed to KucoinSigningHandler
-        // directly — no KucoinOptions.ToCredentials() (which throws on an empty passphrase) in the
-        // signing path.
         ExchangeServiceRegistration.AddExchange<KucoinOptions, IMapper>(
             services,
             ExchangeId.Kucoin,
@@ -47,14 +39,14 @@ public static class ServiceCollectionExtensions
             applyEnvDefaults: ApplyEnvDefaults,
             configure: configure,
             timeoutSecondsSelector: o => o.TimeoutSeconds,
-            // Host-only BaseAddress (no path) so RequestUri.PathAndQuery == the signed KuCoin requestPath.
-            // ExchangeUrl.NormalizeHostRoot fails fast if a path segment is present (would break the prehash).
+            // Host-only BaseAddress so RequestUri.PathAndQuery matches the signed prehash exactly.
             baseUrlSelector: o => ExchangeUrl.NormalizeHostRoot(o.BaseUrl),
             symbolMapperFactory: () => new KucoinSymbolMapper(),
             mapperFactory: KucoinClientComposer.CreateMapper,
             configureHttpClient: null,
             resilienceOptions: new ResilienceOptions(),
             translatorFactory: _ => new KucoinErrorTranslator(),
+            // Gate on both SecretKey AND Passphrase; missing either → no-op PassThroughHandler.
             requestFinalizerFactory: sp =>
             {
                 var o = sp.GetRequiredService<KucoinOptions>();

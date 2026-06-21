@@ -205,7 +205,7 @@ services.AddBitgetExchange(opt =>
 | **Credentials** | `ApiKey`, `SecretKey`, **`Passphrase`** |
 | **Env vars** | `KUCOIN_API_KEY`, `KUCOIN_SECRET_KEY`, `KUCOIN_PASSPHRASE` |
 | **Signing** | HMAC-SHA256 + KC-API passphrase-v2 header |
-| **Endpoints** | REST v2 (spot) |
+| **Endpoints** | REST v1+v2 (spot: account/trading on v1, symbols/exchange-info on v2) |
 | **Symbol format** | `BTC-USDT` (dash-separated) |
 | **Streaming** | Public market-data streams (ticker, trade, order book, kline) |
 

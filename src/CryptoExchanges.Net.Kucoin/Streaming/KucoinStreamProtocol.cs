@@ -47,8 +47,7 @@ internal sealed class KucoinStreamProtocol : IStreamProtocol
         var pingInterval = TimeSpan.FromMilliseconds(server.PingInterval);
         var pingTimeout = TimeSpan.FromMilliseconds(server.PingTimeout);
 
-        // Build a timestamped ping payload each connection using the server-returned interval
-        // as the message ID. The static template is replaced with a per-connection timestamp.
+        // KuCoin ping payload uses a unix-ms timestamp as the message ID.
         var pingTs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString();
         var pingPayload = Encoding.UTF8.GetBytes($"{{\"id\":\"{pingTs}\",\"type\":\"ping\"}}");
 
@@ -84,8 +83,6 @@ internal sealed class KucoinStreamProtocol : IStreamProtocol
     public string RoutingKeyFor(StreamRequest request)
     {
         ArgumentNullException.ThrowIfNull(request);
-        // The routing key IS the topic string — the same token that Classify reads from the
-        // "topic" field of a KuCoin data frame. Both sides share one venue-native keyspace.
         return BuildTopic(request);
     }
 
@@ -121,8 +118,6 @@ internal sealed class KucoinStreamProtocol : IStreamProtocol
             return new StreamFrame(FrameKind.Error, null);
         }
     }
-
-    // ── Helpers ───────────────────────────────────────────────────────────────
 
     private static StreamFrame ClassifyDataFrame(JsonElement root)
     {

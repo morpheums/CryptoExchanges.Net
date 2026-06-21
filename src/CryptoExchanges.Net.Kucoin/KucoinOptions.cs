@@ -28,8 +28,8 @@ public sealed class KucoinOptions
     public int TimeoutSeconds { get; set; } = 30;
 
     /// <summary>
-    /// Builds an <see cref="ExchangeCredentials"/> from these options, including the KuCoin
-    /// <see cref="Passphrase"/>. Intended for signing wire-up in later tasks.
+    /// Builds an <see cref="ExchangeCredentials"/> from the configured <see cref="ApiKey"/>,
+    /// <see cref="SecretKey"/>, and <see cref="Passphrase"/>.
     /// </summary>
     /// <returns>A credential set carrying the API key, secret, and passphrase.</returns>
     /// <exception cref="ArgumentException">

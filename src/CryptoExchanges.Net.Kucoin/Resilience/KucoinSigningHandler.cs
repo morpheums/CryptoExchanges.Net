@@ -36,9 +36,6 @@ internal sealed class KucoinSigningHandler(
 
     private async Task ResignAsync(HttpRequestMessage request, CancellationToken ct)
     {
-        // A signed KuCoin request needs all three credentials: key, secret (held by the signature
-        // service), and passphrase. Guard here even though the composer's secret-gated finalizer
-        // should normally prevent constructing a signing handler without full credentials.
         if (string.IsNullOrEmpty(apiKey))
             throw new InvalidOperationException(
                 "KuCoin signed request requires an API key (KC-API-KEY); none was configured.");

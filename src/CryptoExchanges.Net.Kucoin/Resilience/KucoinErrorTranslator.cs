@@ -24,15 +24,11 @@ internal sealed class KucoinErrorTranslator : IExchangeErrorTranslator
         var (code, msg) = Parse(body);
         var text = msg is null ? $"KuCoin HTTP {(int)response.StatusCode}" : $"KuCoin error {code}: {msg}";
 
-        // Translate always returns an exception (it is only invoked on a failed/error response). When the
-        // JSON envelope still reports code "200000" (e.g. an HTTP-level error with a success-shaped body),
-        // we return the generic ExchangeApiException rather than mapping to a more specific typed exception.
         if (code == "200000")
             return new ExchangeApiException(text, ParseCode(code), body);
 
         var numeric = ParseCode(code);
 
-        // Rate limiting: HTTP 429. KuCoin returns 429 directly for rate limit breaches.
         if (response.StatusCode == HttpStatusCode.TooManyRequests)
             return new RateLimitExceededException(text, RetryAfterReader.GetDelay(response), numeric, body);
 

@@ -56,7 +56,7 @@ Authoritative inputs (read fully before any task):
 |----------|------------|------|------------------------------------------------------------------------------|
 | TASK-056 | ✦ DONE     | 1    | Scaffold `CryptoExchanges.Net.Kucoin` + Unit/Integration test projects (OKX clone) |
 | TASK-061 | ✦ DONE     | 1    | ADR-002 streaming endpoint seam → async `ResolveConnectionAsync` + migrate Binance |
-| TASK-057 | ◇ READY    | 2    | KC-API passphrase-v2 signing service + mark-and-strip signing handler        |
+| TASK-057 | ◆ IMPL     | 2    | KC-API passphrase-v2 signing service + mark-and-strip signing handler        |
 | TASK-058 | ◇ READY    | 2    | Bespoke `ISymbolMapper` + REST wire DTOs + DeltaMapper profiles + parsers    |
 | TASK-059 | ◇ PLANNED  | 3    | REST services (market/account/trading) + http client + composer + entry     |
 | TASK-060 | ◇ PLANNED  | 4    | `AddKucoinExchange` DI + `AddCryptoExchanges` + MCP wiring                   |
@@ -134,9 +134,9 @@ Nothing in PRD "Out of Scope" (futures/margin, private streams, order-book maint
 
 ## Recovery Pointer
 
-- **Current stage**: ◆ TASK-057 IN_PROGRESS — implementing KC-API passphrase-v2 signing service + mark-and-strip handler.
-- **Next action**: Complete implementation of KucoinSignatureService, KucoinSigningHandler, KucoinSigningRequest, KucoinErrorTranslator + tests.
-- **Active task**: TASK-057 (base SHA 9da0981).
+- **Current stage**: ✦ TASK-057 IMPLEMENTED (commit a754e9f) — KC-API passphrase-v2 signing service + mark-and-strip handler; 44 unit tests pass; 0W/0E build. Awaiting review gate.
+- **Next action**: Reviewer agents approve/reject TASK-057; continue Wave 2 parallel work (TASK-058 symbol mapper + DTOs).
+- **Active task**: none.
 - **Files are truth**: the task manifests under `nazgul/tasks/` carry full state; each manifest's
   frontmatter is the canonical record.
 

@@ -1,6 +1,6 @@
 ---
 id: TASK-057
-status: IN_PROGRESS
+status: IMPLEMENTED
 depends_on: [TASK-056]
 ---
 # TASK-057: KC-API passphrase-v2 signing service + mark-and-strip signing handler
@@ -17,7 +17,7 @@ depends_on: [TASK-056]
 - **Created at**: 2026-06-20T19:00:00Z
 - **Claimed at**: 2026-06-21T00:00:00Z
 - **Base SHA**: 9da0981
-- **Implemented at**:
+- **Implemented at**: 2026-06-21T00:00:00Z
 - **Completed at**:
 - **Blocked at**:
 - **Retry count**: 0/3
@@ -87,8 +87,20 @@ Tests (`KucoinSigningTests.cs`) — golden-value + behavior, no network:
 
 ## Commits
 
-<!-- implementer fills SHAs -->
+- a754e9f feat(FEAT-006): TASK-057 IMPLEMENTED (KC-API passphrase-v2 signing + handler)
 
 ## Implementation Log
+
+### 2026-06-21 — Initial implementation
+
+- Cloned OKX signing pattern; adjusted for KuCoin passphrase-v2 differences:
+  - `KucoinSignatureService`: added `SignPassphrase()` (HMAC-SHA256 + base64 of the passphrase itself);
+    `FormatTimestamp()` returns Unix epoch milliseconds string (not ISO-8601).
+  - `KucoinSigningHandler`: strips/re-adds 5 headers on each attempt including `KC-API-KEY-VERSION: 2`;
+    passphrase passed through `SignPassphrase()` before being placed on the wire.
+  - `KucoinSigningRequest`: identical mark-and-strip marker pattern to OKX.
+  - `KucoinErrorTranslator`: maps `{"code","msg"}` (success `"200000"`) to typed exceptions.
+- `KucoinSigningTests`: 44 tests total (38 new) — all passing; golden values independently verified with Python.
+- Build: 0W/0E across full solution.
 
 ## Review Results

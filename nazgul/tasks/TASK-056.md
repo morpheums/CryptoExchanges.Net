@@ -1,6 +1,6 @@
 ---
 id: TASK-056
-status: IMPLEMENTED
+status: IN_REVIEW
 depends_on: []
 ---
 # TASK-056: Scaffold `CryptoExchanges.Net.Kucoin` package + Unit/Integration test projects (clone OKX)

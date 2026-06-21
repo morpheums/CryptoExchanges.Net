@@ -1,70 +1,76 @@
 ---
-verdict: CHANGES_REQUESTED
+verdict: APPROVE
 ---
-# Architect Review — TASK-057
+# Architect Review — TASK-057 (Re-review, retry 1/3)
 
 ## Verdict
-CHANGES_REQUESTED
+APPROVE
 
-## Summary
-The KuCoin signing infrastructure is functionally correct and the mark-and-strip DelegatingHandler pattern is faithfully replicated from OKX. However, `KucoinSigningHandler` accepts `KucoinSignatureService` (the concrete class) rather than `ISignatureService` (the interface), breaking the DIP mandate (Architectural Rule #11) that all other exchange signing handlers follow. Because `SignPassphrase()` does not exist on `ISignatureService`, the fix is to introduce a narrow `IKucoinSignatureService : ISignatureService` interface that adds `SignPassphrase(string)`.
+## What Was Checked
+
+1. **DIP finding from prior review resolved** — Verified `KucoinSigningHandler` constructor parameter is `IKucoinSignatureService` (line 21), not the concrete class.
+2. **Interface correctness** — `IKucoinSignatureService : ISignatureService`, adds `SignPassphrase(string)`, is `internal`, is in its own file (`Auth/IKucoinSignatureService.cs`).
+3. **Call sites in handler** — `signatureService.Sign(prehash)` (line 67) and `signatureService.SignPassphrase(passphrase)` (line 70) both dispatch through the interface, not the concrete type.
+4. **Simplify-pass changes** — `KeyVersion = "2"` const, `using System.Globalization`, removed `.ToUniversalTime()` no-op, `<inheritdoc/>` on impl — all reviewed; no regressions.
+5. **Layer compliance** — KuCoin assembly `ProjectReference` nodes: Core + Http only; no DeltaMapper or Core.Models references in auth/resilience files.
+6. **Handler doc comment** — `<see cref="KucoinSignatureService.SignPassphrase"/>` at line 13 references the concrete class by name in an XML doc, but only inside a `<remarks>` cross-reference. This is a documentation curiosity, not a runtime coupling concern (the field is typed to the interface).
+7. **Static helpers on KucoinSignatureService** — `BuildPrehash` and `FormatTimestamp` are `public static` and called directly in `KucoinSigningHandler` (lines 51, 66). This is a static call on the concrete class from the handler — see Finding 1 below.
+8. **Build and tests** — `dotnet build` (Release): 0W/0E. All 44 tests pass.
 
 ---
 
 ## Findings
 
-### Finding: KucoinSigningHandler takes concrete KucoinSignatureService instead of an interface
-- **Severity**: MEDIUM
-- **Confidence**: 95
-- **File**: `src/CryptoExchanges.Net.Kucoin/Resilience/KucoinSigningHandler.cs:21`
-- **Category**: Architecture (DIP — Invariant #11)
-- **Verdict**: REJECT (blocking — confidence 95, severity MEDIUM)
-- **Issue**: The handler constructor declares `KucoinSignatureService signatureService` (concrete). Every other exchange signing handler (OKX, Bybit, Bitget, Binance) uses `ISignatureService signatureService` (interface). The concrete binding bakes the implementation into the handler, makes the handler untestable via a mock implementing `SignPassphrase`, and violates the maintainer's 2026-06-18 DIP mandate: "Any type representing behavior the maintainer might swap … must be an interface resolved via DI, not a static class / concrete type that bakes the implementation in."
-- **Fix**: Introduce `internal interface IKucoinSignatureService : ISignatureService` in `Auth/` with the additional `string SignPassphrase(string passphrase)` method. Have `KucoinSignatureService` implement that interface. Change the `KucoinSigningHandler` constructor parameter from `KucoinSignatureService` to `IKucoinSignatureService`. Update the test `BuildHandler` helper accordingly.
-- **Pattern reference**: `src/CryptoExchanges.Net.Okx/Resilience/OkxSigningHandler.cs:19` — `ISignatureService signatureService`; `src/CryptoExchanges.Net.Bybit/Resilience/BybitSigningHandler.cs:19` — same; `src/CryptoExchanges.Net.Bitget/Resilience/BitgetSigningHandler.cs:19` — same.
+### Finding 1: Handler calls KucoinSignatureService static methods directly (non-blocking)
+- **Severity**: LOW
+- **Confidence**: 70
+- **File**: `src/CryptoExchanges.Net.Kucoin/Resilience/KucoinSigningHandler.cs:51,66`
+- **Category**: Architecture (DIP — soft concern)
+- **Verdict**: CONCERN (non-blocking — confidence 70, severity LOW)
+- **Issue**: `KucoinSigningHandler.ResignAsync` calls `KucoinSignatureService.FormatTimestamp(instant)` and `KucoinSignatureService.BuildPrehash(...)` via static dispatch on the concrete class, while the instance field `signatureService` is correctly typed to `IKucoinSignatureService`. These two static helpers are pure, deterministic functions with no I/O side effects and no swappable implementation (they encode the KuCoin wire format, not a behavior the maintainer would inject). The OKX handler does the same (`OkxSignatureService.FormatTimestamp`, `OkxSignatureService.BuildPrehash`). By Rule #11 the exemption for "genuinely fixed pure helpers" covers this use. At confidence 70, this is a non-blocking concern worth flagging if the number of exchanges grows and these helpers are ever duplicated to an Nth copy.
+- **Fix (if desired)**: Move `BuildPrehash` and `FormatTimestamp` to the interface as `static abstract` members, or to a standalone `KucoinPrehash` static class. Either removes the concrete coupling from the handler without changing the public surface. Not required to merge.
+- **Pattern reference**: `src/CryptoExchanges.Net.Okx/Resilience/OkxSigningHandler.cs:48,63` — same pattern in OKX reference; this codebase accepts it.
+
+---
+
+## DIP Finding Resolution Verification
+
+| Check | Result |
+|---|---|
+| `IKucoinSignatureService` file exists in `Auth/` folder | PASS |
+| Interface is `internal` | PASS |
+| Interface extends `ISignatureService` | PASS |
+| Interface adds `SignPassphrase(string)` | PASS |
+| `KucoinSignatureService` implements `IKucoinSignatureService` | PASS |
+| `KucoinSigningHandler` constructor parameter type | `IKucoinSignatureService` (interface) — PASS |
+| `signatureService.Sign()` dispatches via interface | PASS |
+| `signatureService.SignPassphrase()` dispatches via interface | PASS |
 
 ---
 
 ## Layering Check
 
-**CLEAN — K1 invariant is not violated.**
-
-- `CryptoExchanges.Net.Core` has no reference to KuCoin (only the pre-existing `ExchangeId.Kucoin` enum value, which is a scalar — not a type dependency).
-- `CryptoExchanges.Net.Http` has no reference to KuCoin (one code comment in `StreamConnectionInfo.cs` is the only occurrence, not a using/reference).
-- `KucoinSignatureService` imports only `CryptoExchanges.Net.Core.Auth`.
-- `KucoinSigningHandler` imports `CryptoExchanges.Net.Core.Auth` and `CryptoExchanges.Net.Kucoin.Auth` — both correct.
-- `KucoinErrorTranslator` imports `CryptoExchanges.Net.Core.Exceptions` and `CryptoExchanges.Net.Http` (for `RetryAfterReader`) — both correct within the Core → Http → Exchange chain.
-- `KucoinSigningRequest` has no external imports — correct.
-- The `CryptoExchanges.Net.Kucoin.csproj` `<ProjectReference>` nodes are `Core` and `Http` only — correct.
+- `CryptoExchanges.Net.Kucoin.csproj` `<ProjectReference>`: Core + Http only — CLEAN.
+- `KucoinSignatureService`: imports `System.Globalization`, `CryptoExchanges.Net.Core.Auth` only — CLEAN.
+- `KucoinSigningHandler`: imports `CryptoExchanges.Net.Core.Auth`, `CryptoExchanges.Net.Kucoin.Auth` — CLEAN (intra-exchange is correct).
+- `KucoinErrorTranslator`: imports `System.Globalization`, `System.Net`, `CryptoExchanges.Net.Core.Exceptions`, `CryptoExchanges.Net.Http` — CLEAN (Core.Exceptions + Http is the correct allowed set).
+- `KucoinSigningRequest`: no external imports — CLEAN.
+- No `Core.Models` reference anywhere in auth/resilience files — K1 invariant CLEAN.
+- No DeltaMapper reference in auth/resilience files — CLEAN.
 
 ---
 
-## Pattern Parity
+## Simplify-Pass Changes (No Regressions)
 
-| Aspect | OKX (reference) | KuCoin (this diff) | Match? |
-|---|---|---|---|
-| Handler base class | `DelegatingHandler` | `DelegatingHandler` | YES |
-| `internal sealed` | Yes | Yes | YES |
-| `SendAsync` override | `protected override async Task<HttpResponseMessage>` | Identical | YES |
-| Unsigned pass-through | `if (!IsSigned) → base.SendAsync immediately` | Identical | YES |
-| Per-attempt timestamp | Fresh `DateTimeOffset.UtcNow.AddMilliseconds(timeOffset())` in `ResignAsync` | Identical | YES |
-| Strip-then-add headers | Remove all auth headers before re-adding | Strips all 5 KC-API-* headers before re-adding | YES |
-| Request options marker | `HttpRequestOptionsKey<bool>("okx.signed")` | `HttpRequestOptionsKey<bool>("kucoin.signed")` | YES |
-| Marker class name | `OkxSigningRequest` (internal static) | `KucoinSigningRequest` (internal static) | YES |
-| File layout | `Auth/` for service, `Resilience/` for handler/marker/translator | Same | YES |
-| Signature service type in handler | `ISignatureService` (interface) | `KucoinSignatureService` (concrete) | **DEVIATION** |
-| POST body reading | `ReadAsStringAsync` on POST/PUT | Identical | YES |
-| `ConfigureAwait(false)` | Present throughout | Present throughout | YES |
-| Passphrase handling | Raw passphrase placed on header directly | HMAC-signed via `SignPassphrase` (KuCoin-specific passphrase-v2) | Justified exchange difference |
-
-**One deviation identified**: the signature service constructor parameter is the concrete class, not an interface. All other exchanges pass `ISignatureService`. This is the blocking finding above.
-
-**Timestamp format deviation is correct**: KuCoin uses Unix epoch milliseconds (`FormatTimestamp` returns numeric string), not ISO-8601 as OKX does. This is a genuine KuCoin API requirement and is correctly implemented.
-
-**Five vs. four headers**: KuCoin requires an extra `KC-API-KEY-VERSION: 2` header that OKX does not have. The implementation strips and re-adds all five headers in the retry path — correct.
+- `KeyVersion = "2"` const: eliminates the magic string literal; correct.
+- `using System.Globalization`: added for `CultureInfo.InvariantCulture` in `FormatTimestamp`; correct.
+- Removed `.ToUniversalTime()` no-op: `DateTimeOffset.ToUnixTimeMilliseconds()` is already UTC-normalized; the removal is correct.
+- `<inheritdoc/>` on `Sign` and `SignPassphrase` implementations: follows interface XML docs; correct.
+- Missing blank line between `private const string KeyVersion = "2";` and `/// <inheritdoc />` (line 24-25): minor style issue, not blocking.
 
 ---
 
 ## Build & Test
-- `dotnet build` (Release): **0 warnings, 0 errors**
-- `dotnet test`: **44/44 tests pass** (KuCoinSigningTests: 40 new tests; ScaffoldSmokeTests: 5 existing)
+
+- `dotnet build src/CryptoExchanges.Net.Kucoin/ -c Release`: **0 warnings, 0 errors** under `TreatWarningsAsErrors=true`.
+- `dotnet test tests/CryptoExchanges.Net.Kucoin.Tests.Unit/`: **44/44 passed**, 0 failed, 0 skipped.

@@ -1,6 +1,6 @@
 ---
 id: TASK-057
-status: IMPLEMENTED
+status: DONE
 depends_on: [TASK-056]
 ---
 # TASK-057: KC-API passphrase-v2 signing service + mark-and-strip signing handler
@@ -11,14 +11,14 @@ depends_on: [TASK-056]
 - **Status**: (see `status:` in the frontmatter block at the top — canonical, read by scripts/lib/structured-state.sh)
 - **Depends on**: TASK-056
 - **Delegates to**: none
-- **Files modified**: [src/CryptoExchanges.Net.Kucoin/Auth/KucoinSignatureService.cs, src/CryptoExchanges.Net.Kucoin/Resilience/KucoinSigningHandler.cs, src/CryptoExchanges.Net.Kucoin/Resilience/KucoinSigningRequest.cs, src/CryptoExchanges.Net.Kucoin/Resilience/KucoinErrorTranslator.cs, tests/CryptoExchanges.Net.Kucoin.Tests.Unit/KucoinSigningTests.cs]
+- **Files modified**: [src/CryptoExchanges.Net.Kucoin/Auth/IKucoinSignatureService.cs, src/CryptoExchanges.Net.Kucoin/Auth/KucoinSignatureService.cs, src/CryptoExchanges.Net.Kucoin/Resilience/KucoinSigningHandler.cs, src/CryptoExchanges.Net.Kucoin/Resilience/KucoinSigningRequest.cs, src/CryptoExchanges.Net.Kucoin/Resilience/KucoinErrorTranslator.cs, tests/CryptoExchanges.Net.Kucoin.Tests.Unit/KucoinSigningTests.cs]
 - **Wave**: 2
 - **Traces to**: PRD-FEAT-006 AC-2; TRD-FEAT-006 §"Signing — KC-API Passphrase-v2"; FEAT-006 spec §"Signing", §"Build approach" step 2; TEST-PLAN-FEAT-006 §1, §2
 - **Created at**: 2026-06-20T19:00:00Z
 - **Claimed at**: 2026-06-21T00:00:00Z
 - **Base SHA**: 9da0981
 - **Implemented at**: 2026-06-21T08:00:00Z
-- **Completed at**:
+- **Completed at**: 2026-06-21T09:48:13Z
 - **Blocked at**:
 - **Retry count**: 1/3
 - **Test failures**: 0
@@ -57,9 +57,9 @@ Tests (`KucoinSigningTests.cs`) — golden-value + behavior, no network:
   timestamps with no duplicate headers; missing api-key throws; missing passphrase throws.
 
 ## Acceptance Criteria
-- [ ] `KucoinSignatureService` (Sign + SignPassphrase both base64 HMAC-SHA256; `FormatTimestamp` = Unix epoch **ms** string; `BuildPrehash` = `timestamp+METHOD+requestPath+body`) and `KucoinSigningHandler` (mark-and-strip, per-attempt re-sign, five headers incl. `KC-API-KEY-VERSION: 2`, unsigned pass-through, retry-GET-only) exist with full XML docs, one type per file.
-- [ ] `KucoinSigningTests` cover golden-value Sign/SignPassphrase, prehash order, Unix-ms timestamp, all-five-headers, retry-resign-fresh-timestamp, missing-key/passphrase throws — all with NO network; solution builds 0W/0E.
-- [ ] `KucoinErrorTranslator` maps `{"code","msg"}` (success `"200000"`) → typed `Core` exceptions, mirroring `OkxErrorTranslator`; existing non-integration suite stays green.
+- [x] `KucoinSignatureService` (Sign + SignPassphrase both base64 HMAC-SHA256; `FormatTimestamp` = Unix epoch **ms** string; `BuildPrehash` = `timestamp+METHOD+requestPath+body`) and `KucoinSigningHandler` (mark-and-strip, per-attempt re-sign, five headers incl. `KC-API-KEY-VERSION: 2`, unsigned pass-through, retry-GET-only) exist with full XML docs, one type per file.
+- [x] `KucoinSigningTests` cover golden-value Sign/SignPassphrase, prehash order, Unix-ms timestamp, all-five-headers, retry-resign-fresh-timestamp, missing-key/passphrase throws — all with NO network; solution builds 0W/0E.
+- [x] `KucoinErrorTranslator` maps `{"code","msg"}` (success `"200000"`) → typed `Core` exceptions, mirroring `OkxErrorTranslator`; existing non-integration suite stays green.
 
 ## Pattern Reference
 - Signing service to clone: `src/CryptoExchanges.Net.Okx/Auth/OkxSignatureService.cs` (base64 HMAC-SHA256, prehash builder).
@@ -71,6 +71,7 @@ Tests (`KucoinSigningTests.cs`) — golden-value + behavior, no network:
 ## File Scope
 
 **Creates**:
+- src/CryptoExchanges.Net.Kucoin/Auth/IKucoinSignatureService.cs
 - src/CryptoExchanges.Net.Kucoin/Auth/KucoinSignatureService.cs
 - src/CryptoExchanges.Net.Kucoin/Resilience/KucoinSigningHandler.cs
 - src/CryptoExchanges.Net.Kucoin/Resilience/KucoinSigningRequest.cs
@@ -89,6 +90,13 @@ Tests (`KucoinSigningTests.cs`) — golden-value + behavior, no network:
 
 - a754e9f feat(FEAT-006): TASK-057 IMPLEMENTED (KC-API passphrase-v2 signing + handler)
 - d3bf817 feat(FEAT-006): TASK-057 IMPLEMENTED (DIP fix — IKucoinSignatureService)
+- 4799140 feat(FEAT-006): simplify TASK-057
+
+## Completion
+
+- **Completion SHA**: (see git commit after state write)
+- **Review cycle**: 2/2 (Cycle 1 CHANGES_REQUESTED; Cycle 2 APPROVED unanimously 4/4)
+- **Reviewers**: architect-reviewer ✦, code-reviewer ✦, security-reviewer ✦, api-reviewer ✦
 
 ## Implementation Log
 
@@ -105,6 +113,14 @@ Tests (`KucoinSigningTests.cs`) — golden-value + behavior, no network:
   `IKucoinSignatureService` via the new inheritance chain.
 - Build: 0W/0E. KuCoin unit tests: 44/44 passed.
 
+### 2026-06-21 — Simplify pass (4799140)
+
+- `<inheritdoc/>` on `SignPassphrase` impl (was full XML doc block)
+- Added `using System.Globalization;` — removed inline FQNs from `KucoinSignatureService` + `KucoinErrorTranslator`
+- Removed redundant `.ToUniversalTime()` before `ToUnixTimeMilliseconds()` (no-op; confirmed by security-reviewer confidence 99)
+- Extracted `"2"` KC-API-KEY-VERSION literal to `private const string KeyVersion` in `KucoinSigningHandler`
+- Build: 0W/0E. KuCoin unit tests: 44/44.
+
 ### 2026-06-21 — Initial implementation
 
 - Cloned OKX signing pattern; adjusted for KuCoin passphrase-v2 differences:
@@ -119,18 +135,14 @@ Tests (`KucoinSigningTests.cs`) — golden-value + behavior, no network:
 
 ## Review Results
 
+**Cycle 2 (final)**:
+- architect-reviewer: APPROVE — DIP finding fully resolved; IKucoinSignatureService is correct; no new findings
+- code-reviewer: APPROVE — no regressions; LR-001 satisfied by delegation; prior notes resolved
+- security-reviewer: APPROVE — all 11 security checks pass; .ToUniversalTime() removal confirmed correct no-op (confidence 99)
+- api-reviewer: APPROVE — DIP fix verified; interface design passes all checks; one cosmetic non-blocking note (cref)
+
+**Cycle 1**:
 - architect-reviewer: CHANGES_REQUESTED — KucoinSigningHandler takes concrete KucoinSignatureService instead of ISignatureService (DIP violation, Architectural Rule #11)
 - code-reviewer: APPROVE — all conventions pass (LR-001, LR-005 satisfied); minor non-blocking style notes
 - security-reviewer: APPROVE — all 11 security checks pass; prehash order, base64 HMAC, passphrase-v2 signing, per-attempt re-sign, mark-and-strip, Unix-ms timestamp all confirmed correct
 - api-reviewer: CHANGES_REQUESTED — same blocking finding as architect: concrete type in handler constructor
-
-## Consolidated Feedback
-
-**Blocking fix required** (1 item):
-
-Introduce `internal interface IKucoinSignatureService : ISignatureService` in `Auth/` with `string SignPassphrase(string passphrase)`. Three file changes:
-1. CREATE `src/CryptoExchanges.Net.Kucoin/Auth/IKucoinSignatureService.cs`
-2. EDIT `src/CryptoExchanges.Net.Kucoin/Auth/KucoinSignatureService.cs:12` — implement `IKucoinSignatureService` instead of `ISignatureService`
-3. EDIT `src/CryptoExchanges.Net.Kucoin/Resilience/KucoinSigningHandler.cs:21` — change parameter type from `KucoinSignatureService` to `IKucoinSignatureService`; update test `BuildHandler` helper type accordingly
-
-Full feedback: `nazgul/reviews/TASK-057/consolidated-feedback.md`

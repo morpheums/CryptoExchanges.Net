@@ -1,89 +1,125 @@
 ---
-verdict: CHANGES_REQUESTED
+verdict: APPROVE
 ---
-# API Review — TASK-057
 
-## Verdict
-CHANGES_REQUESTED
+# API Review: TASK-057 (Re-review, retry 1/3)
 
-## Summary
-All four new source types are correctly `internal`, and both interfaces are correctly implemented. One blocking issue: `KucoinSigningHandler` takes `KucoinSignatureService` (the concrete type) as its `signatureService` parameter instead of `ISignatureService`, deviating from the established OKX, Bybit, and Bitget pattern and coupling the handler to the concrete class. This needs to be resolved before merging.
+## What was checked
 
-## API Surface Check
-- [x] All types are internal (no public leakage): PASS
-- [x] ISignatureService implemented correctly: PASS
-- [x] IExchangeErrorTranslator implemented correctly: PASS
-- [x] Static method signatures clean: PASS
-- [x] Namespace consistency: PASS
-- [ ] Constructor parameter types consistent with OKX pattern: FAIL — `KucoinSigningHandler` takes `KucoinSignatureService` not `ISignatureService`
+1. DIP fix: `KucoinSigningHandler` constructor parameter type
+2. `IKucoinSignatureService` interface design (inheritance chain, member set, access modifier)
+3. One-type-per-file rule for `IKucoinSignatureService`
+4. XML documentation completeness on the interface and `<inheritdoc/>` on the implementation
+5. Testability: `BuildHandler` in tests passes `KucoinSignatureService` where `IKucoinSignatureService` is expected
+6. Parity with OKX pattern (`OkxSignatureService` / `OkxSigningHandler`)
+7. Minor: `<see cref>` in `KucoinSigningHandler`'s XML doc pointing at the concrete type
+
+---
 
 ## Findings
 
-### Finding: KucoinSigningHandler takes concrete `KucoinSignatureService` instead of `ISignatureService`
-- **Severity**: MEDIUM
-- **Confidence**: 95
-- **File**: `src/CryptoExchanges.Net.Kucoin/Resilience/KucoinSigningHandler.cs:209-210`
-- **Category**: API Design
-- **Verdict**: REJECT (blocking)
-- **Issue**: The handler's primary constructor parameter is typed as `KucoinSignatureService signatureService` rather than `ISignatureService signatureService`. Every other exchange signing handler (`OkxSigningHandler`, `BybitSigningHandler`, `BitgetSigningHandler`) uses `ISignatureService` for this parameter. This introduces a concrete-type dependency that prevents substitution (e.g. in unit tests with a mock or stub) and deviates from the established pattern without a justifying comment.
-- **Root cause**: `KucoinSignatureService` carries an additional method `SignPassphrase(string)` that is not on `ISignatureService`. The handler calls `signatureService.SignPassphrase(passphrase)` at line 258, which forces the concrete type to be visible at the call site.
-- **Fix**: Extend `ISignatureService` with a default interface method (DIM) `SignPassphrase` that throws `NotSupportedException` (keeping it non-breaking for existing implementors), then use `ISignatureService` in the constructor. Alternatively — and more conservatively — define a narrower `IPassphraseSignatureService : ISignatureService` that adds `SignPassphrase(string passphrase)`, have `KucoinSignatureService` implement it, and type the handler parameter as `IPassphraseSignatureService`. Either approach restores interface-based injection while accommodating the KuCoin-specific passphrase signing requirement.
-- **Pattern reference**: `src/CryptoExchanges.Net.Okx/Resilience/OkxSigningHandler.cs:19` — `ISignatureService signatureService`; `src/CryptoExchanges.Net.Bitget/Resilience/BitgetSigningHandler.cs:19` — `ISignatureService signatureService`
-
----
-
-### Finding: `SignPassphrase` is a KuCoin-specific method that extends beyond `ISignatureService` with no interface contract
-- **Severity**: LOW
-- **Confidence**: 85
-- **File**: `src/CryptoExchanges.Net.Kucoin/Auth/KucoinSignatureService.cs:35-39`
-- **Category**: API Design
-- **Verdict**: CONCERN (non-blocking on its own; resolved by the REJECT fix above)
-- **Issue**: `SignPassphrase` is a KuCoin-specific capability that has no home on `ISignatureService`. This is by design (OKX, Bybit, Bitget do not need it), but leaving it as an uncontracted method on the concrete class means the handler is implicitly unable to use the abstraction layer. The method itself is well-formed and correctly validated.
-- **Fix**: Address via the interface strategy described in the REJECT finding above (DIM or a new narrower interface).
-
----
-
-### Finding: `ISignatureService.Sign` parameter name mismatch — minor doc inconsistency
-- **Severity**: LOW
-- **Confidence**: 70
-- **File**: `src/CryptoExchanges.Net.Kucoin/Auth/KucoinSignatureService.cs:23`
-- **Category**: API Design
-- **Verdict**: CONCERN (non-blocking)
-- **Issue**: The interface defines `string Sign(string payload)` but the implementation's `<inheritdoc/>` inherits from a method named `Sign(string prehash)`. The parameter name `prehash` vs `payload` is not a compile error and not visible to callers since this is `internal`, but it is a minor doc inconsistency that is visible in VS tooling when browsing the inherited documentation. OKX also names the parameter `prehash` — so this is consistent within the exchange implementations but inconsistent with the interface declaration.
-- **Fix**: Rename the local parameter to `payload` to match the interface definition, or update the interface. Low priority.
-
----
-
-### Finding: `public static` methods on `internal` classes — pattern is consistent, no leakage
-- **Severity**: INFO
-- **Confidence**: 99
-- **File**: `src/CryptoExchanges.Net.Kucoin/Auth/KucoinSignatureService.cs:59,75`; `src/CryptoExchanges.Net.Kucoin/Resilience/KucoinSigningRequest.cs:289,296`
+### Finding: DIP fix is complete and correct
+- **Severity**: N/A (confirmation)
+- **Confidence**: 100
+- **File**: `src/CryptoExchanges.Net.Kucoin/Resilience/KucoinSigningHandler.cs:21`
 - **Category**: API Design
 - **Verdict**: PASS
-- **Issue**: None. `public static` on an `internal` type is the correct C# pattern: the accessibility of a member is bounded by the accessibility of its declaring type, so these are effectively `internal static`. Consistent with `OkxSignatureService`, `OkxSigningRequest`, and `BitgetSignatureService`.
+- **Issue**: Prior review blocked on concrete `KucoinSignatureService` in the constructor. The constructor now reads `IKucoinSignatureService signatureService`. The DIP violation is fully resolved.
+- **Pattern reference**: `src/CryptoExchanges.Net.Okx/Resilience/OkxSigningHandler.cs:19` (`ISignatureService signatureService`)
 
 ---
 
-### Finding: `KucoinErrorTranslator.Translate` — `ArgumentNullException.ThrowIfNull(response)` guards `response` but not `body`
-- **Severity**: LOW
-- **Confidence**: 75
-- **File**: `src/CryptoExchanges.Net.Kucoin/Resilience/KucoinErrorTranslator.cs:109-111`
+### Finding: `IKucoinSignatureService` inheritance chain is correct
+- **Severity**: N/A (confirmation)
+- **Confidence**: 100
+- **File**: `src/CryptoExchanges.Net.Kucoin/Auth/IKucoinSignatureService.cs:10`
 - **Category**: API Design
-- **Verdict**: CONCERN (non-blocking)
-- **Issue**: `body` is not explicitly null-guarded before `Parse(body)`. `Parse` handles `string.IsNullOrWhiteSpace(body)` which returns `(null, null)` for null input, so no exception surfaces at runtime. However the interface contract `Translate(HttpResponseMessage response, string body)` implies `body` is a non-null `string`. The OKX counterpart has the same omission. Low risk but minor inconsistency with the guard style used elsewhere in this task (`ArgumentNullException.ThrowIfNull` is used throughout).
-- **Fix**: Add `ArgumentNullException.ThrowIfNull(body);` after the `response` guard, or explicitly note in the method comment that null body is treated as empty. Low priority.
+- **Verdict**: PASS
+- **Issue**: None. `internal interface IKucoinSignatureService : ISignatureService` correctly extends the Core base interface, adds only `SignPassphrase`, and stays `internal` — matching the project's cross-assembly encapsulation requirement.
 
 ---
 
-## Summary Table
+### Finding: Interface is in its own file
+- **Severity**: N/A (confirmation)
+- **Confidence**: 100
+- **File**: `src/CryptoExchanges.Net.Kucoin/Auth/IKucoinSignatureService.cs`
+- **Category**: API Design
+- **Verdict**: PASS
+- **Issue**: None. One type per file rule is satisfied. The interface lives in `Auth/IKucoinSignatureService.cs` alongside `KucoinSignatureService.cs`.
 
-| Item | Result | Note |
-|---|---|---|
-| All source types are `internal` | PASS | `KucoinSignatureService`, `KucoinSigningHandler`, `KucoinSigningRequest`, `KucoinErrorTranslator` are all `internal sealed` |
-| `ISignatureService` correctly implemented | PASS | `Sign(string)` member present and returns `string`; `KucoinSignatureService` also adds `SignPassphrase` |
-| `IExchangeErrorTranslator` correctly implemented | PASS | `Translate(HttpResponseMessage, string)` signature matches interface |
-| `BuildPrehash` / `FormatTimestamp` static signatures | PASS | Same shape as OKX counterparts; `FormatTimestamp` correctly uses Unix-ms not ISO-8601 |
-| Namespace consistency | PASS | `Auth/` → `CryptoExchanges.Net.Kucoin.Auth`; `Resilience/` → `CryptoExchanges.Net.Kucoin.Resilience` — matches OKX/Bybit/Bitget layout |
-| `KucoinSigningRequest` pattern | PASS | `MarkSigned`/`IsSigned` signatures and option key naming (`"kucoin.signed"`) match `OkxSigningRequest` pattern |
-| Handler constructor parameter type | REJECT | `KucoinSignatureService` (concrete) used instead of `ISignatureService` (interface); see blocking finding above |
-| LR-004 compliance (array null+length guards) | N/A | No array parameters in these files |
+---
+
+### Finding: Full XML docs on `IKucoinSignatureService.SignPassphrase`
+- **Severity**: N/A (confirmation)
+- **Confidence**: 100
+- **File**: `src/CryptoExchanges.Net.Kucoin/Auth/IKucoinSignatureService.cs:12-26`
+- **Category**: API Design
+- **Verdict**: PASS
+- **Issue**: None. `<summary>`, `<param name="passphrase">`, `<returns>`, and `<exception cref="ArgumentException">` are all present. `GenerateDocumentationFile=true` + `TreatWarningsAsErrors` will not fire.
+
+---
+
+### Finding: `<inheritdoc/>` on implementation members
+- **Severity**: N/A (confirmation)
+- **Confidence**: 100
+- **File**: `src/CryptoExchanges.Net.Kucoin/Auth/KucoinSignatureService.cs:17,21`
+- **Category**: API Design
+- **Verdict**: PASS
+- **Issue**: None. Both `Sign` (inherited from `ISignatureService`) and `SignPassphrase` (inherited from `IKucoinSignatureService`) carry `/// <inheritdoc />` on the implementation, consistent with project convention.
+
+---
+
+### Finding: Testability — `BuildHandler` passes concrete through interface slot
+- **Severity**: N/A (confirmation)
+- **Confidence**: 100
+- **File**: `tests/CryptoExchanges.Net.Kucoin.Tests.Unit/KucoinSigningTests.cs:173-176`
+- **Category**: API Design
+- **Verdict**: PASS
+- **Issue**: None. `new KucoinSignatureService(secret)` is assigned to `var svc` (implicit type `KucoinSignatureService`) and passed to `new KucoinSigningHandler(..., svc, ...)`. Since `KucoinSignatureService : IKucoinSignatureService`, this compiles and correctly tests through the interface.
+
+---
+
+### Finding: `KucoinSigningHandler` XML doc `<see cref>` references the concrete type
+- **Severity**: LOW
+- **Confidence**: 65
+- **File**: `src/CryptoExchanges.Net.Kucoin/Resilience/KucoinSigningHandler.cs:13`
+- **Category**: API Design
+- **Verdict**: CONCERN (non-blocking — confidence 65 < 80)
+- **Issue**: The class-level XML doc reads `see <see cref="KucoinSignatureService.SignPassphrase"/>`. After the DIP fix, the handler depends on `IKucoinSignatureService`, so the cref arguably belongs on the interface member (`IKucoinSignatureService.SignPassphrase`). The reference still resolves at compile time (the concrete type is `internal` in the same assembly), so there is no build failure and no observable API breakage. It is cosmetically inconsistent with the principle that the handler no longer "knows" it is dealing with the concrete class.
+- **Fix**: Change the cref to `<see cref="IKucoinSignatureService.SignPassphrase"/>` to match the handler's declared dependency.
+
+---
+
+### Finding: OKX pattern parity
+- **Severity**: N/A (confirmation)
+- **Confidence**: 100
+- **File**: `src/CryptoExchanges.Net.Kucoin/Auth/KucoinSignatureService.cs` vs `src/CryptoExchanges.Net.Okx/Auth/OkxSignatureService.cs`
+- **Category**: API Design
+- **Verdict**: PASS
+- **Issue**: None. Structure is identical: primary constructor, `InitializeSecretKey` guard, `Sign` via `HmacSignature.Compute` with `Base64`, static `BuildPrehash` and `FormatTimestamp`. The Kucoin variant correctly adds `SignPassphrase` (absent in OKX, which sends the passphrase in plaintext) and uses Unix epoch ms instead of ISO-8601 — both intentional per the exchange-specific authentication requirements.
+
+---
+
+### Finding: `InternalsVisibleTo` grants are scoped correctly
+- **Severity**: N/A (confirmation)
+- **Confidence**: 100
+- **File**: `src/CryptoExchanges.Net.Kucoin/CryptoExchanges.Net.Kucoin.csproj:19-22`
+- **Category**: NuGet Conventions
+- **Verdict**: PASS
+- **Issue**: None. Grants are limited to `CryptoExchanges.Net.Kucoin.Tests.Unit`, `CryptoExchanges.Net.Kucoin.Tests.Integration`, and `DynamicProxyGenAssembly2` (Moq). No consumer application projects are granted visibility.
+
+---
+
+## Summary
+
+- PASS: DIP fix — `KucoinSigningHandler` constructor takes `IKucoinSignatureService` (interface), not the concrete class.
+- PASS: `IKucoinSignatureService` — correct inheritance (`ISignatureService`), `internal`, single new member (`SignPassphrase`), own file, full XML docs.
+- PASS: `KucoinSignatureService` — implements `IKucoinSignatureService`, `<inheritdoc/>` on both interface members.
+- PASS: Test `BuildHandler` — `KucoinSignatureService` satisfies `IKucoinSignatureService` slot in handler constructor; no test changes needed.
+- PASS: OKX pattern parity — structure is identical; exchange-specific deviations (Unix ms timestamp, signed passphrase) are correct and documented.
+- PASS: `InternalsVisibleTo` — test and mock assemblies only.
+- CONCERN: `KucoinSigningHandler` XML doc `<see cref="KucoinSignatureService.SignPassphrase"/>` should reference `IKucoinSignatureService.SignPassphrase` after the DIP fix. (confidence: 65/100, non-blocking)
+
+## Final Verdict
+
+APPROVED — The blocking DIP violation from the prior review is fully resolved. The interface is well-designed, documented, and in its own file. The one concern (cref pointing at the concrete type in a comment) is cosmetic, does not affect the public API surface, and does not warrant blocking the task.

@@ -8,7 +8,7 @@
 - **Status**: active
 - **Scope-Agents**: implementer, code-reviewer
 - **Scope-Globs**: src/**/*.cs
-- **Hits**: 6
+- **Hits**: 7
 - **Added**: 2026-06-18
 - **Evidence**: TASK-002 (code-reviewer REJECT@85 — BuildGetSignString/BuildPostSignString missing guards), TASK-005 (code-reviewer REJECT@97 — BybitHttpClient.GetAsync/PostAsync/DeleteAsync missing endpoint guard), TASK-003 (api-reviewer non-blocking concern on ctor params)
 
@@ -83,7 +83,7 @@ OKX, and Bitget `TimeSync.ApplyOffset`.
 - **Status**: active
 - **Scope-Agents**: implementer, code-reviewer
 - **Scope-Globs**: src/**/Services/*.cs, tests/**/*.cs
-- **Hits**: 4
+- **Hits**: 5
 - **Added**: 2026-06-18
 - **Evidence**: TASK-015 (code-reviewer REJECT@95 — GetCandlesticksAsync had zero test coverage; the missing test was paired with and hid the unguarded long.Parse bug at the exact same site), TASK-006 (api-reviewer/code-reviewer blocked on service methods with broken default-parameter behaviour that was undetected by insufficient test coverage)
 

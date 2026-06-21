@@ -20,8 +20,35 @@ namespace CryptoExchanges.Net.Http.Streaming;
 /// </remarks>
 internal interface IStreamProtocol
 {
-    /// <summary>The WebSocket endpoint URI for this venue.</summary>
-    Uri Endpoint { get; }
+    /// <summary>
+    /// Resolves the connection parameters (endpoint URI and heartbeat policy) for the
+    /// next connection attempt. The engine calls this method immediately before every
+    /// <c>ConnectAsync</c> — both the initial connect and every subsequent reconnect.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Implementations may perform I/O (e.g. a token-negotiation HTTP call for
+    /// venues that require a short-lived connection token). For static venues the
+    /// implementation returns a pre-built <see cref="StreamConnectionInfo"/> via
+    /// <see cref="ValueTask.FromResult{TResult}"/> with negligible overhead.
+    /// </para>
+    /// <para>
+    /// <strong>Constraint C1</strong>: the protocol only <em>describes</em> the heartbeat
+    /// through the returned <see cref="StreamConnectionInfo.Heartbeat"/>; no timers,
+    /// threads, or behavioral methods belong here.
+    /// </para>
+    /// <para>
+    /// If <paramref name="ct"/> is cancelled before resolution completes, an
+    /// <see cref="OperationCanceledException"/> must propagate to the engine, which will
+    /// abort the connect/reconnect attempt.
+    /// </para>
+    /// </remarks>
+    /// <param name="ct">A cancellation token to abort the resolution.</param>
+    /// <returns>
+    /// A <see cref="ValueTask{TResult}"/> whose result is the resolved
+    /// <see cref="StreamConnectionInfo"/> for this connection attempt.
+    /// </returns>
+    ValueTask<StreamConnectionInfo> ResolveConnectionAsync(CancellationToken ct);
 
     /// <summary>
     /// Builds the subscribe request text to send over the socket for the given
@@ -64,10 +91,4 @@ internal interface IStreamProtocol
     /// <param name="frame">The raw frame bytes as received from the socket.</param>
     /// <returns>The classified <see cref="StreamFrame"/>.</returns>
     StreamFrame Classify(ReadOnlySpan<byte> frame);
-
-    /// <summary>
-    /// The heartbeat policy for this venue. The engine reads this once on connection
-    /// and executes the timers, watchdog, and send/pong logic accordingly.
-    /// </summary>
-    HeartbeatPolicy Heartbeat { get; }
 }

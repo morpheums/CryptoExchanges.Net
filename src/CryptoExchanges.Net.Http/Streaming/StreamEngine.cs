@@ -282,14 +282,10 @@ internal sealed class StreamEngine : IAsyncDisposable
 
     private async Task OpenSocketAsync(CancellationToken ct)
     {
+        var info = await _protocol.ResolveConnectionAsync(ct).ConfigureAwait(false);
         _socket = _connectionFactory();
-        await _socket.ConnectAsync(_protocol.Endpoint, ct).ConfigureAwait(false);
-
-        _pumpCts = CancellationTokenSource.CreateLinkedTokenSource(_disposeCts.Token);
-        _pumpTask = Task.Run(() => PumpLoopAsync(_pumpCts.Token), _pumpCts.Token);
-
-        StartHeartbeat(_pumpCts.Token);
-        _backoff.Reset();
+        await _socket.ConnectAsync(info.Endpoint, ct).ConfigureAwait(false);
+        StartPump(info.Heartbeat);
     }
 
     private async Task CloseSocketAsync()
@@ -504,10 +500,12 @@ internal sealed class StreamEngine : IAsyncDisposable
             try
             {
                 IWebSocketConnection? newSocket = null;
+                StreamConnectionInfo info;
                 try
                 {
+                    info = await _protocol.ResolveConnectionAsync(_disposeCts.Token).ConfigureAwait(false);
                     newSocket = _connectionFactory();
-                    await newSocket.ConnectAsync(_protocol.Endpoint, _disposeCts.Token).ConfigureAwait(false);
+                    await newSocket.ConnectAsync(info.Endpoint, _disposeCts.Token).ConfigureAwait(false);
                 }
 #pragma warning disable CA1031 // intentional: connect failure → retry next backoff iteration
                 catch (Exception ex)
@@ -527,10 +525,7 @@ internal sealed class StreamEngine : IAsyncDisposable
                 _socket = newSocket;
 
                 // Connected — restart pump and heartbeat.
-                _pumpCts = CancellationTokenSource.CreateLinkedTokenSource(_disposeCts.Token);
-                _pumpTask = Task.Run(() => PumpLoopAsync(_pumpCts.Token), _pumpCts.Token);
-                StartHeartbeat(_pumpCts.Token);
-                _backoff.Reset();
+                StartPump(info.Heartbeat);
 
                 // K2: replay the stored subscribe set.
                 foreach (var (routingKey, request) in _subscribeSet)
@@ -583,13 +578,23 @@ internal sealed class StreamEngine : IAsyncDisposable
         }
     }
 
+    // ── Pump + heartbeat wiring (shared by OpenSocketAsync and ReconnectCoreAsync) ─
+
+    private void StartPump(HeartbeatPolicy heartbeat)
+    {
+        _pumpCts = CancellationTokenSource.CreateLinkedTokenSource(_disposeCts.Token);
+        _pumpTask = Task.Run(() => PumpLoopAsync(_pumpCts.Token), _pumpCts.Token);
+        StartHeartbeat(heartbeat, _pumpCts.Token);
+        _backoff.Reset();
+    }
+
     // ── Heartbeat (C1 — timers/watchdog in the engine, not in the protocol) ───
 
-    private void StartHeartbeat(CancellationToken ct)
+    private void StartHeartbeat(HeartbeatPolicy policy, CancellationToken ct)
     {
         _heartbeatCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
         Interlocked.Exchange(ref _livenessFlag, 1); // treat connect as liveness event
-        _heartbeatTask = Task.Run(() => HeartbeatLoopAsync(_heartbeatCts.Token), _heartbeatCts.Token);
+        _heartbeatTask = Task.Run(() => HeartbeatLoopAsync(policy, _heartbeatCts.Token), _heartbeatCts.Token);
     }
 
     private void StopHeartbeat()
@@ -602,9 +607,8 @@ internal sealed class StreamEngine : IAsyncDisposable
         }
     }
 
-    private Task HeartbeatLoopAsync(CancellationToken ct)
+    private Task HeartbeatLoopAsync(HeartbeatPolicy policy, CancellationToken ct)
     {
-        var policy = _protocol.Heartbeat;
         return policy.Direction == HeartbeatDirection.ClientPing
             ? ClientPingLoopAsync(policy, ct)
             : ServerPingWatchdogAsync(policy, ct);

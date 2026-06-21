@@ -840,8 +840,16 @@ public sealed class StreamEngineTests
     /// </summary>
     private sealed class VenueKeyProtocol : IStreamProtocol
     {
+        private static readonly StreamConnectionInfo s_info = new(
+            new Uri("wss://fake.test/ws"),
+            new HeartbeatPolicy(
+                Direction: HeartbeatDirection.ServerPingClientPong,
+                Interval: TimeSpan.FromSeconds(30),
+                Timeout: TimeSpan.FromSeconds(60)));
+
         /// <inheritdoc/>
-        public Uri Endpoint { get; } = new Uri("wss://fake.test/ws");
+        public ValueTask<StreamConnectionInfo> ResolveConnectionAsync(CancellationToken ct)
+            => new(s_info);
 
         /// <inheritdoc/>
         public string RoutingKeyFor(StreamRequest request)
@@ -858,12 +866,6 @@ public sealed class StreamEngineTests
         /// <inheritdoc/>
         public StreamFrame Classify(ReadOnlySpan<byte> frame)
             => new(FrameKind.Data, "btcusdt@ticker"); // same venue-native key — frames must route
-
-        /// <inheritdoc/>
-        public HeartbeatPolicy Heartbeat { get; } = new HeartbeatPolicy(
-            Direction: HeartbeatDirection.ServerPingClientPong,
-            Interval: TimeSpan.FromSeconds(30),
-            Timeout: TimeSpan.FromSeconds(60));
     }
 
 

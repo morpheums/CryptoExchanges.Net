@@ -4,9 +4,8 @@ CryptoExchanges.Net supports real-time market-data streaming via WebSocket.
 The streaming layer is **opt-in**: REST-only consumers reference only the REST packages
 and pay nothing for socket machinery.
 
-> **Scope** — v1 ships public market-data streams for Binance only:
-> ticker, trade, order-book, and kline (candlestick). Private streams
-> and order-book maintenance are not included in v1.
+> **Scope** — public market-data streams (ticker, trade, order-book, kline) are available for
+> Binance and KuCoin. Private streams and order-book maintenance are not included.
 
 ---
 
@@ -87,6 +86,8 @@ on a subscription removes it from the subscribe set so it is not resurrected on 
 
 ## Setup with dependency injection
 
+### Binance
+
 Call `AddBinanceExchange` first, then `AddBinanceStreams`:
 
 ```csharp
@@ -118,11 +119,49 @@ await Task.Delay(TimeSpan.FromMinutes(1));
 await subscription.DisposeAsync();
 ```
 
+### KuCoin
+
+KuCoin uses a token-negotiated WebSocket endpoint (bullet-public). Call `AddKucoinExchange`
+first (credentials optional for public streams), then `AddKucoinStreams`:
+
+```csharp
+services.AddKucoinExchange(o =>
+{
+    o.ApiKey     = "your-api-key";    // optional for public streams
+    o.SecretKey  = "your-secret-key"; // optional for public streams
+    o.Passphrase = "your-passphrase"; // optional for public streams
+});
+
+services.AddKucoinStreams();  // opt-in — REST-only consumers skip this
+```
+
+Then resolve and use exactly as with Binance:
+
+```csharp
+var factory = serviceProvider.GetRequiredService<IStreamClientFactory>();
+await using var client = factory.GetClient(ExchangeId.Kucoin);
+
+var subscription = await client.SubscribeToTickerAsync(
+    new Symbol(Asset.Btc, Asset.Usdt),
+    new StreamHandlers<Ticker>(ticker =>
+    {
+        Console.WriteLine($"BTC/USDT last: {ticker.LastPrice}");
+        return ValueTask.CompletedTask;
+    }));
+
+await Task.Delay(TimeSpan.FromMinutes(1));
+await subscription.DisposeAsync();
+```
+
+Supported stream types: ticker, trade, order book, kline (candlestick). Public streams only;
+order-book maintenance is not included.
+
 ---
 
 ## Usage without dependency injection
 
-Use `StreamClientFactory.Create` directly:
+Use `StreamClientFactory.Create` directly (Binance shown; the same factory method applies to
+KuCoin via the appropriate protocol and decoder registry):
 
 ```csharp
 var options   = new BinanceStreamOptions();
@@ -139,7 +178,7 @@ var client = StreamClientFactory.Create(
     symbolMapper);
 ```
 
-For most use cases the DI path via `AddBinanceStreams` is simpler.
+For most use cases the DI path via `AddBinanceStreams` or `AddKucoinStreams` is simpler.
 
 ---
 

@@ -2,8 +2,8 @@
 
 CryptoExchanges.Net ships a **read-only**
 [Model Context Protocol (MCP)](https://modelcontextprotocol.io) stdio server that exposes
-crypto exchange data to LLM agents via 12 structured tools across **Binance, Bybit, OKX, and
-Bitget** — all returning the same canonical models regardless of exchange.
+crypto exchange data to LLM agents via 12 structured tools across **Binance, Bybit, OKX, Bitget,
+and KuCoin** — all returning the same canonical models regardless of exchange.
 
 > **Read-only — no order placement.** This server exposes market-data and account-read
 > operations only. No write or trading tools exist.
@@ -78,7 +78,7 @@ All tools accept symbols as `BASE/QUOTE` (e.g., `BTC/USDT`, `ETH/USDT`, `SOL/BTC
 
 ## Supported exchanges
 
-Pass `exchange` as one of: `binance`, `bybit`, `okx`, `bitget` (case-insensitive).
+Pass `exchange` as one of: `binance`, `bybit`, `okx`, `bitget`, `kucoin` (case-insensitive).
 
 ---
 
@@ -101,9 +101,12 @@ block — see [mcp-clients.md](mcp-clients.md)).
 | `BITGET_API_KEY`      | Account tools | Bitget API key (read permission)          |
 | `BITGET_SECRET_KEY`   | Account tools | Bitget secret key                         |
 | `BITGET_PASSPHRASE`   | Account tools | Bitget API passphrase                     |
+| `KUCOIN_API_KEY`      | Account tools | KuCoin API key (read permission)          |
+| `KUCOIN_SECRET_KEY`   | Account tools | KuCoin secret key                         |
+| `KUCOIN_PASSPHRASE`   | Account tools | KuCoin API passphrase                     |
 
-**OKX and Bitget require a passphrase** — a third credential configured in the exchange's API
-management console alongside the key and secret.
+**OKX, Bitget, and KuCoin require a passphrase** — a third credential configured in the
+exchange's API management console alongside the key and secret.
 
 Unused exchange credentials are silently ignored.
 

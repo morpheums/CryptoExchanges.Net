@@ -47,4 +47,16 @@ public sealed class CryptoExchangesOptions
 
     /// <summary>Bitget API passphrase (the third Bitget credential, required for signed endpoints).</summary>
     public string? BitgetPassphrase { get; set; }
+
+    /// <summary>KuCoin API base URL override.</summary>
+    public string? KucoinBaseUrl { get; set; }
+
+    /// <summary>KuCoin API key.</summary>
+    public string? KucoinApiKey { get; set; }
+
+    /// <summary>KuCoin API secret key.</summary>
+    public string? KucoinSecretKey { get; set; }
+
+    /// <summary>KuCoin API passphrase (the third KuCoin credential, required for signed endpoints).</summary>
+    public string? KucoinPassphrase { get; set; }
 }

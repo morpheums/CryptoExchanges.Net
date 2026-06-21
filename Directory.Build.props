@@ -6,7 +6,7 @@
     <AnalysisLevel>latest-all</AnalysisLevel>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    
+
     <!-- Package metadata -->
     <Authors>Orodruin Labs</Authors>
     <Company>Orodruin Labs</Company>
@@ -17,7 +17,7 @@
     <PackageTags>crypto;exchange;trading;sdk;binance;coinbase;bybit;bitcoin;ethereum</PackageTags>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageIcon>icon.png</PackageIcon>
-    <Version>0.3.0-preview.2</Version>
+    <Version>0.4.0-preview.1</Version>
   </PropertyGroup>
 
   <!-- NuGet does not render raw HTML in READMEs, so the rich GitHub README.md (centered banner,

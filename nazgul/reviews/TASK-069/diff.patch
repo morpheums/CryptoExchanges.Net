@@ -1,0 +1,228 @@
+diff --git a/CHANGELOG.md b/CHANGELOG.md
+index 146bf1c..d62c2f2 100644
+--- a/CHANGELOG.md
++++ b/CHANGELOG.md
+@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
+ 
+ ## [Unreleased]
+ 
++## [0.5.0-preview.1] — 2026-06-21
++
++### Changed
++
++- **[BREAKING — package id / namespace]** Renamed aggregator package
++  `CryptoExchanges.Net.DependencyInjection` → `CryptoExchanges.Net`.
++  `AddCryptoExchanges` and `CryptoExchangesOptions` moved to namespace `CryptoExchanges.Net`.
++  Method name and options shape are unchanged.
++
++### Migration
++
++- Remove: `dotnet add package CryptoExchanges.Net.DependencyInjection`
++- Add:    `dotnet add package CryptoExchanges.Net`
++- Change: `using CryptoExchanges.Net.DependencyInjection;` → `using CryptoExchanges.Net;`
++- `services.AddCryptoExchanges(...)` — unchanged.
++
++### Internal
++
++- Decoupled per-exchange `.Tests.Unit` projects from the aggregator; consolidated
++  all-exchanges resolution test into `CryptoExchanges.Net.Tests.Unit`.
++
++---
++
+ ## [0.4.0-preview.1] - 2026-06-21
+ 
+ ### Added
+@@ -104,7 +127,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
+ - Account operations: balances, trade history
+ - Comprehensive unit and integration test suite
+ 
+-[Unreleased]: https://github.com/OrodruinLabs/CryptoExchanges.Net/compare/v0.4.0-preview.1...HEAD
++[Unreleased]: https://github.com/OrodruinLabs/CryptoExchanges.Net/compare/v0.5.0-preview.1...HEAD
++[0.5.0-preview.1]: https://github.com/OrodruinLabs/CryptoExchanges.Net/compare/v0.4.0-preview.1...v0.5.0-preview.1
+ [0.4.0-preview.1]: https://github.com/OrodruinLabs/CryptoExchanges.Net/compare/v0.3.0-preview.1...v0.4.0-preview.1
+ [0.3.0-preview.1]: https://github.com/OrodruinLabs/CryptoExchanges.Net/compare/v0.2.0-preview.1...v0.3.0-preview.1
+ [0.2.0-preview.1]: https://github.com/OrodruinLabs/CryptoExchanges.Net/compare/v0.1.0-preview.1...v0.2.0-preview.1
+diff --git a/Directory.Build.props b/Directory.Build.props
+index 72e4f8f..301f95b 100644
+--- a/Directory.Build.props
++++ b/Directory.Build.props
+@@ -17,7 +17,7 @@
+     <PackageTags>crypto;exchange;trading;sdk;binance;coinbase;bybit;bitcoin;ethereum</PackageTags>
+     <PackageReadmeFile>README.md</PackageReadmeFile>
+     <PackageIcon>icon.png</PackageIcon>
+-    <Version>0.4.0-preview.1</Version>
++    <Version>0.5.0-preview.1</Version>
+   </PropertyGroup>
+ 
+   <!-- NuGet does not render raw HTML in READMEs, so the rich GitHub README.md (centered banner,
+diff --git a/NUGET_README.md b/NUGET_README.md
+index a6bba2b..d2f05fa 100644
+--- a/NUGET_README.md
++++ b/NUGET_README.md
+@@ -4,7 +4,7 @@
+ 
+ **A unified .NET SDK for cryptocurrency exchanges — one typed interface across every exchange, with a read-only MCP server for AI agents.**
+ 
+-[![NuGet](https://img.shields.io/nuget/v/CryptoExchanges.Net.DependencyInjection.svg)](https://www.nuget.org/packages/CryptoExchanges.Net.DependencyInjection)
++[![NuGet](https://img.shields.io/nuget/v/CryptoExchanges.Net.svg)](https://www.nuget.org/packages/CryptoExchanges.Net)
+ [![License](https://img.shields.io/badge/license-Apache--2.0-green)](https://github.com/OrodruinLabs/CryptoExchanges.Net/blob/main/LICENSE)
+ 
+ REST market data, account, and trading across **Binance, Bybit, OKX, and Bitget** — plus live **WebSocket** market-data streaming (Binance) — all mapped to one canonical model set (`Core.Models`).
+@@ -13,7 +13,7 @@ REST market data, account, and trading across **Binance, Bybit, OKX, and Bitget*
+ 
+ | Package | Purpose |
+ |---------|---------|
+-| `CryptoExchanges.Net.DependencyInjection` | DI registration (`AddBinanceExchange()`, …) — start here |
++| `CryptoExchanges.Net` | All-exchanges meta-package — `AddCryptoExchanges()` in one call |
+ | `CryptoExchanges.Net.Binance` · `.Bybit` · `.Okx` · `.Bitget` | Per-exchange implementations |
+ | `CryptoExchanges.Net.Core` | Canonical models + interfaces (zero dependencies) |
+ | `CryptoExchanges.Net.Http` | Shared HTTP/resilience pipeline + streaming engine |
+@@ -23,7 +23,7 @@ REST market data, account, and trading across **Binance, Bybit, OKX, and Bitget*
+ 
+ ```bash
+ dotnet add package CryptoExchanges.Net.Binance
+-dotnet add package CryptoExchanges.Net.DependencyInjection
++dotnet add package CryptoExchanges.Net
+ ```
+ 
+ ## Documentation
+diff --git a/README.md b/README.md
+index cfc8f35..f878c4b 100644
+--- a/README.md
++++ b/README.md
+@@ -6,7 +6,7 @@
+ 
+ > **A unified .NET SDK for cryptocurrency exchanges — one typed interface across every exchange, with a read-only MCP server for AI agents.**
+ 
+-[![NuGet](https://img.shields.io/nuget/v/CryptoExchanges.Net.DependencyInjection.svg)](https://www.nuget.org/packages/CryptoExchanges.Net.DependencyInjection)
++[![NuGet](https://img.shields.io/nuget/v/CryptoExchanges.Net.svg)](https://www.nuget.org/packages/CryptoExchanges.Net)
+ [![License](https://img.shields.io/badge/license-Apache--2.0-green)](LICENSE)
+ [![.NET](https://img.shields.io/badge/.NET-10.0-512BD4)](https://dotnet.microsoft.com/)
+ 
+diff --git a/docs/architecture.md b/docs/architecture.md
+index 2ccb530..18e3b48 100644
+--- a/docs/architecture.md
++++ b/docs/architecture.md
+@@ -35,7 +35,7 @@ This page describes the shipped design only.
+ └────────────┬────────────────────────────────────────────────────┘
+              │ depends on Core + per-exchange packages
+ ┌────────────▼────────────────────────────────────────────────────┐
+-│  CryptoExchanges.Net.DependencyInjection                         │
++│  CryptoExchanges.Net                                             │
+ │  AddCryptoExchanges() — aggregator that delegates to Add*Exchange │
+ │  keyed-singleton registration                                    │
+ └─────────────────────────────────────────────────────────────────┘
+@@ -186,7 +186,7 @@ OKX and Bitget additionally include the passphrase in the signed headers.
+ 
+ ## Dependency injection
+ 
+-`AddCryptoExchanges()` (in `CryptoExchanges.Net.DependencyInjection`) is a convenience aggregator
++`AddCryptoExchanges()` (in `CryptoExchanges.Net`) is a convenience aggregator
+ that delegates to each exchange's own `Add*Exchange()` method (defined in the exchange's package,
+ per ADR-001). Each exchange is registered as a keyed singleton under its `ExchangeId`.
+ 
+diff --git a/docs/exchanges.md b/docs/exchanges.md
+index 5f63fe0..db8bee5 100644
+--- a/docs/exchanges.md
++++ b/docs/exchanges.md
+@@ -254,11 +254,15 @@ services.AddKucoinStreams();  // opt-in — REST-only consumers skip this
+ 
+ ## Register all exchanges at once
+ 
+-`CryptoExchanges.Net.DependencyInjection` provides a single `AddCryptoExchanges()` call that
++`CryptoExchanges.Net` provides a single `AddCryptoExchanges()` call that
+ registers all supported exchanges:
+ 
++```bash
++dotnet add package CryptoExchanges.Net
++```
++
+ ```csharp
+-using CryptoExchanges.Net.DependencyInjection;
++using CryptoExchanges.Net;
+ 
+ services.AddCryptoExchanges(opt =>
+ {
+diff --git a/docs/getting-started.md b/docs/getting-started.md
+index 96d083d..d11f1b1 100644
+--- a/docs/getting-started.md
++++ b/docs/getting-started.md
+@@ -31,10 +31,10 @@ dotnet add package CryptoExchanges.Net.Okx
+ dotnet add package CryptoExchanges.Net.Bitget
+ ```
+ 
+-To register all four exchanges in one call (ASP.NET Core / hosted services):
++To register all exchanges in one call (ASP.NET Core / hosted services):
+ 
+ ```bash
+-dotnet add package CryptoExchanges.Net.DependencyInjection
++dotnet add package CryptoExchanges.Net
+ ```
+ 
+ ---
+diff --git a/docs/library-usage.md b/docs/library-usage.md
+index a95000a..29d6cb1 100644
+--- a/docs/library-usage.md
++++ b/docs/library-usage.md
+@@ -250,8 +250,14 @@ IReadOnlyList<Trade> myTrades = await client.Account.GetTradeHistoryAsync(
+ 
+ ### Register all exchanges at once
+ 
++```bash
++dotnet add package CryptoExchanges.Net
++```
++
+ ```csharp
+ // Program.cs
++using CryptoExchanges.Net;
++
+ builder.Services.AddCryptoExchanges(opt =>
+ {
+     opt.BinanceApiKey    = builder.Configuration["Binance:ApiKey"];
+@@ -271,7 +277,7 @@ builder.Services.AddCryptoExchanges(opt =>
+ 
+ ```csharp
+ // AddBinanceExchange / AddBybitExchange / AddOkxExchange / AddBitgetExchange
+-// live in the per-exchange package, not DependencyInjection
++// live in the per-exchange package (CryptoExchanges.Net.Binance, etc.), not the meta-package
+ builder.Services.AddBinanceExchange(opt =>
+ {
+     opt.ApiKey    = builder.Configuration["Binance:ApiKey"];
+diff --git a/nazgul/plan.md b/nazgul/plan.md
+index c7dc6be..dc6e6eb 100644
+--- a/nazgul/plan.md
++++ b/nazgul/plan.md
+@@ -1,8 +1,8 @@
+ # Nazgul Plan — FEAT-007
+ 
+ ## Recovery Pointer
+-**Active task**: TASK-069 (PLANNED) — Docs + CHANGELOG + version bump → `0.5.0-preview.1`
+-**Next action**: Claim TASK-069, update README/NUGET_README/docs/*.md + CHANGELOG + Directory.Build.props.
++**Active task**: TASK-069 (IN_PROGRESS) — Docs + CHANGELOG + version bump → `0.5.0-preview.1`
++**Next action**: Edit all consumer-facing docs + CHANGELOG + Directory.Build.props; then set IMPLEMENTED.
+ 
+ ─── ◈ NAZGUL ▸ PLANNING ────────────────────────────────
+ 
+diff --git a/nazgul/tasks/TASK-069.md b/nazgul/tasks/TASK-069.md
+index 71b3e0e..f06f5d2 100644
+--- a/nazgul/tasks/TASK-069.md
++++ b/nazgul/tasks/TASK-069.md
+@@ -1,6 +1,6 @@
+ ---
+ id: TASK-069
+-status: PLANNED
++status: IN_PROGRESS
+ depends_on: [TASK-068]
+ ---
+ # TASK-069: Docs + CHANGELOG + version bump to `0.5.0-preview.1`
+@@ -15,8 +15,8 @@ depends_on: [TASK-068]
+ - **Wave**: 5
+ - **Traces to**: PRD-FEAT-007 AC-1, AC-8; TRD-FEAT-007 §"Step 5 — Docs and version"; FEAT-007 spec §"Scope — In" #5, #6
+ - **Created at**: 2026-06-21T18:00:00Z
+-- **Claimed at**:
+-- **Base SHA**:
++- **Claimed at**: 2026-06-21T19:30:00Z
++- **Base SHA**: 3756e53
+ - **Implemented at**:
+ - **Completed at**:
+ - **Blocked at**:

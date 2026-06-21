@@ -1,6 +1,6 @@
 ---
 id: TASK-069
-status: IN_PROGRESS
+status: IMPLEMENTED
 depends_on: [TASK-068]
 ---
 # TASK-069: Docs + CHANGELOG + version bump to `0.5.0-preview.1`
@@ -17,7 +17,7 @@ depends_on: [TASK-068]
 - **Created at**: 2026-06-21T18:00:00Z
 - **Claimed at**: 2026-06-21T19:30:00Z
 - **Base SHA**: 3756e53
-- **Implemented at**:
+- **Implemented at**: 2026-06-21T19:45:00Z
 - **Completed at**:
 - **Blocked at**:
 - **Retry count**: 0/3
@@ -62,9 +62,9 @@ post-merge step (note it in CHANGELOG Migration prose only if it already fits th
 otherwise omit). No source/test code changes in this task.
 
 ## Acceptance Criteria
-- [ ] `Directory.Build.props` `<Version>` is `0.5.0-preview.1`; `CHANGELOG.md` has a `## [0.5.0-preview.1]` section with the rename (BREAKING), a two-line migration (package swap + using swap, `AddCryptoExchanges` unchanged), and the test-decoupling internal note.
-- [ ] `grep -r 'CryptoExchanges.Net.DependencyInjection' README.md NUGET_README.md docs/` returns zero matches; each shows `dotnet add package CryptoExchanges.Net` / `using CryptoExchanges.Net;` as the all-exchanges entry point.
-- [ ] No opsec/roadmap leakage introduced; `dotnet build CryptoExchanges.Net.sln` remains 0W/0E (docs/props-only change does not regress the build).
+- [x] `Directory.Build.props` `<Version>` is `0.5.0-preview.1`; `CHANGELOG.md` has a `## [0.5.0-preview.1]` section with the rename (BREAKING), a two-line migration (package swap + using swap, `AddCryptoExchanges` unchanged), and the test-decoupling internal note.
+- [x] `grep -r 'CryptoExchanges.Net.DependencyInjection' README.md NUGET_README.md docs/` returns zero matches; each shows `dotnet add package CryptoExchanges.Net` / `using CryptoExchanges.Net;` as the all-exchanges entry point.
+- [x] No opsec/roadmap leakage introduced; `dotnet build CryptoExchanges.Net.sln` remains 0W/0E (docs/props-only change does not regress the build).
 
 ## Pattern Reference
 - Version source of truth: `Directory.Build.props:20`.
@@ -93,6 +93,22 @@ otherwise omit). No source/test code changes in this task.
 
 ## Commits
 
+- `5d0ec52` — feat(FEAT-007): TASK-069 — docs + CHANGELOG + version 0.5.0-preview.1
+
 ## Implementation Log
+
+- Bumped `Directory.Build.props` `<Version>` from `0.4.0-preview.1` to `0.5.0-preview.1`.
+- Added `## [0.5.0-preview.1] — 2026-06-21` CHANGELOG section with BREAKING rename note,
+  two-line migration (package swap + using swap), and internal test-decoupling note.
+- Updated comparison links footer in CHANGELOG.md.
+- README.md: NuGet badge swapped to `CryptoExchanges.Net`.
+- NUGET_README.md: badge + package table row + install command updated.
+- docs/architecture.md: layer diagram box + prose paragraph updated (2 occurrences).
+- docs/getting-started.md: install command updated; prose updated ("all four" → "all exchanges").
+- docs/exchanges.md: prose + `using` in "Register all exchanges at once" section; added
+  `dotnet add package CryptoExchanges.Net` bash block.
+- docs/library-usage.md: updated code comment; added `dotnet add package CryptoExchanges.Net`
+  + `using CryptoExchanges.Net;` to the DI "Register all exchanges at once" section.
+- Build: 0W/0E. Non-integration suite: all passed.
 
 ## Review Results

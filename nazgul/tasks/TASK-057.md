@@ -1,6 +1,6 @@
 ---
 id: TASK-057
-status: CHANGES_REQUESTED
+status: IMPLEMENTED
 depends_on: [TASK-056]
 ---
 # TASK-057: KC-API passphrase-v2 signing service + mark-and-strip signing handler
@@ -17,7 +17,7 @@ depends_on: [TASK-056]
 - **Created at**: 2026-06-20T19:00:00Z
 - **Claimed at**: 2026-06-21T00:00:00Z
 - **Base SHA**: 9da0981
-- **Implemented at**: 2026-06-21T00:00:00Z
+- **Implemented at**: 2026-06-21T08:00:00Z
 - **Completed at**:
 - **Blocked at**:
 - **Retry count**: 1/3
@@ -90,6 +90,19 @@ Tests (`KucoinSigningTests.cs`) — golden-value + behavior, no network:
 - a754e9f feat(FEAT-006): TASK-057 IMPLEMENTED (KC-API passphrase-v2 signing + handler)
 
 ## Implementation Log
+
+### 2026-06-21 — Retry 1: DIP fix (IKucoinSignatureService)
+
+- Blocking finding resolved: introduced `IKucoinSignatureService : ISignatureService` in `Auth/`
+  with `string SignPassphrase(string passphrase)` (full XML docs).
+- `KucoinSignatureService` now implements `IKucoinSignatureService` (instead of `ISignatureService`
+  directly); all member implementations use `<inheritdoc/>` unchanged.
+- `KucoinSigningHandler` primary constructor parameter changed from concrete `KucoinSignatureService`
+  to `IKucoinSignatureService` — DIP satisfied, handler is now testable with any mock that
+  implements the interface.
+- Test helper `BuildHandler` compiles unchanged: `new KucoinSignatureService(secret)` satisfies
+  `IKucoinSignatureService` via the new inheritance chain.
+- Build: 0W/0E. KuCoin unit tests: 44/44 passed.
 
 ### 2026-06-21 — Initial implementation
 

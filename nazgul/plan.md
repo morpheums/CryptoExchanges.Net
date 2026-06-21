@@ -56,7 +56,7 @@ Authoritative inputs (read fully before any task):
 |----------|------------|------|------------------------------------------------------------------------------|
 | TASK-056 | ✦ DONE     | 1    | Scaffold `CryptoExchanges.Net.Kucoin` + Unit/Integration test projects (OKX clone) |
 | TASK-061 | ✦ DONE     | 1    | ADR-002 streaming endpoint seam → async `ResolveConnectionAsync` + migrate Binance |
-| TASK-057 | ⚠ CHANGES  | 2    | KC-API passphrase-v2 signing service + mark-and-strip signing handler        |
+| TASK-057 | ✦ IMPL     | 2    | KC-API passphrase-v2 signing service + mark-and-strip signing handler        |
 | TASK-058 | ◇ READY    | 2    | Bespoke `ISymbolMapper` + REST wire DTOs + DeltaMapper profiles + parsers    |
 | TASK-059 | ◇ PLANNED  | 3    | REST services (market/account/trading) + http client + composer + entry     |
 | TASK-060 | ◇ PLANNED  | 4    | `AddKucoinExchange` DI + `AddCryptoExchanges` + MCP wiring                   |

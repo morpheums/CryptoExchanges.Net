@@ -9,7 +9,7 @@ namespace CryptoExchanges.Net.Kucoin.Auth;
 /// <c>timestamp + METHOD + requestPath + body</c>, identical in structure to OKX, but with a Unix
 /// epoch <strong>millisecond</strong> timestamp (not ISO-8601) and an HMAC-signed passphrase.
 /// </summary>
-internal sealed class KucoinSignatureService(string secretKey) : ISignatureService
+internal sealed class KucoinSignatureService(string secretKey) : IKucoinSignatureService
 {
     private readonly string _secretKey = InitializeSecretKey(secretKey);
 

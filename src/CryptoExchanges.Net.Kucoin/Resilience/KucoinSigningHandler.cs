@@ -18,7 +18,7 @@ namespace CryptoExchanges.Net.Kucoin.Resilience;
 /// <param name="signatureService">Computes the base64 HMAC-SHA256 signature over the KuCoin prehash string and signs the passphrase.</param>
 /// <param name="timeOffset">Returns the current server-time offset in milliseconds, applied to each timestamp.</param>
 internal sealed class KucoinSigningHandler(
-    string apiKey, string passphrase, KucoinSignatureService signatureService, Func<long> timeOffset)
+    string apiKey, string passphrase, IKucoinSignatureService signatureService, Func<long> timeOffset)
     : DelegatingHandler
 {
     /// <inheritdoc />

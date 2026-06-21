@@ -1,0 +1,718 @@
+diff --git a/src/CryptoExchanges.Net.Kucoin/Dtos/Streaming/BulletPublicDto.cs b/src/CryptoExchanges.Net.Kucoin/Dtos/Streaming/BulletPublicDto.cs
+new file mode 100644
+index 0000000..bc26609
+--- /dev/null
++++ b/src/CryptoExchanges.Net.Kucoin/Dtos/Streaming/BulletPublicDto.cs
+@@ -0,0 +1,34 @@
++namespace CryptoExchanges.Net.Kucoin.Dtos.Streaming;
++
++/// <summary>
++/// Payload returned by <c>POST /api/v1/bullet-public</c> — the public WebSocket
++/// negotiation endpoint. Wrapped in a <see cref="ResponseDto{T}"/> envelope.
++/// </summary>
++internal sealed record BulletPublicDto
++{
++    /// <summary>Short-lived connection token to embed in the WebSocket URI query string.</summary>
++    [JsonPropertyName("token")]
++    public string Token { get; init; } = string.Empty;
++
++    /// <summary>List of candidate WebSocket instance servers. The client picks the first entry.</summary>
++    [JsonPropertyName("instanceServers")]
++    public List<InstanceServerDto> InstanceServers { get; init; } = [];
++}
++
++/// <summary>
++/// A single WebSocket server entry inside <see cref="BulletPublicDto.InstanceServers"/>.
++/// </summary>
++internal sealed record InstanceServerDto
++{
++    /// <summary>WebSocket endpoint URL (e.g. <c>wss://ws-api-spot.kucoin.com/</c>).</summary>
++    [JsonPropertyName("endpoint")]
++    public string Endpoint { get; init; } = string.Empty;
++
++    /// <summary>Server-dictated client-ping interval in milliseconds.</summary>
++    [JsonPropertyName("pingInterval")]
++    public int PingInterval { get; init; }
++
++    /// <summary>Server-dictated ping timeout in milliseconds.</summary>
++    [JsonPropertyName("pingTimeout")]
++    public int PingTimeout { get; init; }
++}
+diff --git a/src/CryptoExchanges.Net.Kucoin/Dtos/Streaming/StreamDepthDto.cs b/src/CryptoExchanges.Net.Kucoin/Dtos/Streaming/StreamDepthDto.cs
+new file mode 100644
+index 0000000..75623b9
+--- /dev/null
++++ b/src/CryptoExchanges.Net.Kucoin/Dtos/Streaming/StreamDepthDto.cs
+@@ -0,0 +1,46 @@
++namespace CryptoExchanges.Net.Kucoin.Dtos.Streaming;
++
++/// <summary>
++/// The <c>data</c> payload of a KuCoin WebSocket order-book update frame
++/// (<c>topic: /market/level2:{symbol}</c>). Delivers incremental changes; prices and
++/// sizes are string-encoded. Each entry is <c>[price, size]</c> as strings.
++/// </summary>
++internal sealed record StreamDepthDto
++{
++    /// <summary>Sequence number at the start of this change.</summary>
++    [JsonPropertyName("sequenceStart")]
++    public long SequenceStart { get; init; }
++
++    /// <summary>Sequence number at the end of this change.</summary>
++    [JsonPropertyName("sequenceEnd")]
++    public long SequenceEnd { get; init; }
++
++    /// <summary>Trading symbol wire string (e.g. <c>BTC-USDT</c>).</summary>
++    [JsonPropertyName("symbol")]
++    public string Symbol { get; init; } = string.Empty;
++
++    /// <summary>
++    /// Changed bid and ask levels: each inner list is <c>[price, size, sequence]</c> as strings.
++    /// A size of <c>"0"</c> means the level was removed.
++    /// </summary>
++    [JsonPropertyName("changes")]
++    public DepthChangesDto Changes { get; init; } = new();
++}
++
++/// <summary>
++/// The nested changes object inside <see cref="StreamDepthDto"/>, carrying bid and ask level changes.
++/// </summary>
++internal sealed record DepthChangesDto
++{
++    /// <summary>
++    /// Changed ask levels: each inner list is <c>[price, size, sequence]</c> as strings.
++    /// </summary>
++    [JsonPropertyName("asks")]
++    public List<List<string>> Asks { get; init; } = [];
++
++    /// <summary>
++    /// Changed bid levels: each inner list is <c>[price, size, sequence]</c> as strings.
++    /// </summary>
++    [JsonPropertyName("bids")]
++    public List<List<string>> Bids { get; init; } = [];
++}
+diff --git a/src/CryptoExchanges.Net.Kucoin/Dtos/Streaming/StreamKlineDto.cs b/src/CryptoExchanges.Net.Kucoin/Dtos/Streaming/StreamKlineDto.cs
+new file mode 100644
+index 0000000..32a6678
+--- /dev/null
++++ b/src/CryptoExchanges.Net.Kucoin/Dtos/Streaming/StreamKlineDto.cs
+@@ -0,0 +1,21 @@
++namespace CryptoExchanges.Net.Kucoin.Dtos.Streaming;
++
++/// <summary>
++/// The <c>data</c> payload of a KuCoin WebSocket kline/candle frame
++/// (<c>topic: /market/candles:{symbol}_{interval}</c>). The payload carries the
++/// interval string and the OHLCV bar as a string array.
++/// </summary>
++internal sealed record StreamKlineDto
++{
++    /// <summary>Trading symbol wire string (e.g. <c>BTC-USDT</c>).</summary>
++    [JsonPropertyName("symbol")]
++    public string Symbol { get; init; } = string.Empty;
++
++    /// <summary>Candle interval string (e.g. <c>"1min"</c>).</summary>
++    [JsonPropertyName("candles")]
++    public List<string> Candles { get; init; } = [];
++
++    /// <summary>Frame timestamp in unix seconds (string-encoded).</summary>
++    [JsonPropertyName("time")]
++    public string Time { get; init; } = "0";
++}
+diff --git a/src/CryptoExchanges.Net.Kucoin/Dtos/Streaming/StreamTickerDto.cs b/src/CryptoExchanges.Net.Kucoin/Dtos/Streaming/StreamTickerDto.cs
+new file mode 100644
+index 0000000..fdd076d
+--- /dev/null
++++ b/src/CryptoExchanges.Net.Kucoin/Dtos/Streaming/StreamTickerDto.cs
+@@ -0,0 +1,61 @@
++namespace CryptoExchanges.Net.Kucoin.Dtos.Streaming;
++
++/// <summary>
++/// The <c>data</c> payload of a KuCoin WebSocket ticker frame
++/// (<c>topic: /market/ticker:{symbol}</c>). Decimal fields are string-encoded per
++/// the KuCoin V2 API convention.
++/// </summary>
++internal sealed record StreamTickerDto
++{
++    /// <summary>Sequence number for ordering frames.</summary>
++    [JsonPropertyName("sequence")]
++    public string Sequence { get; init; } = "0";
++
++    /// <summary>Last traded price.</summary>
++    [JsonPropertyName("price")]
++    public string Price { get; init; } = "0";
++
++    /// <summary>Best bid price.</summary>
++    [JsonPropertyName("bestBid")]
++    public string BestBid { get; init; } = "0";
++
++    /// <summary>Best bid size.</summary>
++    [JsonPropertyName("bestBidSize")]
++    public string BestBidSize { get; init; } = "0";
++
++    /// <summary>Best ask price.</summary>
++    [JsonPropertyName("bestAsk")]
++    public string BestAsk { get; init; } = "0";
++
++    /// <summary>Best ask size.</summary>
++    [JsonPropertyName("bestAskSize")]
++    public string BestAskSize { get; init; } = "0";
++
++    /// <summary>24h open price (price 24 hours ago).</summary>
++    [JsonPropertyName("open")]
++    public string Open { get; init; } = "0";
++
++    /// <summary>24h high price.</summary>
++    [JsonPropertyName("high")]
++    public string High { get; init; } = "0";
++
++    /// <summary>24h low price.</summary>
++    [JsonPropertyName("low")]
++    public string Low { get; init; } = "0";
++
++    /// <summary>24h base-asset volume.</summary>
++    [JsonPropertyName("vol")]
++    public string Vol { get; init; } = "0";
++
++    /// <summary>24h quote-asset volume.</summary>
++    [JsonPropertyName("volValue")]
++    public string VolValue { get; init; } = "0";
++
++    /// <summary>Trading symbol wire string (e.g. <c>BTC-USDT</c>).</summary>
++    [JsonPropertyName("symbol")]
++    public string Symbol { get; init; } = string.Empty;
++
++    /// <summary>Frame timestamp in unix nanoseconds (string-encoded).</summary>
++    [JsonPropertyName("time")]
++    public string Time { get; init; } = "0";
++}
+diff --git a/src/CryptoExchanges.Net.Kucoin/Dtos/Streaming/StreamTradeDto.cs b/src/CryptoExchanges.Net.Kucoin/Dtos/Streaming/StreamTradeDto.cs
+new file mode 100644
+index 0000000..dc0f794
+--- /dev/null
++++ b/src/CryptoExchanges.Net.Kucoin/Dtos/Streaming/StreamTradeDto.cs
+@@ -0,0 +1,51 @@
++namespace CryptoExchanges.Net.Kucoin.Dtos.Streaming;
++
++/// <summary>
++/// The <c>data</c> payload of a KuCoin WebSocket trade/match frame
++/// (<c>topic: /market/match:{symbol}</c>). Decimal fields are string-encoded.
++/// </summary>
++internal sealed record StreamTradeDto
++{
++    /// <summary>Sequence number for ordering frames.</summary>
++    [JsonPropertyName("sequence")]
++    public string Sequence { get; init; } = "0";
++
++    /// <summary>Trade execution type (e.g. <c>"trade"</c>).</summary>
++    [JsonPropertyName("type")]
++    public string Type { get; init; } = string.Empty;
++
++    /// <summary>Trading symbol wire string (e.g. <c>BTC-USDT</c>).</summary>
++    [JsonPropertyName("symbol")]
++    public string Symbol { get; init; } = string.Empty;
++
++    /// <summary>Maker order ID.</summary>
++    [JsonPropertyName("makerOrderId")]
++    public string MakerOrderId { get; init; } = string.Empty;
++
++    /// <summary>Taker order ID.</summary>
++    [JsonPropertyName("takerOrderId")]
++    public string TakerOrderId { get; init; } = string.Empty;
++
++    /// <summary>Trade execution price.</summary>
++    [JsonPropertyName("price")]
++    public string Price { get; init; } = "0";
++
++    /// <summary>Trade size (quantity in base currency).</summary>
++    [JsonPropertyName("size")]
++    public string Size { get; init; } = "0";
++
++    /// <summary>
++    /// Taker order side: <c>"buy"</c> or <c>"sell"</c>.
++    /// The side is from the taker's perspective.
++    /// </summary>
++    [JsonPropertyName("side")]
++    public string Side { get; init; } = string.Empty;
++
++    /// <summary>Unique trade ID.</summary>
++    [JsonPropertyName("tradeId")]
++    public string TradeId { get; init; } = string.Empty;
++
++    /// <summary>Trade timestamp in unix nanoseconds (string-encoded).</summary>
++    [JsonPropertyName("time")]
++    public string Time { get; init; } = "0";
++}
+diff --git a/src/CryptoExchanges.Net.Kucoin/StreamServiceCollectionExtensions.cs b/src/CryptoExchanges.Net.Kucoin/StreamServiceCollectionExtensions.cs
+new file mode 100644
+index 0000000..19f7d15
+--- /dev/null
++++ b/src/CryptoExchanges.Net.Kucoin/StreamServiceCollectionExtensions.cs
+@@ -0,0 +1,50 @@
++using CryptoExchanges.Net.Kucoin.Streaming;
++using CryptoExchanges.Net.Core.Enums;
++using CryptoExchanges.Net.Http.Streaming;
++using DeltaMapper;
++using Microsoft.Extensions.DependencyInjection;
++
++namespace CryptoExchanges.Net.Kucoin;
++
++/// <summary>
++/// Dependency-injection extensions for registering the KuCoin WebSocket streaming client.
++/// Opt-in: REST-only consumers pay nothing for socket machinery.
++/// </summary>
++public static class StreamServiceCollectionExtensions
++{
++    internal const string KucoinClientName = "kucoin";
++
++    /// <summary>
++    /// Registers the KuCoin WebSocket streaming client and all its dependencies as per-exchange
++    /// keyed singletons. Requires <c>AddKucoinExchange</c> to be called first so the keyed
++    /// <c>ISymbolMapper</c> and <c>IMapper</c> are already available in the container. The
++    /// bullet-public HTTP call reuses the named <c>kucoin</c> HttpClient (unauthenticated POST).
++    /// Options are validated with fail-fast (<c>ValidateOnStart</c>).
++    /// </summary>
++    /// <param name="services">The <see cref="IServiceCollection"/> to add services to.</param>
++    /// <param name="configure">An optional action to configure <see cref="KucoinStreamOptions"/>.</param>
++    /// <returns>The <see cref="IServiceCollection"/> for chaining.</returns>
++    public static IServiceCollection AddKucoinStreams(
++        this IServiceCollection services,
++        Action<KucoinStreamOptions>? configure = null) =>
++        StreamServiceRegistration.AddStreams<KucoinStreamOptions>(
++            services,
++            ExchangeId.Kucoin,
++            protocolFactory: sp =>
++            {
++                // Reuse the named kucoin HttpClient (already registered by AddKucoinExchange).
++                // Bullet-public is unauthenticated (signed: false), so the signing handler is a no-op.
++                var httpClientFactory = sp.GetRequiredService<System.Net.Http.IHttpClientFactory>();
++                var httpClient = httpClientFactory.CreateClient(KucoinClientName);
++                IKucoinHttpClient http = new KucoinHttpClient(httpClient);
++                var bulletClient = new KucoinBulletPublicClient(http);
++                return new KucoinStreamProtocol(bulletClient);
++            },
++            decoderRegistryFactory: sp =>
++            {
++                var mapper = sp.GetRequiredKeyedService<IMapper>(ExchangeId.Kucoin);
++                var symbolMapper = sp.GetRequiredKeyedService<ISymbolMapper>(ExchangeId.Kucoin);
++                return KucoinStreamDecoders.Build(mapper, symbolMapper);
++            },
++            configure: configure);
++}
+diff --git a/src/CryptoExchanges.Net.Kucoin/Streaming/KucoinBulletPublicClient.cs b/src/CryptoExchanges.Net.Kucoin/Streaming/KucoinBulletPublicClient.cs
+new file mode 100644
+index 0000000..2bc0b58
+--- /dev/null
++++ b/src/CryptoExchanges.Net.Kucoin/Streaming/KucoinBulletPublicClient.cs
+@@ -0,0 +1,51 @@
++using CryptoExchanges.Net.Kucoin.Dtos;
++using CryptoExchanges.Net.Kucoin.Dtos.Streaming;
++
++namespace CryptoExchanges.Net.Kucoin.Streaming;
++
++/// <summary>
++/// Abstraction for the bullet-public negotiation call so tests can fake the HTTP round-trip.
++/// </summary>
++internal interface IKucoinBulletPublicClient
++{
++    /// <summary>
++    /// Calls <c>POST /api/v1/bullet-public</c> (unauthenticated) and returns the
++    /// <see cref="BulletPublicDto"/> payload.
++    /// </summary>
++    /// <param name="ct">Cancellation token to abort the HTTP call.</param>
++    /// <returns>The negotiation response from KuCoin.</returns>
++    /// <exception cref="OperationCanceledException">Thrown if <paramref name="ct"/> is cancelled.</exception>
++    Task<BulletPublicDto> NegotiateAsync(CancellationToken ct);
++}
++
++/// <summary>
++/// Posts to <c>/api/v1/bullet-public</c> via the resilient HTTP client to obtain a short-lived
++/// connection token and the WebSocket server list. Unauthenticated — no signing required.
++/// </summary>
++internal sealed class KucoinBulletPublicClient : IKucoinBulletPublicClient
++{
++    private readonly IKucoinHttpClient _http;
++
++    /// <summary>
++    /// Initialises the bullet-public client with the injected resilient HTTP client.
++    /// </summary>
++    /// <param name="http">The KuCoin resilient HTTP client.</param>
++    public KucoinBulletPublicClient(IKucoinHttpClient http)
++    {
++        ArgumentNullException.ThrowIfNull(http);
++        _http = http;
++    }
++
++    /// <inheritdoc />
++    public async Task<BulletPublicDto> NegotiateAsync(CancellationToken ct)
++    {
++        var response = await _http
++            .PostAsync<ResponseDto<BulletPublicDto>>("/api/v1/bullet-public", parameters: null, signed: false, ct: ct)
++            .ConfigureAwait(false);
++
++        if (response?.Data is null)
++            throw new InvalidOperationException("bullet-public response returned no data.");
++
++        return response.Data;
++    }
++}
+diff --git a/src/CryptoExchanges.Net.Kucoin/Streaming/KucoinStreamDecoders.cs b/src/CryptoExchanges.Net.Kucoin/Streaming/KucoinStreamDecoders.cs
+new file mode 100644
+index 0000000..6bbcdaf
+--- /dev/null
++++ b/src/CryptoExchanges.Net.Kucoin/Streaming/KucoinStreamDecoders.cs
+@@ -0,0 +1,133 @@
++using System.Text.Json;
++using CryptoExchanges.Net.Http.Streaming;
++using CryptoExchanges.Net.Kucoin.Dtos.Streaming;
++using CryptoExchanges.Net.Kucoin.Internal;
++using DeltaMapper;
++
++namespace CryptoExchanges.Net.Kucoin.Streaming;
++
++/// <summary>
++/// Builds the <see cref="StreamDecoderRegistry"/> for the KuCoin public WebSocket streams.
++/// Each closure deserializes the KuCoin push-frame <c>data</c> payload into the venue DTO
++/// and maps it to the matching <see cref="CryptoExchanges.Net.Core.Models"/> type, reusing
++/// the keyed <see cref="IMapper"/> and bespoke <see cref="ISymbolMapper"/>.
++/// </summary>
++/// <remarks>
++/// Binding constraint K1: DTO deserialization, DeltaMapper projection, and symbol resolution
++/// all happen here in the Kucoin package. The Http engine receives only the resulting opaque
++/// <see cref="StreamDecoderRegistry"/> of <c>Func&lt;ReadOnlyMemory&lt;byte&gt;, object&gt;</c>.
++/// </remarks>
++internal static class KucoinStreamDecoders
++{
++    private static readonly JsonSerializerOptions JsonOpts = new()
++    {
++        PropertyNameCaseInsensitive = true,
++    };
++
++    /// <summary>
++    /// Builds a fully-populated <see cref="StreamDecoderRegistry"/> with decoders for
++    /// all four stream kinds, capturing the provided mapper and symbol mapper as closures.
++    /// </summary>
++    /// <param name="mapper">The keyed DeltaMapper instance from <c>AddKucoinExchange</c>.</param>
++    /// <param name="symbolMapper">The bespoke keyed symbol mapper from <c>AddKucoinExchange</c>.</param>
++    /// <returns>A registry ready for injection into the engine.</returns>
++    public static StreamDecoderRegistry Build(IMapper mapper, ISymbolMapper symbolMapper)
++    {
++        ArgumentNullException.ThrowIfNull(mapper);
++        ArgumentNullException.ThrowIfNull(symbolMapper);
++
++        var registry = new StreamDecoderRegistry();
++
++        // Ticker uses DeltaMapper (StreamTickerDto -> Ticker profile in KucoinResponseProfile).
++        registry.Register(StreamKind.Ticker, bytes =>
++        {
++            var dto = DeserializeData<StreamTickerDto>(bytes)!;
++            return mapper.Map<StreamTickerDto, Ticker>(dto);
++        });
++
++        // Trade is hand-mapped (matches the convention for the match stream).
++        registry.Register(StreamKind.Trade, bytes =>
++        {
++            var dto = DeserializeData<StreamTradeDto>(bytes)!;
++            var symbol = symbolMapper.FromWire(dto.Symbol);
++            // The taker side identifies the aggressor: "buy" taker → seller is maker (IsBuyerMaker = false).
++            var isBuyerMaker = string.Equals(dto.Side, "sell", StringComparison.OrdinalIgnoreCase);
++            var tsMs = KucoinValueParsers.ParseNsToMs(dto.Time);
++            return new Trade(
++                Symbol: symbol,
++                Id: dto.TradeId,
++                Price: KucoinValueParsers.ParseDecimal(dto.Price),
++                Quantity: KucoinValueParsers.ParseDecimal(dto.Size),
++                Timestamp: tsMs > 0 ? DateTimeOffset.FromUnixTimeMilliseconds(tsMs) : null,
++                IsBuyerMaker: isBuyerMaker);
++        });
++
++        // Hand-mapped following the REST GetOrderBookAsync convention.
++        // KuCoin level2 stream delivers incremental diffs; each entry is [price, size, sequence].
++        registry.Register(StreamKind.OrderBook, bytes =>
++        {
++            var dto = DeserializeData<StreamDepthDto>(bytes)!;
++            var symbol = symbolMapper.FromWire(dto.Symbol);
++            var bidEntries = dto.Changes.Bids;
++            var bids = new List<OrderBookEntry>(bidEntries.Count);
++            foreach (var b in bidEntries)
++                bids.Add(new OrderBookEntry(KucoinValueParsers.ParseDecimal(b[0]), KucoinValueParsers.ParseDecimal(b[1])));
++            var askEntries = dto.Changes.Asks;
++            var asks = new List<OrderBookEntry>(askEntries.Count);
++            foreach (var a in askEntries)
++                asks.Add(new OrderBookEntry(KucoinValueParsers.ParseDecimal(a[0]), KucoinValueParsers.ParseDecimal(a[1])));
++            return new OrderBook(symbol, bids, asks, null, dto.SequenceEnd);
++        });
++
++        // Hand-mapped. KuCoin candles array: [startAt(s), open, close, high, low, vol, quoteVol].
++        // Indices: 0=startAt, 1=open, 2=close, 3=high, 4=low, 5=volume, 6=quoteVolume.
++        // The interval is encoded in the routing-key topic but not in the data payload;
++        // it is set to null here as the decoder receives only the data bytes.
++        registry.Register(StreamKind.Kline, bytes =>
++        {
++            var dto = DeserializeData<StreamKlineDto>(bytes)!;
++            var c = dto.Candles;
++            var openTimeSec = c.Count > 0 ? KucoinValueParsers.ParseMs(c[0]) : 0L;
++            var openTime = openTimeSec > 0
++                ? DateTimeOffset.FromUnixTimeSeconds(openTimeSec)
++                : DateTimeOffset.MinValue;
++            return new Candlestick(
++                OpenTime: openTime,
++                // KuCoin does not send a separate close time in the streaming payload.
++                CloseTime: null,
++                Open: c.Count > 1 ? KucoinValueParsers.ParseDecimal(c[1]) : 0m,
++                High: c.Count > 3 ? KucoinValueParsers.ParseDecimal(c[3]) : 0m,
++                Low: c.Count > 4 ? KucoinValueParsers.ParseDecimal(c[4]) : 0m,
++                Close: c.Count > 2 ? KucoinValueParsers.ParseDecimal(c[2]) : 0m,
++                Volume: c.Count > 5 ? KucoinValueParsers.ParseDecimal(c[5]) : 0m,
++                QuoteVolume: c.Count > 6 ? KucoinValueParsers.ParseDecimal(c[6]) : 0m,
++                TradeCount: null,
++                Interval: null);
++        });
++
++        return registry;
++    }
++
++    /// <summary>
++    /// Parses the frame once. When a root-level <c>"data"</c> field is present (full push frame),
++    /// deserializes directly from the <see cref="JsonElement"/> — avoids re-serializing to bytes
++    /// and a second full parse. When absent (bare data payload, e.g. in tests), deserializes from
++    /// the raw span directly.
++    /// </summary>
++    private static T? DeserializeData<T>(ReadOnlyMemory<byte> frame)
++    {
++        try
++        {
++            var reader = new Utf8JsonReader(frame.Span);
++            using var doc = JsonDocument.ParseValue(ref reader);
++            if (doc.RootElement.TryGetProperty("data"u8, out var dataProp))
++                return dataProp.Deserialize<T>(JsonOpts);
++        }
++        catch (JsonException)
++        {
++            // Malformed outer wrapper: fall through and try deserializing as bare payload.
++        }
++
++        return JsonSerializer.Deserialize<T>(frame.Span, JsonOpts);
++    }
++}
+diff --git a/src/CryptoExchanges.Net.Kucoin/Streaming/KucoinStreamOptions.cs b/src/CryptoExchanges.Net.Kucoin/Streaming/KucoinStreamOptions.cs
+new file mode 100644
+index 0000000..5c163bc
+--- /dev/null
++++ b/src/CryptoExchanges.Net.Kucoin/Streaming/KucoinStreamOptions.cs
+@@ -0,0 +1,13 @@
++namespace CryptoExchanges.Net.Kucoin.Streaming;
++
++/// <summary>
++/// Configuration options for the KuCoin WebSocket streaming client.
++/// </summary>
++public sealed class KucoinStreamOptions
++{
++    /// <summary>
++    /// The REST base URL used to reach the bullet-public negotiation endpoint.
++    /// Default: <c>https://api.kucoin.com</c>.
++    /// </summary>
++    public string RestBaseUrl { get; set; } = "https://api.kucoin.com";
++}
+diff --git a/src/CryptoExchanges.Net.Kucoin/Streaming/KucoinStreamProtocol.cs b/src/CryptoExchanges.Net.Kucoin/Streaming/KucoinStreamProtocol.cs
+new file mode 100644
+index 0000000..35f4cc4
+--- /dev/null
++++ b/src/CryptoExchanges.Net.Kucoin/Streaming/KucoinStreamProtocol.cs
+@@ -0,0 +1,198 @@
++using System.Text;
++using CryptoExchanges.Net.Http.Streaming;
++
++namespace CryptoExchanges.Net.Kucoin.Streaming;
++
++/// <summary>
++/// Per-exchange protocol strategy for the KuCoin public WebSocket streams.
++/// Performs bullet-public token negotiation per connect, builds subscribe/unsubscribe
++/// wire JSON, classifies incoming frames, and describes the heartbeat policy.
++/// Pure data + classification — no timers or threads (binding constraint C1).
++/// </summary>
++internal sealed class KucoinStreamProtocol : IStreamProtocol
++{
++    private readonly IKucoinBulletPublicClient _bulletClient;
++    private long _nextId;
++
++    /// <summary>
++    /// Initialises the protocol with the injectable bullet-public client used to negotiate
++    /// the WebSocket token on every connection attempt.
++    /// </summary>
++    /// <param name="bulletClient">The bullet-public negotiation client.</param>
++    public KucoinStreamProtocol(IKucoinBulletPublicClient bulletClient)
++    {
++        ArgumentNullException.ThrowIfNull(bulletClient);
++        _bulletClient = bulletClient;
++    }
++
++    /// <inheritdoc />
++    /// <remarks>
++    /// Calls <c>POST /api/v1/bullet-public</c> on every connect/reconnect to obtain a fresh
++    /// short-lived token. The returned URI is validated to the expected KuCoin WS host scheme
++    /// (SSRF guard: only <c>wss://</c> URIs pointing to <c>*.kucoin.com</c> are accepted).
++    /// </remarks>
++    public async ValueTask<StreamConnectionInfo> ResolveConnectionAsync(CancellationToken ct)
++    {
++        var bullet = await _bulletClient.NegotiateAsync(ct).ConfigureAwait(false);
++
++        if (bullet.InstanceServers.Count == 0)
++            throw new InvalidOperationException("bullet-public response returned no instance servers.");
++
++        var server = bullet.InstanceServers[0];
++        ValidateWsEndpoint(server.Endpoint);
++
++        var connectId = Guid.NewGuid().ToString("N");
++        var uri = new Uri($"{server.Endpoint.TrimEnd('/')}?token={Uri.EscapeDataString(bullet.Token)}&connectId={connectId}");
++
++        var pingInterval = TimeSpan.FromMilliseconds(server.PingInterval);
++        var pingTimeout = TimeSpan.FromMilliseconds(server.PingTimeout);
++
++        // Build a timestamped ping payload each connection using the server-returned interval
++        // as the message ID. The static template is replaced with a per-connection timestamp.
++        var pingTs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString();
++        var pingPayload = Encoding.UTF8.GetBytes($"{{\"id\":\"{pingTs}\",\"type\":\"ping\"}}");
++
++        var heartbeat = new HeartbeatPolicy(
++            Direction: HeartbeatDirection.ClientPing,
++            Interval: pingInterval,
++            Timeout: pingTimeout,
++            ClientPingPayload: pingPayload,
++            PingFormat: PingFormat.Json);
++
++        return new StreamConnectionInfo(uri, heartbeat);
++    }
++
++    /// <inheritdoc />
++    public string BuildSubscribe(StreamRequest request)
++    {
++        ArgumentNullException.ThrowIfNull(request);
++        var topic = BuildTopic(request);
++        var id = Interlocked.Increment(ref _nextId);
++        return $"{{\"id\":\"{id}\",\"type\":\"subscribe\",\"topic\":\"{topic}\",\"privateChannel\":false,\"response\":true}}";
++    }
++
++    /// <inheritdoc />
++    public string BuildUnsubscribe(StreamRequest request)
++    {
++        ArgumentNullException.ThrowIfNull(request);
++        var topic = BuildTopic(request);
++        var id = Interlocked.Increment(ref _nextId);
++        return $"{{\"id\":\"{id}\",\"type\":\"unsubscribe\",\"topic\":\"{topic}\",\"privateChannel\":false,\"response\":true}}";
++    }
++
++    /// <inheritdoc />
++    public string RoutingKeyFor(StreamRequest request)
++    {
++        ArgumentNullException.ThrowIfNull(request);
++        // The routing key IS the topic string — the same token that Classify reads from the
++        // "topic" field of a KuCoin data frame. Both sides share one venue-native keyspace.
++        return BuildTopic(request);
++    }
++
++    /// <inheritdoc />
++    public StreamFrame Classify(ReadOnlySpan<byte> frame)
++    {
++        if (frame.IsEmpty)
++            return new StreamFrame(FrameKind.Error, null);
++
++        try
++        {
++            var reader = new Utf8JsonReader(frame);
++            using var doc = JsonDocument.ParseValue(ref reader);
++            var root = doc.RootElement;
++
++            if (!root.TryGetProperty("type"u8, out var typeProp))
++                return new StreamFrame(FrameKind.Error, null);
++
++            var type = typeProp.GetString();
++            return type switch
++            {
++                "message" => ClassifyDataFrame(root),
++                "ack" => new StreamFrame(FrameKind.Ack, null),
++                "pong" => new StreamFrame(FrameKind.Pong, null),
++                "error" => new StreamFrame(FrameKind.Error, null),
++                // "welcome" on connect, "notice" system notices — treat as Ack so the engine discards them.
++                "welcome" => new StreamFrame(FrameKind.Ack, null),
++                _ => new StreamFrame(FrameKind.Error, null)
++            };
++        }
++        catch (JsonException)
++        {
++            return new StreamFrame(FrameKind.Error, null);
++        }
++    }
++
++    // ── Helpers ───────────────────────────────────────────────────────────────
++
++    private static StreamFrame ClassifyDataFrame(JsonElement root)
++    {
++        if (!root.TryGetProperty("topic"u8, out var topicProp))
++            return new StreamFrame(FrameKind.Error, null);
++
++        var routingKey = topicProp.GetString();
++        return new StreamFrame(FrameKind.Data, routingKey);
++    }
++
++    /// <summary>
++    /// Builds the KuCoin venue topic string for the given subscription request.
++    /// </summary>
++    private static string BuildTopic(StreamRequest request) => request.Kind switch
++    {
++        StreamKind.Ticker => $"/market/ticker:{request.WireSymbol}",
++        StreamKind.Trade => $"/market/match:{request.WireSymbol}",
++        StreamKind.OrderBook => $"/market/level2:{request.WireSymbol}",
++        StreamKind.Kline when request.Interval is not null =>
++            $"/market/candles:{request.WireSymbol}_{MapInterval(request.Interval)}",
++        StreamKind.Kline => $"/market/candles:{request.WireSymbol}_1min",
++        _ => throw new ArgumentOutOfRangeException(nameof(request), request.Kind,
++            $"Unsupported stream kind: {request.Kind}")
++    };
++
++    /// <summary>
++    /// Maps a canonical <see cref="KlineInterval"/> enum name to the KuCoin wire interval notation.
++    /// </summary>
++    private static string MapInterval(string intervalToken) => intervalToken switch
++    {
++        nameof(KlineInterval.OneMinute) => "1min",
++        nameof(KlineInterval.ThreeMinutes) => "3min",
++        nameof(KlineInterval.FiveMinutes) => "5min",
++        nameof(KlineInterval.FifteenMinutes) => "15min",
++        nameof(KlineInterval.ThirtyMinutes) => "30min",
++        nameof(KlineInterval.OneHour) => "1hour",
++        nameof(KlineInterval.TwoHours) => "2hour",
++        nameof(KlineInterval.FourHours) => "4hour",
++        nameof(KlineInterval.SixHours) => "6hour",
++        nameof(KlineInterval.EightHours) => "8hour",
++        nameof(KlineInterval.TwelveHours) => "12hour",
++        nameof(KlineInterval.OneDay) => "1day",
++        nameof(KlineInterval.OneWeek) => "1week",
++        nameof(KlineInterval.OneMonth) => "1month",
++        nameof(KlineInterval.ThreeDays) => "3day",
++        _ => throw new ArgumentOutOfRangeException(nameof(intervalToken), intervalToken,
++            $"Unsupported interval: {intervalToken}")
++    };
++
++    /// <summary>
++    /// SSRF guard: only <c>wss://</c> URIs whose host ends with <c>.kucoin.com</c> or is exactly
++    /// <c>kucoin.com</c> are accepted. Prevents a compromised negotiation endpoint from redirecting
++    /// the client to an attacker-controlled host.
++    /// </summary>
++    private static void ValidateWsEndpoint(string endpoint)
++    {
++        if (!Uri.TryCreate(endpoint, UriKind.Absolute, out var parsed))
++            throw new InvalidOperationException(
++                $"bullet-public returned an invalid endpoint URI: '{endpoint}'.");
++
++        if (!string.Equals(parsed.Scheme, "wss", StringComparison.OrdinalIgnoreCase))
++            throw new InvalidOperationException(
++                $"bullet-public endpoint must use the 'wss' scheme; got '{parsed.Scheme}'.");
++
++        var host = parsed.Host;
++        var isKucoinHost = string.Equals(host, "kucoin.com", StringComparison.OrdinalIgnoreCase)
++            || host.EndsWith(".kucoin.com", StringComparison.OrdinalIgnoreCase);
++
++        if (!isKucoinHost)
++            throw new InvalidOperationException(
++                $"bullet-public endpoint host '{host}' is not a trusted KuCoin host.");
++    }
++}

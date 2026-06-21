@@ -88,6 +88,7 @@ Tests (`KucoinSigningTests.cs`) — golden-value + behavior, no network:
 ## Commits
 
 - a754e9f feat(FEAT-006): TASK-057 IMPLEMENTED (KC-API passphrase-v2 signing + handler)
+- d3bf817 feat(FEAT-006): TASK-057 IMPLEMENTED (DIP fix — IKucoinSignatureService)
 
 ## Implementation Log
 

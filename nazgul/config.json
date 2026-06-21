@@ -39,7 +39,9 @@
     {
       "feat_id": "FEAT-006",
       "objective": "KuCoin exchange integration (5th exchange) — full parity: REST market data + account + trading with KC-API passphrase-v2 HMAC signing (per-attempt re-sign, retry-only-on-GET), bespoke ISymbolMapper (BTC-USDT), DeltaMapper DTO→model, AddKucoinExchange DI + MCP wiring, plus public WebSocket streaming (ticker/trade/order-book/kline) with auto-reconnect+resubscribe. Generalizes the streaming endpoint seam for KuCoin's token-negotiated bullet-public connection while keeping Binance's static-URL path unchanged. Spot-only, public streams only, no order-book maintenance.",
-      "started_at": "2026-06-20T18:50:45Z"
+      "started_at": "2026-06-20T18:50:45Z",
+      "completed_at": "2026-06-21T14:27:48Z",
+      "pr": "#35"
     }
   ],
   "max_iterations": 40,

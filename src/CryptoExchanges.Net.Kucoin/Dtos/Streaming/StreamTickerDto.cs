@@ -1,61 +1,60 @@
 namespace CryptoExchanges.Net.Kucoin.Dtos.Streaming;
 
 /// <summary>
-/// The <c>data</c> payload of a KuCoin WebSocket ticker frame
-/// (<c>topic: /market/ticker:{symbol}</c>). Decimal fields are string-encoded per
-/// the KuCoin V2 API convention.
+/// The inner <c>data.data</c> payload of a KuCoin WebSocket snapshot ticker frame
+/// (<c>topic: /market/snapshot:{symbol}</c>). All numeric fields arrive as JSON numbers
+/// (not strings) per the snapshot channel wire format.
 /// </summary>
 internal sealed record StreamTickerDto
 {
-    /// <summary>Sequence number for ordering frames.</summary>
-    [JsonPropertyName("sequence")]
-    public string Sequence { get; init; } = "0";
-
-    /// <summary>Last traded price.</summary>
-    [JsonPropertyName("price")]
-    public string Price { get; init; } = "0";
-
-    /// <summary>Best bid price.</summary>
-    [JsonPropertyName("bestBid")]
-    public string BestBid { get; init; } = "0";
-
-    /// <summary>Best bid size.</summary>
-    [JsonPropertyName("bestBidSize")]
-    public string BestBidSize { get; init; } = "0";
-
-    /// <summary>Best ask price.</summary>
-    [JsonPropertyName("bestAsk")]
-    public string BestAsk { get; init; } = "0";
-
-    /// <summary>Best ask size.</summary>
-    [JsonPropertyName("bestAskSize")]
-    public string BestAskSize { get; init; } = "0";
-
-    /// <summary>24h open price (price 24 hours ago).</summary>
-    [JsonPropertyName("open")]
-    public string Open { get; init; } = "0";
-
-    /// <summary>24h high price.</summary>
-    [JsonPropertyName("high")]
-    public string High { get; init; } = "0";
-
-    /// <summary>24h low price.</summary>
-    [JsonPropertyName("low")]
-    public string Low { get; init; } = "0";
-
-    /// <summary>24h base-asset volume.</summary>
-    [JsonPropertyName("vol")]
-    public string Vol { get; init; } = "0";
-
-    /// <summary>24h quote-asset volume.</summary>
-    [JsonPropertyName("volValue")]
-    public string VolValue { get; init; } = "0";
-
     /// <summary>Trading symbol wire string (e.g. <c>BTC-USDT</c>).</summary>
     [JsonPropertyName("symbol")]
     public string Symbol { get; init; } = string.Empty;
 
-    /// <summary>Frame timestamp in unix nanoseconds (string-encoded).</summary>
-    [JsonPropertyName("time")]
-    public string Time { get; init; } = "0";
+    /// <summary>Last traded price.</summary>
+    [JsonPropertyName("lastTradedPrice")]
+    public decimal LastTradedPrice { get; init; }
+
+    /// <summary>Best bid price (<c>buy</c> in the snapshot payload).</summary>
+    [JsonPropertyName("buy")]
+    public decimal Buy { get; init; }
+
+    /// <summary>Best ask price (<c>sell</c> in the snapshot payload).</summary>
+    [JsonPropertyName("sell")]
+    public decimal Sell { get; init; }
+
+    /// <summary>24h high price.</summary>
+    [JsonPropertyName("high")]
+    public decimal High { get; init; }
+
+    /// <summary>24h low price.</summary>
+    [JsonPropertyName("low")]
+    public decimal Low { get; init; }
+
+    /// <summary>Opening price (price 24 hours ago).</summary>
+    [JsonPropertyName("open")]
+    public decimal Open { get; init; }
+
+    /// <summary>24h base-asset volume.</summary>
+    [JsonPropertyName("vol")]
+    public decimal Vol { get; init; }
+
+    /// <summary>24h quote-asset volume.</summary>
+    [JsonPropertyName("volValue")]
+    public decimal VolValue { get; init; }
+
+    /// <summary>Absolute price change over the last 24 hours.</summary>
+    [JsonPropertyName("changePrice")]
+    public decimal ChangePrice { get; init; }
+
+    /// <summary>
+    /// Fractional price-change rate over the last 24 hours (e.g. <c>0.0014</c> ≡ 0.14%).
+    /// Multiply by 100 to obtain a percentage.
+    /// </summary>
+    [JsonPropertyName("changeRate")]
+    public decimal ChangeRate { get; init; }
+
+    /// <summary>Frame timestamp in unix milliseconds (JSON number).</summary>
+    [JsonPropertyName("datetime")]
+    public long Datetime { get; init; }
 }

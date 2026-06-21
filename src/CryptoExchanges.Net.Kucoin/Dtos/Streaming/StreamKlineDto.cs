@@ -15,7 +15,7 @@ internal sealed record StreamKlineDto
     [JsonPropertyName("candles")]
     public List<string> Candles { get; init; } = [];
 
-    /// <summary>Frame timestamp in unix seconds (string-encoded).</summary>
+    /// <summary>Frame timestamp in unix nanoseconds (JSON number — not used by the decoder).</summary>
     [JsonPropertyName("time")]
-    public string Time { get; init; } = "0";
+    public long Time { get; init; }
 }

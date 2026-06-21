@@ -39,9 +39,11 @@ internal static class KucoinStreamDecoders
         var registry = new StreamDecoderRegistry();
 
         // Ticker uses DeltaMapper (StreamTickerDto -> Ticker profile in KucoinResponseProfile).
+        // The snapshot channel wraps the payload as data.data (double-nested), so we use
+        // DeserializeSnapshotData which navigates both levels.
         registry.Register(StreamKind.Ticker, bytes =>
         {
-            var dto = DeserializeData<StreamTickerDto>(bytes)!;
+            var dto = DeserializeSnapshotData<StreamTickerDto>(bytes)!;
             return mapper.Map<StreamTickerDto, Ticker>(dto);
         });
 
@@ -128,6 +130,41 @@ internal static class KucoinStreamDecoders
             // Malformed outer wrapper: fall through and try deserializing as bare payload.
         }
 
+        return JsonSerializer.Deserialize<T>(frame.Span, JsonOpts);
+    }
+
+    /// <summary>
+    /// Deserializes the double-nested snapshot payload (<c>data.data</c>) used by the
+    /// <c>/market/snapshot</c> channel. The outer wrapper is
+    /// <c>{"type":"message","topic":...,"data":{"sequence":...,"data":{...}}}</c>; this method
+    /// navigates to the inner <c>data.data</c> object. When the outer wrapper is absent (bare
+    /// inner payload as used in unit tests) it falls back to deserializing the raw bytes.
+    /// </summary>
+    private static T? DeserializeSnapshotData<T>(ReadOnlyMemory<byte> frame)
+    {
+        try
+        {
+            var reader = new Utf8JsonReader(frame.Span);
+            using var doc = JsonDocument.ParseValue(ref reader);
+            var root = doc.RootElement;
+
+            // Full push frame: {... "data": {"sequence":..., "data": {...}}}
+            if (root.TryGetProperty("data"u8, out var outerData))
+            {
+                if (outerData.TryGetProperty("data"u8, out var innerData))
+                    return innerData.Deserialize<T>(JsonOpts);
+
+                // Outer data present but no inner data — try deserializing outer as the payload
+                // (handles bare single-level test fixtures that already represent the inner object).
+                return outerData.Deserialize<T>(JsonOpts);
+            }
+        }
+        catch (JsonException)
+        {
+            // Malformed outer wrapper — fall through.
+        }
+
+        // Bare inner payload (unit-test fixture with no envelope at all).
         return JsonSerializer.Deserialize<T>(frame.Span, JsonOpts);
     }
 }

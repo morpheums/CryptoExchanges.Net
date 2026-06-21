@@ -138,7 +138,7 @@ internal sealed class KucoinStreamProtocol : IStreamProtocol
     /// </summary>
     private static string BuildTopic(StreamRequest request) => request.Kind switch
     {
-        StreamKind.Ticker => $"/market/ticker:{request.WireSymbol}",
+        StreamKind.Ticker => $"/market/snapshot:{request.WireSymbol}",
         StreamKind.Trade => $"/market/match:{request.WireSymbol}",
         StreamKind.OrderBook => $"/market/level2:{request.WireSymbol}",
         StreamKind.Kline when request.Interval is not null =>

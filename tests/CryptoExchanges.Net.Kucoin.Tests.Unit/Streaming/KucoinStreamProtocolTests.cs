@@ -136,7 +136,7 @@ public class KucoinStreamProtocolTests
     // ── BuildSubscribe ─────────────────────────────────────────────────────────
 
     [Fact]
-    public void BuildSubscribe_Ticker_ProducesCorrectTopic()
+    public void BuildSubscribe_Ticker_ProducesSnapshotTopic()
     {
         var protocol = MakeProtocol();
         var request = new StreamRequest(StreamKind.Ticker, "BTC-USDT");
@@ -145,7 +145,8 @@ public class KucoinStreamProtocolTests
         using var doc = JsonDocument.Parse(wire);
 
         doc.RootElement.GetProperty("type").GetString().Should().Be("subscribe");
-        doc.RootElement.GetProperty("topic").GetString().Should().Be("/market/ticker:BTC-USDT");
+        // Ticker uses /market/snapshot (the canonical 24h stats channel with symbol, not /market/ticker)
+        doc.RootElement.GetProperty("topic").GetString().Should().Be("/market/snapshot:BTC-USDT");
         doc.RootElement.GetProperty("privateChannel").GetBoolean().Should().BeFalse();
         doc.RootElement.GetProperty("response").GetBoolean().Should().BeTrue();
     }
@@ -210,7 +211,7 @@ public class KucoinStreamProtocolTests
         using var doc = JsonDocument.Parse(wire);
 
         doc.RootElement.GetProperty("type").GetString().Should().Be("unsubscribe");
-        doc.RootElement.GetProperty("topic").GetString().Should().Be("/market/ticker:BTC-USDT");
+        doc.RootElement.GetProperty("topic").GetString().Should().Be("/market/snapshot:BTC-USDT");
     }
 
     // ── RoutingKeyFor / Classify round-trip ────────────────────────────────────
@@ -220,13 +221,14 @@ public class KucoinStreamProtocolTests
     {
         var protocol = MakeProtocol();
         var request = new StreamRequest(StreamKind.Ticker, "BTC-USDT");
-        var frame = Utf8("{\"type\":\"message\",\"topic\":\"/market/ticker:BTC-USDT\",\"subject\":\"trade.ticker\",\"data\":{}}");
+        // Ticker uses /market/snapshot — this is the real KuCoin topic for the snapshot channel.
+        var frame = Utf8("{\"type\":\"message\",\"topic\":\"/market/snapshot:BTC-USDT\",\"subject\":\"trade.snapshot\",\"data\":{\"sequence\":\"1\",\"data\":{}}}");
 
         var subscribeKey = protocol.RoutingKeyFor(request);
         var classifiedKey = protocol.Classify(frame).RoutingKey;
 
-        subscribeKey.Should().Be("/market/ticker:BTC-USDT");
-        classifiedKey.Should().Be("/market/ticker:BTC-USDT");
+        subscribeKey.Should().Be("/market/snapshot:BTC-USDT");
+        classifiedKey.Should().Be("/market/snapshot:BTC-USDT");
         subscribeKey.Should().Be(classifiedKey,
             "RoutingKeyFor and Classify must share one keyspace so frames reach their subscription");
     }

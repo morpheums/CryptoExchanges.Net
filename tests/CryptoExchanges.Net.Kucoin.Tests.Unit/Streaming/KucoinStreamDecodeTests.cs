@@ -44,50 +44,63 @@ public class KucoinStreamDecodeTests
     // ── Ticker ────────────────────────────────────────────────────────────────
 
     [Fact]
-    public void Ticker_CannedDataFrame_MapsAllFields()
+    public void Ticker_CannedInnerPayload_MapsAllFields()
     {
         var registry = BuildRegistry();
         var decoder = registry.Resolve(StreamKind.Ticker);
 
-        // KuCoin ticker data payload (inner "data" object of a push frame).
+        // Bare inner data.data payload (as observed live from /market/snapshot:BTC-USDT).
+        // All numeric fields are JSON numbers, not strings.
         var data = Utf8Bytes(
-            "{\"sequence\":\"1720000000000\",\"price\":\"67000.00\",\"bestBid\":\"66999.00\"," +
-            "\"bestBidSize\":\"0.5\",\"bestAsk\":\"67001.00\",\"bestAskSize\":\"0.3\"," +
-            "\"open\":\"65000.00\",\"high\":\"68000.00\",\"low\":\"64000.00\"," +
-            "\"vol\":\"12345.678\",\"volValue\":\"820000000.00\"," +
-            "\"symbol\":\"BTC-USDT\",\"time\":\"1718784000000000000\"}");
+            "{\"symbol\":\"BTC-USDT\",\"lastTradedPrice\":64052.6," +
+            "\"buy\":64055.4,\"sell\":64055.5," +
+            "\"high\":64583.1,\"low\":63730.7,\"open\":63958.2," +
+            "\"vol\":1938.61,\"volValue\":124352841.5," +
+            "\"changePrice\":94.4,\"changeRate\":0.0014," +
+            "\"datetime\":1782053405029}");
 
         var result = (Ticker)decoder(data);
 
         result.Symbol.Should().Be(BtcUsdt);
-        result.LastPrice.Should().Be(67000.00m);
-        result.OpenPrice.Should().Be(65000.00m);
-        result.HighPrice.Should().Be(68000.00m);
-        result.LowPrice.Should().Be(64000.00m);
-        result.Volume.Should().Be(12345.678m);
-        result.PriceChange.Should().Be(67000.00m - 65000.00m);
+        result.LastPrice.Should().Be(64052.6m);
+        result.OpenPrice.Should().Be(63958.2m);
+        result.HighPrice.Should().Be(64583.1m);
+        result.LowPrice.Should().Be(63730.7m);
+        result.Volume.Should().Be(1938.61m);
+        result.QuoteVolume.Should().Be(124352841.5m);
+        result.PriceChange.Should().Be(94.4m);
+        result.PriceChangePercent.Should().Be(0.0014m * 100m);
         result.Timestamp.Should().NotBeNull();
+        result.Timestamp!.Value.ToUnixTimeMilliseconds().Should().Be(1782053405029L);
     }
 
     [Fact]
-    public void Ticker_FullFrame_ExtractsDataAndMapsAllFields()
+    public void Ticker_FullSnapshotFrame_DoubleNestedData_MapsAllFields()
     {
-        // Test that the decoder correctly extracts the "data" field from a full push frame.
+        // Full push frame from /market/snapshot — double-nested: data.data is the inner payload.
         var registry = BuildRegistry();
         var decoder = registry.Resolve(StreamKind.Ticker);
 
         var fullFrame = Utf8Bytes(
-            "{\"type\":\"message\",\"topic\":\"/market/ticker:BTC-USDT\",\"subject\":\"trade.ticker\"," +
-            "\"data\":{\"sequence\":\"1720000000000\",\"price\":\"67000.00\",\"bestBid\":\"66999.00\"," +
-            "\"bestBidSize\":\"0.5\",\"bestAsk\":\"67001.00\",\"bestAskSize\":\"0.3\"," +
-            "\"open\":\"65000.00\",\"high\":\"68000.00\",\"low\":\"64000.00\"," +
-            "\"vol\":\"12345.678\",\"volValue\":\"820000000.00\"," +
-            "\"symbol\":\"BTC-USDT\",\"time\":\"1718784000000000000\"}}");
+            "{\"type\":\"message\",\"topic\":\"/market/snapshot:BTC-USDT\",\"subject\":\"trade.snapshot\"," +
+            "\"data\":{\"sequence\":\"33762550100\"," +
+            "\"data\":{\"symbol\":\"BTC-USDT\",\"lastTradedPrice\":64052.6," +
+            "\"buy\":64055.4,\"sell\":64055.5," +
+            "\"high\":64583.1,\"low\":63730.7,\"open\":63958.2," +
+            "\"vol\":1938.61,\"volValue\":124352841.5," +
+            "\"changePrice\":94.4,\"changeRate\":0.0014," +
+            "\"datetime\":1782053405029}}}");
 
         var result = (Ticker)decoder(fullFrame);
 
         result.Symbol.Should().Be(BtcUsdt);
-        result.LastPrice.Should().Be(67000.00m);
+        result.LastPrice.Should().Be(64052.6m);
+        result.OpenPrice.Should().Be(63958.2m);
+        result.HighPrice.Should().Be(64583.1m);
+        result.LowPrice.Should().Be(63730.7m);
+        result.Volume.Should().Be(1938.61m);
+        result.PriceChange.Should().Be(94.4m);
+        result.Timestamp.Should().NotBeNull();
     }
 
     // ── Trade ─────────────────────────────────────────────────────────────────
@@ -170,11 +183,12 @@ public class KucoinStreamDecodeTests
         var registry = BuildRegistry();
         var decoder = registry.Resolve(StreamKind.Kline);
 
-        // KuCoin candles data: [startAt(s), open, close, high, low, vol, quoteVol]
+        // KuCoin candles data: [startAt(s), open, close, high, low, vol, quoteVol].
+        // time is a JSON number (unix nanoseconds) per live wire — verified against real KuCoin WS.
         var data = Utf8Bytes(
             "{\"symbol\":\"BTC-USDT\"," +
             "\"candles\":[\"1589968800\",\"9786.9\",\"9740.8\",\"9790\",\"9738\",\"1006.95\",\"9839209.1\"]," +
-            "\"time\":\"1589968800000000000\"}");
+            "\"time\":1589968800000000000}");
 
         var result = (Candlestick)decoder(data);
 

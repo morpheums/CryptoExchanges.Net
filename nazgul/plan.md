@@ -56,7 +56,7 @@ Authoritative inputs (read fully before any task):
 |----------|------------|------|------------------------------------------------------------------------------|
 | TASK-056 | ✦ DONE     | 1    | Scaffold `CryptoExchanges.Net.Kucoin` + Unit/Integration test projects (OKX clone) |
 | TASK-061 | ✦ DONE     | 1    | ADR-002 streaming endpoint seam → async `ResolveConnectionAsync` + migrate Binance |
-| TASK-057 | ◆ IMPL     | 2    | KC-API passphrase-v2 signing service + mark-and-strip signing handler        |
+| TASK-057 | ⚠ CHANGES  | 2    | KC-API passphrase-v2 signing service + mark-and-strip signing handler        |
 | TASK-058 | ◇ READY    | 2    | Bespoke `ISymbolMapper` + REST wire DTOs + DeltaMapper profiles + parsers    |
 | TASK-059 | ◇ PLANNED  | 3    | REST services (market/account/trading) + http client + composer + entry     |
 | TASK-060 | ◇ PLANNED  | 4    | `AddKucoinExchange` DI + `AddCryptoExchanges` + MCP wiring                   |
@@ -134,17 +134,17 @@ Nothing in PRD "Out of Scope" (futures/margin, private streams, order-book maint
 
 ## Recovery Pointer
 
-- **Current stage**: ✦ TASK-057 IMPLEMENTED (commit a754e9f) — KC-API passphrase-v2 signing service + mark-and-strip handler; 44 unit tests pass; 0W/0E build. Awaiting review gate.
-- **Next action**: Reviewer agents approve/reject TASK-057; continue Wave 2 parallel work (TASK-058 symbol mapper + DTOs).
-- **Active task**: none.
+- **Current stage**: ⚠ TASK-057 CHANGES_REQUESTED (retry 1/3) — review board 2/4 approved (security, code); 2/4 CHANGES_REQUESTED (architect, api-reviewer). Blocking: `KucoinSigningHandler` takes concrete `KucoinSignatureService` instead of `IKucoinSignatureService` interface (DIP violation). Fix: add `IKucoinSignatureService : ISignatureService` in `Auth/`, implement it in `KucoinSignatureService`, update handler constructor type.
+- **Next action**: Implementer fixes TASK-057 — CREATE `Auth/IKucoinSignatureService.cs`; EDIT `KucoinSignatureService.cs:12`; EDIT `KucoinSigningHandler.cs:21`; update test `BuildHandler` helper. Re-run review gate.
+- **Active task**: TASK-057 (CHANGES_REQUESTED).
 - **Files are truth**: the task manifests under `nazgul/tasks/` carry full state; each manifest's
   frontmatter is the canonical record.
 
 ─── ◈ NEXT ─────────────────────────────────────────────
   ✦ TASK-056 — Scaffold complete; DONE (reviewed 4/4, commit 2b9c308).
   ✦ TASK-061 — ADR-002 seam generalization DONE (reviewed 4/4, commit f04dfc4).
-  ◆ TASK-057 — KC-API passphrase-v2 signing service + handler (Wave 2, READY — 056 unblocked).
-  ◆ TASK-058 — Symbol mapper + DTOs + DeltaMapper profiles (Wave 2, READY — 056 unblocked).
+  ⚠ TASK-057 — CHANGES_REQUESTED (retry 1/3). Fix: IKucoinSignatureService interface.
+  ◇ TASK-058 — Symbol mapper + DTOs + DeltaMapper profiles (Wave 2, READY — 056 unblocked).
 ────────────────────────────────────────────────────────
 
 ## Completed

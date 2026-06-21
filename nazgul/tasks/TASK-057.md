@@ -1,6 +1,6 @@
 ---
 id: TASK-057
-status: IMPLEMENTED
+status: CHANGES_REQUESTED
 depends_on: [TASK-056]
 ---
 # TASK-057: KC-API passphrase-v2 signing service + mark-and-strip signing handler
@@ -20,7 +20,7 @@ depends_on: [TASK-056]
 - **Implemented at**: 2026-06-21T00:00:00Z
 - **Completed at**:
 - **Blocked at**:
-- **Retry count**: 0/3
+- **Retry count**: 1/3
 - **Test failures**: 0
 
 ## Description
@@ -104,3 +104,19 @@ Tests (`KucoinSigningTests.cs`) — golden-value + behavior, no network:
 - Build: 0W/0E across full solution.
 
 ## Review Results
+
+- architect-reviewer: CHANGES_REQUESTED — KucoinSigningHandler takes concrete KucoinSignatureService instead of ISignatureService (DIP violation, Architectural Rule #11)
+- code-reviewer: APPROVE — all conventions pass (LR-001, LR-005 satisfied); minor non-blocking style notes
+- security-reviewer: APPROVE — all 11 security checks pass; prehash order, base64 HMAC, passphrase-v2 signing, per-attempt re-sign, mark-and-strip, Unix-ms timestamp all confirmed correct
+- api-reviewer: CHANGES_REQUESTED — same blocking finding as architect: concrete type in handler constructor
+
+## Consolidated Feedback
+
+**Blocking fix required** (1 item):
+
+Introduce `internal interface IKucoinSignatureService : ISignatureService` in `Auth/` with `string SignPassphrase(string passphrase)`. Three file changes:
+1. CREATE `src/CryptoExchanges.Net.Kucoin/Auth/IKucoinSignatureService.cs`
+2. EDIT `src/CryptoExchanges.Net.Kucoin/Auth/KucoinSignatureService.cs:12` — implement `IKucoinSignatureService` instead of `ISignatureService`
+3. EDIT `src/CryptoExchanges.Net.Kucoin/Resilience/KucoinSigningHandler.cs:21` — change parameter type from `KucoinSignatureService` to `IKucoinSignatureService`; update test `BuildHandler` helper type accordingly
+
+Full feedback: `nazgul/reviews/TASK-057/consolidated-feedback.md`

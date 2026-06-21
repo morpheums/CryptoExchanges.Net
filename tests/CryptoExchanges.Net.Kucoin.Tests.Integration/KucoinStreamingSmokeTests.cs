@@ -17,9 +17,6 @@ namespace CryptoExchanges.Net.Kucoin.Tests.Integration;
 /// <c>[Trait("Category", "Integration")]</c> and are excluded from the default gate
 /// (<c>dotnet test --filter 'Category!=Integration'</c>).
 /// </summary>
-/// <remarks>
-/// No <c>Thread.Sleep</c> — frame waits use <see cref="TaskCompletionSource{T}"/> + <c>WaitAsync</c>.
-/// </remarks>
 [Trait("Category", "Integration")]
 [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1001:Types that own disposable fields should be disposable", Justification = "Disposed inline in each test")]
 public class KucoinStreamingSmokeTests
@@ -115,9 +112,6 @@ public class KucoinStreamingSmokeTests
 
         await using (var firstClient = BuildStreamClient())
         {
-            var reconnectingFired = false;
-            var reconnectedFired = false;
-
             var sub = await firstClient.SubscribeToTickerAsync(
                 BtcUsdt,
                 new StreamHandlers<Ticker>(
@@ -126,16 +120,8 @@ public class KucoinStreamingSmokeTests
                         firstFrame.TrySetResult(t);
                         return ValueTask.CompletedTask;
                     },
-                    OnReconnecting: () =>
-                    {
-                        reconnectingFired = true;
-                        return ValueTask.CompletedTask;
-                    },
-                    OnReconnected: () =>
-                    {
-                        reconnectedFired = true;
-                        return ValueTask.CompletedTask;
-                    }),
+                    OnReconnecting: () => ValueTask.CompletedTask,
+                    OnReconnected: () => ValueTask.CompletedTask),
                 TestContext.Current.CancellationToken);
 
             await using (sub)
@@ -143,10 +129,6 @@ public class KucoinStreamingSmokeTests
                 // Wait for the first live frame to confirm the connection and first bullet-public call.
                 await firstFrame.Task.WaitAsync(ReceiveTimeout, TestContext.Current.CancellationToken);
                 sub.State.Should().Be(StreamConnectionState.Live);
-
-                // Lifecycle callbacks are wired for any natural reconnect (AC-4 readiness).
-                _ = reconnectingFired;
-                _ = reconnectedFired;
             }
         }
 

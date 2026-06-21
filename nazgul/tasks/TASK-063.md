@@ -1,6 +1,6 @@
 ---
 id: TASK-063
-status: IMPLEMENTED
+status: IN_PROGRESS
 depends_on: [TASK-060, TASK-062]
 ---
 # TASK-063: Live integration smokes — REST + one streaming (self-skip without credentials)
@@ -80,5 +80,10 @@ calls.
 - Created `KucoinRestSmokeTests.cs`: 5 tests — `GetServerTime`, `GetTicker_BtcUsdt`, `GetOrderBook_BtcUsdt` (public), `GetBalances_WithCredentials` + `PlaceAndCancelOrder_LimitBuy_Roundtrip` (signed). All `[Trait("Category","Integration")]`. Uses `IAsyncLifetime` + `SkipIfUnavailable()` matching Binance market data pattern. Skips on missing `KUCOIN_API_KEY` or unreachable endpoint.
 - Created `KucoinStreamingSmokeTests.cs`: 2 tests — `StreamTicker_BtcUsdt_ReceivesUpdate` (subscribe + await one frame) + `StreamReconnect_TokenRenegotiated` (two sequential connections; each calls bullet-public; proves token re-negotiation). Uses `CheckReachabilityAsync` + `Assert.SkipWhen`. No `Thread.Sleep`. Uses `TaskCompletionSource<T>` + `WaitAsync`.
 - Solution builds 0W/0E. `dotnet test --filter 'Category!=Integration'` excludes all 7 new integration tests (confirmed: "No test matches the given testcase filter"). Non-integration suite: all green.
+
+## Fix-First Auto-Remediation (Cycle 1)
+
+- Fix 1: Removed redundant `<remarks>` block from `KucoinStreamingSmokeTests` (LEAN comment violation — restated what code shows).
+- Fix 2: Removed dead `reconnectingFired`/`reconnectedFired` boolean locals and `_ =` discards; wired `OnReconnecting`/`OnReconnected` as no-ops (`() => ValueTask.CompletedTask`).
 
 ## Review Results

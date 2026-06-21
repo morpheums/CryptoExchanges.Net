@@ -8,7 +8,7 @@
 - **Status**: active
 - **Scope-Agents**: implementer, code-reviewer
 - **Scope-Globs**: src/**/*.cs
-- **Hits**: 7
+- **Hits**: 8
 - **Added**: 2026-06-18
 - **Evidence**: TASK-002 (code-reviewer REJECT@85 — BuildGetSignString/BuildPostSignString missing guards), TASK-005 (code-reviewer REJECT@97 — BybitHttpClient.GetAsync/PostAsync/DeleteAsync missing endpoint guard), TASK-003 (api-reviewer non-blocking concern on ctor params)
 
@@ -46,7 +46,7 @@ and makes every default call pattern fail silently. The safe pattern:
 - **Status**: active
 - **Scope-Agents**: implementer, code-reviewer
 - **Scope-Globs**: src/**/Services/*.cs, src/**/Mapping/*.cs
-- **Hits**: 0
+- **Hits**: 1
 - **Added**: 2026-06-18
 - **Evidence**: TASK-015 (code-reviewer REJECT@95 — OkxMarketDataService.cs:214 used raw `long.Parse` for candlestick timestamp while every other timestamp in the same file used `OkxValueParsers.ParseMs`; OKX returns `""` for unconfirmed candles, causing FormatException), TASK-022 (code-reviewer PASS@100 confirmed BitgetMarketDataService candlestick path correctly uses `BitgetValueParsers.ParseMs`)
 

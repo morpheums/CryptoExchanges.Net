@@ -1,6 +1,6 @@
 ---
 id: TASK-058
-status: IN_REVIEW
+status: DONE
 depends_on: [TASK-056]
 ---
 # TASK-058: Bespoke `ISymbolMapper` + REST wire DTOs + DeltaMapper profiles + value parsers
@@ -18,7 +18,7 @@ depends_on: [TASK-056]
 - **Claimed at**: 2026-06-21T10:00:00Z
 - **Base SHA**: 60f184af0de06efe199e497d2be2a7d519825286
 - **Implemented at**: 2026-06-21T10:30:00Z
-- **Completed at**:
+- **Completed at**: 2026-06-21T11:00:00Z
 - **Blocked at**:
 - **Retry count**: 0/3
 - **Test failures**: 0
@@ -103,7 +103,15 @@ Tests (`KucoinSymbolAndMappingTests.cs`), no network:
 ## Commits
 
 - `c59600f` — feat(FEAT-006): TASK-058 — KucoinSymbolMapper + REST wire DTOs + DeltaMapper profiles + parsers
+- `5a20da1` — feat(FEAT-006): simplify TASK-058
 
 ## Implementation Log
 
 ## Review Results
+
+- **Reviewed at**: 2026-06-21T11:00:00Z
+- **Cycle**: 1
+- **architect-reviewer**: APPROVE — 4-layer chain preserved, DeltaMapper mandate met, one-type-per-file confirmed. ServerTimeDto shape concern (non-blocking, confidence 55%).
+- **code-reviewer**: APPROVE — All conventions met. Non-blocking concern: two `IsSupported` test methods have misleading names but correct assertions.
+- **security-reviewer**: APPROVE — No secrets, no unsafe deserialization, financial values kept as strings. Non-blocking concern: ParseDecimal on malformed non-empty string (matches Binance pattern).
+- **api-reviewer**: APPROVE — ISymbolMapper contract correct, DeltaMapper profiles complete, enum coverage confirmed. Non-blocking: FromWire exception type diverges from interface docs (confidence 70%).

@@ -213,3 +213,6 @@ FEAT-006 Tasks: 9/9 DONE. PR #35. Completion SHAs recorded in each `nazgul/tasks
 - **TASK-063** — DONE (Fix-First Cycle 1). Impl `5dc88fa`, fix/completion `b365dbb`.
 - **TASK-064** — DONE (Fix-First Cycle 2). Impl `425b66b`, fix `d54e9f1`, completion `76a2798`.
 - **POST-LOOP** — documentation + release-manager → PR to main (#35).
+
+## Patches
+- [x] PATCH-001: Add NuGet download-count badges to README.md (sha: be0fa75)

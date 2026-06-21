@@ -1,6 +1,6 @@
 ---
 id: TASK-061
-status: IMPLEMENTED
+status: DONE
 depends_on: []
 ---
 # TASK-061: Generalize streaming endpoint seam (ADR-002) — async `ResolveConnectionAsync` + migrate Binance
@@ -18,7 +18,7 @@ depends_on: []
 - **Claimed at**: 2026-06-21T00:00:00Z
 - **Base SHA**: 8837e79d6fe76bdb30f944dcfce9c56fcfb6ae4a
 - **Implemented at**: 2026-06-21T00:00:00Z
-- **Completed at**:
+- **Completed at**: 2026-06-21T05:00:00Z
 - **Blocked at**:
 - **Retry count**: 0/3
 - **Test failures**: 0
@@ -64,9 +64,9 @@ Tests — extend `CryptoExchanges.Net.Http.Tests.Unit` with a fake `IStreamProto
 Existing `Http.Tests.Unit` streaming tests + Binance streaming regression must pass unchanged.
 
 ## Acceptance Criteria
-- [ ] `IStreamProtocol` drops `Endpoint`/`Heartbeat` properties and exposes `ValueTask<StreamConnectionInfo> ResolveConnectionAsync(CancellationToken ct)`; new `internal sealed record StreamConnectionInfo(Uri, HeartbeatPolicy)`; `StreamEngine` awaits it at both connect + reconnect call sites; full XML docs. K1 preserved (no Core.Models/DeltaMapper under Http) and C1 preserved (no timer/thread in protocol).
-- [ ] `BinanceStreamProtocol` implements `ResolveConnectionAsync` returning a constructor-cached `StreamConnectionInfo`; `Endpoint`/`Heartbeat` properties removed; Binance streaming behavior unchanged (regression-free).
-- [ ] New engine seam tests assert resolve-called-once-per-connect, resolve-called-on-each-reconnect, Binance-returns-cached-info, cancellation-propagation; ALL existing `Http.Tests.Unit` streaming tests + the Binance streaming integration suite pass unchanged; solution builds 0W/0E; NO network.
+- [x] `IStreamProtocol` drops `Endpoint`/`Heartbeat` properties and exposes `ValueTask<StreamConnectionInfo> ResolveConnectionAsync(CancellationToken ct)`; new `internal sealed record StreamConnectionInfo(Uri, HeartbeatPolicy)`; `StreamEngine` awaits it at both connect + reconnect call sites; full XML docs. K1 preserved (no Core.Models/DeltaMapper under Http) and C1 preserved (no timer/thread in protocol).
+- [x] `BinanceStreamProtocol` implements `ResolveConnectionAsync` returning a constructor-cached `StreamConnectionInfo`; `Endpoint`/`Heartbeat` properties removed; Binance streaming behavior unchanged (regression-free).
+- [x] New engine seam tests assert resolve-called-once-per-connect, resolve-called-on-each-reconnect, Binance-returns-cached-info, cancellation-propagation; ALL existing `Http.Tests.Unit` streaming tests + the Binance streaming integration suite pass unchanged; solution builds 0W/0E; NO network.
 
 ## Pattern Reference
 - Seam to change: `src/CryptoExchanges.Net.Http/Streaming/IStreamProtocol.cs` (current `Endpoint`/`Heartbeat` properties).
@@ -94,6 +94,7 @@ Existing `Http.Tests.Unit` streaming tests + Binance streaming regression must p
 ## Commits
 
 - f25dc9d — feat(FEAT-006): ADR-002 streaming endpoint seam — async ResolveConnectionAsync + migrate Binance
+- f04dfc4 — feat(FEAT-006): simplify TASK-061 (StartPump helper extracted)
 
 ## Implementation Log
 
@@ -105,6 +106,14 @@ Existing `Http.Tests.Unit` streaming tests + Binance streaming regression must p
 - Updated `StreamEngineTests.cs`: `VenueKeyProtocol` inner class updated to implement `ResolveConnectionAsync` and drop `Endpoint`/`Heartbeat`.
 - Updated `BinanceStreamProtocolTests.cs`: replaced `Heartbeat_IsServerPingClientPong` with two async tests: `ResolveConnectionAsync_ReturnsServerPingClientPong` and `ResolveConnectionAsync_ReturnsCachedInstance`.
 - Created `StreamEngineResolveConnectionTests.cs`: 4 new tests — resolve-on-first-connect, resolve-on-each-reconnect, not-cached-from-first-connect, cancellation-propagation.
+- Simplifier extracted `StartPump(HeartbeatPolicy)` helper from duplicated post-connect wiring.
 - Build: 0W/0E. Test run: 584 passed, 0 failed.
 
 ## Review Results
+
+- **architect-reviewer**: APPROVE (confidence 99) — K1/C1/K2/K3/ADR-002 all PASS; two non-blocking LOWs.
+- **code-reviewer**: APPROVE (confidence 95) — LR-001/LR-005 not triggered; 4 non-blocking LOWs.
+- **security-reviewer**: APPROVE (confidence 97) — URI integrity/signing pipeline/gate safety all PASS; one future SSRF concern (LOW, confidence 50).
+- **api-reviewer**: APPROVE (confidence 97) — public API unchanged, internal seam correctly scoped; one doc inconsistency (LOW).
+- **Gate decision**: ALL APPROVED — TASK-061 DONE.
+- **Completion SHA**: (see commit below)

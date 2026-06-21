@@ -62,9 +62,9 @@ Authoritative inputs (read fully before any task):
 | TASK-060 | ✦ DONE     | 4    | `AddKucoinExchange` DI + `AddCryptoExchanges` + MCP wiring                   |
 | TASK-062 | ✦ DONE     | 5    | `KucoinStreamProtocol` + bullet-public + 4 decoders + `AddKucoinStreams`     |
 | TASK-063 | ✦ DONE     | 6    | Live integration smokes — REST + one streaming (self-skip)                   |
-| TASK-064 | ✦ IMPLEMENTED | 6    | Docs — README KuCoin row → supported + MCP/exchanges/streaming reference     |
+| TASK-064 | ✦ DONE     | 6    | Docs — README KuCoin row → supported + MCP/exchanges/streaming reference     |
 
-Tasks: 8/9 DONE.
+Tasks: 9/9 DONE.
 
 ## Wave Groups
 
@@ -134,9 +134,9 @@ Nothing in PRD "Out of Scope" (futures/margin, private streams, order-book maint
 
 ## Recovery Pointer
 
-- **Current stage**: ✦ TASK-064 IMPLEMENTED — Docs (README KuCoin row → supported + MCP/exchanges/streaming reference). Commit 425b66b. Awaiting review.
-- **Next action**: Review gate for TASK-064 (4/4 reviewers).
-- **Active task**: TASK-064 IMPLEMENTED (commit 425b66b).
+- **Current stage**: ✦ ALL TASKS DONE — FEAT-006 complete. TASK-064 DONE (commit 76a2798). Awaiting post-loop.
+- **Next action**: Post-loop phase (documentation, release-manager agents) → PR to main.
+- **Active task**: none (all 9/9 DONE).
 - **Files are truth**: the task manifests under `nazgul/tasks/` carry full state; each manifest's
   frontmatter is the canonical record.
 
@@ -149,7 +149,8 @@ Nothing in PRD "Out of Scope" (futures/margin, private streams, order-book maint
   ✦ TASK-060 — AddKucoinExchange DI + AddCryptoExchanges + MCP wiring DONE (reviewed 4/4, Cycle 1; impl commit ad607d6).
   ✦ TASK-062 — KucoinStreamProtocol + bullet-public + 4 decoders + AddKucoinStreams DONE (reviewed 4/4, Cycle 2; completion 2039654).
   ✦ TASK-063 — Live integration smokes (REST + streaming, self-skip) DONE (reviewed 4/4, Fix-First Cycle 1; completion b365dbb).
-  ◇ TASK-064 — Docs (README/MCP/exchanges/streaming) — Wave 6 final (next).
+  ✦ TASK-064 — Docs (README/MCP/exchanges/streaming) DONE (reviewed 4/4, Fix-First Cycle 1 + Cycle 2; completion 76a2798).
+  ◇ POST-LOOP — documentation + release-manager → PR to main.
 ────────────────────────────────────────────────────────
 
 ## Completed
@@ -173,6 +174,9 @@ Nothing in PRD "Out of Scope" (futures/margin, private streams, order-book maint
 - **TASK-063** — DONE (2026-06-21T15:00:00Z). Live integration smokes (REST + streaming, self-skip) — 4/4 reviewers, Fix-First Cycle 1.
   Impl commit: `5dc88fa`. Fix commit: `b365dbb` (removed <remarks> noise + dead reconnect booleans). Completion SHA: `b365dbb`. Review artifacts: `nazgul/reviews/TASK-063/`.
   Cycle 1: code-reviewer CHANGES_REQUESTED (2 REJECTs: <remarks> violates LEAN mandate, dead boolean locals); Fix-First auto-remediated both mechanically. Build 0W/0E post-fix; all tests green. architect/security/api all APPROVE in first cycle.
+- **TASK-064** — DONE (2026-06-21T16:00:00Z). Docs KuCoin promotion (README, exchanges.md, mcp-server.md, streaming.md) + MCP kucoin wiring fix — 4/4 reviewers, Fix-First Cycle 1 + Cycle 2.
+  Impl commit: `425b66b`. Fix commit: `d54e9f1` (ToolInputs.cs + EnvCredentialBinder.cs kucoin wiring). Completion SHA: `76a2798`. Review artifacts: `nazgul/reviews/TASK-064/`.
+  Cycle 1: code-reviewer CHANGES_REQUESTED (REJECT@95% — mcp-server.md claimed kucoin as valid exchange key but ToolInputs + EnvCredentialBinder missing KuCoin routing — gap from TASK-060); Fix-First auto-remediated both files mechanically; 783 tests pass; Cycle 2 code-reviewer APPROVE. architect/security/api all APPROVE in first cycle.
 
 
 ## Archived — FEAT-005 (WebSocket streaming v1) — COMPLETE

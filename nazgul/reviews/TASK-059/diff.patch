@@ -1,280 +1,3 @@
-diff --git a/nazgul/learning/learned-rules.md b/nazgul/learning/learned-rules.md
-index 13b2fbf..36b93da 100644
---- a/nazgul/learning/learned-rules.md
-+++ b/nazgul/learning/learned-rules.md
-@@ -8,7 +8,7 @@
- - **Status**: active
- - **Scope-Agents**: implementer, code-reviewer
- - **Scope-Globs**: src/**/*.cs
--- **Hits**: 7
-+- **Hits**: 8
- - **Added**: 2026-06-18
- - **Evidence**: TASK-002 (code-reviewer REJECT@85 — BuildGetSignString/BuildPostSignString missing guards), TASK-005 (code-reviewer REJECT@97 — BybitHttpClient.GetAsync/PostAsync/DeleteAsync missing endpoint guard), TASK-003 (api-reviewer non-blocking concern on ctor params)
- 
-@@ -46,7 +46,7 @@ and makes every default call pattern fail silently. The safe pattern:
- - **Status**: active
- - **Scope-Agents**: implementer, code-reviewer
- - **Scope-Globs**: src/**/Services/*.cs, src/**/Mapping/*.cs
--- **Hits**: 0
-+- **Hits**: 1
- - **Added**: 2026-06-18
- - **Evidence**: TASK-015 (code-reviewer REJECT@95 — OkxMarketDataService.cs:214 used raw `long.Parse` for candlestick timestamp while every other timestamp in the same file used `OkxValueParsers.ParseMs`; OKX returns `""` for unconfirmed candles, causing FormatException), TASK-022 (code-reviewer PASS@100 confirmed BitgetMarketDataService candlestick path correctly uses `BitgetValueParsers.ParseMs`)
- 
-diff --git a/nazgul/plan.md b/nazgul/plan.md
-index a57d0d0..dc44067 100644
---- a/nazgul/plan.md
-+++ b/nazgul/plan.md
-@@ -57,14 +57,14 @@ Authoritative inputs (read fully before any task):
- | TASK-056 | ✦ DONE     | 1    | Scaffold `CryptoExchanges.Net.Kucoin` + Unit/Integration test projects (OKX clone) |
- | TASK-061 | ✦ DONE     | 1    | ADR-002 streaming endpoint seam → async `ResolveConnectionAsync` + migrate Binance |
- | TASK-057 | ✦ DONE     | 2    | KC-API passphrase-v2 signing service + mark-and-strip signing handler        |
--| TASK-058 | ◆ IN_PROGRESS | 2 | Bespoke `ISymbolMapper` + REST wire DTOs + DeltaMapper profiles + parsers    |
-+| TASK-058 | ✦ DONE     | 2    | Bespoke `ISymbolMapper` + REST wire DTOs + DeltaMapper profiles + parsers    |
- | TASK-059 | ◇ PLANNED  | 3    | REST services (market/account/trading) + http client + composer + entry     |
- | TASK-060 | ◇ PLANNED  | 4    | `AddKucoinExchange` DI + `AddCryptoExchanges` + MCP wiring                   |
- | TASK-062 | ◇ PLANNED  | 5    | `KucoinStreamProtocol` + bullet-public + 4 decoders + `AddKucoinStreams`     |
- | TASK-063 | ◇ PLANNED  | 6    | Live integration smokes — REST + one streaming (self-skip)                   |
- | TASK-064 | ◇ PLANNED  | 6    | Docs — README KuCoin row → supported + MCP/exchanges/streaming reference     |
- 
--Tasks: 3/9 DONE.
-+Tasks: 4/9 DONE.
- 
- ## Wave Groups
- 
-@@ -134,9 +134,9 @@ Nothing in PRD "Out of Scope" (futures/margin, private streams, order-book maint
- 
- ## Recovery Pointer
- 
--- **Current stage**: ◆ TASK-058 IN_PROGRESS — Symbol mapper + DTOs + DeltaMapper profiles. Claimed 2026-06-21T10:00:00Z.
--- **Next action**: Implement KucoinSymbolMapper, wire DTOs, KucoinValueParsers, KucoinMappingProfiles, tests.
--- **Active task**: TASK-058 (IN_PROGRESS).
-+- **Current stage**: ◆ TASK-059 IN_PROGRESS — REST services + http client + composer + entry (Wave 3).
-+- **Next action**: Implement all source files + tests then set IMPLEMENTED.
-+- **Active task**: TASK-059.
- - **Files are truth**: the task manifests under `nazgul/tasks/` carry full state; each manifest's
-   frontmatter is the canonical record.
- 
-@@ -144,7 +144,8 @@ Nothing in PRD "Out of Scope" (futures/margin, private streams, order-book maint
-   ✦ TASK-056 — Scaffold complete; DONE (reviewed 4/4, commit 2b9c308).
-   ✦ TASK-061 — ADR-002 seam generalization DONE (reviewed 4/4, commit f04dfc4).
-   ✦ TASK-057 — KC-API signing DONE (reviewed 4/4, Cycle 2; simplify 4799140).
--  ◇ TASK-058 — Symbol mapper + DTOs + DeltaMapper profiles (Wave 2, READY — 056+057 unblocked).
-+  ✦ TASK-058 — KucoinSymbolMapper + wire DTOs + DeltaMapper + parsers DONE (reviewed 4/4, Cycle 1; simplify 5a20da1).
-+  ◇ TASK-059 — REST services + http client + composer + entry (Wave 3, READY — 057+058 unblocked).
- ────────────────────────────────────────────────────────
- 
- ## Completed
-@@ -155,6 +156,8 @@ Nothing in PRD "Out of Scope" (futures/margin, private streams, order-book maint
-   Impl commit: `f25dc9d`. Simplify commit: `f04dfc4`. Completion SHA: `f04dfc4`. Review artifacts: `nazgul/reviews/TASK-061/`.
- - **TASK-057** — DONE (2026-06-21T09:48:13Z). KC-API passphrase-v2 signing approved unanimously (4/4, Cycle 2).
-   Impl commits: `a754e9f` (initial) + `d3bf817` (DIP fix) + `4799140` (simplify). Completion SHA: ffc7e3f. Review artifacts: `nazgul/reviews/TASK-057/`.
-+- **TASK-058** — DONE (2026-06-21T11:00:00Z). KucoinSymbolMapper + wire DTOs + DeltaMapper profiles + parsers approved unanimously (4/4, Cycle 1).
-+  Impl commit: `c59600f`. Simplify commit: `5a20da1`. Review artifacts: `nazgul/reviews/TASK-058/`.
- 
- 
- ## Archived — FEAT-005 (WebSocket streaming v1) — COMPLETE
-diff --git a/nazgul/reviews/TASK-058/diff.patch b/nazgul/reviews/TASK-058/diff.patch
-index 700638b..871d355 100644
---- a/nazgul/reviews/TASK-058/diff.patch
-+++ b/nazgul/reviews/TASK-058/diff.patch
-@@ -188,7 +188,7 @@ index 0000000..80fabef
- +}
- diff --git a/src/CryptoExchanges.Net.Kucoin/Dtos/OrderDto.cs b/src/CryptoExchanges.Net.Kucoin/Dtos/OrderDto.cs
- new file mode 100644
--index 0000000..85d4f88
-+index 0000000..c64ee60
- --- /dev/null
- +++ b/src/CryptoExchanges.Net.Kucoin/Dtos/OrderDto.cs
- @@ -0,0 +1,57 @@
-@@ -233,7 +233,7 @@ index 0000000..85d4f88
- +    [JsonPropertyName("type")]
- +    public string Type { get; init; } = "limit";
- +
--+    /// <summary>Order status: <c>open</c>, <c>done</c>, or <c>cancelled</c>.</summary>
-++    /// <summary><see langword="true"/> when the order is still resting (open or partially filled); <see langword="false"/> when it has completed or been cancelled.</summary>
- +    [JsonPropertyName("isActive")]
- +    public bool IsActive { get; init; }
- +
-@@ -391,10 +391,10 @@ index 0000000..8bed2cb
- +}
- diff --git a/src/CryptoExchanges.Net.Kucoin/Internal/KucoinSymbolMapper.cs b/src/CryptoExchanges.Net.Kucoin/Internal/KucoinSymbolMapper.cs
- new file mode 100644
--index 0000000..9df006f
-+index 0000000..2b0dd79
- --- /dev/null
- +++ b/src/CryptoExchanges.Net.Kucoin/Internal/KucoinSymbolMapper.cs
--@@ -0,0 +1,79 @@
-+@@ -0,0 +1,76 @@
- +using CryptoExchanges.Net.Core;
- +using CryptoExchanges.Net.Core.Exceptions;
- +
-@@ -417,10 +417,7 @@ index 0000000..9df006f
- +        _inner = new SymbolMapper(KucoinSymbolFormat.Instance);
- +    }
- +
--+    /// <summary>
--+    /// Formats a <see cref="Symbol"/> as the KuCoin wire string (e.g. <c>BTC-USDT</c>).
--+    /// Returns the formatted wire string; never throws (any well-formed symbol can be encoded).
--+    /// </summary>
-++    /// <inheritdoc />
- +    public string ToWire(Symbol symbol) => _inner.ToWire(symbol);
- +
- +    /// <inheritdoc />
-@@ -476,10 +473,10 @@ index 0000000..9df006f
- +}
- diff --git a/src/CryptoExchanges.Net.Kucoin/Internal/KucoinValueParsers.cs b/src/CryptoExchanges.Net.Kucoin/Internal/KucoinValueParsers.cs
- new file mode 100644
--index 0000000..7314fc2
-+index 0000000..ea00002
- --- /dev/null
- +++ b/src/CryptoExchanges.Net.Kucoin/Internal/KucoinValueParsers.cs
--@@ -0,0 +1,112 @@
-+@@ -0,0 +1,111 @@
- +namespace CryptoExchanges.Net.Kucoin.Internal;
- +
- +/// <summary>
-@@ -578,7 +575,7 @@ index 0000000..7314fc2
- +    /// KuCoin encodes most timestamps as epoch-millisecond strings throughout the V1/V2 API.
- +    /// </summary>
- +    public static long ParseMs(string value)
--+        => long.TryParse(value, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out var ms) ? ms : 0L;
-++        => TryParseLong(value, out var ms) ? ms : 0L;
- +
- +    /// <summary>
- +    /// Parses a KuCoin string-encoded unix-nanosecond timestamp into milliseconds.
-@@ -586,18 +583,17 @@ index 0000000..7314fc2
- +    /// Returns <c>0</c> for null/empty/malformed input.
- +    /// </summary>
- +    public static long ParseNsToMs(string value)
--+    {
--+        if (!long.TryParse(value, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out var ns))
--+            return 0L;
--+        return ns / 1_000_000L;
--+    }
-++        => TryParseLong(value, out var ns) ? ns / 1_000_000L : 0L;
-++
-++    private static bool TryParseLong(string value, out long result)
-++        => long.TryParse(value, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out result);
- +}
- diff --git a/src/CryptoExchanges.Net.Kucoin/Mapping/KucoinMappingProfiles.cs b/src/CryptoExchanges.Net.Kucoin/Mapping/KucoinMappingProfiles.cs
- new file mode 100644
--index 0000000..5a00240
-+index 0000000..bbc6e69
- --- /dev/null
- +++ b/src/CryptoExchanges.Net.Kucoin/Mapping/KucoinMappingProfiles.cs
--@@ -0,0 +1,109 @@
-+@@ -0,0 +1,105 @@
- +using DeltaMapper;
- +using CryptoExchanges.Net.Kucoin.Dtos;
- +using CryptoExchanges.Net.Kucoin.Internal;
-@@ -637,7 +633,7 @@ index 0000000..5a00240
- +            .ForMember(d => d.TimeInForce, o => o.MapFrom(s => KucoinValueParsers.ParseTimeInForce(s.TimeInForce)))
- +            .ForMember(d => d.StopPrice, o => o.Ignore())
- +            .ForMember(d => d.IcebergQuantity, o => o.Ignore())
--+            .ForMember(d => d.CreatedAt, o => o.MapFrom(s => ParseEpochMs(s.CreatedAt)))
-++            .ForMember(d => d.CreatedAt, o => o.MapFrom(s => ParseMs(s.CreatedAt)))
- +            .ForMember(d => d.UpdatedAt, o => o.Ignore());
- +
- +        // TickerDto -> Ticker. KuCoin reports open (price 24h ago); price change is last - open,
-@@ -686,7 +682,7 @@ index 0000000..5a00240
- +            .ForMember(d => d.Id, o => o.MapFrom(s => s.TradeId))
- +            .ForMember(d => d.Price, o => o.MapFrom(s => KucoinValueParsers.ParseDecimal(s.Price)))
- +            .ForMember(d => d.Quantity, o => o.MapFrom(s => KucoinValueParsers.ParseDecimal(s.Size)))
--+            .ForMember(d => d.Timestamp, o => o.MapFrom(s => ParseEpochMs(s.CreatedAt)))
-++            .ForMember(d => d.Timestamp, o => o.MapFrom(s => ParseMs(s.CreatedAt)))
- +            // IsBuyerMaker: a buy fill that is the maker, or a sell fill that is the taker.
- +            .ForMember(d => d.IsBuyerMaker, o => o.MapFrom(s =>
- +                s.Side == "buy" ? s.Liquidity == "maker" : s.Liquidity != "maker"))
-@@ -697,14 +693,10 @@ index 0000000..5a00240
- +    private static readonly OrderType[] DefaultSpotOrderTypes = [OrderType.Limit, OrderType.Market];
- +
- +    /// <summary>Parses a KuCoin string-encoded unix-ms timestamp into an optional instant (null when unset/zero).</summary>
--+    private static DateTimeOffset? ParseMs(string value)
--+    {
--+        var ms = KucoinValueParsers.ParseMs(value);
--+        return ms > 0 ? DateTimeOffset.FromUnixTimeMilliseconds(ms) : null;
--+    }
-++    private static DateTimeOffset? ParseMs(string value) => ParseMs(KucoinValueParsers.ParseMs(value));
- +
--+    /// <summary>Parses a KuCoin long unix-ms epoch into an optional instant (null when zero).</summary>
--+    private static DateTimeOffset? ParseEpochMs(long ms)
-++    /// <summary>Converts a unix-ms epoch long into an optional instant (null when zero).</summary>
-++    private static DateTimeOffset? ParseMs(long ms)
- +        => ms > 0 ? DateTimeOffset.FromUnixTimeMilliseconds(ms) : null;
- +}
- diff --git a/tests/CryptoExchanges.Net.Kucoin.Tests.Unit/KucoinSymbolAndMappingTests.cs b/tests/CryptoExchanges.Net.Kucoin.Tests.Unit/KucoinSymbolAndMappingTests.cs
-diff --git a/nazgul/tasks/TASK-058.md b/nazgul/tasks/TASK-058.md
-index 9b6cde3..60cc8dc 100644
---- a/nazgul/tasks/TASK-058.md
-+++ b/nazgul/tasks/TASK-058.md
-@@ -1,6 +1,6 @@
- ---
- id: TASK-058
--status: IN_REVIEW
-+status: DONE
- depends_on: [TASK-056]
- ---
- # TASK-058: Bespoke `ISymbolMapper` + REST wire DTOs + DeltaMapper profiles + value parsers
-@@ -18,7 +18,7 @@ depends_on: [TASK-056]
- - **Claimed at**: 2026-06-21T10:00:00Z
- - **Base SHA**: 60f184af0de06efe199e497d2be2a7d519825286
- - **Implemented at**: 2026-06-21T10:30:00Z
--- **Completed at**:
-+- **Completed at**: 2026-06-21T11:00:00Z
- - **Blocked at**:
- - **Retry count**: 0/3
- - **Test failures**: 0
-@@ -103,7 +103,15 @@ Tests (`KucoinSymbolAndMappingTests.cs`), no network:
- ## Commits
- 
- - `c59600f` — feat(FEAT-006): TASK-058 — KucoinSymbolMapper + REST wire DTOs + DeltaMapper profiles + parsers
-+- `5a20da1` — feat(FEAT-006): simplify TASK-058
- 
- ## Implementation Log
- 
- ## Review Results
-+
-+- **Reviewed at**: 2026-06-21T11:00:00Z
-+- **Cycle**: 1
-+- **architect-reviewer**: APPROVE — 4-layer chain preserved, DeltaMapper mandate met, one-type-per-file confirmed. ServerTimeDto shape concern (non-blocking, confidence 55%).
-+- **code-reviewer**: APPROVE — All conventions met. Non-blocking concern: two `IsSupported` test methods have misleading names but correct assertions.
-+- **security-reviewer**: APPROVE — No secrets, no unsafe deserialization, financial values kept as strings. Non-blocking concern: ParseDecimal on malformed non-empty string (matches Binance pattern).
-+- **api-reviewer**: APPROVE — ISymbolMapper contract correct, DeltaMapper profiles complete, enum coverage confirmed. Non-blocking: FromWire exception type diverges from interface docs (confidence 70%).
-diff --git a/nazgul/tasks/TASK-059.md b/nazgul/tasks/TASK-059.md
-index b518cb7..a9f0d00 100644
---- a/nazgul/tasks/TASK-059.md
-+++ b/nazgul/tasks/TASK-059.md
-@@ -1,6 +1,6 @@
- ---
- id: TASK-059
--status: PLANNED
-+status: IN_PROGRESS
- depends_on: [TASK-057, TASK-058]
- ---
- # TASK-059: REST client — market-data / account / trading service methods + HTTP client + composer
-@@ -15,8 +15,8 @@ depends_on: [TASK-057, TASK-058]
- - **Wave**: 3
- - **Traces to**: PRD-FEAT-006 AC-1, AC-2; TRD-FEAT-006 §"Project Layout", §"Signing"; FEAT-006 spec §"REST" (market/account/trading surface), §"Build approach" step 4; TEST-PLAN-FEAT-006 §"stub-HTTP service methods"
- - **Created at**: 2026-06-20T19:00:00Z
--- **Claimed at**:
--- **Base SHA**:
-+- **Claimed at**: 2026-06-21T00:00:00Z
-+- **Base SHA**: b0bbb902c3c16f3ccd73aa1ae070959bfd3448a5
- - **Implemented at**:
- - **Completed at**:
- - **Blocked at**:
-diff --git a/src/CryptoExchanges.Net.Http/CryptoExchanges.Net.Http.csproj b/src/CryptoExchanges.Net.Http/CryptoExchanges.Net.Http.csproj
-index 45a6358..794afd6 100644
---- a/src/CryptoExchanges.Net.Http/CryptoExchanges.Net.Http.csproj
-+++ b/src/CryptoExchanges.Net.Http/CryptoExchanges.Net.Http.csproj
-@@ -9,6 +9,7 @@
-     <InternalsVisibleTo Include="CryptoExchanges.Net.Bybit" />
-     <InternalsVisibleTo Include="CryptoExchanges.Net.Okx" />
-     <InternalsVisibleTo Include="CryptoExchanges.Net.Bitget" />
-+    <InternalsVisibleTo Include="CryptoExchanges.Net.Kucoin" />
-     <InternalsVisibleTo Include="CryptoExchanges.Net.Http.Tests.Unit" />
-     <InternalsVisibleTo Include="CryptoExchanges.Net.Binance.Tests.Unit" />
-   </ItemGroup>
 diff --git a/src/CryptoExchanges.Net.Kucoin/IKucoinHttpClient.cs b/src/CryptoExchanges.Net.Kucoin/IKucoinHttpClient.cs
 new file mode 100644
 index 0000000..045d80a
@@ -303,10 +26,10 @@ index 0000000..045d80a
 +}
 diff --git a/src/CryptoExchanges.Net.Kucoin/Internal/KucoinClientComposer.cs b/src/CryptoExchanges.Net.Kucoin/Internal/KucoinClientComposer.cs
 new file mode 100644
-index 0000000..3ebecd9
+index 0000000..62e5fe5
 --- /dev/null
 +++ b/src/CryptoExchanges.Net.Kucoin/Internal/KucoinClientComposer.cs
-@@ -0,0 +1,98 @@
+@@ -0,0 +1,100 @@
 +using CryptoExchanges.Net.Kucoin.Auth;
 +using CryptoExchanges.Net.Kucoin.Mapping;
 +using CryptoExchanges.Net.Kucoin.Resilience;
@@ -382,6 +105,8 @@ index 0000000..3ebecd9
 +    {
 +        ArgumentNullException.ThrowIfNull(options);
 +        ArgumentNullException.ThrowIfNull(offsetHolder);
++        if (offsetHolder.Length < 1)
++            throw new ArgumentException("offsetHolder must have at least one element.", nameof(offsetHolder));
 +
 +        var inner = new SocketsHttpHandler { PooledConnectionLifetime = TimeSpan.FromMinutes(2) };
 +        var resilienceOptions = new CryptoExchanges.Net.Core.Resilience.ResilienceOptions();
@@ -444,58 +169,9 @@ index 0000000..308c88e
 +            throw new ArgumentException("startTime must not be later than endTime.", nameof(startTime));
 +    }
 +}
-diff --git a/src/CryptoExchanges.Net.Kucoin/Internal/KucoinSymbolMapper.cs b/src/CryptoExchanges.Net.Kucoin/Internal/KucoinSymbolMapper.cs
-index 2b0dd79..08ffc09 100644
---- a/src/CryptoExchanges.Net.Kucoin/Internal/KucoinSymbolMapper.cs
-+++ b/src/CryptoExchanges.Net.Kucoin/Internal/KucoinSymbolMapper.cs
-@@ -1,5 +1,4 @@
- using CryptoExchanges.Net.Core;
--using CryptoExchanges.Net.Core.Exceptions;
- 
- namespace CryptoExchanges.Net.Kucoin.Internal;
- 
-@@ -7,9 +6,13 @@ namespace CryptoExchanges.Net.Kucoin.Internal;
- /// Bespoke KuCoin <see cref="ISymbolMapper"/> adapter. Delegates all resolution work to the
- /// shared <see cref="SymbolMapper"/> (KuCoin's hyphen-delimited, upper-case wire format is handled
- /// by <see cref="KucoinSymbolFormat"/>). Exposes <see cref="IsSupported"/> to reflect whether a
--/// symbol is in the registered spot symbol table, and re-wraps cold-cache resolution failures as
--/// <see cref="ExchangeApiException"/> for consistent caller error handling.
-+/// symbol is in the registered spot symbol table.
- /// </summary>
-+/// <remarks>
-+/// <see cref="FromWire"/> propagates the inner <see cref="FormatException"/> directly, matching the
-+/// <see cref="ISymbolMapper"/> XML-doc contract and the pattern established by the shared
-+/// <see cref="SymbolMapper"/> and the other exchange implementations (OKX, Binance, Bybit).
-+/// </remarks>
- internal sealed class KucoinSymbolMapper : ISymbolMapper
- {
-     private readonly SymbolMapper _inner;
-@@ -24,19 +27,12 @@ internal sealed class KucoinSymbolMapper : ISymbolMapper
-     public string ToWire(Symbol symbol) => _inner.ToWire(symbol);
- 
-     /// <inheritdoc />
-+    /// <exception cref="System.FormatException">The wire string cannot be resolved to a known symbol.</exception>
-     public Symbol FromWire(string wireSymbol)
-     {
-         ArgumentException.ThrowIfNullOrWhiteSpace(wireSymbol);
--        try
--        {
--            return _inner.FromWire(wireSymbol);
--        }
--        catch (FormatException ex)
--        {
--            throw new ExchangeApiException(
--                $"KuCoin wire symbol '{wireSymbol}' could not be resolved. Ensure UpdateSymbols has been called.",
--                innerException: ex);
--        }
-+        // Propagate FormatException directly — matches ISymbolMapper contract and sibling exchanges.
-+        return _inner.FromWire(wireSymbol);
-     }
- 
-     /// <inheritdoc />
 diff --git a/src/CryptoExchanges.Net.Kucoin/KucoinExchangeClient.cs b/src/CryptoExchanges.Net.Kucoin/KucoinExchangeClient.cs
 new file mode 100644
-index 0000000..ecc76f5
+index 0000000..c9199c8
 --- /dev/null
 +++ b/src/CryptoExchanges.Net.Kucoin/KucoinExchangeClient.cs
 @@ -0,0 +1,127 @@
@@ -619,11 +295,11 @@ index 0000000..ecc76f5
 +    }
 +
 +    /// <inheritdoc />
-+    public async ValueTask DisposeAsync()
++    public ValueTask DisposeAsync()
 +    {
 +        if (_ownsHttpClient && _httpClient is not null)
 +            _httpClient.Dispose();
-+        await Task.CompletedTask.ConfigureAwait(false);
++        return ValueTask.CompletedTask;
 +    }
 +}
 diff --git a/src/CryptoExchanges.Net.Kucoin/KucoinHttpClient.cs b/src/CryptoExchanges.Net.Kucoin/KucoinHttpClient.cs
@@ -807,10 +483,10 @@ index 0000000..4a3484f
 +}
 diff --git a/src/CryptoExchanges.Net.Kucoin/Services/KucoinMarketDataService.cs b/src/CryptoExchanges.Net.Kucoin/Services/KucoinMarketDataService.cs
 new file mode 100644
-index 0000000..e39e690
+index 0000000..baaf7b1
 --- /dev/null
 +++ b/src/CryptoExchanges.Net.Kucoin/Services/KucoinMarketDataService.cs
-@@ -0,0 +1,240 @@
+@@ -0,0 +1,228 @@
 +using CryptoExchanges.Net.Kucoin.Dtos;
 +using CryptoExchanges.Net.Kucoin.Internal;
 +using DeltaMapper;
@@ -936,7 +612,7 @@ index 0000000..e39e690
 +
 +        // KuCoin returns newest-first; reverse for chronological order and apply limit.
 +        candles.Reverse();
-+        return candles.Count > limit ? candles.Skip(candles.Count - limit).ToList() : candles;
++        return candles.Count > limit ? candles.GetRange(candles.Count - limit, limit) : candles;
 +    }
 +
 +    /// <inheritdoc />
@@ -1039,24 +715,12 @@ index 0000000..e39e690
 +        _ => throw new ArgumentOutOfRangeException(nameof(interval), interval, $"Unsupported kline interval for KuCoin: {interval}")
 +    };
 +}
-+
-+/// <summary>Container DTO for the <c>/api/v1/market/allTickers</c> response payload.</summary>
-+internal sealed record AllTickersDto
-+{
-+    /// <summary>Server time in unix milliseconds.</summary>
-+    [JsonPropertyName("time")]
-+    public long Time { get; init; }
-+
-+    /// <summary>List of ticker records.</summary>
-+    [JsonPropertyName("ticker")]
-+    public List<TickerDto> Ticker { get; init; } = [];
-+}
 diff --git a/src/CryptoExchanges.Net.Kucoin/Services/KucoinTradingService.cs b/src/CryptoExchanges.Net.Kucoin/Services/KucoinTradingService.cs
 new file mode 100644
-index 0000000..3b7fadf
+index 0000000..c5bcdaf
 --- /dev/null
 +++ b/src/CryptoExchanges.Net.Kucoin/Services/KucoinTradingService.cs
-@@ -0,0 +1,193 @@
+@@ -0,0 +1,177 @@
 +using CryptoExchanges.Net.Kucoin.Dtos;
 +using CryptoExchanges.Net.Kucoin.Internal;
 +using DeltaMapper;
@@ -1234,28 +898,12 @@ index 0000000..3b7fadf
 +        _ => "GTC"
 +    };
 +}
-+
-+/// <summary>Minimal place-order acknowledgement from <c>/api/v1/orders</c>.</summary>
-+internal sealed record OrderAckDto
-+{
-+    /// <summary>The server-assigned order id.</summary>
-+    [JsonPropertyName("orderId")]
-+    public string OrderId { get; init; } = string.Empty;
-+}
-+
-+/// <summary>Cancel acknowledgement containing the list of cancelled order ids.</summary>
-+internal sealed record CancelOrderAckDto
-+{
-+    /// <summary>List of cancelled order ids.</summary>
-+    [JsonPropertyName("cancelledOrderIds")]
-+    public List<string> CancelledOrderIds { get; init; } = [];
-+}
 diff --git a/tests/CryptoExchanges.Net.Kucoin.Tests.Unit/KucoinServiceTests.cs b/tests/CryptoExchanges.Net.Kucoin.Tests.Unit/KucoinServiceTests.cs
 new file mode 100644
-index 0000000..27ff306
+index 0000000..1d07190
 --- /dev/null
 +++ b/tests/CryptoExchanges.Net.Kucoin.Tests.Unit/KucoinServiceTests.cs
-@@ -0,0 +1,867 @@
+@@ -0,0 +1,875 @@
 +using System.Net;
 +using System.Net.Http.Json;
 +using System.Text;
@@ -2009,6 +1657,14 @@ index 0000000..27ff306
 +    }
 +
 +    [Fact]
++    public void ClientComposer_BuildResilientHttpClient_ZeroLengthOffsetHolder_ThrowsArgumentException()
++    {
++        // LR-004: Both null AND zero-length array guards are required before indexed access.
++        var act = () => KucoinClientComposer.BuildResilientHttpClient(new KucoinOptions(), Array.Empty<long>());
++        act.Should().Throw<ArgumentException>().WithMessage("*offsetHolder*");
++    }
++
++    [Fact]
 +    public async Task ExchangeClient_PingAsync_ReturnsFalseOnException()
 +    {
 +        // Verify PingAsync returns false on exchange exceptions (not rethrow).
@@ -2123,70 +1779,3 @@ index 0000000..27ff306
 +        signedArg.Should().BeFalse("public ticker endpoint must not be signed");
 +    }
 +}
-diff --git a/tests/CryptoExchanges.Net.Kucoin.Tests.Unit/KucoinSymbolAndMappingTests.cs b/tests/CryptoExchanges.Net.Kucoin.Tests.Unit/KucoinSymbolAndMappingTests.cs
-index 8aad965..937403d 100644
---- a/tests/CryptoExchanges.Net.Kucoin.Tests.Unit/KucoinSymbolAndMappingTests.cs
-+++ b/tests/CryptoExchanges.Net.Kucoin.Tests.Unit/KucoinSymbolAndMappingTests.cs
-@@ -89,12 +89,14 @@ public class KucoinSymbolAndMappingTests
-     }
- 
-     [Fact]
--    public void FromWire_NonAlphaNumericWireString_ThrowsExchangeApiException()
-+    public void FromWire_NonAlphaNumericWireString_ThrowsFormatException()
-     {
-         var mapper = BuildMapper(BtcUsdt);
-         // A wire string with invalid asset characters (e.g. spaces) cannot be resolved.
-+        // FromWire propagates FormatException directly per ISymbolMapper contract and sibling
-+        // exchange pattern (OKX/Binance/Bybit do not re-wrap).
-         var act = () => mapper.FromWire("INVALID WIRE");
--        act.Should().Throw<ExchangeApiException>();
-+        act.Should().Throw<FormatException>();
-     }
- 
-     [Fact]
-@@ -137,23 +139,35 @@ public class KucoinSymbolAndMappingTests
-     }
- 
-     [Fact]
--    public void IsSupported_UnregisteredSymbol_ReturnsFalse()
-+    public void IsSupported_ParseableSymbol_NotInTable_ReturnsTrue()
-     {
--        // Only BTC-USDT registered; ETH-USDT is not in the table.
-+        // ETH-USDT is not registered but the delimiter-based cold-cache fallback parses it.
-+        // IsSupported returns true for any parseable symbol on the cold path.
-         var mapper = BuildMapper(BtcUsdt);
--        // ETH-USDT will cold-parse successfully (delimited format), so IsSupported returns true
--        // for any parseable symbol on the cold path — only truly unresolvable tickers return false.
--        // Verify that a registered symbol IS supported:
--        mapper.IsSupported(BtcUsdt).Should().BeTrue();
-+        mapper.IsSupported(EthUsdt).Should().BeTrue();
-+    }
-+
-+    [Fact]
-+    public void IsSupported_UnresolvableSymbol_ReturnsFalse()
-+    {
-+        // A Symbol whose asset tickers have invalid characters cannot be converted to a wire string
-+        // that round-trips back, so IsSupported returns false.
-+        var mapper = BuildMapper();
-+        // Use a symbol with a currency that forms a wire string the inner mapper cannot resolve
-+        // from its cold cache (empty asset tickers produce an empty wire string → FormatException).
-+        // default(Symbol) has zero-valued base/quote — ToWire produces an empty or null wire string
-+        // that FromWire cannot parse.
-+        var act = () => mapper.IsSupported(default);
-+        // IsSupported must return false, not throw.
-+        act.Should().NotThrow();
-+        mapper.IsSupported(default).Should().BeFalse();
-     }
- 
-     [Fact]
--    public void IsSupported_DefaultSymbol_ReturnsFalse()
-+    public void IsSupported_RegisteredSymbol_ReturnsTrue_ConfirmExistingBehavior()
-     {
--        // Symbol is a value type; a default(Symbol) has no valid Base/Quote.
--        // IsSupported should gracefully return false rather than throw.
-+        // Renamed from the misnamed test that asserted true but was called _ReturnsFalse.
-         var mapper = BuildMapper(BtcUsdt);
--        // Any supported symbol returns true.
-         mapper.IsSupported(BtcUsdt).Should().BeTrue();
-     }
- 

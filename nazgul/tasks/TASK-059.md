@@ -1,6 +1,6 @@
 ---
 id: TASK-059
-status: IMPLEMENTED
+status: DONE
 depends_on: [TASK-057, TASK-058]
 ---
 # TASK-059: REST client — market-data / account / trading service methods + HTTP client + composer
@@ -18,7 +18,7 @@ depends_on: [TASK-057, TASK-058]
 - **Claimed at**: 2026-06-21T00:00:00Z
 - **Base SHA**: b0bbb902c3c16f3ccd73aa1ae070959bfd3448a5
 - **Implemented at**: 2026-06-21T00:30:00Z
-- **Completed at**:
+- **Completed at**: 2026-06-21T12:30:00Z
 - **Blocked at**:
 - **Retry count**: 1/3
 - **Test failures**: 0
@@ -57,9 +57,9 @@ Tests (`KucoinServiceTests.cs`) — stub HTTP handler returning canned KuCoin JS
 - Error envelope (`code != "200000"`) surfaces a typed exception via `KucoinErrorTranslator`.
 
 ## Acceptance Criteria
-- [ ] `KucoinMarketDataService` / `KucoinAccountService` / `KucoinTradingService` implement the same `Core` service interfaces the other exchanges expose (market data + balances + place/cancel/cancel-by-client-id/cancel-all/get/open/history orders + fills/trade history), each returning canonical `Core.Models` via DeltaMapper; signed methods mark `KucoinSigningRequest`; retry stays GET-only; full XML docs (`<inheritdoc/>` on impls).
-- [ ] `KucoinExchangeClient.Create(...)` + `CreateFromEnvironment()` + `KucoinClientComposer` (shared by factory + DI) + typed `KucoinHttpClient` (ResponseDto envelope, success `"200000"`, error translation) exist, one type per file, mirroring OKX.
-- [ ] `KucoinServiceTests` drive every service method through a stub HTTP handler asserting mapped `Core.Models` + signed-request marking + error translation — NO network; solution builds 0W/0E; existing non-integration suite stays green.
+- [x] `KucoinMarketDataService` / `KucoinAccountService` / `KucoinTradingService` implement the same `Core` service interfaces the other exchanges expose (market data + balances + place/cancel/cancel-by-client-id/cancel-all/get/open/history orders + fills/trade history), each returning canonical `Core.Models` via DeltaMapper; signed methods mark `KucoinSigningRequest`; retry stays GET-only; full XML docs (`<inheritdoc/>` on impls).
+- [x] `KucoinExchangeClient.Create(...)` + `CreateFromEnvironment()` + `KucoinClientComposer` (shared by factory + DI) + typed `KucoinHttpClient` (ResponseDto envelope, success `"200000"`, error translation) exist, one type per file, mirroring OKX.
+- [x] `KucoinServiceTests` drive every service method through a stub HTTP handler asserting mapped `Core.Models` + signed-request marking + error translation — NO network; solution builds 0W/0E; existing non-integration suite stays green.
 
 ## Pattern Reference
 - Service implementations: `src/CryptoExchanges.Net.Okx/Services/OkxMarketDataService.cs`, `OkxAccountService.cs`, `OkxTradingService.cs`.
@@ -92,6 +92,7 @@ Tests (`KucoinServiceTests.cs`) — stub HTTP handler returning canned KuCoin JS
 ## Commits
 
 - `95a6066` — feat(FEAT-006): TASK-059 — KuCoin REST services + HTTP client + composer + entry point
+- `ee97d43` — feat(FEAT-006): TASK-059 Cycle 1 fix — LR-004 offsetHolder length guard + test
 
 ## Implementation Log
 
@@ -126,3 +127,9 @@ Reviewers: architect-reviewer (APPROVE), code-reviewer (APPROVE), security-revie
 
 **Blocking finding (api-reviewer, LR-004, HIGH/95)**:
 `KucoinClientComposer.BuildResilientHttpClient` had `ArgumentNullException.ThrowIfNull(offsetHolder)` (null guard) but was missing the required minimum-length guard before `offsetHolder[0]` indexed access. Fixed in Cycle 1.
+
+### Cycle 2 — ALL APPROVED (2026-06-21)
+
+Reviewers: architect-reviewer (APPROVE), code-reviewer (APPROVE), security-reviewer (APPROVE), api-reviewer (APPROVE).
+
+LR-004 fix verified: both null guard and length guard present in `BuildResilientHttpClient`; test `ClientComposer_BuildResilientHttpClient_ZeroLengthOffsetHolder_ThrowsArgumentException` using `Array.Empty<long>()` confirmed.

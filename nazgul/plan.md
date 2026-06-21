@@ -58,13 +58,13 @@ Authoritative inputs (read fully before any task):
 | TASK-061 | ✦ DONE     | 1    | ADR-002 streaming endpoint seam → async `ResolveConnectionAsync` + migrate Binance |
 | TASK-057 | ✦ DONE     | 2    | KC-API passphrase-v2 signing service + mark-and-strip signing handler        |
 | TASK-058 | ✦ DONE     | 2    | Bespoke `ISymbolMapper` + REST wire DTOs + DeltaMapper profiles + parsers    |
-| TASK-059 | ◇ PLANNED  | 3    | REST services (market/account/trading) + http client + composer + entry     |
+| TASK-059 | ✦ DONE     | 3    | REST services (market/account/trading) + http client + composer + entry     |
 | TASK-060 | ◇ PLANNED  | 4    | `AddKucoinExchange` DI + `AddCryptoExchanges` + MCP wiring                   |
 | TASK-062 | ◇ PLANNED  | 5    | `KucoinStreamProtocol` + bullet-public + 4 decoders + `AddKucoinStreams`     |
 | TASK-063 | ◇ PLANNED  | 6    | Live integration smokes — REST + one streaming (self-skip)                   |
 | TASK-064 | ◇ PLANNED  | 6    | Docs — README KuCoin row → supported + MCP/exchanges/streaming reference     |
 
-Tasks: 4/9 DONE.
+Tasks: 5/9 DONE.
 
 ## Wave Groups
 
@@ -134,9 +134,9 @@ Nothing in PRD "Out of Scope" (futures/margin, private streams, order-book maint
 
 ## Recovery Pointer
 
-- **Current stage**: ✦ TASK-059 IMPLEMENTED — REST services + http client + composer + entry (commit 95a6066).
-- **Next action**: Review gate for TASK-059 → then TASK-060 (AddKucoinExchange DI).
-- **Active task**: TASK-059 (awaiting review).
+- **Current stage**: ✦ TASK-059 DONE — REST services + http client + composer + entry (reviewed 4/4, Cycle 2; completion SHA ee97d43).
+- **Next action**: TASK-060 — AddKucoinExchange DI + AddCryptoExchanges + MCP wiring.
+- **Active task**: TASK-060 (next to implement).
 - **Files are truth**: the task manifests under `nazgul/tasks/` carry full state; each manifest's
   frontmatter is the canonical record.
 
@@ -145,7 +145,8 @@ Nothing in PRD "Out of Scope" (futures/margin, private streams, order-book maint
   ✦ TASK-061 — ADR-002 seam generalization DONE (reviewed 4/4, commit f04dfc4).
   ✦ TASK-057 — KC-API signing DONE (reviewed 4/4, Cycle 2; simplify 4799140).
   ✦ TASK-058 — KucoinSymbolMapper + wire DTOs + DeltaMapper + parsers DONE (reviewed 4/4, Cycle 1; simplify 5a20da1).
-  ✦ TASK-059 — REST services + http client + composer + entry IMPLEMENTED (commit 95a6066, awaiting review).
+  ✦ TASK-059 — REST services + http client + composer + entry DONE (reviewed 4/4, Cycle 2; fix ee97d43).
+  ◇ TASK-060 — AddKucoinExchange DI + AddCryptoExchanges + MCP wiring (next).
 ────────────────────────────────────────────────────────
 
 ## Completed
@@ -158,6 +159,8 @@ Nothing in PRD "Out of Scope" (futures/margin, private streams, order-book maint
   Impl commits: `a754e9f` (initial) + `d3bf817` (DIP fix) + `4799140` (simplify). Completion SHA: ffc7e3f. Review artifacts: `nazgul/reviews/TASK-057/`.
 - **TASK-058** — DONE (2026-06-21T11:00:00Z). KucoinSymbolMapper + wire DTOs + DeltaMapper profiles + parsers approved unanimously (4/4, Cycle 1).
   Impl commit: `c59600f`. Simplify commit: `5a20da1`. Review artifacts: `nazgul/reviews/TASK-058/`.
+- **TASK-059** — DONE (2026-06-21T12:30:00Z). REST services + http client + composer + entry approved unanimously (4/4, Cycle 2).
+  Impl commit: `95a6066`. Simplify commits: `dc8aac9` + `272ded8` + `12fffb6`. Cycle-1 fix: `ee97d43`. Completion SHA: `ee97d43`. Review artifacts: `nazgul/reviews/TASK-059/`.
 
 
 ## Archived — FEAT-005 (WebSocket streaming v1) — COMPLETE

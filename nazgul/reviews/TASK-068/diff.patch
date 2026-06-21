@@ -1,0 +1,70 @@
+diff --git a/samples/BasicUsage/BasicUsage.csproj b/samples/BasicUsage/BasicUsage.csproj
+index f07a0f9..23b8cce 100644
+--- a/samples/BasicUsage/BasicUsage.csproj
++++ b/samples/BasicUsage/BasicUsage.csproj
+@@ -8,6 +8,6 @@
+   </PropertyGroup>
+ 
+   <ItemGroup>
+-    <ProjectReference Include="..\..\src\CryptoExchanges.Net.DependencyInjection\CryptoExchanges.Net.DependencyInjection.csproj" />
++    <ProjectReference Include="..\..\src\CryptoExchanges.Net\CryptoExchanges.Net.csproj" />
+   </ItemGroup>
+ </Project>
+diff --git a/src/CryptoExchanges.Net.Mcp/CryptoExchanges.Net.Mcp.csproj b/src/CryptoExchanges.Net.Mcp/CryptoExchanges.Net.Mcp.csproj
+index 1f528cc..7b1f2ff 100644
+--- a/src/CryptoExchanges.Net.Mcp/CryptoExchanges.Net.Mcp.csproj
++++ b/src/CryptoExchanges.Net.Mcp/CryptoExchanges.Net.Mcp.csproj
+@@ -16,7 +16,7 @@
+     <ProjectReference Include="../CryptoExchanges.Net.Okx/CryptoExchanges.Net.Okx.csproj" />
+     <ProjectReference Include="../CryptoExchanges.Net.Bitget/CryptoExchanges.Net.Bitget.csproj" />
+     <ProjectReference Include="../CryptoExchanges.Net.Kucoin/CryptoExchanges.Net.Kucoin.csproj" />
+-    <ProjectReference Include="../CryptoExchanges.Net.DependencyInjection/CryptoExchanges.Net.DependencyInjection.csproj" />
++    <ProjectReference Include="../CryptoExchanges.Net/CryptoExchanges.Net.csproj" />
+   </ItemGroup>
+   <ItemGroup>
+     <None Include="README.md" Pack="true" PackagePath="\" />
+diff --git a/src/CryptoExchanges.Net.Mcp/EnvCredentialBinder.cs b/src/CryptoExchanges.Net.Mcp/EnvCredentialBinder.cs
+index 3f9c3e7..0104a04 100644
+--- a/src/CryptoExchanges.Net.Mcp/EnvCredentialBinder.cs
++++ b/src/CryptoExchanges.Net.Mcp/EnvCredentialBinder.cs
+@@ -1,4 +1,4 @@
+-using CryptoExchanges.Net.DependencyInjection;
++using CryptoExchanges.Net;
+ 
+ namespace CryptoExchanges.Net.Mcp;
+ 
+diff --git a/src/CryptoExchanges.Net.Mcp/Program.cs b/src/CryptoExchanges.Net.Mcp/Program.cs
+index 2bbd222..d967115 100644
+--- a/src/CryptoExchanges.Net.Mcp/Program.cs
++++ b/src/CryptoExchanges.Net.Mcp/Program.cs
+@@ -1,4 +1,4 @@
+-using CryptoExchanges.Net.DependencyInjection;
++using CryptoExchanges.Net;
+ using CryptoExchanges.Net.Mcp;
+ using Microsoft.Extensions.DependencyInjection;
+ using Microsoft.Extensions.Hosting;
+diff --git a/tests/CryptoExchanges.Net.Mcp.Tests.Unit/CryptoExchanges.Net.Mcp.Tests.Unit.csproj b/tests/CryptoExchanges.Net.Mcp.Tests.Unit/CryptoExchanges.Net.Mcp.Tests.Unit.csproj
+index 6d69dee..089db3c 100644
+--- a/tests/CryptoExchanges.Net.Mcp.Tests.Unit/CryptoExchanges.Net.Mcp.Tests.Unit.csproj
++++ b/tests/CryptoExchanges.Net.Mcp.Tests.Unit/CryptoExchanges.Net.Mcp.Tests.Unit.csproj
+@@ -8,7 +8,7 @@
+   </PropertyGroup>
+   <ItemGroup>
+     <ProjectReference Include="../../src/CryptoExchanges.Net.Mcp/CryptoExchanges.Net.Mcp.csproj" />
+-    <ProjectReference Include="../../src/CryptoExchanges.Net.DependencyInjection/CryptoExchanges.Net.DependencyInjection.csproj" />
++    <ProjectReference Include="../../src/CryptoExchanges.Net/CryptoExchanges.Net.csproj" />
+   </ItemGroup>
+   <ItemGroup>
+     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.6.0" />
+diff --git a/tests/CryptoExchanges.Net.Mcp.Tests.Unit/EnvCredentialBinderTests.cs b/tests/CryptoExchanges.Net.Mcp.Tests.Unit/EnvCredentialBinderTests.cs
+index e24d606..5a7d6bc 100644
+--- a/tests/CryptoExchanges.Net.Mcp.Tests.Unit/EnvCredentialBinderTests.cs
++++ b/tests/CryptoExchanges.Net.Mcp.Tests.Unit/EnvCredentialBinderTests.cs
+@@ -1,6 +1,6 @@
+ using Xunit;
+ using AwesomeAssertions;
+-using CryptoExchanges.Net.DependencyInjection;
++using CryptoExchanges.Net;
+ using CryptoExchanges.Net.Mcp;
+ 
+ namespace CryptoExchanges.Net.Mcp.Tests.Unit;

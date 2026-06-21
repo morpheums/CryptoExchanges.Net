@@ -89,6 +89,8 @@ the MCP and sample projects (full 0W/0E + suite gate is TASK-070); run
 
 ## Commits
 
+- `58f6313` — feat(FEAT-007): TASK-068 IMPLEMENTED — repoint MCP + samples consumers to renamed CryptoExchanges.Net
+
 ## Implementation Log
 
 - Swapped `using CryptoExchanges.Net.DependencyInjection;` → `using CryptoExchanges.Net;` in 3 `.cs` files: `Program.cs`, `EnvCredentialBinder.cs`, `EnvCredentialBinderTests.cs`.

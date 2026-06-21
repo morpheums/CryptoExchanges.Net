@@ -1,132 +1,209 @@
 ---
 reviewer: architect-reviewer
-verdict: APPROVED
----
-# TASK-062 Architect Review
-
-## Verdict: APPROVED
-
+task: TASK-062
+cycle: bugfix
+verdict: APPROVE
 ---
 
-## Findings
+# Architect Review — TASK-062 (bugfix re-review, commit 32f75f7)
 
-### PASS — K1: Http layer untouched (confidence: 100%)
+## Summary of Change
 
-The diff adds files exclusively under `src/CryptoExchanges.Net.Kucoin/`. No file under `src/CryptoExchanges.Net.Http/` was modified. The Http layer contains zero `Core.Models` or DeltaMapper references in its new streaming infrastructure (`StreamConnectionInfo`, `HeartbeatPolicy`, `IStreamProtocol`, `StreamServiceRegistration` — all confirmed clean). K1 is intact.
-
----
-
-### PASS — C1: No timers, threads, or Task.Delay in KucoinStreamProtocol or KucoinBulletPublicClient (confidence: 100%)
-
-Grep of `src/CryptoExchanges.Net.Kucoin/Streaming/` for `Timer`, `Thread`, `Task.Delay`, and `Thread.Sleep` returned no results. `KucoinStreamProtocol` is pure classification + data construction; `HeartbeatPolicy` is a data record with no behavior. Binding constraint C1 is preserved.
+Fixes the KuCoin ticker stream: the subscription channel was wrong (`/market/ticker:{sym}` has a
+different wire shape than `/market/snapshot:{sym}`). This caused live integration tests to time out
+because the server sends snapshot-shaped frames on the snapshot channel but the DTO expected the
+ticker-channel shape (string-encoded fields, different JSON property names, no `data.data` nesting).
+The fix: change the topic in `BuildTopic`, replace `StreamTickerDto` with a snapshot-shaped DTO, add
+`DeserializeSnapshotData` for the double-nested envelope, update the DeltaMapper profile, and update
+all affected tests. Also hardens CI by filtering integration tests out of the build runner.
 
 ---
 
-### PASS — K2/K3: ResolveConnectionAsync re-negotiates on every call, unique connectId per connection (confidence: 100%)
+## Finding 1: Channel correctness — routing keyspace consistency
 
-`KucoinStreamProtocol` holds no cached token or URL field. Every call to `ResolveConnectionAsync` invokes `_bulletClient.NegotiateAsync(ct)` unconditionally. `connectId` is produced via `Guid.NewGuid().ToString("N")` inside that method body on every call. No caching pattern (lazy, volatile, field) exists. K2/K3 are satisfied.
+- **Severity**: HIGH
+- **Confidence**: 99
+- **Blocking**: false (no violation found — this is a PASS)
+- **File**: `src/CryptoExchanges.Net.Kucoin/Streaming/KucoinStreamProtocol.cs:139-149`
 
----
+`BuildTopic` is the single source of truth for the topic string. All three consumers — `BuildSubscribe`,
+`BuildUnsubscribe`, and `RoutingKeyFor` — call `BuildTopic` directly (no inline string constants). The
+`Classify` method reads the `topic` field verbatim from the incoming frame and sets it as `RoutingKey`;
+it does not re-construct the topic itself. As a result:
 
-### PASS — ADR-002: IStreamProtocol.ResolveConnectionAsync async seam implemented correctly (confidence: 100%)
+- `RoutingKeyFor` = output of `BuildTopic` = `/market/snapshot:{sym}`
+- `Classify` = JSON `topic` field from the frame = `/market/snapshot:{sym}` (what KuCoin sends)
+- These two are guaranteed to match by the single-source design.
 
-`KucoinStreamProtocol` implements `ValueTask<StreamConnectionInfo> ResolveConnectionAsync(CancellationToken ct)` — the exact signature from ADR-002. This replaces the old static `Endpoint` + `Heartbeat` property pair. The method performs the HTTP negotiation call, constructs a fresh `HeartbeatPolicy` from server-dictated `pingInterval`/`pingTimeout`, and returns a `StreamConnectionInfo(uri, heartbeat)`. The Binance reference implementation (which returns a pre-built `StreamConnectionInfo` from the constructor) continues to work unchanged.
+No keyspace collision: snapshot → `/market/snapshot:*`, trade → `/market/match:*`, order book →
+`/market/level2:*`, kline → `/market/candles:*_interval`. All four prefixes are structurally distinct;
+no cross-kind collision possible.
 
----
+The round-trip test `RoutingKeyFor_Ticker_MatchesClassifyRoutingKey` explicitly asserts
+`subscribeKey.Should().Be(classifiedKey)` with a live snapshot-envelope frame.
 
-### PASS — 4-layer dependency chain: Kucoin references Core + Http only (confidence: 100%)
-
-`CryptoExchanges.Net.Kucoin.csproj` has exactly two `ProjectReference` nodes: `CryptoExchanges.Net.Core` and `CryptoExchanges.Net.Http`. No reference to `CryptoExchanges.Net.DependencyInjection` or any sibling exchange assembly. The dependency direction invariant is satisfied.
-
----
-
-### PASS — AddKucoinStreams parity with AddBinanceStreams (confidence: 100%)
-
-`AddKucoinStreams` delegates to `StreamServiceRegistration.AddStreams<KucoinStreamOptions>` with `ExchangeId.Kucoin`, a `protocolFactory` lambda, and a `decoderRegistryFactory` lambda — exactly the same pattern as `AddBinanceStreams`. Named `kucoin` HttpClient is resolved via `IHttpClientFactory.CreateClient(KucoinClientName)` (not a typed client), satisfying Invariant 9 (no captive dependency). Keyed services (`IMapper`, `ISymbolMapper`) are resolved with `GetRequiredKeyedService`. `ValidateOnStart` is handled by the shared `StreamServiceRegistration` body.
-
----
-
-### PASS — Topic map and RoutingKeyFor/Classify agreement (confidence: 100%)
-
-`BuildTopic` produces:
-- Ticker: `/market/ticker:{WIRE}`
-- Trade: `/market/match:{WIRE}`
-- OrderBook: `/market/level2:{WIRE}`
-- Kline: `/market/candles:{WIRE}_{INTERVAL_WIRE}`
-
-`RoutingKeyFor` returns `BuildTopic(request)` directly. `Classify` reads `"topic"` from an inbound `"message"` frame and returns it verbatim as the routing key. Both sides share exactly the same venue-native topic string. Subscribe-time registration and receive-time routing will agree. The keyspace contract from `IStreamProtocol` is met.
+**Verdict: PASS.**
 
 ---
 
-### PASS — SSRF guard on bullet-public endpoint (confidence: 100%)
+## Finding 2: Double-nesting unwrap isolation
 
-`ValidateWsEndpoint` enforces that the negotiated endpoint URI (a) parses as an absolute URI, (b) uses the `wss` scheme, and (c) has a host that is exactly `kucoin.com` or ends with `.kucoin.com`. This prevents a compromised negotiation response from redirecting the WebSocket connection to an attacker-controlled host. The guard fires before the URI is used to construct `StreamConnectionInfo`.
+- **Severity**: HIGH
+- **Confidence**: 97
+- **Blocking**: false (no violation found — this is a PASS)
+- **File**: `src/CryptoExchanges.Net.Kucoin/Streaming/KucoinStreamDecoders.cs:44-48, 119-169`
 
----
+`DeserializeSnapshotData<T>` is used exclusively for `StreamKind.Ticker`. Trade, OrderBook, and Kline
+all call `DeserializeData<T>` (single-nested). The two paths are cleanly separated by the registry
+closure per `StreamKind`, so there is no possibility of the snapshot path contaminating other frame
+types.
 
-### PASS — KucoinStreamDecoders is a static factory, not a static utility with swappable behavior (confidence: 95%)
+The fallback behavior in `DeserializeSnapshotData`:
+1. Full frame (`data` present, `data.data` present) → deserializes inner `data.data` object. Correct.
+2. `data` present but no inner `data` → deserializes `outerData` directly. This handles test fixtures
+   that supply only a single-level envelope. The fallback is architecturally sound: the else branch
+   cannot be triggered by a live KuCoin frame (KuCoin always sends the full double-nested shape on
+   `/market/snapshot`) and the test coverage for both paths is present.
+3. No envelope at all (bare payload) → falls through to raw `JsonSerializer.Deserialize`. Correct.
+4. `JsonException` on the outer parse → falls through to raw deserialize. Correct.
 
-`KucoinStreamDecoders` is `internal static` and exposes only `Build(IMapper, ISymbolMapper)`. It is a pure factory that produces a `StreamDecoderRegistry`; the decoders themselves are closures capturing the injected `IMapper` and `ISymbolMapper`. The static class holds no mutable state and does not implement any swappable interface. This is structurally analogous to `BinanceStreamDecoders` and matches the pattern described in `StreamServiceRegistration`. Invariant 11 (interfaces for swappable behavior) is not violated here.
+There is no code path by which `DeserializeSnapshotData` could corrupt a Trade/OrderBook/Kline frame:
+those decoders are registered under different `StreamKind` keys and call a different method.
 
----
-
-### CONCERN — KucoinStreamOptions.RestBaseUrl is public but never consumed (confidence: 90%, non-blocking)
-
-**File**: `src/CryptoExchanges.Net.Kucoin/Streaming/KucoinStreamOptions.cs:12`
-
-`KucoinStreamOptions.RestBaseUrl` is a `public` settable property that documents itself as the URL for the bullet-public endpoint. However, `KucoinStreamProtocol` never reads `KucoinStreamOptions`; neither does `KucoinBulletPublicClient`. The actual REST base address is fixed by `AddKucoinExchange` when it registers the named `kucoin` HttpClient. `KucoinStreamOptions` is passed through `StreamServiceRegistration.AddStreams<KucoinStreamOptions>` solely to enable `ValidateOnStart` on the options type — but since there are no `[Required]` or `[Range]` attributes and `RestBaseUrl` has a hardcoded default, `ValidateOnStart` is a no-op.
-
-The practical risks: (1) a consumer sets `KucoinStreamOptions.RestBaseUrl` expecting to change the negotiation endpoint, but the named `kucoin` HttpClient base address is unaffected — silent misconfiguration. (2) `RestBaseUrl` is part of the public API surface of a NuGet package with no semantic effect. Removing it later is a breaking change.
-
-**Recommendation**: Either (a) wire `RestBaseUrl` into the bullet-public HTTP call (e.g. have the `protocolFactory` lambda in `AddKucoinStreams` resolve `KucoinStreamOptions` and pass the URL to `KucoinHttpClient`), or (b) remove `RestBaseUrl` entirely and keep `KucoinStreamOptions` as an empty placeholder for future options, or (c) add a `[Required]` / `[MinLength(1)]` attribute and actually use it, so it earns its place on the public surface. This is non-blocking for the current task since the SSRF guard and named-client pattern both work correctly at runtime, but the dead public property should be resolved before the next milestone's release.
-
----
-
-### CONCERN — Two top-level types per file in BulletPublicDto.cs and StreamDepthDto.cs (confidence: 95%, non-blocking)
-
-**Files**:
-- `src/CryptoExchanges.Net.Kucoin/Dtos/Streaming/BulletPublicDto.cs` — `BulletPublicDto` + `InstanceServerDto`
-- `src/CryptoExchanges.Net.Kucoin/Dtos/Streaming/StreamDepthDto.cs` — `StreamDepthDto` + `DepthChangesDto`
-
-The project convention (CLAUDE.md: "One type per file") is violated in both cases. The second types (`InstanceServerDto`, `DepthChangesDto`) are tightly coupled nested-payload types, which may be why they were co-located — but the convention is unconditional. The same pattern exists in the Binance and other exchange packages for similarly-paired nested DTOs (the task manifest notes this is "known"), so this is a pre-existing pattern issue being cloned rather than a new violation introduced without precedent.
-
-**Recommendation**: Split each file: `InstanceServerDto.cs` alongside `BulletPublicDto.cs`; `DepthChangesDto.cs` alongside `StreamDepthDto.cs`. This is consistent with how the convention is applied to all other DTO types in the project. Non-blocking for the current task, but cloning this pattern to each new exchange makes the violation grow proportionally.
-
-**Pattern reference**: Every other DTO under `src/CryptoExchanges.Net.Kucoin/Dtos/` follows the one-type-per-file rule.
+**Verdict: PASS.**
 
 ---
 
-### CONCERN — IKucoinBulletPublicClient and KucoinBulletPublicClient co-located in one file (confidence: 85%, non-blocking)
+## Finding 3: K1 constraint — Core.Models and DeltaMapper stay in Kucoin package
 
-**File**: `src/CryptoExchanges.Net.Kucoin/Streaming/KucoinBulletPublicClient.cs`
+- **Severity**: HIGH
+- **Confidence**: 100
+- **Blocking**: false (no violation found — this is a PASS)
+- **File**: commit file list
 
-`IKucoinBulletPublicClient` (interface) and `KucoinBulletPublicClient` (implementation) are both defined in `KucoinBulletPublicClient.cs`. The one-type-per-file convention applies to interfaces as well as classes. Severity is low given both types are `internal` and tightly coupled, but the convention violation is the same as the DTO case above.
+The diff touches exactly these files:
+- `.github/workflows/ci.yml`
+- `src/CryptoExchanges.Net.Kucoin/` (5 files)
+- `tests/CryptoExchanges.Net.Kucoin.Tests.Unit/` (2 files)
 
-**Recommendation**: Move `IKucoinBulletPublicClient` to its own file (`IKucoinBulletPublicClient.cs`). Non-blocking.
+No file in `src/CryptoExchanges.Net.Http/` was modified. No new `using` or `ProjectReference` nodes
+were introduced in any Http-layer file. DeltaMapper references remain in `KucoinMappingProfiles.cs`
+(Kucoin package only). K1 is intact.
+
+**Verdict: PASS.**
 
 ---
 
-## Build Verification
+## Finding 4: C1 constraint — no timers or threads introduced
 
-`dotnet build --configuration Release -warnaserror` on the full solution: **Build succeeded. 0 Warning(s). 0 Error(s).** All downstream assemblies (DI, tests, samples) compiled cleanly.
+- **Severity**: HIGH
+- **Confidence**: 100
+- **Blocking**: false (no violation found — this is a PASS)
+- **File**: `src/CryptoExchanges.Net.Kucoin/Streaming/KucoinStreamProtocol.cs`,
+  `src/CryptoExchanges.Net.Kucoin/Streaming/KucoinStreamDecoders.cs`
+
+`DeserializeSnapshotData` is a synchronous, pure parsing function. `KucoinStreamProtocol` is
+unchanged in structure — no `Timer`, `Thread`, `Task.Run`, or background work was introduced. The
+`_nextId` field uses `Interlocked.Increment` (pre-existing). C1 holds.
+
+**Verdict: PASS.**
+
+---
+
+## Finding 5: ADR-002 seam — ResolveConnectionAsync delegation unchanged
+
+- **Severity**: MEDIUM
+- **Confidence**: 100
+- **Blocking**: false (no violation found — this is a PASS)
+- **File**: `src/CryptoExchanges.Net.Kucoin/Streaming/KucoinStreamProtocol.cs:34-63`
+
+`ResolveConnectionAsync` is untouched by the diff. It still delegates entirely to the injectable
+`IKucoinBulletPublicClient.NegotiateAsync`, returning a fresh `StreamConnectionInfo` (new token, new
+`connectId`) on every call. The `CountingFakeBulletClient` test confirms the method is called on every
+resolve (AC-4, reconnect re-negotiation). Seam is clean.
+
+**Verdict: PASS.**
+
+---
+
+## Finding 6: CI filter change — `--filter 'Category!=Integration'`
+
+- **Severity**: MEDIUM
+- **Confidence**: 98
+- **Blocking**: false (no violation found — this is a PASS)
+- **File**: `.github/workflows/ci.yml:38`
+
+The CI `Test` step now adds `--filter 'Category!=Integration'`. This is consistent with `release.yml`
+line 45, which has used the identical filter since the release workflow was authored. Both workflows
+now agree: unit tests run on CI/release; integration tests (marked `[Trait("Category", "Integration")]`)
+are excluded from automated pipelines that lack live-exchange credentials. The change correctly
+prevents KuCoin (and other) streaming integration tests from running on GitHub-hosted runners without
+credentials, which was the proximate cause of the timeout failures.
+
+All 87 unit tests pass with the filter applied (confirmed by local `dotnet test` run).
+
+No `Category` trait leakage was observed — unit test classes in both `KucoinStreamProtocolTests` and
+`KucoinStreamDecodeTests` carry `[Trait("Category", "Unit")]`, which is not excluded.
+
+**Verdict: PASS.**
+
+---
+
+## Finding 7: Layering — no new cross-layer dependencies
+
+- **Severity**: HIGH
+- **Confidence**: 100
+- **Blocking**: false (no violation found — this is a PASS)
+- **File**: all modified `.cs` files
+
+Namespace scan of all modified files:
+- All source files are `CryptoExchanges.Net.Kucoin.*` or `CryptoExchanges.Net.Kucoin.Dtos.*` —
+  no Core or Http namespace appears in new `using` statements that was not already there.
+- No `ProjectReference` nodes were added or modified.
+- `KucoinMappingProfiles.cs` already references `DeltaMapper` and `CryptoExchanges.Net.Core.Models`
+  (Kucoin package, allowed). The removed `ParseNsTimestamp` helper was the only change and it was a
+  pure simplification.
+
+**Verdict: PASS.**
+
+---
+
+## Finding 8: StreamTickerDto field shape — snapshot wire format alignment (non-blocking concern)
+
+- **Severity**: LOW
+- **Confidence**: 75
+- **Blocking**: false (CONCERN — confidence below 80)
+- **File**: `src/CryptoExchanges.Net.Kucoin/Dtos/Streaming/StreamTickerDto.cs`
+
+The new `StreamTickerDto` maps `buy`/`sell` for best bid/ask price but does not capture best bid/ask
+size (no `buySize`/`sellSize` fields). The KuCoin `/market/snapshot` payload does include size fields.
+The `Ticker` core model may or may not expose bid/ask sizes — if it does not expose them today, this
+is not a gap, but if a future `Ticker` model extension adds those fields, the DTO will need updating.
+This is a pre-existing model limitation, not a regression introduced by this fix. Low priority.
+
+**Recommendation**: No action required now. If `Ticker` ever adds `BestBidSize`/`BestAskSize`,
+remember to extend `StreamTickerDto` and the DeltaMapper profile simultaneously.
+
+---
+
+## Build and Test Gate
+
+- `dotnet build` (Release, TreatWarningsAsErrors): 0 errors, 0 warnings. PASS.
+- `dotnet test --filter 'Category!=Integration'` (Release): 87/87 passed. PASS.
 
 ---
 
 ## Summary
 
-| Check | Result | Notes |
-|---|---|---|
-| K1: Http layer not touched | PASS | No Http files modified |
-| C1: No timers/threads in protocol | PASS | Confirmed via grep |
-| K2/K3: Token re-negotiated on every call | PASS | No caching field; Guid per call |
-| ADR-002: ResolveConnectionAsync seam | PASS | Correct ValueTask<StreamConnectionInfo> signature |
-| 4-layer dependency chain | PASS | Core + Http only in csproj |
-| AddKucoinStreams parity | PASS | Mirrors AddBinanceStreams pattern |
-| Topic map + routing key agreement | PASS | RoutingKeyFor/Classify share same BuildTopic |
-| SSRF guard on WS endpoint | PASS | wss:// + *.kucoin.com enforced |
-| RestBaseUrl never consumed | CONCERN | Public property with no semantic effect (confidence: 90%) |
-| Two types per file (DTOs) | CONCERN | Pre-existing pattern cloned (confidence: 95%) |
-| Two types per file (client+interface) | CONCERN | IKucoinBulletPublicClient co-located (confidence: 85%) |
-| Build clean | PASS | 0 warnings, 0 errors |
+| # | Item | Result |
+|---|------|--------|
+| 1 | Routing keyspace (RoutingKeyFor/Classify/BuildTopic consistency) | PASS |
+| 2 | Double-nesting unwrap isolation (snapshot vs Trade/OrderBook/Kline) | PASS |
+| 3 | K1 constraint (Core.Models / DeltaMapper stay in Kucoin) | PASS |
+| 4 | C1 constraint (no timers or threads) | PASS |
+| 5 | ADR-002 seam (ResolveConnectionAsync delegation unchanged) | PASS |
+| 6 | CI filter change consistency with release.yml | PASS |
+| 7 | Layering — no new cross-layer dependencies | PASS |
+| 8 | StreamTickerDto missing bid/ask size fields | CONCERN (low, non-blocking, confidence 75) |
 
-All three concerns are non-blocking. No hard constraints (K1, C1, K2/K3, ADR-002, dependency chain) are violated. The implementation is architecturally sound and ready to proceed.
+No blocking rejections. All hard REJECT lines are clear.

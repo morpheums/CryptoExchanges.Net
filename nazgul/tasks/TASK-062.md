@@ -1,6 +1,6 @@
 ---
 id: TASK-062
-status: IMPLEMENTED
+status: DONE
 depends_on: [TASK-058, TASK-060, TASK-061]
 ---
 # TASK-062: `KucoinStreamProtocol` + bullet-public negotiation + 4 decoders + `AddKucoinStreams`
@@ -18,9 +18,9 @@ depends_on: [TASK-058, TASK-060, TASK-061]
 - **Claimed at**: 2026-06-21T00:00:00Z
 - **Base SHA**: fb8a8855b3f2901ffe7c07614c11273787203280
 - **Implemented at**: 2026-06-21T00:30:00Z
-- **Completed at**: 2026-06-21T13:15:00Z
+- **Completed at**: 2026-06-21T17:30:00Z
 - **Blocked at**:
-- **Retry count**: 1/3
+- **Retry count**: 2/3
 - **Test failures**: 0
 
 ## Description
@@ -45,7 +45,7 @@ Create:
   new HeartbeatPolicy(ClientPing, pingInterval, pingTimeout, jsonPingPayload, PingFormat.Json))` with the
   KuCoin ping payload `{"id":"<ts>","type":"ping"}`. `BuildSubscribe`/`BuildUnsubscribe` produce the
   KuCoin JSON (`type:subscribe|unsubscribe`, `topic`, `privateChannel:false`, `response:true`). Topic
-  map: Ticker `/market/ticker:{WIRE}`, Trade `/market/match:{WIRE}`, OrderBook `/market/level2:{WIRE}`,
+  map: Ticker `/market/snapshot:{WIRE}`, Trade `/market/match:{WIRE}`, OrderBook `/market/level2:{WIRE}`,
   Kline `/market/candles:{WIRE}_{INTERVAL_WIRE}`. `RoutingKeyFor` agrees with `Classify`. `Classify`
   reads `"type"`: `message`→Data (routing key = `topic`), `ack`→Ack, `pong`→Pong, `error`/unknown→Error.
   Pure data + classification — NO timers/threads (C1).
@@ -222,3 +222,11 @@ G. **`ci.yml`**: added `--filter 'Category!=Integration'` to Test step — preve
 **Build:** `dotnet build CryptoExchanges.Net.sln` → 0 Warning(s), 0 Error(s).
 **Tests:** `dotnet test --filter 'Category!=Integration'` → all projects green (Kucoin.Tests.Unit 200/200,
 Http.Tests.Unit 87/87, all other suites passing).
+
+### Bugfix review (cycle 3 — re-review of commit 32f75f7)
+
+**Reviewers**: architect-reviewer APPROVE, code-reviewer APPROVE, security-reviewer APPROVE, api-reviewer APPROVE.
+**Gate (require_all_approve=true): APPROVED 4/4.**
+
+Pre-checks: `dotnet build` 0W/0E; `dotnet test --filter 'Category!=Integration'` 586 green (Kucoin.Tests.Unit 200/200, Http.Tests.Unit 87/87, all other suites passing).
+Non-blocking concerns carried: DeserializeSnapshotData fallback path (2) silently zero-fills for malformed outer-only frame (dead-code edge case on real KuCoin wire); FullSnapshotFrame test omits QuoteVolume/PriceChangePercent assertions (covered in bare-payload test).

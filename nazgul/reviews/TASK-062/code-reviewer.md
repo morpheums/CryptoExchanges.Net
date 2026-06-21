@@ -1,118 +1,168 @@
 ---
 reviewer: code-reviewer
+task: TASK-062
+cycle: bugfix
 verdict: APPROVE
 ---
-# TASK-062 Code Review
+# TASK-062 Code Review — Bugfix Re-Review (commit 32f75f7)
 
-## Verdict: APPROVE
+## Summary
 
-Build: `dotnet build` — 0 warnings, 0 errors (TreatWarningsAsErrors=true confirmed).
-Tests: 46/46 unit tests pass (Kucoin.Tests.Unit, Category=Unit).
+Build: `dotnet build` — 0 warnings, 0 errors (`TreatWarningsAsErrors=true` confirmed).
+Tests: 87/87 unit tests pass with `--filter 'Category!=Integration'`.
+
+All hard-REJECT lines checked: none triggered.
 
 ---
 
 ## Findings
 
-### [APPROVE] Build and tests clean (confidence: 100%)
-Zero warnings, zero errors under `AnalysisLevel=latest-all` and `TreatWarningsAsErrors=true`. All 46 Kucoin unit tests pass including the 22 new streaming tests.
+### Finding: Channel fix is correct — /market/snapshot replaces /market/ticker
+- **Severity**: N/A (this is the fix being reviewed)
+- **Confidence**: 100
+- **File**: `src/CryptoExchanges.Net.Kucoin/Streaming/KucoinStreamProtocol.cs:141`
+- **Category**: Correctness
+- **Verdict**: PASS
+- **Issue**: Previously `BuildTopic` returned `/market/ticker:{symbol}`; the snapshot channel that carries 24h stats is `/market/snapshot:{symbol}`.
+- **Fix**: Applied correctly. `StreamKind.Ticker => $"/market/snapshot:{request.WireSymbol}"`.
 
 ---
 
-### [CONCERN] One type per file — BulletPublicDto.cs and StreamDepthDto.cs each contain two types (confidence: 75%)
-Rule reference: CLAUDE.md "One type per file"
-
-`BulletPublicDto.cs` defines both `BulletPublicDto` and `InstanceServerDto`. `StreamDepthDto.cs` defines both `StreamDepthDto` and `DepthChangesDto`. The project convention is one top-level type per file, named after the type. Because `InstanceServerDto` and `DepthChangesDto` are tightly nested supporting types (the outer type cannot be used without them) and Roslyn did not warn about it, this is a convention violation rather than a compilation defect. The pattern is non-blocking but should be corrected: split `InstanceServerDto` into `InstanceServerDto.cs` and `DepthChangesDto` into `DepthChangesDto.cs`.
-
----
-
-### [CONCERN] KucoinStreamOptions.RestBaseUrl is declared but never read (confidence: 85%)
-`KucoinStreamOptions` declares `RestBaseUrl` (default `"https://api.kucoin.com"`), implying the caller can override the REST base URL used for bullet-public negotiation. However, `StreamServiceCollectionExtensions.protocolFactory` constructs `KucoinBulletPublicClient` from the named `"kucoin"` `HttpClient` (whose base address is fixed by `AddKucoinExchange`) and never passes `RestBaseUrl` through. A consumer who sets `configure: o => o.RestBaseUrl = "https://sandbox-api.kucoin.com"` will observe no effect — the property is a silent no-op.
-
-This is a misleading API surface. Either remove `RestBaseUrl` from `KucoinStreamOptions` (it has no effect), or wire it through the factory so it actually controls the bullet-public base address. Non-blocking because there is no functional regression for default configurations, but it will confuse future maintainers and testnet users.
+### Finding: StreamTickerDto fields and [JsonPropertyName] annotations
+- **Severity**: N/A
+- **Confidence**: 100
+- **File**: `src/CryptoExchanges.Net.Kucoin/Dtos/Streaming/StreamTickerDto.cs:1-60`
+- **Category**: Correctness
+- **Verdict**: PASS
+- **Issue**: Verified all eleven annotations: `symbol`, `lastTradedPrice`, `buy`, `sell`, `high`, `low`, `open`, `vol`, `volValue`, `changePrice`, `changeRate`, `datetime`. All match the KuCoin `/market/snapshot` wire format (JSON numbers, not strings). No stale `/market/ticker` field names (`price`, `bestBid`, `bestBidSize`, `bestAsk`, `bestAskSize`, `sequence`, `time`). DTO class-level `<summary>` correctly references `/market/snapshot` and "JSON numbers (not strings)".
 
 ---
 
-### [CONCERN] `typeProp.GetString()` in `Classify` is unguarded (confidence: 70%)
-Rule reference: project rule "guard ValueKind before typed accessors"
-
-In `KucoinStreamProtocol.Classify` (line 107), after `root.TryGetProperty("type"u8, out var typeProp)` succeeds, `typeProp.GetString()` is called without first checking `typeProp.ValueKind == JsonValueKind.String`. If KuCoin (or a malformed forwarder) ever sends `{"type":42,...}` with a numeric `type` field, `GetString()` throws `InvalidOperationException` which escapes the `catch (JsonException)` block at line 119 and becomes an unhandled exception in the engine. The same pattern applies to `ClassifyDataFrame` (line 132) for the `topic` property.
-
-The Binance implementation (`BinanceStreamProtocol.cs:88`) uses `streamProp.GetString()` with the same omission, so this is a pre-existing codebase pattern, hence confidence < 80. However the project reviewer instructions call this HIGH when confidence >= 80; at 70% it is non-blocking. The fix is: `var type = typeProp.ValueKind == JsonValueKind.String ? typeProp.GetString() : null;` (mirror `BybitErrorTranslator.Parse`).
-
----
-
-### [APPROVE] String parameter guards (LR-001) (confidence: 100%)
-All public/internal methods with reference-type parameters use `ArgumentNullException.ThrowIfNull`. No string-typed method parameters require `ArgumentException.ThrowIfNullOrWhiteSpace` in the new code — the only string entries are `MapInterval` and `ValidateWsEndpoint`, which are private static helpers. Fully compliant.
-
----
-
-### [APPROVE] Test coverage (LR-005) (confidence: 100%)
-All five new service/protocol entry points (`ResolveConnectionAsync`, `BuildSubscribe`, `BuildUnsubscribe`, `RoutingKeyFor`, `Classify`) have multiple test cases each. All four decoder closures (Ticker, Trade, OrderBook, Kline) have happy-path tests plus edge cases (full frame extraction, sell-side IsBuyerMaker, routing-key round-trip). DI smoke test confirms `AddKucoinStreams` resolves the keyed `IStreamClient`. No coverage gap.
-
----
-
-### [APPROVE] XML documentation (confidence: 100%)
-All new public types (`KucoinStreamOptions`, `StreamServiceCollectionExtensions`) have full `<summary>/<param>/<returns>` docs. All new internal types have `<summary>` on the type and each member. Implementations use `<inheritdoc />`. No missing docs detected.
+### Finding: Mapping profile correctness
+- **Severity**: N/A
+- **Confidence**: 100
+- **File**: `src/CryptoExchanges.Net.Kucoin/Mapping/KucoinMappingProfiles.cs:96-113`
+- **Category**: Correctness
+- **Verdict**: PASS
+- **Issue**: Verified all eight member mappings:
+  - `LastPrice ← LastTradedPrice` (direct decimal — no parse)
+  - `OpenPrice ← Open` (direct decimal)
+  - `HighPrice ← High` (direct decimal)
+  - `LowPrice ← Low` (direct decimal)
+  - `Volume ← Vol` (direct decimal)
+  - `QuoteVolume ← VolValue` (direct decimal)
+  - `PriceChange ← ChangePrice` (direct decimal — exchange-provided, not derived)
+  - `PriceChangePercent ← ChangeRate * 100m` (fraction → percent conversion, correct direction)
+  - `Timestamp ← Datetime > 0 ? DateTimeOffset.FromUnixTimeMilliseconds(Datetime) : null` (ms not ns — correct for snapshot channel)
+- `ParseNsTimestamp` removed without trace; `ParseMs` overloads remain (still used by REST mappings — correct).
+- Comment accurately states the mapping intent, no stale references.
 
 ---
 
-### [APPROVE] DTO naming house rules (confidence: 100%)
-All new wire DTOs (`BulletPublicDto`, `InstanceServerDto`, `StreamTickerDto`, `StreamTradeDto`, `StreamDepthDto`, `DepthChangesDto`, `StreamKlineDto`) are `internal sealed record`, named with the canonical `{Concept}Dto` pattern, with vendor field names only in `[JsonPropertyName]`. No "Response"/"Result"/"History" suffix on leaf DTOs. Compliant.
+### Finding: DeserializeSnapshotData fallback logic
+- **Severity**: LOW
+- **Confidence**: 65
+- **File**: `src/CryptoExchanges.Net.Kucoin/Streaming/KucoinStreamDecoders.cs:143-169`
+- **Category**: Correctness
+- **Verdict**: CONCERN (non-blocking — confidence < 80)
+- **Issue**: The fallback case (2) — outer `data` present but no inner `data` — deserializes `outerData` as `T`. In a production `data.sequence` wrapper frame where the inner `data` is missing (e.g. a partial delivery or a vendor bug), the outer object `{"sequence":"33762550100"}` would be deserialized as `StreamTickerDto`. Because all fields are `decimal`/`long` with `init` defaults of `0`/`0L`, this produces a zero-filled DTO that maps to a `Ticker` with all prices zero — silently, with no error logged or thrown. The caller only sees a zero `Ticker` reach the subscription handler. The comment describes this as handling "bare single-level test fixtures", but the actual unit tests use either the full double-nested format or the bare inner payload with no envelope — neither exercises this path. In practice, the path is dead code unless KuCoin sends a malformed frame.
+- **Fix**: This is acceptable for now given the edge case nature. If future observability is added to the stream engine, a warning log here would help. Non-blocking.
+- **Pattern reference**: `KucoinStreamDecoders.cs:130-131` (DeserializeData's fallthrough comment is analogous).
 
 ---
 
-### [APPROVE] HeartbeatPolicy constructor parameter order (confidence: 100%)
-`KucoinStreamProtocol.cs:55-60` constructs `HeartbeatPolicy` with named positional arguments `Direction`, `Interval`, `Timeout`, `ClientPingPayload`, `PingFormat` — matching the record's declared positional parameter order exactly (`HeartbeatPolicy.cs:32-36`). Correct.
+### Finding: StreamKlineDto.Time changed from string to long
+- **Severity**: N/A
+- **Confidence**: 100
+- **File**: `src/CryptoExchanges.Net.Kucoin/Dtos/Streaming/StreamKlineDto.cs:18-20`
+- **Category**: Correctness
+- **Verdict**: PASS
+- **Issue**: `time` is a JSON number (unix nanoseconds) per live wire. Changing from `string Time = "0"` to `long Time` is correct. The decoder never reads `dto.Time` — it only reads `dto.Candles` — so this has no behavioral effect on Kline mapping. Comment "not used by the decoder" is accurate. The test fixture now sends `"time":1589968800000000000` (JSON number) matching the wire.
 
 ---
 
-### [APPROVE] Subscribe/unsubscribe wire format (confidence: 100%)
-`BuildSubscribe` and `BuildUnsubscribe` produce `{"id":"N","type":"subscribe"/"unsubscribe","topic":"...","privateChannel":false,"response":true}`, which matches the KuCoin WebSocket API spec exactly. Tests verify `type`, `topic`, `privateChannel`, and `response` fields.
+### Finding: Test fixtures use real double-nested snapshot format
+- **Severity**: N/A
+- **Confidence**: 100
+- **File**: `tests/CryptoExchanges.Net.Kucoin.Tests.Unit/Streaming/KucoinStreamDecodeTests.cs:46-104`
+- **Category**: Correctness
+- **Verdict**: PASS
+- **Issue**: Verified both test cases:
+  - `Ticker_CannedInnerPayload_MapsAllFields`: bare inner payload (no envelope), all fields are JSON numbers. Asserts `PriceChangePercent == 0.0014m * 100m` (= 0.14m) — correct. Asserts `Timestamp!.Value.ToUnixTimeMilliseconds() == 1782053405029L` — correct for ms input.
+  - `Ticker_FullSnapshotFrame_DoubleNestedData_MapsAllFields`: full double-nested envelope with `data.sequence` + `data.data`. `DeserializeSnapshotData` navigates both levels correctly. Field values match the inner payload.
+- Old string-encoded fixtures (`"price":"67000.00"`, `"time":"1718784000000000000"`) fully replaced. No stale string-encoded assertions.
 
 ---
 
-### [APPROVE] Kline interval wire encoding (confidence: 100%)
-`MapInterval` in `KucoinStreamProtocol` maps canonical enum names to KuCoin wire strings: `"1min"`, `"3min"`, `"5min"`, `"15min"`, `"30min"`, `"1hour"`, `"2hour"`, `"4hour"`, `"6hour"`, `"8hour"`, `"12hour"`, `"1day"`, `"1week"`, `"1month"`, `"3day"`. These match the KuCoin v1 REST/WebSocket candles documentation. Two tests exercise `1min` and `1hour` to verify the wire encoding.
+### Finding: Protocol tests updated consistently
+- **Severity**: N/A
+- **Confidence**: 100
+- **File**: `tests/CryptoExchanges.Net.Kucoin.Tests.Unit/Streaming/KucoinStreamProtocolTests.cs:139-413`
+- **Category**: Correctness
+- **Verdict**: PASS
+- **Issue**: `BuildSubscribe_Ticker_ProducesSnapshotTopic`, `BuildUnsubscribe_Ticker`, and `RoutingKeyFor_Ticker_MatchesClassifyRoutingKey` all updated to assert `/market/snapshot:BTC-USDT`. The `Classify_MessageFrame_ReturnsDataWithTopic` test at line 284 still uses `/market/ticker:BTC-USDT` as the topic string — this is intentional: it tests the generic classify path, not the snapshot channel, and the classifier routes any topic verbatim. This is correct.
 
 ---
 
-### [APPROVE] ConfigureAwait(false) and CancellationToken forwarding (confidence: 100%)
-`KucoinBulletPublicClient.NegotiateAsync` and `KucoinStreamProtocol.ResolveConnectionAsync` both use `.ConfigureAwait(false)` on every `await` and forward `ct` through. No fire-and-forget tasks. Compliant.
+### Finding: CI filter correctness
+- **Severity**: N/A
+- **Confidence**: 100
+- **File**: `.github/workflows/ci.yml:10`
+- **Category**: Correctness
+- **Verdict**: PASS
+- **Issue**: `--filter 'Category!=Integration'` uses the xUnit Trait filter syntax. All integration test classes in the repo carry `[Trait("Category", "Integration")]`. The KuCoin streaming smoke tests that were timing out all have this trait (`KucoinStreamingSmokeTests.cs:20`, `KucoinRestSmokeTests.cs:16`). The filter correctly excludes them. Note: `BinanceMarketDataIntegrationTests` lacks the `[Trait("Category", "Integration")]` annotation and thus still runs in CI — this is a pre-existing condition unrelated to this diff; those tests passed in the 87-test run above.
 
 ---
 
-### [APPROVE] Null safety / ValueKind on BulletPublicDto parsing (confidence: 100%)
-`BulletPublicDto.InstanceServers` has default `= []`, so an empty server list results in `Count == 0` which is caught at `KucoinStreamProtocol.cs:38-39` with an `InvalidOperationException` before the first array access. `response?.Data is null` check at `KucoinBulletPublicClient.cs:46` guards against null envelopes. No unguarded index access.
+### Finding: No stale /market/ticker or "nanoseconds" references in ticker-specific code
+- **Severity**: N/A
+- **Confidence**: 100
+- **File**: `StreamTickerDto.cs`, `KucoinMappingProfiles.cs`, `KucoinStreamDecoders.cs`
+- **Category**: Correctness
+- **Verdict**: PASS
+- **Issue**: Grep of source files (excluding bin/obj) confirms zero occurrences of `/market/ticker` in source (only in generated XML artifacts and a test using it as an arbitrary non-snapshot topic). All "nanoseconds" references are in `StreamKlineDto` (kline frame time — correct), `StreamTradeDto` (trade stream time — correct), `KucoinValueParsers.ParseNsToMs` (still used by Trade decoder — correct), and `KucoinMarketDataService` (REST recent-trades — correct). None are in the ticker DTO or ticker mapping.
 
 ---
 
-### [APPROVE] async/await idioms — using var for disposables (confidence: 100%)
-`ExtractDataBytes` uses `using var doc`, `using var ms`, `using var writer` for all `IDisposable` instances in the async-context helper. `StreamServiceCollectionExtensions` test uses `await using var sp`. Compliant.
+### Finding: ChangeRate * 100m mapping direction
+- **Severity**: N/A
+- **Confidence**: 100
+- **File**: `src/CryptoExchanges.Net.Kucoin/Mapping/KucoinMappingProfiles.cs:109`
+- **Category**: Correctness
+- **Verdict**: PASS
+- **Issue**: `ChangeRate` is a fraction (e.g. `0.0014` ≡ 0.14%). Multiplying by `100m` gives the percentage. The DTO `<summary>` documents this explicitly ("e.g. `0.0014` ≡ 0.14%, multiply by 100"). The mapping applies `s.ChangeRate * 100m`. Test asserts `result.PriceChangePercent.Should().Be(0.0014m * 100m)` (= 0.14m). Correct direction.
 
 ---
 
-### [APPROVE] C# 13/.NET 10 idioms (confidence: 100%)
-Collection expressions (`[...]`), primary constructors (not applicable — types take non-DI state), `ReadOnlyMemory<byte>` patterns, `u8` string literals, target-typed new(), all consistent with the Binance streaming reference implementation.
+### Finding: Datetime treated as milliseconds
+- **Severity**: N/A
+- **Confidence**: 100
+- **File**: `src/CryptoExchanges.Net.Kucoin/Mapping/KucoinMappingProfiles.cs:111-113`
+- **Category**: Correctness
+- **Verdict**: PASS
+- **Issue**: `DateTimeOffset.FromUnixTimeMilliseconds(s.Datetime)` is correct. The snapshot channel delivers `datetime` as unix milliseconds (e.g. `1782053405029`). The test asserts `result.Timestamp!.Value.ToUnixTimeMilliseconds().Should().Be(1782053405029L)` — round-trips correctly.
 
 ---
 
-### [APPROVE] Thread safety on `_nextId` (confidence: 100%)
-`_nextId` is incremented via `Interlocked.Increment(ref _nextId)` in both `BuildSubscribe` and `BuildUnsubscribe`, consistent with the `_nextId` pattern in `BinanceStreamProtocol.cs:58`. Correct.
+### Finding: XML docs — no duplication, LEAN compliance
+- **Severity**: N/A
+- **Confidence**: 100
+- **File**: All modified files
+- **Category**: Documentation
+- **Verdict**: PASS
+- **Issue**: `StreamTickerDto` has a concise class-level `<summary>` with factual wire-format info. Per-member `<summary>` are single short lines. `DeserializeSnapshotData` has `<summary>` documenting the double-nested format. The mapping profile comment on lines 96-99 explains the non-obvious `changeRate` fraction convention — this is justified commentary, not restate-the-code noise. No banner separators added.
 
 ---
 
-## Summary
+## Final Verdict: APPROVED
 
-- APPROVE: Build clean (0 warnings, 0 errors) — TreatWarningsAsErrors confirmed
-- APPROVE: Test coverage — all 46 unit tests pass; 22 new streaming tests added
-- APPROVE: String guards (LR-001) — ArgumentNullException.ThrowIfNull on all public entry points
-- APPROVE: XML docs — complete on all new public and internal types/members
-- APPROVE: DTO naming — canonical {Concept}Dto names, vendor vocabulary in [JsonPropertyName] only
-- APPROVE: HeartbeatPolicy — correct positional argument order
-- APPROVE: Wire formats — subscribe/unsubscribe JSON and kline interval strings match KuCoin spec
-- APPROVE: ConfigureAwait(false) and CT forwarding — present on every await
-- APPROVE: Null safety — InstanceServers.Count==0 guard, response?.Data null check
-- APPROVE: Thread safety — Interlocked.Increment on _nextId
-- CONCERN: One type per file — BulletPublicDto.cs defines BulletPublicDto+InstanceServerDto; StreamDepthDto.cs defines StreamDepthDto+DepthChangesDto; split into separate files (confidence: 75%, non-blocking)
-- CONCERN: KucoinStreamOptions.RestBaseUrl is never read by the protocol factory — misleading public API surface; remove or wire through (confidence: 85%, non-blocking)
-- CONCERN: typeProp.GetString() in Classify lacks ValueKind guard — a numeric "type" field would throw InvalidOperationException escaping catch (JsonException); pre-existing Binance pattern, so non-blocking at confidence 70%
+All hard-REJECT lines cleared:
+- No stale `/market/ticker` reference in source (ticker path)
+- `ChangeRate * 100m` mapping is present and correct direction
+- `Datetime` treated as milliseconds (`FromUnixTimeMilliseconds`)
+- Test fixtures use new JSON-number fields, not old string-encoded fields
+
+Build: 0 warnings, 0 errors.
+Tests: 87/87 pass.
+
+One non-blocking CONCERN: the fallback path (2) in `DeserializeSnapshotData` (outer `data` present, no inner `data`) silently produces a zero-filled DTO rather than surfacing an error. This is an edge-case robustness issue, not a regression, and does not block approval.

@@ -60,11 +60,11 @@ Authoritative inputs (read fully before any task):
 | TASK-058 | ✦ DONE     | 2    | Bespoke `ISymbolMapper` + REST wire DTOs + DeltaMapper profiles + parsers    |
 | TASK-059 | ✦ DONE     | 3    | REST services (market/account/trading) + http client + composer + entry     |
 | TASK-060 | ✦ DONE     | 4    | `AddKucoinExchange` DI + `AddCryptoExchanges` + MCP wiring                   |
-| TASK-062 | ◆ IN_PROGRESS | 5 | `KucoinStreamProtocol` + bullet-public + 4 decoders + `AddKucoinStreams`     |
+| TASK-062 | ✦ DONE     | 5    | `KucoinStreamProtocol` + bullet-public + 4 decoders + `AddKucoinStreams`     |
 | TASK-063 | ◇ PLANNED  | 6    | Live integration smokes — REST + one streaming (self-skip)                   |
 | TASK-064 | ◇ PLANNED  | 6    | Docs — README KuCoin row → supported + MCP/exchanges/streaming reference     |
 
-Tasks: 6/9 DONE.
+Tasks: 7/9 DONE.
 
 ## Wave Groups
 
@@ -134,9 +134,9 @@ Nothing in PRD "Out of Scope" (futures/margin, private streams, order-book maint
 
 ## Recovery Pointer
 
-- **Current stage**: ✦ TASK-060 DONE — AddKucoinExchange DI + AddCryptoExchanges + MCP wiring (reviewed 4/4, Cycle 1; impl commit ad607d6).
-- **Next action**: TASK-062 — KucoinStreamProtocol + bullet-public + 4 decoders + AddKucoinStreams (Wave 5, convergence of REST + streaming-seam work streams).
-- **Active task**: none (TASK-060 complete; TASK-062 next to implement).
+- **Current stage**: ✦ TASK-062 DONE — KucoinStreamProtocol + bullet-public + 4 decoders + AddKucoinStreams (reviewed 4/4, Cycle 2; completion commit 2039654). Wave 5 convergence complete.
+- **Next action**: TASK-063 — Live integration smokes (REST + one streaming, self-skip) and TASK-064 — Docs (README/MCP/exchanges/streaming); Wave 6, parallel-safe (no file overlap).
+- **Active task**: none (TASK-062 complete; TASK-063 + TASK-064 next — Wave 6).
 - **Files are truth**: the task manifests under `nazgul/tasks/` carry full state; each manifest's
   frontmatter is the canonical record.
 
@@ -147,7 +147,9 @@ Nothing in PRD "Out of Scope" (futures/margin, private streams, order-book maint
   ✦ TASK-058 — KucoinSymbolMapper + wire DTOs + DeltaMapper + parsers DONE (reviewed 4/4, Cycle 1; simplify 5a20da1).
   ✦ TASK-059 — REST services + http client + composer + entry DONE (reviewed 4/4, Cycle 2; fix ee97d43).
   ✦ TASK-060 — AddKucoinExchange DI + AddCryptoExchanges + MCP wiring DONE (reviewed 4/4, Cycle 1; impl commit ad607d6).
-  ◇ TASK-062 — KucoinStreamProtocol + bullet-public + 4 decoders + AddKucoinStreams (next).
+  ✦ TASK-062 — KucoinStreamProtocol + bullet-public + 4 decoders + AddKucoinStreams DONE (reviewed 4/4, Cycle 2; completion 2039654).
+  ◇ TASK-063 — Live integration smokes (REST + streaming, self-skip) — Wave 6 (next).
+  ◇ TASK-064 — Docs (README/MCP/exchanges/streaming) — Wave 6, parallel-safe (next).
 ────────────────────────────────────────────────────────
 
 ## Completed
@@ -165,6 +167,9 @@ Nothing in PRD "Out of Scope" (futures/margin, private streams, order-book maint
 - **TASK-060** — DONE (2026-06-21T11:33:29Z). AddKucoinExchange DI + AddCryptoExchanges + MCP wiring approved unanimously (4/4, Cycle 1).
   Impl commit: `ad607d6`. Completion SHA: `0940957`. Simplify: 0 fixes (faithful clone). No blocking findings (all CONCERNs <=65, pre-existing cross-exchange patterns).
   Flake note: Http.Tests.Unit streaming-reconnect race is a pre-existing parallel-run harness race (87/87 PASS in isolation), NOT a TASK-061 seam regression. Review artifacts: `nazgul/reviews/TASK-060/`.
+- **TASK-062** — DONE (2026-06-21T13:15:00Z). KucoinStreamProtocol + bullet-public negotiation + 4 decoders + AddKucoinStreams approved unanimously (4/4, Cycle 2).
+  Impl commit: `af4d08a`. Simplify commit: `d6988f7` (6 fixes). Cycle-1 fix (RestBaseUrl wiring) + completion SHA: `2039654`. Review artifacts: `nazgul/reviews/TASK-062/`.
+  Cycle 1: api-reviewer CHANGES_REQUESTED (RestBaseUrl public option silently ignored, REJECT@98%); Fix-First auto-remediation wired RestBaseUrl→bullet-public HttpClient BaseAddress (LR-001 guards) + 4 no-network wiring tests; api-reviewer Cycle 2 APPROVE@99%. Security SSRF (deferred to this task) RESOLVED — wss:// + *.kucoin.com host allowlist enforced pre-URI. Wave 5 convergence (REST + streaming-seam) complete.
 
 
 ## Archived — FEAT-005 (WebSocket streaming v1) — COMPLETE

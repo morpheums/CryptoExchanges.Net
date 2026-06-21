@@ -108,7 +108,7 @@ Tests (`Streaming/` in the Kucoin unit project), no network:
 
 - `af4d08a` — feat(FEAT-006): TASK-062 — KucoinStreamProtocol + bullet-public negotiation + 4 decoders + AddKucoinStreams
 - `d6988f7` — feat(FEAT-006): simplify TASK-062 (6 fixes: XML-doc corrections + per-frame decoder allocation removal)
-- `<completion>` — feat(FEAT-006): TASK-062 DONE — RestBaseUrl wiring fix (cycle 2 review 4/4)
+- `2039654` — feat(FEAT-006): TASK-062 DONE — RestBaseUrl wiring fix (cycle 2 review 4/4)
 
 ## Implementation Log
 

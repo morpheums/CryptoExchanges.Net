@@ -1,6 +1,6 @@
 ---
 id: TASK-062
-status: PLANNED
+status: IN_PROGRESS
 depends_on: [TASK-058, TASK-060, TASK-061]
 ---
 # TASK-062: `KucoinStreamProtocol` + bullet-public negotiation + 4 decoders + `AddKucoinStreams`
@@ -15,8 +15,8 @@ depends_on: [TASK-058, TASK-060, TASK-061]
 - **Wave**: 6
 - **Traces to**: PRD-FEAT-006 AC-3, AC-4; TRD-FEAT-006 §"WebSocket Streaming — KuCoin Protocol", §"Data Flow (Streaming)"; FEAT-006 spec §"WebSocket streaming (public)", §"Build approach" step 7; TEST-PLAN-FEAT-006 §6, §7
 - **Created at**: 2026-06-20T19:00:00Z
-- **Claimed at**:
-- **Base SHA**:
+- **Claimed at**: 2026-06-21T00:00:00Z
+- **Base SHA**: fb8a8855b3f2901ffe7c07614c11273787203280
 - **Implemented at**:
 - **Completed at**:
 - **Blocked at**:

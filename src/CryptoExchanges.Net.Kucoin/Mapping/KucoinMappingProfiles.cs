@@ -1,5 +1,6 @@
 using DeltaMapper;
 using CryptoExchanges.Net.Kucoin.Dtos;
+using CryptoExchanges.Net.Kucoin.Dtos.Streaming;
 using CryptoExchanges.Net.Kucoin.Internal;
 
 namespace CryptoExchanges.Net.Kucoin.Mapping;
@@ -91,6 +92,27 @@ internal sealed class KucoinResponseProfile : Profile
             .ForMember(d => d.IsBuyerMaker, o => o.MapFrom(s =>
                 s.Side == "buy" ? s.Liquidity == "maker" : s.Liquidity != "maker"))
             .ForMember(d => d.OrderId, o => o.MapFrom(s => s.OrderId));
+
+        // StreamTickerDto -> Ticker. WebSocket ticker push frame carries the last price, 24h
+        // open/high/low, base/quote volumes, and a nanosecond timestamp. Price change is derived
+        // from last - open; percent is (last - open) / open * 100.
+        CreateMap<StreamTickerDto, Ticker>()
+            .ForMember(d => d.Symbol, o => o.MapFrom(s => symbolMapper.FromWire(s.Symbol)))
+            .ForMember(d => d.LastPrice, o => o.MapFrom(s => KucoinValueParsers.ParseDecimal(s.Price)))
+            .ForMember(d => d.OpenPrice, o => o.MapFrom(s => KucoinValueParsers.ParseDecimal(s.Open)))
+            .ForMember(d => d.HighPrice, o => o.MapFrom(s => KucoinValueParsers.ParseDecimal(s.High)))
+            .ForMember(d => d.LowPrice, o => o.MapFrom(s => KucoinValueParsers.ParseDecimal(s.Low)))
+            .ForMember(d => d.Volume, o => o.MapFrom(s => KucoinValueParsers.ParseDecimal(s.Vol)))
+            .ForMember(d => d.QuoteVolume, o => o.MapFrom(s => KucoinValueParsers.ParseDecimal(s.VolValue)))
+            .ForMember(d => d.PriceChange, o => o.MapFrom(s =>
+                KucoinValueParsers.ParseDecimal(s.Price) - KucoinValueParsers.ParseDecimal(s.Open)))
+            .ForMember(d => d.PriceChangePercent, o => o.MapFrom(s =>
+                KucoinValueParsers.ParseDecimal(s.Open) == 0m
+                    ? 0m
+                    : (KucoinValueParsers.ParseDecimal(s.Price) - KucoinValueParsers.ParseDecimal(s.Open))
+                      / KucoinValueParsers.ParseDecimal(s.Open) * 100m))
+            // Time is nanoseconds (string-encoded); convert to ms by dividing by 1_000_000.
+            .ForMember(d => d.Timestamp, o => o.MapFrom(s => ParseNsTimestamp(s.Time)));
     }
 
     /// <summary>The order types KuCoin spot accepts (stop/take-profit use the separate plan API).</summary>
@@ -102,4 +124,14 @@ internal sealed class KucoinResponseProfile : Profile
     /// <summary>Converts a unix-ms epoch long into an optional instant (null when zero).</summary>
     private static DateTimeOffset? ParseMs(long ms)
         => ms > 0 ? DateTimeOffset.FromUnixTimeMilliseconds(ms) : null;
+
+    /// <summary>
+    /// Parses a KuCoin string-encoded nanosecond timestamp (used in streaming ticker frames)
+    /// into an optional instant. Returns <see langword="null"/> when zero or unset.
+    /// </summary>
+    private static DateTimeOffset? ParseNsTimestamp(string value)
+    {
+        var ms = KucoinValueParsers.ParseNsToMs(value);
+        return ms > 0 ? DateTimeOffset.FromUnixTimeMilliseconds(ms) : null;
+    }
 }

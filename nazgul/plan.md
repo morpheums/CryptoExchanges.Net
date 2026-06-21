@@ -60,7 +60,7 @@ Authoritative inputs (read fully before any task):
 | TASK-058 | ✦ DONE     | 2    | Bespoke `ISymbolMapper` + REST wire DTOs + DeltaMapper profiles + parsers    |
 | TASK-059 | ✦ DONE     | 3    | REST services (market/account/trading) + http client + composer + entry     |
 | TASK-060 | ✦ DONE     | 4    | `AddKucoinExchange` DI + `AddCryptoExchanges` + MCP wiring                   |
-| TASK-062 | ◇ PLANNED  | 5    | `KucoinStreamProtocol` + bullet-public + 4 decoders + `AddKucoinStreams`     |
+| TASK-062 | ◆ IN_PROGRESS | 5 | `KucoinStreamProtocol` + bullet-public + 4 decoders + `AddKucoinStreams`     |
 | TASK-063 | ◇ PLANNED  | 6    | Live integration smokes — REST + one streaming (self-skip)                   |
 | TASK-064 | ◇ PLANNED  | 6    | Docs — README KuCoin row → supported + MCP/exchanges/streaming reference     |
 

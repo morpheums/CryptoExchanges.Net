@@ -73,7 +73,7 @@ calls.
 
 ## Commits
 
-<!-- implementer fills SHAs — added post-commit below -->
+- `5dc88fa` — feat(FEAT-006): TASK-063 — KuCoin live integration smokes (REST + streaming, self-skip)
 
 ## Implementation Log
 

@@ -123,7 +123,7 @@ internal sealed class KucoinMarketDataService(IKucoinHttpClient http, ISymbolMap
 
         // KuCoin returns newest-first; reverse for chronological order and apply limit.
         candles.Reverse();
-        return candles.Count > limit ? candles.Skip(candles.Count - limit).ToList() : candles;
+        return candles.Count > limit ? candles.GetRange(candles.Count - limit, limit) : candles;
     }
 
     /// <inheritdoc />

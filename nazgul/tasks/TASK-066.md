@@ -1,6 +1,6 @@
 ---
 id: TASK-066
-status: PLANNED
+status: IMPLEMENTED
 depends_on: [TASK-065]
 ---
 # TASK-066: Rename + consolidate aggregator test project → `CryptoExchanges.Net.Tests.Unit`
@@ -15,9 +15,9 @@ depends_on: [TASK-065]
 - **Wave**: 2
 - **Traces to**: PRD-FEAT-007 AC-2, AC-3, AC-6, AC-7; TRD-FEAT-007 §"Step 2 — Rename and consolidate the aggregator test project"; TEST-PLAN-FEAT-007 §"New and Modified Tests"; ADR-003 (test isolation); FEAT-007 spec §"Scope — In" #2
 - **Created at**: 2026-06-21T18:00:00Z
-- **Claimed at**:
-- **Base SHA**:
-- **Implemented at**:
+- **Claimed at**: 2026-06-21T20:00:00Z
+- **Base SHA**: 6658ca32d147f97f7f658585bd251461c9198b0c
+- **Implemented at**: 2026-06-21T20:05:00Z
 - **Completed at**:
 - **Blocked at**:
 - **Retry count**: 0/3
@@ -72,9 +72,9 @@ Run `dotnet test tests/CryptoExchanges.Net.Tests.Unit/ --filter 'Category!=Integ
 including the two new facts.
 
 ## Acceptance Criteria
-- [ ] Test project is `tests/CryptoExchanges.Net.Tests.Unit/` with `AssemblyName`/`RootNamespace` = `CryptoExchanges.Net.Tests.Unit`, referencing `..\..\src\CryptoExchanges.Net\CryptoExchanges.Net.csproj`; `DiRegistrationTests`/`ExchangeClientFactoryTests` keep every existing test, now under `namespace CryptoExchanges.Net.Tests.Unit;` with `using CryptoExchanges.Net;`.
-- [ ] `AddCryptoExchangesTests.cs` contains `AddCryptoExchanges_ResolvesAllFiveExchanges` (asserts a working keyed `IExchangeClient` for Binance/Bybit/Okx/Bitget/Kucoin) and `AddCryptoExchanges_OptionsFlow_ReachesExchangeOptions`; both pass with no network.
-- [ ] `CryptoExchanges.Net.sln` references `tests\CryptoExchanges.Net.Tests.Unit\…` (same GUID); `dotnet test tests/CryptoExchanges.Net.Tests.Unit/ --filter 'Category!=Integration'` is green and `dotnet build` of this project is 0W/0E.
+- [x] Test project is `tests/CryptoExchanges.Net.Tests.Unit/` with `AssemblyName`/`RootNamespace` = `CryptoExchanges.Net.Tests.Unit`, referencing `..\..\src\CryptoExchanges.Net\CryptoExchanges.Net.csproj`; `DiRegistrationTests`/`ExchangeClientFactoryTests` keep every existing test, now under `namespace CryptoExchanges.Net.Tests.Unit;` with `using CryptoExchanges.Net;`.
+- [x] `AddCryptoExchangesTests.cs` contains `AddCryptoExchanges_ResolvesAllFiveExchanges` (asserts a working keyed `IExchangeClient` for Binance/Bybit/Okx/Bitget/Kucoin) and `AddCryptoExchanges_OptionsFlow_ReachesExchangeOptions`; both pass with no network.
+- [x] `CryptoExchanges.Net.sln` references `tests\CryptoExchanges.Net.Tests.Unit\…` (same GUID); `dotnet test tests/CryptoExchanges.Net.Tests.Unit/ --filter 'Category!=Integration'` is green and `dotnet build` of this project is 0W/0E.
 
 ## Pattern Reference
 - Existing aggregator tests to preserve + adapt: `tests/CryptoExchanges.Net.DependencyInjection.Tests.Unit/DiRegistrationTests.cs` (namespace line :12, using :9), `tests/CryptoExchanges.Net.DependencyInjection.Tests.Unit/ExchangeClientFactoryTests.cs` (namespace :10, using :8).
@@ -107,5 +107,14 @@ including the two new facts.
 ## Commits
 
 ## Implementation Log
+
+- 2026-06-21T20:05:00Z: Claimed task (base SHA `6658ca3`). Read manifest, existing test files, KuCoin pattern references.
+- `git mv` folder to `tests/CryptoExchanges.Net.Tests.Unit/` and renamed csproj to `CryptoExchanges.Net.Tests.Unit.csproj`.
+- Updated csproj: added `AssemblyName`/`RootNamespace`, repointed `ProjectReference` from `DependencyInjection` → `CryptoExchanges.Net`.
+- Updated `DiRegistrationTests.cs`: swapped `using CryptoExchanges.Net.DependencyInjection;` → `using CryptoExchanges.Net;`, namespace → `CryptoExchanges.Net.Tests.Unit`.
+- Updated `ExchangeClientFactoryTests.cs`: same using/namespace swap.
+- Created `AddCryptoExchangesTests.cs` with `AddCryptoExchanges_ResolvesAllFiveExchanges` and `AddCryptoExchanges_OptionsFlow_ReachesExchangeOptions` (Binance options-flow pattern, mirrors KuCoin test).
+- Updated `CryptoExchanges.Net.sln` line 28: name + path to `CryptoExchanges.Net.Tests.Unit`; GUID `{A552E3A1-3728-4BA3-8DB8-8EC84EF8288E}` preserved.
+- Build: 0W/0E. Tests: 15/15 passed (13 existing + 2 new).
 
 ## Review Results

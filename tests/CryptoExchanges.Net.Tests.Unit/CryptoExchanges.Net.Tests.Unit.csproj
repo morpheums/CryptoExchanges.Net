@@ -1,13 +1,15 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
+    <AssemblyName>CryptoExchanges.Net.Tests.Unit</AssemblyName>
+    <RootNamespace>CryptoExchanges.Net.Tests.Unit</RootNamespace>
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
     <NoWarn>$(NoWarn);CA1707;CA2007;CA1515;CS1591;xUnit1051</NoWarn>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\CryptoExchanges.Net.Core\CryptoExchanges.Net.Core.csproj" />
-    <ProjectReference Include="..\..\src\CryptoExchanges.Net.DependencyInjection\CryptoExchanges.Net.DependencyInjection.csproj" />
+    <ProjectReference Include="..\..\src\CryptoExchanges.Net\CryptoExchanges.Net.csproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.6.0" />

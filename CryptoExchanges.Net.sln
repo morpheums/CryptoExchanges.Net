@@ -25,7 +25,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{0AB3BF05
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CryptoExchanges.Net.Http.Tests.Unit", "tests\CryptoExchanges.Net.Http.Tests.Unit\CryptoExchanges.Net.Http.Tests.Unit.csproj", "{4FEED444-D856-4DFE-8A57-20E54F638C77}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CryptoExchanges.Net.DependencyInjection.Tests.Unit", "tests\CryptoExchanges.Net.DependencyInjection.Tests.Unit\CryptoExchanges.Net.DependencyInjection.Tests.Unit.csproj", "{A552E3A1-3728-4BA3-8DB8-8EC84EF8288E}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CryptoExchanges.Net.Tests.Unit", "tests\CryptoExchanges.Net.Tests.Unit\CryptoExchanges.Net.Tests.Unit.csproj", "{A552E3A1-3728-4BA3-8DB8-8EC84EF8288E}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CryptoExchanges.Net.Bybit.Tests.Unit", "tests\CryptoExchanges.Net.Bybit.Tests.Unit\CryptoExchanges.Net.Bybit.Tests.Unit.csproj", "{B1C2D3E4-F5A6-4789-9ABC-DEF012345601}"
 EndProject

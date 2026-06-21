@@ -6,10 +6,10 @@ using CryptoExchanges.Net.Bybit;
 using CryptoExchanges.Net.Core.Enums;
 using CryptoExchanges.Net.Core.Interfaces;
 using CryptoExchanges.Net.Core.Resilience;
-using CryptoExchanges.Net.DependencyInjection;
+using CryptoExchanges.Net;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
-namespace CryptoExchanges.Net.DependencyInjection.Tests.Unit;
+namespace CryptoExchanges.Net.Tests.Unit;
 
 public class DiRegistrationTests
 {

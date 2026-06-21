@@ -215,4 +215,4 @@ FEAT-006 Tasks: 9/9 DONE. PR #35. Completion SHAs recorded in each `nazgul/tasks
 - **POST-LOOP** — documentation + release-manager → PR to main (#35).
 
 ## Patches
-- [x] PATCH-001: Add NuGet download-count badges to README.md (sha: PENDING)
+- [x] PATCH-001: Add NuGet download-count badges to README.md (sha: be0fa75)

@@ -16,7 +16,7 @@
     <ProjectReference Include="../CryptoExchanges.Net.Okx/CryptoExchanges.Net.Okx.csproj" />
     <ProjectReference Include="../CryptoExchanges.Net.Bitget/CryptoExchanges.Net.Bitget.csproj" />
     <ProjectReference Include="../CryptoExchanges.Net.Kucoin/CryptoExchanges.Net.Kucoin.csproj" />
-    <ProjectReference Include="../CryptoExchanges.Net.DependencyInjection/CryptoExchanges.Net.DependencyInjection.csproj" />
+    <ProjectReference Include="../CryptoExchanges.Net/CryptoExchanges.Net.csproj" />
   </ItemGroup>
   <ItemGroup>
     <None Include="README.md" Pack="true" PackagePath="\" />

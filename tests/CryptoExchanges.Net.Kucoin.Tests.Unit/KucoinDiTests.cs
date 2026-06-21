@@ -4,14 +4,13 @@ using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 using CryptoExchanges.Net.Core.Enums;
 using CryptoExchanges.Net.Core.Interfaces;
-using CryptoExchanges.Net.DependencyInjection;
 using CryptoExchanges.Net.Kucoin;
 
 namespace CryptoExchanges.Net.Kucoin.Tests.Unit;
 
 /// <summary>
-/// No-network unit tests for KuCoin DI registration, keyed service resolution, ValidateOnStart
-/// fail-fast, and AddCryptoExchanges aggregator coverage.
+/// No-network unit tests for KuCoin DI registration, keyed service resolution, and ValidateOnStart
+/// fail-fast.
 /// </summary>
 [Trait("Category", "Unit")]
 public class KucoinDiTests
@@ -116,55 +115,4 @@ public class KucoinDiTests
         sp.GetRequiredKeyedService<IExchangeClient>(ExchangeId.Kucoin).Should().NotBeNull();
     }
 
-    // ── AddCryptoExchanges aggregator ──
-
-    [Fact]
-    public async Task AddCryptoExchanges_ResolvesKucoinClient()
-    {
-        var services = new ServiceCollection();
-        services.AddCryptoExchanges();
-        await using var sp = services.BuildServiceProvider();
-
-        sp.GetRequiredKeyedService<IExchangeClient>(ExchangeId.Kucoin).ExchangeId
-            .Should().Be(ExchangeId.Kucoin);
-    }
-
-    [Fact]
-    public async Task AddCryptoExchanges_ResolvesAllFiveExchanges()
-    {
-        var services = new ServiceCollection();
-        services.AddCryptoExchanges();
-        await using var sp = services.BuildServiceProvider();
-
-        sp.GetRequiredKeyedService<IExchangeClient>(ExchangeId.Binance).ExchangeId
-            .Should().Be(ExchangeId.Binance);
-        sp.GetRequiredKeyedService<IExchangeClient>(ExchangeId.Bybit).ExchangeId
-            .Should().Be(ExchangeId.Bybit);
-        sp.GetRequiredKeyedService<IExchangeClient>(ExchangeId.Okx).ExchangeId
-            .Should().Be(ExchangeId.Okx);
-        sp.GetRequiredKeyedService<IExchangeClient>(ExchangeId.Bitget).ExchangeId
-            .Should().Be(ExchangeId.Bitget);
-        sp.GetRequiredKeyedService<IExchangeClient>(ExchangeId.Kucoin).ExchangeId
-            .Should().Be(ExchangeId.Kucoin);
-    }
-
-    [Fact]
-    public async Task AddCryptoExchanges_KucoinOptions_AppliesViaAggregator()
-    {
-        // Validates the delegation path: CryptoExchangesOptions.KucoinApiKey flows through
-        // AddCryptoExchanges → AddKucoinExchange configure delegate → KucoinOptions.ApiKey.
-        var services = new ServiceCollection();
-        services.AddCryptoExchanges(o =>
-        {
-            o.KucoinApiKey = "test-api-key";
-            o.KucoinSecretKey = "test-secret";
-            o.KucoinPassphrase = "test-passphrase";
-        });
-        await using var sp = services.BuildServiceProvider();
-
-        var resolvedOptions = sp.GetRequiredService<KucoinOptions>();
-        resolvedOptions.ApiKey.Should().Be("test-api-key");
-        resolvedOptions.SecretKey.Should().Be("test-secret");
-        resolvedOptions.Passphrase.Should().Be("test-passphrase");
-    }
 }

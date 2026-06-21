@@ -5,9 +5,9 @@ using CryptoExchanges.Net.Binance;
 using CryptoExchanges.Net.Core.Enums;
 using CryptoExchanges.Net.Core.Exceptions;
 using CryptoExchanges.Net.Core.Interfaces;
-using CryptoExchanges.Net.DependencyInjection;
+using CryptoExchanges.Net;
 
-namespace CryptoExchanges.Net.DependencyInjection.Tests.Unit;
+namespace CryptoExchanges.Net.Tests.Unit;
 
 public class ExchangeClientFactoryTests
 {

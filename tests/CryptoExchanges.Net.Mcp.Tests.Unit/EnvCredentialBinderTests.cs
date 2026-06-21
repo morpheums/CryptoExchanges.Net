@@ -1,6 +1,6 @@
 using Xunit;
 using AwesomeAssertions;
-using CryptoExchanges.Net.DependencyInjection;
+using CryptoExchanges.Net;
 using CryptoExchanges.Net.Mcp;
 
 namespace CryptoExchanges.Net.Mcp.Tests.Unit;

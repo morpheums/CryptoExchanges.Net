@@ -250,8 +250,14 @@ IReadOnlyList<Trade> myTrades = await client.Account.GetTradeHistoryAsync(
 
 ### Register all exchanges at once
 
+```bash
+dotnet add package CryptoExchanges.Net
+```
+
 ```csharp
 // Program.cs
+using CryptoExchanges.Net;
+
 builder.Services.AddCryptoExchanges(opt =>
 {
     opt.BinanceApiKey    = builder.Configuration["Binance:ApiKey"];
@@ -271,7 +277,7 @@ builder.Services.AddCryptoExchanges(opt =>
 
 ```csharp
 // AddBinanceExchange / AddBybitExchange / AddOkxExchange / AddBitgetExchange
-// live in the per-exchange package, not DependencyInjection
+// live in the per-exchange package (CryptoExchanges.Net.Binance, etc.), not the meta-package
 builder.Services.AddBinanceExchange(opt =>
 {
     opt.ApiKey    = builder.Configuration["Binance:ApiKey"];

@@ -254,11 +254,15 @@ services.AddKucoinStreams();  // opt-in — REST-only consumers skip this
 
 ## Register all exchanges at once
 
-`CryptoExchanges.Net.DependencyInjection` provides a single `AddCryptoExchanges()` call that
+`CryptoExchanges.Net` provides a single `AddCryptoExchanges()` call that
 registers all supported exchanges:
 
+```bash
+dotnet add package CryptoExchanges.Net
+```
+
 ```csharp
-using CryptoExchanges.Net.DependencyInjection;
+using CryptoExchanges.Net;
 
 services.AddCryptoExchanges(opt =>
 {

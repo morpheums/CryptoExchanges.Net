@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0-preview.1] — 2026-06-21
+
+### Changed
+
+- **[BREAKING — package id / namespace]** Renamed aggregator package
+  `CryptoExchanges.Net.DependencyInjection` → `CryptoExchanges.Net`.
+  `AddCryptoExchanges` and `CryptoExchangesOptions` moved to namespace `CryptoExchanges.Net`.
+  Method name and options shape are unchanged.
+
+### Migration
+
+- Remove: `dotnet add package CryptoExchanges.Net.DependencyInjection`
+- Add:    `dotnet add package CryptoExchanges.Net`
+- Change: `using CryptoExchanges.Net.DependencyInjection;` → `using CryptoExchanges.Net;`
+- `services.AddCryptoExchanges(...)` — unchanged.
+
+### Internal
+
+- Decoupled per-exchange `.Tests.Unit` projects from the aggregator; consolidated
+  all-exchanges resolution test into `CryptoExchanges.Net.Tests.Unit`.
+
+---
+
 ## [0.4.0-preview.1] - 2026-06-21
 
 ### Added
@@ -104,7 +127,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Account operations: balances, trade history
 - Comprehensive unit and integration test suite
 
-[Unreleased]: https://github.com/OrodruinLabs/CryptoExchanges.Net/compare/v0.4.0-preview.1...HEAD
+[Unreleased]: https://github.com/OrodruinLabs/CryptoExchanges.Net/compare/v0.5.0-preview.1...HEAD
+[0.5.0-preview.1]: https://github.com/OrodruinLabs/CryptoExchanges.Net/compare/v0.4.0-preview.1...v0.5.0-preview.1
 [0.4.0-preview.1]: https://github.com/OrodruinLabs/CryptoExchanges.Net/compare/v0.3.0-preview.1...v0.4.0-preview.1
 [0.3.0-preview.1]: https://github.com/OrodruinLabs/CryptoExchanges.Net/compare/v0.2.0-preview.1...v0.3.0-preview.1
 [0.2.0-preview.1]: https://github.com/OrodruinLabs/CryptoExchanges.Net/compare/v0.1.0-preview.1...v0.2.0-preview.1

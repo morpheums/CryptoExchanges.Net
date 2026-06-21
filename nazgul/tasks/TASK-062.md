@@ -1,6 +1,6 @@
 ---
 id: TASK-062
-status: DONE
+status: IMPLEMENTED
 depends_on: [TASK-058, TASK-060, TASK-061]
 ---
 # TASK-062: `KucoinStreamProtocol` + bullet-public negotiation + 4 decoders + `AddKucoinStreams`
@@ -110,6 +110,7 @@ Tests (`Streaming/` in the Kucoin unit project), no network:
 - `d6988f7` — feat(FEAT-006): simplify TASK-062 (6 fixes: XML-doc corrections + per-frame decoder allocation removal)
 - `2039654` — feat(FEAT-006): TASK-062 DONE — RestBaseUrl wiring fix (cycle 2 review 4/4)
 - `32f75f7` — feat(FEAT-006): TASK-062 bugfix — ticker channel → /market/snapshot (real live wire)
+- `ec23dd8` — feat(FEAT-006): PR-35 review cleanup — dead-code deletion + LEAN-comment pass
 
 ## Implementation Log
 

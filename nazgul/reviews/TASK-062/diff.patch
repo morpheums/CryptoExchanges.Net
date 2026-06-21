@@ -1,413 +1,376 @@
-diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml
-index 8a8d8a0..7d61bd9 100644
---- a/.github/workflows/ci.yml
-+++ b/.github/workflows/ci.yml
-@@ -35,4 +35,4 @@ jobs:
-         run: dotnet build CryptoExchanges.Net.sln --no-restore --configuration Release
+diff --git a/docs/exchanges.md b/docs/exchanges.md
+index 423d69a..5f63fe0 100644
+--- a/docs/exchanges.md
++++ b/docs/exchanges.md
+@@ -205,7 +205,7 @@ services.AddBitgetExchange(opt =>
+ | **Credentials** | `ApiKey`, `SecretKey`, **`Passphrase`** |
+ | **Env vars** | `KUCOIN_API_KEY`, `KUCOIN_SECRET_KEY`, `KUCOIN_PASSPHRASE` |
+ | **Signing** | HMAC-SHA256 + KC-API passphrase-v2 header |
+-| **Endpoints** | REST v2 (spot) |
++| **Endpoints** | REST v1+v2 (spot: account/trading on v1, symbols/exchange-info on v2) |
+ | **Symbol format** | `BTC-USDT` (dash-separated) |
+ | **Streaming** | Public market-data streams (ticker, trade, order book, kline) |
  
-       - name: Test
--        run: dotnet test CryptoExchanges.Net.sln --no-build --configuration Release --verbosity normal
-+        run: dotnet test CryptoExchanges.Net.sln --no-build --configuration Release --verbosity normal --filter 'Category!=Integration'
-diff --git a/src/CryptoExchanges.Net.Kucoin/Dtos/Streaming/StreamKlineDto.cs b/src/CryptoExchanges.Net.Kucoin/Dtos/Streaming/StreamKlineDto.cs
-index 32a6678..569095d 100644
---- a/src/CryptoExchanges.Net.Kucoin/Dtos/Streaming/StreamKlineDto.cs
-+++ b/src/CryptoExchanges.Net.Kucoin/Dtos/Streaming/StreamKlineDto.cs
-@@ -15,7 +15,7 @@ internal sealed record StreamKlineDto
-     [JsonPropertyName("candles")]
-     public List<string> Candles { get; init; } = [];
- 
--    /// <summary>Frame timestamp in unix seconds (string-encoded).</summary>
-+    /// <summary>Frame timestamp in unix nanoseconds (JSON number — not used by the decoder).</summary>
-     [JsonPropertyName("time")]
--    public string Time { get; init; } = "0";
-+    public long Time { get; init; }
- }
-diff --git a/src/CryptoExchanges.Net.Kucoin/Dtos/Streaming/StreamTickerDto.cs b/src/CryptoExchanges.Net.Kucoin/Dtos/Streaming/StreamTickerDto.cs
-index fdd076d..31c2478 100644
---- a/src/CryptoExchanges.Net.Kucoin/Dtos/Streaming/StreamTickerDto.cs
-+++ b/src/CryptoExchanges.Net.Kucoin/Dtos/Streaming/StreamTickerDto.cs
-@@ -1,61 +1,60 @@
- namespace CryptoExchanges.Net.Kucoin.Dtos.Streaming;
- 
- /// <summary>
--/// The <c>data</c> payload of a KuCoin WebSocket ticker frame
--/// (<c>topic: /market/ticker:{symbol}</c>). Decimal fields are string-encoded per
--/// the KuCoin V2 API convention.
-+/// The inner <c>data.data</c> payload of a KuCoin WebSocket snapshot ticker frame
-+/// (<c>topic: /market/snapshot:{symbol}</c>). All numeric fields arrive as JSON numbers
-+/// (not strings) per the snapshot channel wire format.
- /// </summary>
- internal sealed record StreamTickerDto
- {
--    /// <summary>Sequence number for ordering frames.</summary>
--    [JsonPropertyName("sequence")]
--    public string Sequence { get; init; } = "0";
-+    /// <summary>Trading symbol wire string (e.g. <c>BTC-USDT</c>).</summary>
-+    [JsonPropertyName("symbol")]
-+    public string Symbol { get; init; } = string.Empty;
- 
-     /// <summary>Last traded price.</summary>
--    [JsonPropertyName("price")]
--    public string Price { get; init; } = "0";
+diff --git a/src/CryptoExchanges.Net.Kucoin/Dtos/ServerTimeDto.cs b/src/CryptoExchanges.Net.Kucoin/Dtos/ServerTimeDto.cs
+deleted file mode 100644
+index 96272ec..0000000
+--- a/src/CryptoExchanges.Net.Kucoin/Dtos/ServerTimeDto.cs
++++ /dev/null
+@@ -1,9 +0,0 @@
+-namespace CryptoExchanges.Net.Kucoin.Dtos;
 -
--    /// <summary>Best bid price.</summary>
--    [JsonPropertyName("bestBid")]
--    public string BestBid { get; init; } = "0";
-+    [JsonPropertyName("lastTradedPrice")]
-+    public decimal LastTradedPrice { get; init; }
+-/// <summary>The <c>data</c> payload of the KuCoin <c>/api/v1/timestamp</c> response.</summary>
+-internal sealed record ServerTimeDto
+-{
+-    /// <summary>Server time in unix milliseconds.</summary>
+-    [JsonPropertyName("data")]
+-    public long Data { get; init; }
+-}
+diff --git a/src/CryptoExchanges.Net.Kucoin/KucoinOptions.cs b/src/CryptoExchanges.Net.Kucoin/KucoinOptions.cs
+index cb763da..5db3c2a 100644
+--- a/src/CryptoExchanges.Net.Kucoin/KucoinOptions.cs
++++ b/src/CryptoExchanges.Net.Kucoin/KucoinOptions.cs
+@@ -28,8 +28,8 @@ public sealed class KucoinOptions
+     public int TimeoutSeconds { get; set; } = 30;
  
--    /// <summary>Best bid size.</summary>
--    [JsonPropertyName("bestBidSize")]
--    public string BestBidSize { get; init; } = "0";
-+    /// <summary>Best bid price (<c>buy</c> in the snapshot payload).</summary>
-+    [JsonPropertyName("buy")]
-+    public decimal Buy { get; init; }
+     /// <summary>
+-    /// Builds an <see cref="ExchangeCredentials"/> from these options, including the KuCoin
+-    /// <see cref="Passphrase"/>. Intended for signing wire-up in later tasks.
++    /// Builds an <see cref="ExchangeCredentials"/> from the configured <see cref="ApiKey"/>,
++    /// <see cref="SecretKey"/>, and <see cref="Passphrase"/>.
+     /// </summary>
+     /// <returns>A credential set carrying the API key, secret, and passphrase.</returns>
+     /// <exception cref="ArgumentException">
+diff --git a/src/CryptoExchanges.Net.Kucoin/Resilience/KucoinErrorTranslator.cs b/src/CryptoExchanges.Net.Kucoin/Resilience/KucoinErrorTranslator.cs
+index e7a7e8c..919980b 100644
+--- a/src/CryptoExchanges.Net.Kucoin/Resilience/KucoinErrorTranslator.cs
++++ b/src/CryptoExchanges.Net.Kucoin/Resilience/KucoinErrorTranslator.cs
+@@ -24,15 +24,11 @@ internal sealed class KucoinErrorTranslator : IExchangeErrorTranslator
+         var (code, msg) = Parse(body);
+         var text = msg is null ? $"KuCoin HTTP {(int)response.StatusCode}" : $"KuCoin error {code}: {msg}";
  
--    /// <summary>Best ask price.</summary>
--    [JsonPropertyName("bestAsk")]
--    public string BestAsk { get; init; } = "0";
--
--    /// <summary>Best ask size.</summary>
--    [JsonPropertyName("bestAskSize")]
--    public string BestAskSize { get; init; } = "0";
--
--    /// <summary>24h open price (price 24 hours ago).</summary>
--    [JsonPropertyName("open")]
--    public string Open { get; init; } = "0";
-+    /// <summary>Best ask price (<c>sell</c> in the snapshot payload).</summary>
-+    [JsonPropertyName("sell")]
-+    public decimal Sell { get; init; }
+-        // Translate always returns an exception (it is only invoked on a failed/error response). When the
+-        // JSON envelope still reports code "200000" (e.g. an HTTP-level error with a success-shaped body),
+-        // we return the generic ExchangeApiException rather than mapping to a more specific typed exception.
+         if (code == "200000")
+             return new ExchangeApiException(text, ParseCode(code), body);
  
-     /// <summary>24h high price.</summary>
-     [JsonPropertyName("high")]
--    public string High { get; init; } = "0";
-+    public decimal High { get; init; }
+         var numeric = ParseCode(code);
  
-     /// <summary>24h low price.</summary>
-     [JsonPropertyName("low")]
--    public string Low { get; init; } = "0";
-+    public decimal Low { get; init; }
-+
-+    /// <summary>Opening price (price 24 hours ago).</summary>
-+    [JsonPropertyName("open")]
-+    public decimal Open { get; init; }
+-        // Rate limiting: HTTP 429. KuCoin returns 429 directly for rate limit breaches.
+         if (response.StatusCode == HttpStatusCode.TooManyRequests)
+             return new RateLimitExceededException(text, RetryAfterReader.GetDelay(response), numeric, body);
  
-     /// <summary>24h base-asset volume.</summary>
-     [JsonPropertyName("vol")]
--    public string Vol { get; init; } = "0";
-+    public decimal Vol { get; init; }
+diff --git a/src/CryptoExchanges.Net.Kucoin/Resilience/KucoinSigningHandler.cs b/src/CryptoExchanges.Net.Kucoin/Resilience/KucoinSigningHandler.cs
+index fc41d67..86d455d 100644
+--- a/src/CryptoExchanges.Net.Kucoin/Resilience/KucoinSigningHandler.cs
++++ b/src/CryptoExchanges.Net.Kucoin/Resilience/KucoinSigningHandler.cs
+@@ -36,9 +36,6 @@ internal sealed class KucoinSigningHandler(
  
-     /// <summary>24h quote-asset volume.</summary>
-     [JsonPropertyName("volValue")]
--    public string VolValue { get; init; } = "0";
--
--    /// <summary>Trading symbol wire string (e.g. <c>BTC-USDT</c>).</summary>
--    [JsonPropertyName("symbol")]
--    public string Symbol { get; init; } = string.Empty;
--
--    /// <summary>Frame timestamp in unix nanoseconds (string-encoded).</summary>
--    [JsonPropertyName("time")]
--    public string Time { get; init; } = "0";
-+    public decimal VolValue { get; init; }
-+
-+    /// <summary>Absolute price change over the last 24 hours.</summary>
-+    [JsonPropertyName("changePrice")]
-+    public decimal ChangePrice { get; init; }
-+
-+    /// <summary>
-+    /// Fractional price-change rate over the last 24 hours (e.g. <c>0.0014</c> ≡ 0.14%).
-+    /// Multiply by 100 to obtain a percentage.
-+    /// </summary>
-+    [JsonPropertyName("changeRate")]
-+    public decimal ChangeRate { get; init; }
-+
-+    /// <summary>Frame timestamp in unix milliseconds (JSON number).</summary>
-+    [JsonPropertyName("datetime")]
-+    public long Datetime { get; init; }
- }
-diff --git a/src/CryptoExchanges.Net.Kucoin/Mapping/KucoinMappingProfiles.cs b/src/CryptoExchanges.Net.Kucoin/Mapping/KucoinMappingProfiles.cs
-index 53c029e..96a928e 100644
---- a/src/CryptoExchanges.Net.Kucoin/Mapping/KucoinMappingProfiles.cs
-+++ b/src/CryptoExchanges.Net.Kucoin/Mapping/KucoinMappingProfiles.cs
-@@ -93,26 +93,24 @@ internal sealed class KucoinResponseProfile : Profile
-                 s.Side == "buy" ? s.Liquidity == "maker" : s.Liquidity != "maker"))
-             .ForMember(d => d.OrderId, o => o.MapFrom(s => s.OrderId));
+     private async Task ResignAsync(HttpRequestMessage request, CancellationToken ct)
+     {
+-        // A signed KuCoin request needs all three credentials: key, secret (held by the signature
+-        // service), and passphrase. Guard here even though the composer's secret-gated finalizer
+-        // should normally prevent constructing a signing handler without full credentials.
+         if (string.IsNullOrEmpty(apiKey))
+             throw new InvalidOperationException(
+                 "KuCoin signed request requires an API key (KC-API-KEY); none was configured.");
+diff --git a/src/CryptoExchanges.Net.Kucoin/ServiceCollectionExtensions.cs b/src/CryptoExchanges.Net.Kucoin/ServiceCollectionExtensions.cs
+index 0a67a25..d5c43d5 100644
+--- a/src/CryptoExchanges.Net.Kucoin/ServiceCollectionExtensions.cs
++++ b/src/CryptoExchanges.Net.Kucoin/ServiceCollectionExtensions.cs
+@@ -31,14 +31,6 @@ public static class ServiceCollectionExtensions
+     public static IServiceCollection AddKucoinExchange(
+         this IServiceCollection services,
+         Action<KucoinOptions>? configure = null) =>
+-        // Delegates to the shared Http registration helper; only the KuCoin variation points differ.
+-        // KuCoin sets NO default api-key header (it signs per-request), so configureHttpClient is null,
+-        // and KucoinHttpClient's ctor takes (httpClient) only. KuCoin uses the default ResilienceOptions
+-        // (no usage-header). The finalizer is ALWAYS registered and gates on BOTH SecretKey AND
+-        // Passphrase; if either is missing the client resolves to a no-op PassThroughHandler (mirrors
+-        // Create()). Because the gate requires both, secret/passphrase are passed to KucoinSigningHandler
+-        // directly — no KucoinOptions.ToCredentials() (which throws on an empty passphrase) in the
+-        // signing path.
+         ExchangeServiceRegistration.AddExchange<KucoinOptions, IMapper>(
+             services,
+             ExchangeId.Kucoin,
+@@ -47,14 +39,14 @@ public static class ServiceCollectionExtensions
+             applyEnvDefaults: ApplyEnvDefaults,
+             configure: configure,
+             timeoutSecondsSelector: o => o.TimeoutSeconds,
+-            // Host-only BaseAddress (no path) so RequestUri.PathAndQuery == the signed KuCoin requestPath.
+-            // ExchangeUrl.NormalizeHostRoot fails fast if a path segment is present (would break the prehash).
++            // Host-only BaseAddress so RequestUri.PathAndQuery matches the signed prehash exactly.
+             baseUrlSelector: o => ExchangeUrl.NormalizeHostRoot(o.BaseUrl),
+             symbolMapperFactory: () => new KucoinSymbolMapper(),
+             mapperFactory: KucoinClientComposer.CreateMapper,
+             configureHttpClient: null,
+             resilienceOptions: new ResilienceOptions(),
+             translatorFactory: _ => new KucoinErrorTranslator(),
++            // Gate on both SecretKey AND Passphrase; missing either → no-op PassThroughHandler.
+             requestFinalizerFactory: sp =>
+             {
+                 var o = sp.GetRequiredService<KucoinOptions>();
+diff --git a/src/CryptoExchanges.Net.Kucoin/Services/KucoinMarketDataService.cs b/src/CryptoExchanges.Net.Kucoin/Services/KucoinMarketDataService.cs
+index baaf7b1..f8d418d 100644
+--- a/src/CryptoExchanges.Net.Kucoin/Services/KucoinMarketDataService.cs
++++ b/src/CryptoExchanges.Net.Kucoin/Services/KucoinMarketDataService.cs
+@@ -38,7 +38,6 @@ internal sealed class KucoinMarketDataService(IKucoinHttpClient http, ISymbolMap
+     {
+         if (symbol.HasValue)
+         {
+-            // Single-symbol path: /api/v1/market/stats?symbol=BTC-USDT
+             var single = new Dictionary<string, string> { ["symbol"] = mapper.ToWire(symbol.Value) };
+             var oneResp = await http.GetAsync<ResponseDto<TickerDto>>("/api/v1/market/stats", single, false, ct).ConfigureAwait(false);
+             if (oneResp.Data is null)
+@@ -46,7 +45,6 @@ internal sealed class KucoinMarketDataService(IKucoinHttpClient http, ISymbolMap
+             return [modelMapper.Map<TickerDto, Ticker>(oneResp.Data)];
+         }
  
--        // StreamTickerDto -> Ticker. WebSocket ticker push frame carries the last price, 24h
--        // open/high/low, base/quote volumes, and a nanosecond timestamp. Price change is derived
--        // from last - open; percent is (last - open) / open * 100.
-+        // StreamTickerDto -> Ticker. WebSocket snapshot frame (/market/snapshot) carries the
-+        // last traded price, 24h open/high/low, base/quote volumes, absolute and fractional
-+        // price change, and a unix-ms timestamp (JSON number). changeRate is a fraction
-+        // (e.g. 0.0014) so multiply by 100 to produce a percentage.
-         CreateMap<StreamTickerDto, Ticker>()
-             .ForMember(d => d.Symbol, o => o.MapFrom(s => symbolMapper.FromWire(s.Symbol)))
--            .ForMember(d => d.LastPrice, o => o.MapFrom(s => KucoinValueParsers.ParseDecimal(s.Price)))
--            .ForMember(d => d.OpenPrice, o => o.MapFrom(s => KucoinValueParsers.ParseDecimal(s.Open)))
--            .ForMember(d => d.HighPrice, o => o.MapFrom(s => KucoinValueParsers.ParseDecimal(s.High)))
--            .ForMember(d => d.LowPrice, o => o.MapFrom(s => KucoinValueParsers.ParseDecimal(s.Low)))
--            .ForMember(d => d.Volume, o => o.MapFrom(s => KucoinValueParsers.ParseDecimal(s.Vol)))
--            .ForMember(d => d.QuoteVolume, o => o.MapFrom(s => KucoinValueParsers.ParseDecimal(s.VolValue)))
--            .ForMember(d => d.PriceChange, o => o.MapFrom(s =>
--                KucoinValueParsers.ParseDecimal(s.Price) - KucoinValueParsers.ParseDecimal(s.Open)))
--            .ForMember(d => d.PriceChangePercent, o => o.MapFrom(s =>
--                KucoinValueParsers.ParseDecimal(s.Open) == 0m
--                    ? 0m
--                    : (KucoinValueParsers.ParseDecimal(s.Price) - KucoinValueParsers.ParseDecimal(s.Open))
--                      / KucoinValueParsers.ParseDecimal(s.Open) * 100m))
--            // Time is nanoseconds (string-encoded); convert to ms by dividing by 1_000_000.
--            .ForMember(d => d.Timestamp, o => o.MapFrom(s => ParseNsTimestamp(s.Time)));
-+            .ForMember(d => d.LastPrice, o => o.MapFrom(s => s.LastTradedPrice))
-+            .ForMember(d => d.OpenPrice, o => o.MapFrom(s => s.Open))
-+            .ForMember(d => d.HighPrice, o => o.MapFrom(s => s.High))
-+            .ForMember(d => d.LowPrice, o => o.MapFrom(s => s.Low))
-+            .ForMember(d => d.Volume, o => o.MapFrom(s => s.Vol))
-+            .ForMember(d => d.QuoteVolume, o => o.MapFrom(s => s.VolValue))
-+            .ForMember(d => d.PriceChange, o => o.MapFrom(s => s.ChangePrice))
-+            .ForMember(d => d.PriceChangePercent, o => o.MapFrom(s => s.ChangeRate * 100m))
-+            // datetime is unix milliseconds (JSON number) — convert directly.
-+            .ForMember(d => d.Timestamp, o => o.MapFrom(s => s.Datetime > 0
-+                ? DateTimeOffset.FromUnixTimeMilliseconds(s.Datetime)
-+                : (DateTimeOffset?)null));
-     }
+-        // All-tickers path: /api/v1/market/allTickers — returns { time, ticker: [...] }
+         var response = await http.GetAsync<ResponseDto<AllTickersDto>>("/api/v1/market/allTickers", null, false, ct).ConfigureAwait(false);
+         var items = response.Data?.Ticker ?? [];
  
-     /// <summary>The order types KuCoin spot accepts (stop/take-profit use the separate plan API).</summary>
-@@ -125,13 +123,4 @@ internal sealed class KucoinResponseProfile : Profile
-     private static DateTimeOffset? ParseMs(long ms)
-         => ms > 0 ? DateTimeOffset.FromUnixTimeMilliseconds(ms) : null;
+diff --git a/src/CryptoExchanges.Net.Kucoin/StreamServiceCollectionExtensions.cs b/src/CryptoExchanges.Net.Kucoin/StreamServiceCollectionExtensions.cs
+index 70e512d..6ee5b46 100644
+--- a/src/CryptoExchanges.Net.Kucoin/StreamServiceCollectionExtensions.cs
++++ b/src/CryptoExchanges.Net.Kucoin/StreamServiceCollectionExtensions.cs
+@@ -32,8 +32,6 @@ public static class StreamServiceCollectionExtensions
+             ExchangeId.Kucoin,
+             protocolFactory: sp =>
+             {
+-                // Reuse the named kucoin HttpClient (already registered by AddKucoinExchange).
+-                // Bullet-public is unauthenticated (signed: false), so the signing handler is a no-op.
+                 var options = sp.GetRequiredService<KucoinStreamOptions>();
+                 // LR-001: guard the caller-configurable base URL before consuming it.
+                 ArgumentException.ThrowIfNullOrWhiteSpace(options.RestBaseUrl);
+@@ -43,8 +41,7 @@ public static class StreamServiceCollectionExtensions
+                         $"must be a well-formed absolute URI. Got: '{options.RestBaseUrl}'.");
  
--    /// <summary>
--    /// Parses a KuCoin string-encoded nanosecond timestamp (used in streaming ticker frames)
--    /// into an optional instant. Returns <see langword="null"/> when zero or unset.
--    /// </summary>
--    private static DateTimeOffset? ParseNsTimestamp(string value)
--    {
--        var ms = KucoinValueParsers.ParseNsToMs(value);
--        return ms > 0 ? DateTimeOffset.FromUnixTimeMilliseconds(ms) : null;
--    }
- }
+                 var httpClientFactory = sp.GetRequiredService<System.Net.Http.IHttpClientFactory>();
+-                // CreateClient returns a fresh HttpClient per call, so overriding its host-only
+-                // BaseAddress here only affects the bullet-public negotiation, never the shared REST client.
++                // CreateClient returns a fresh HttpClient per call — BaseAddress override only affects bullet-public, not the shared REST client.
+                 var httpClient = httpClientFactory.CreateClient(KucoinClientName);
+                 httpClient.BaseAddress = baseUri;
+                 IKucoinHttpClient http = new KucoinHttpClient(httpClient);
 diff --git a/src/CryptoExchanges.Net.Kucoin/Streaming/KucoinStreamDecoders.cs b/src/CryptoExchanges.Net.Kucoin/Streaming/KucoinStreamDecoders.cs
-index 6bbcdaf..38d6535 100644
+index 38d6535..f91ad18 100644
 --- a/src/CryptoExchanges.Net.Kucoin/Streaming/KucoinStreamDecoders.cs
 +++ b/src/CryptoExchanges.Net.Kucoin/Streaming/KucoinStreamDecoders.cs
-@@ -39,9 +39,11 @@ internal static class KucoinStreamDecoders
+@@ -38,21 +38,18 @@ internal static class KucoinStreamDecoders
+ 
          var registry = new StreamDecoderRegistry();
  
-         // Ticker uses DeltaMapper (StreamTickerDto -> Ticker profile in KucoinResponseProfile).
-+        // The snapshot channel wraps the payload as data.data (double-nested), so we use
-+        // DeserializeSnapshotData which navigates both levels.
+-        // Ticker uses DeltaMapper (StreamTickerDto -> Ticker profile in KucoinResponseProfile).
+-        // The snapshot channel wraps the payload as data.data (double-nested), so we use
+-        // DeserializeSnapshotData which navigates both levels.
++        // Ticker: snapshot channel wraps payload as data.data (double-nested).
          registry.Register(StreamKind.Ticker, bytes =>
          {
--            var dto = DeserializeData<StreamTickerDto>(bytes)!;
-+            var dto = DeserializeSnapshotData<StreamTickerDto>(bytes)!;
+             var dto = DeserializeSnapshotData<StreamTickerDto>(bytes)!;
              return mapper.Map<StreamTickerDto, Ticker>(dto);
          });
  
-@@ -130,4 +132,39 @@ internal static class KucoinStreamDecoders
+-        // Trade is hand-mapped (matches the convention for the match stream).
+         registry.Register(StreamKind.Trade, bytes =>
+         {
+             var dto = DeserializeData<StreamTradeDto>(bytes)!;
+             var symbol = symbolMapper.FromWire(dto.Symbol);
+-            // The taker side identifies the aggressor: "buy" taker → seller is maker (IsBuyerMaker = false).
++            // "buy" taker → seller is maker (IsBuyerMaker = false).
+             var isBuyerMaker = string.Equals(dto.Side, "sell", StringComparison.OrdinalIgnoreCase);
+             var tsMs = KucoinValueParsers.ParseNsToMs(dto.Time);
+             return new Trade(
+@@ -64,7 +61,6 @@ internal static class KucoinStreamDecoders
+                 IsBuyerMaker: isBuyerMaker);
+         });
  
-         return JsonSerializer.Deserialize<T>(frame.Span, JsonOpts);
-     }
-+
-+    /// <summary>
-+    /// Deserializes the double-nested snapshot payload (<c>data.data</c>) used by the
-+    /// <c>/market/snapshot</c> channel. The outer wrapper is
-+    /// <c>{"type":"message","topic":...,"data":{"sequence":...,"data":{...}}}</c>; this method
-+    /// navigates to the inner <c>data.data</c> object. When the outer wrapper is absent (bare
-+    /// inner payload as used in unit tests) it falls back to deserializing the raw bytes.
-+    /// </summary>
-+    private static T? DeserializeSnapshotData<T>(ReadOnlyMemory<byte> frame)
-+    {
-+        try
-+        {
-+            var reader = new Utf8JsonReader(frame.Span);
-+            using var doc = JsonDocument.ParseValue(ref reader);
-+            var root = doc.RootElement;
-+
-+            // Full push frame: {... "data": {"sequence":..., "data": {...}}}
-+            if (root.TryGetProperty("data"u8, out var outerData))
-+            {
-+                if (outerData.TryGetProperty("data"u8, out var innerData))
-+                    return innerData.Deserialize<T>(JsonOpts);
-+
-+                // Outer data present but no inner data — try deserializing outer as the payload
-+                // (handles bare single-level test fixtures that already represent the inner object).
-+                return outerData.Deserialize<T>(JsonOpts);
-+            }
-+        }
-+        catch (JsonException)
-+        {
-+            // Malformed outer wrapper — fall through.
-+        }
-+
-+        // Bare inner payload (unit-test fixture with no envelope at all).
-+        return JsonSerializer.Deserialize<T>(frame.Span, JsonOpts);
-+    }
- }
+-        // Hand-mapped following the REST GetOrderBookAsync convention.
+         // KuCoin level2 stream delivers incremental diffs; each entry is [price, size, sequence].
+         registry.Register(StreamKind.OrderBook, bytes =>
+         {
+@@ -81,10 +77,7 @@ internal static class KucoinStreamDecoders
+             return new OrderBook(symbol, bids, asks, null, dto.SequenceEnd);
+         });
+ 
+-        // Hand-mapped. KuCoin candles array: [startAt(s), open, close, high, low, vol, quoteVol].
+-        // Indices: 0=startAt, 1=open, 2=close, 3=high, 4=low, 5=volume, 6=quoteVolume.
+-        // The interval is encoded in the routing-key topic but not in the data payload;
+-        // it is set to null here as the decoder receives only the data bytes.
++        // KuCoin candles array: [startAt(s), open, close, high, low, vol, quoteVol]; interval not in payload.
+         registry.Register(StreamKind.Kline, bytes =>
+         {
+             var dto = DeserializeData<StreamKlineDto>(bytes)!;
 diff --git a/src/CryptoExchanges.Net.Kucoin/Streaming/KucoinStreamProtocol.cs b/src/CryptoExchanges.Net.Kucoin/Streaming/KucoinStreamProtocol.cs
-index 35f4cc4..31e001a 100644
+index 31e001a..0d30d71 100644
 --- a/src/CryptoExchanges.Net.Kucoin/Streaming/KucoinStreamProtocol.cs
 +++ b/src/CryptoExchanges.Net.Kucoin/Streaming/KucoinStreamProtocol.cs
-@@ -138,7 +138,7 @@ internal sealed class KucoinStreamProtocol : IStreamProtocol
-     /// </summary>
-     private static string BuildTopic(StreamRequest request) => request.Kind switch
+@@ -47,8 +47,7 @@ internal sealed class KucoinStreamProtocol : IStreamProtocol
+         var pingInterval = TimeSpan.FromMilliseconds(server.PingInterval);
+         var pingTimeout = TimeSpan.FromMilliseconds(server.PingTimeout);
+ 
+-        // Build a timestamped ping payload each connection using the server-returned interval
+-        // as the message ID. The static template is replaced with a per-connection timestamp.
++        // KuCoin ping payload uses a unix-ms timestamp as the message ID.
+         var pingTs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString();
+         var pingPayload = Encoding.UTF8.GetBytes($"{{\"id\":\"{pingTs}\",\"type\":\"ping\"}}");
+ 
+@@ -84,8 +83,6 @@ internal sealed class KucoinStreamProtocol : IStreamProtocol
+     public string RoutingKeyFor(StreamRequest request)
      {
--        StreamKind.Ticker => $"/market/ticker:{request.WireSymbol}",
-+        StreamKind.Ticker => $"/market/snapshot:{request.WireSymbol}",
-         StreamKind.Trade => $"/market/match:{request.WireSymbol}",
-         StreamKind.OrderBook => $"/market/level2:{request.WireSymbol}",
-         StreamKind.Kline when request.Interval is not null =>
+         ArgumentNullException.ThrowIfNull(request);
+-        // The routing key IS the topic string — the same token that Classify reads from the
+-        // "topic" field of a KuCoin data frame. Both sides share one venue-native keyspace.
+         return BuildTopic(request);
+     }
+ 
+@@ -122,8 +119,6 @@ internal sealed class KucoinStreamProtocol : IStreamProtocol
+         }
+     }
+ 
+-    // ── Helpers ───────────────────────────────────────────────────────────────
+-
+     private static StreamFrame ClassifyDataFrame(JsonElement root)
+     {
+         if (!root.TryGetProperty("topic"u8, out var topicProp))
+diff --git a/tests/CryptoExchanges.Net.Kucoin.Tests.Integration/KucoinIntegrationPlaceholder.cs b/tests/CryptoExchanges.Net.Kucoin.Tests.Integration/KucoinIntegrationPlaceholder.cs
+deleted file mode 100644
+index 67655d0..0000000
+--- a/tests/CryptoExchanges.Net.Kucoin.Tests.Integration/KucoinIntegrationPlaceholder.cs
++++ /dev/null
+@@ -1,9 +0,0 @@
+-namespace CryptoExchanges.Net.Kucoin.Tests.Integration;
+-
+-/// <summary>
+-/// Placeholder assembly anchor for the KuCoin integration test project.
+-/// Live end-to-end tests are added in TASK-063.
+-/// </summary>
+-internal static class KucoinIntegrationPlaceholder
+-{
+-}
 diff --git a/tests/CryptoExchanges.Net.Kucoin.Tests.Unit/Streaming/KucoinStreamDecodeTests.cs b/tests/CryptoExchanges.Net.Kucoin.Tests.Unit/Streaming/KucoinStreamDecodeTests.cs
-index e1ed122..ee156ac 100644
+index ee156ac..8452534 100644
 --- a/tests/CryptoExchanges.Net.Kucoin.Tests.Unit/Streaming/KucoinStreamDecodeTests.cs
 +++ b/tests/CryptoExchanges.Net.Kucoin.Tests.Unit/Streaming/KucoinStreamDecodeTests.cs
-@@ -44,50 +44,63 @@ public class KucoinStreamDecodeTests
-     // ── Ticker ────────────────────────────────────────────────────────────────
+@@ -41,8 +41,6 @@ public class KucoinStreamDecodeTests
+     private static ReadOnlyMemory<byte> Utf8Bytes(string json) =>
+         new ReadOnlyMemory<byte>(Encoding.UTF8.GetBytes(json));
  
+-    // ── Ticker ────────────────────────────────────────────────────────────────
+-
      [Fact]
--    public void Ticker_CannedDataFrame_MapsAllFields()
-+    public void Ticker_CannedInnerPayload_MapsAllFields()
+     public void Ticker_CannedInnerPayload_MapsAllFields()
      {
-         var registry = BuildRegistry();
-         var decoder = registry.Resolve(StreamKind.Ticker);
- 
--        // KuCoin ticker data payload (inner "data" object of a push frame).
-+        // Bare inner data.data payload (as observed live from /market/snapshot:BTC-USDT).
-+        // All numeric fields are JSON numbers, not strings.
-         var data = Utf8Bytes(
--            "{\"sequence\":\"1720000000000\",\"price\":\"67000.00\",\"bestBid\":\"66999.00\"," +
--            "\"bestBidSize\":\"0.5\",\"bestAsk\":\"67001.00\",\"bestAskSize\":\"0.3\"," +
--            "\"open\":\"65000.00\",\"high\":\"68000.00\",\"low\":\"64000.00\"," +
--            "\"vol\":\"12345.678\",\"volValue\":\"820000000.00\"," +
--            "\"symbol\":\"BTC-USDT\",\"time\":\"1718784000000000000\"}");
-+            "{\"symbol\":\"BTC-USDT\",\"lastTradedPrice\":64052.6," +
-+            "\"buy\":64055.4,\"sell\":64055.5," +
-+            "\"high\":64583.1,\"low\":63730.7,\"open\":63958.2," +
-+            "\"vol\":1938.61,\"volValue\":124352841.5," +
-+            "\"changePrice\":94.4,\"changeRate\":0.0014," +
-+            "\"datetime\":1782053405029}");
- 
-         var result = (Ticker)decoder(data);
- 
-         result.Symbol.Should().Be(BtcUsdt);
--        result.LastPrice.Should().Be(67000.00m);
--        result.OpenPrice.Should().Be(65000.00m);
--        result.HighPrice.Should().Be(68000.00m);
--        result.LowPrice.Should().Be(64000.00m);
--        result.Volume.Should().Be(12345.678m);
--        result.PriceChange.Should().Be(67000.00m - 65000.00m);
-+        result.LastPrice.Should().Be(64052.6m);
-+        result.OpenPrice.Should().Be(63958.2m);
-+        result.HighPrice.Should().Be(64583.1m);
-+        result.LowPrice.Should().Be(63730.7m);
-+        result.Volume.Should().Be(1938.61m);
-+        result.QuoteVolume.Should().Be(124352841.5m);
-+        result.PriceChange.Should().Be(94.4m);
-+        result.PriceChangePercent.Should().Be(0.0014m * 100m);
+@@ -103,8 +101,6 @@ public class KucoinStreamDecodeTests
          result.Timestamp.Should().NotBeNull();
-+        result.Timestamp!.Value.ToUnixTimeMilliseconds().Should().Be(1782053405029L);
      }
  
+-    // ── Trade ─────────────────────────────────────────────────────────────────
+-
      [Fact]
--    public void Ticker_FullFrame_ExtractsDataAndMapsAllFields()
-+    public void Ticker_FullSnapshotFrame_DoubleNestedData_MapsAllFields()
+     public void Trade_CannedDataFrame_MapsAllFields()
      {
--        // Test that the decoder correctly extracts the "data" field from a full push frame.
-+        // Full push frame from /market/snapshot — double-nested: data.data is the inner payload.
-         var registry = BuildRegistry();
-         var decoder = registry.Resolve(StreamKind.Ticker);
- 
-         var fullFrame = Utf8Bytes(
--            "{\"type\":\"message\",\"topic\":\"/market/ticker:BTC-USDT\",\"subject\":\"trade.ticker\"," +
--            "\"data\":{\"sequence\":\"1720000000000\",\"price\":\"67000.00\",\"bestBid\":\"66999.00\"," +
--            "\"bestBidSize\":\"0.5\",\"bestAsk\":\"67001.00\",\"bestAskSize\":\"0.3\"," +
--            "\"open\":\"65000.00\",\"high\":\"68000.00\",\"low\":\"64000.00\"," +
--            "\"vol\":\"12345.678\",\"volValue\":\"820000000.00\"," +
--            "\"symbol\":\"BTC-USDT\",\"time\":\"1718784000000000000\"}}");
-+            "{\"type\":\"message\",\"topic\":\"/market/snapshot:BTC-USDT\",\"subject\":\"trade.snapshot\"," +
-+            "\"data\":{\"sequence\":\"33762550100\"," +
-+            "\"data\":{\"symbol\":\"BTC-USDT\",\"lastTradedPrice\":64052.6," +
-+            "\"buy\":64055.4,\"sell\":64055.5," +
-+            "\"high\":64583.1,\"low\":63730.7,\"open\":63958.2," +
-+            "\"vol\":1938.61,\"volValue\":124352841.5," +
-+            "\"changePrice\":94.4,\"changeRate\":0.0014," +
-+            "\"datetime\":1782053405029}}}");
- 
-         var result = (Ticker)decoder(fullFrame);
- 
-         result.Symbol.Should().Be(BtcUsdt);
--        result.LastPrice.Should().Be(67000.00m);
-+        result.LastPrice.Should().Be(64052.6m);
-+        result.OpenPrice.Should().Be(63958.2m);
-+        result.HighPrice.Should().Be(64583.1m);
-+        result.LowPrice.Should().Be(63730.7m);
-+        result.Volume.Should().Be(1938.61m);
-+        result.PriceChange.Should().Be(94.4m);
-+        result.Timestamp.Should().NotBeNull();
+@@ -148,8 +144,6 @@ public class KucoinStreamDecodeTests
+         result.IsBuyerMaker.Should().BeTrue();
      }
  
-     // ── Trade ─────────────────────────────────────────────────────────────────
-@@ -170,11 +183,12 @@ public class KucoinStreamDecodeTests
-         var registry = BuildRegistry();
-         var decoder = registry.Resolve(StreamKind.Kline);
+-    // ── OrderBook ─────────────────────────────────────────────────────────────
+-
+     [Fact]
+     public void OrderBook_CannedDataFrame_MapsBidsAndAsks()
+     {
+@@ -175,8 +169,6 @@ public class KucoinStreamDecodeTests
+         result.Asks[0].Quantity.Should().Be(0.3m);
+     }
  
--        // KuCoin candles data: [startAt(s), open, close, high, low, vol, quoteVol]
-+        // KuCoin candles data: [startAt(s), open, close, high, low, vol, quoteVol].
-+        // time is a JSON number (unix nanoseconds) per live wire — verified against real KuCoin WS.
-         var data = Utf8Bytes(
-             "{\"symbol\":\"BTC-USDT\"," +
-             "\"candles\":[\"1589968800\",\"9786.9\",\"9740.8\",\"9790\",\"9738\",\"1006.95\",\"9839209.1\"]," +
--            "\"time\":\"1589968800000000000\"}");
-+            "\"time\":1589968800000000000}");
+-    // ── Kline ─────────────────────────────────────────────────────────────────
+-
+     [Fact]
+     public void Kline_CannedDataFrame_MapsOhlcv()
+     {
+@@ -201,8 +193,6 @@ public class KucoinStreamDecodeTests
+         result.OpenTime.ToUnixTimeSeconds().Should().Be(1589968800L);
+     }
  
-         var result = (Candlestick)decoder(data);
- 
+-    // ── DI resolution ─────────────────────────────────────────────────────────
+-
+     [Fact]
+     public async Task AddKucoinStreams_AfterAddKucoinExchange_ResolvesKeyedStreamClient()
+     {
 diff --git a/tests/CryptoExchanges.Net.Kucoin.Tests.Unit/Streaming/KucoinStreamProtocolTests.cs b/tests/CryptoExchanges.Net.Kucoin.Tests.Unit/Streaming/KucoinStreamProtocolTests.cs
-index c24cf46..63f6394 100644
+index 63f6394..12bfa29 100644
 --- a/tests/CryptoExchanges.Net.Kucoin.Tests.Unit/Streaming/KucoinStreamProtocolTests.cs
 +++ b/tests/CryptoExchanges.Net.Kucoin.Tests.Unit/Streaming/KucoinStreamProtocolTests.cs
-@@ -136,7 +136,7 @@ public class KucoinStreamProtocolTests
-     // ── BuildSubscribe ─────────────────────────────────────────────────────────
+@@ -17,8 +17,6 @@ namespace CryptoExchanges.Net.Kucoin.Tests.Unit.Streaming;
+ [Trait("Category", "Unit")]
+ public class KucoinStreamProtocolTests
+ {
+-    // ── Helpers ───────────────────────────────────────────────────────────────
+-
+     private static KucoinStreamProtocol MakeProtocol(IKucoinBulletPublicClient? bulletClient = null)
+         => new(bulletClient ?? MakeFakeBulletClient());
  
+@@ -31,8 +29,6 @@ public class KucoinStreamProtocolTests
+ 
+     private static byte[] Utf8(string json) => Encoding.UTF8.GetBytes(json);
+ 
+-    // ── ResolveConnectionAsync — bullet-public negotiation ─────────────────────
+-
      [Fact]
--    public void BuildSubscribe_Ticker_ProducesCorrectTopic()
-+    public void BuildSubscribe_Ticker_ProducesSnapshotTopic()
+     public async Task ResolveConnectionAsync_FakeClient_ReturnsTokenInUri()
      {
-         var protocol = MakeProtocol();
-         var request = new StreamRequest(StreamKind.Ticker, "BTC-USDT");
-@@ -145,7 +145,8 @@ public class KucoinStreamProtocolTests
-         using var doc = JsonDocument.Parse(wire);
- 
-         doc.RootElement.GetProperty("type").GetString().Should().Be("subscribe");
--        doc.RootElement.GetProperty("topic").GetString().Should().Be("/market/ticker:BTC-USDT");
-+        // Ticker uses /market/snapshot (the canonical 24h stats channel with symbol, not /market/ticker)
-+        doc.RootElement.GetProperty("topic").GetString().Should().Be("/market/snapshot:BTC-USDT");
-         doc.RootElement.GetProperty("privateChannel").GetBoolean().Should().BeFalse();
-         doc.RootElement.GetProperty("response").GetBoolean().Should().BeTrue();
-     }
-@@ -210,7 +211,7 @@ public class KucoinStreamProtocolTests
-         using var doc = JsonDocument.Parse(wire);
- 
-         doc.RootElement.GetProperty("type").GetString().Should().Be("unsubscribe");
--        doc.RootElement.GetProperty("topic").GetString().Should().Be("/market/ticker:BTC-USDT");
-+        doc.RootElement.GetProperty("topic").GetString().Should().Be("/market/snapshot:BTC-USDT");
+@@ -111,8 +107,6 @@ public class KucoinStreamProtocolTests
+         info.Heartbeat.PingFormat.Should().Be(PingFormat.Json);
      }
  
-     // ── RoutingKeyFor / Classify round-trip ────────────────────────────────────
-@@ -220,13 +221,14 @@ public class KucoinStreamProtocolTests
+-    // ── SSRF validation ────────────────────────────────────────────────────────
+-
+     [Fact]
+     public async Task ResolveConnectionAsync_NonKucoinHost_Throws()
      {
-         var protocol = MakeProtocol();
-         var request = new StreamRequest(StreamKind.Ticker, "BTC-USDT");
--        var frame = Utf8("{\"type\":\"message\",\"topic\":\"/market/ticker:BTC-USDT\",\"subject\":\"trade.ticker\",\"data\":{}}");
-+        // Ticker uses /market/snapshot — this is the real KuCoin topic for the snapshot channel.
-+        var frame = Utf8("{\"type\":\"message\",\"topic\":\"/market/snapshot:BTC-USDT\",\"subject\":\"trade.snapshot\",\"data\":{\"sequence\":\"1\",\"data\":{}}}");
- 
-         var subscribeKey = protocol.RoutingKeyFor(request);
-         var classifiedKey = protocol.Classify(frame).RoutingKey;
- 
--        subscribeKey.Should().Be("/market/ticker:BTC-USDT");
--        classifiedKey.Should().Be("/market/ticker:BTC-USDT");
-+        subscribeKey.Should().Be("/market/snapshot:BTC-USDT");
-+        classifiedKey.Should().Be("/market/snapshot:BTC-USDT");
-         subscribeKey.Should().Be(classifiedKey,
-             "RoutingKeyFor and Classify must share one keyspace so frames reach their subscription");
+@@ -133,8 +127,6 @@ public class KucoinStreamProtocolTests
+         await act.Should().ThrowAsync<InvalidOperationException>();
      }
+ 
+-    // ── BuildSubscribe ─────────────────────────────────────────────────────────
+-
+     [Fact]
+     public void BuildSubscribe_Ticker_ProducesSnapshotTopic()
+     {
+@@ -199,8 +191,6 @@ public class KucoinStreamProtocolTests
+         doc.RootElement.GetProperty("topic").GetString().Should().Be("/market/candles:BTC-USDT_1hour");
+     }
+ 
+-    // ── BuildUnsubscribe ───────────────────────────────────────────────────────
+-
+     [Fact]
+     public void BuildUnsubscribe_Ticker_ProducesUnsubscribeType()
+     {
+@@ -214,8 +204,6 @@ public class KucoinStreamProtocolTests
+         doc.RootElement.GetProperty("topic").GetString().Should().Be("/market/snapshot:BTC-USDT");
+     }
+ 
+-    // ── RoutingKeyFor / Classify round-trip ────────────────────────────────────
+-
+     [Fact]
+     public void RoutingKeyFor_Ticker_MatchesClassifyRoutingKey()
+     {
+@@ -278,8 +266,6 @@ public class KucoinStreamProtocolTests
+         subscribeKey.Should().Be(classifiedKey);
+     }
+ 
+-    // ── Classify ──────────────────────────────────────────────────────────────
+-
+     [Fact]
+     public void Classify_MessageFrame_ReturnsDataWithTopic()
+     {
+@@ -372,8 +358,6 @@ public class KucoinStreamProtocolTests
+         result.Kind.Should().Be(FrameKind.Error);
+     }
+ 
+-    // ── Fake helpers ──────────────────────────────────────────────────────────
+-
+     private sealed class FakeBulletPublicClient : IKucoinBulletPublicClient
+     {
+         private readonly string _wsEndpoint;

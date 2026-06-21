@@ -1,6 +1,6 @@
 ---
 id: TASK-062
-status: IN_PROGRESS
+status: IMPLEMENTED
 depends_on: [TASK-058, TASK-060, TASK-061]
 ---
 # TASK-062: `KucoinStreamProtocol` + bullet-public negotiation + 4 decoders + `AddKucoinStreams`
@@ -17,7 +17,7 @@ depends_on: [TASK-058, TASK-060, TASK-061]
 - **Created at**: 2026-06-20T19:00:00Z
 - **Claimed at**: 2026-06-21T00:00:00Z
 - **Base SHA**: fb8a8855b3f2901ffe7c07614c11273787203280
-- **Implemented at**:
+- **Implemented at**: 2026-06-21T00:30:00Z
 - **Completed at**:
 - **Blocked at**:
 - **Retry count**: 0/3
@@ -69,9 +69,9 @@ Tests (`Streaming/` in the Kucoin unit project), no network:
   price/qty/side/ts, orderbook bids/asks, candlestick OHLCV + interval).
 
 ## Acceptance Criteria
-- [ ] `KucoinStreamProtocol : IStreamProtocol` (`internal sealed`, `ResolveConnectionAsync` via fake-able `KucoinBulletPublicClient` → token+connectId URL + server-dictated `HeartbeatPolicy(ClientPing, JSON ping)`, KuCoin subscribe/unsubscribe wire, 4-topic map, `Classify` by `type`, `RoutingKeyFor`==`Classify`, no timers — C1) + 4 streaming DTOs + `BulletPublicDto` + `KucoinStreamOptions` exist, one type per file, full XML docs.
-- [ ] `KucoinStreamDecoders` registers 4 decode closures (Ticker via DeltaMapper; Trade/OrderBook/Kline hand-mapped) reusing the keyed `ISymbolMapper` → boxed `Core.Models`; `AddKucoinStreams()` registers the keyed `IStreamClient` for `ExchangeId.Kucoin`, mirroring `AddBinanceStreams`.
-- [ ] `Streaming/` unit tests assert subscribe/unsubscribe wire + 4-topic map + `Classify` (message/ack/pong/error) + `RoutingKeyFor` round-trip + `ResolveConnectionAsync` (fake bullet-public → token URL + heartbeat) + 4 decoder `Core.Models` outputs — ALL NO network; solution builds 0W/0E; existing non-integration suite stays green.
+- [x] `KucoinStreamProtocol : IStreamProtocol` (`internal sealed`, `ResolveConnectionAsync` via fake-able `KucoinBulletPublicClient` → token+connectId URL + server-dictated `HeartbeatPolicy(ClientPing, JSON ping)`, KuCoin subscribe/unsubscribe wire, 4-topic map, `Classify` by `type`, `RoutingKeyFor`==`Classify`, no timers — C1) + 4 streaming DTOs + `BulletPublicDto` + `KucoinStreamOptions` exist, one type per file, full XML docs.
+- [x] `KucoinStreamDecoders` registers 4 decode closures (Ticker via DeltaMapper; Trade/OrderBook/Kline hand-mapped) reusing the keyed `ISymbolMapper` → boxed `Core.Models`; `AddKucoinStreams()` registers the keyed `IStreamClient` for `ExchangeId.Kucoin`, mirroring `AddBinanceStreams`.
+- [x] `Streaming/` unit tests assert subscribe/unsubscribe wire + 4-topic map + `Classify` (message/ack/pong/error) + `RoutingKeyFor` round-trip + `ResolveConnectionAsync` (fake bullet-public → token URL + heartbeat) + 4 decoder `Core.Models` outputs — ALL NO network; solution builds 0W/0E; existing non-integration suite stays green.
 
 ## Pattern Reference
 - Streaming package to clone: `src/CryptoExchanges.Net.Binance/Streaming/BinanceStreamProtocol.cs`, `BinanceStreamDecoders.cs`, `BinanceStreamOptions.cs` + `Dtos/Streaming/Stream*Dto.cs`.
@@ -105,7 +105,7 @@ Tests (`Streaming/` in the Kucoin unit project), no network:
 
 ## Commits
 
-<!-- implementer fills SHAs -->
+- `af4d08a` — feat(FEAT-006): TASK-062 — KucoinStreamProtocol + bullet-public negotiation + 4 decoders + AddKucoinStreams
 
 ## Implementation Log
 

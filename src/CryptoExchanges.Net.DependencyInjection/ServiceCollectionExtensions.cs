@@ -2,6 +2,7 @@ using CryptoExchanges.Net.Binance;
 using CryptoExchanges.Net.Bybit;
 using CryptoExchanges.Net.Okx;
 using CryptoExchanges.Net.Bitget;
+using CryptoExchanges.Net.Kucoin;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace CryptoExchanges.Net.DependencyInjection;
@@ -58,6 +59,14 @@ public static class ServiceCollectionExtensions
             opt.ApiKey = options.BitgetApiKey ?? opt.ApiKey;
             opt.SecretKey = options.BitgetSecretKey ?? opt.SecretKey;
             opt.Passphrase = options.BitgetPassphrase ?? opt.Passphrase;
+        });
+
+        services.AddKucoinExchange(opt =>
+        {
+            opt.BaseUrl = options.KucoinBaseUrl ?? opt.BaseUrl;
+            opt.ApiKey = options.KucoinApiKey ?? opt.ApiKey;
+            opt.SecretKey = options.KucoinSecretKey ?? opt.SecretKey;
+            opt.Passphrase = options.KucoinPassphrase ?? opt.Passphrase;
         });
 
         return services;

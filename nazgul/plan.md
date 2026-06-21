@@ -134,9 +134,9 @@ Nothing in PRD "Out of Scope" (futures/margin, private streams, order-book maint
 
 ## Recovery Pointer
 
-- **Current stage**: ✦ TASK-059 DONE — REST services + http client + composer + entry (reviewed 4/4, Cycle 2; completion SHA ee97d43).
-- **Next action**: TASK-060 — AddKucoinExchange DI + AddCryptoExchanges + MCP wiring.
-- **Active task**: TASK-060 (next to implement).
+- **Current stage**: ◆ TASK-060 IN_PROGRESS — AddKucoinExchange DI + AddCryptoExchanges + MCP wiring.
+- **Next action**: Implement ServiceCollectionExtensions, update DI aggregator, MCP csproj, write KucoinDiTests.
+- **Active task**: TASK-060 (in progress).
 - **Files are truth**: the task manifests under `nazgul/tasks/` carry full state; each manifest's
   frontmatter is the canonical record.
 

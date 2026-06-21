@@ -1,6 +1,6 @@
 ---
 id: TASK-060
-status: PLANNED
+status: IN_PROGRESS
 depends_on: [TASK-059]
 ---
 # TASK-060: `AddKucoinExchange` DI registration + `AddCryptoExchanges` + MCP wiring
@@ -15,8 +15,8 @@ depends_on: [TASK-059]
 - **Wave**: 4
 - **Traces to**: PRD-FEAT-006 AC-1; TRD-FEAT-006 §"AddKucoinExchange (ADR-001 compliant)", §"MCP Wiring", §"Dependency Impact"; FEAT-006 spec §"DI + MCP", §"Build approach" step 5; TEST-PLAN-FEAT-006 §9
 - **Created at**: 2026-06-20T19:00:00Z
-- **Claimed at**:
-- **Base SHA**:
+- **Claimed at**: 2026-06-21T00:00:00Z
+- **Base SHA**: 00e124761bd8f095d7d25222440231faadaed681
 - **Implemented at**:
 - **Completed at**:
 - **Blocked at**:

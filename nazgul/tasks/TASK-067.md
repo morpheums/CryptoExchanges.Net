@@ -1,6 +1,6 @@
 ---
 id: TASK-067
-status: PLANNED
+status: IN_PROGRESS
 depends_on: [TASK-066]
 ---
 # TASK-067: Decouple the 5 per-exchange `.Tests.Unit` projects from the aggregator
@@ -15,8 +15,8 @@ depends_on: [TASK-066]
 - **Wave**: 3
 - **Traces to**: PRD-FEAT-007 AC-4, AC-6, AC-7; TRD-FEAT-007 §"Step 3 — Decouple the five per-exchange test projects"; TEST-PLAN-FEAT-007 §"Regression Coverage"; ADR-003 (test isolation); FEAT-007 spec §"Scope — In" #3
 - **Created at**: 2026-06-21T18:00:00Z
-- **Claimed at**:
-- **Base SHA**:
+- **Claimed at**: 2026-06-21T22:00:00Z
+- **Base SHA**: d447033a93962404ef834e780da093abee014460
 - **Implemented at**:
 - **Completed at**:
 - **Blocked at**:

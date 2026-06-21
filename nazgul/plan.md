@@ -148,9 +148,9 @@ changes, plugin auto-discovery, method/options-shape change, the manual nuget.or
 
 ## Recovery Pointer
 
-- **Current stage**: TASK-066 IMPLEMENTED (commit `998525f`). Awaiting review gate.
-- **Next action**: Review gate for TASK-066; then begin TASK-067 (decouple 5 per-exchange test projects).
-- **Active task**: TASK-066 (IMPLEMENTED — pending review).
+- **Current stage**: TASK-067 IN_PROGRESS (base SHA `d447033`). Decoupling 5 per-exchange test projects.
+- **Next action**: Implement TASK-067 — remove aggregator ProjectReference + using + tests from 5 csprojs.
+- **Active task**: TASK-067 (IN_PROGRESS).
 - **Files are truth**: the task manifests under `nazgul/tasks/TASK-065..070.md` carry full state; each
   manifest's frontmatter `status:` is the canonical record.
 

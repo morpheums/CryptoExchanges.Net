@@ -10,7 +10,6 @@ using CryptoExchanges.Net.Core;
 using CryptoExchanges.Net.Core.Interfaces;
 using CryptoExchanges.Net.Core.Models;
 using CryptoExchanges.Net.Core.Enums;
-using CryptoExchanges.Net.DependencyInjection;
 
 namespace CryptoExchanges.Net.Bitget.Tests.Unit;
 
@@ -522,19 +521,6 @@ public class BitgetMappingAndServiceTests
         services.AddBitgetExchange(o => o.TimeoutSeconds = 0);
         var act = () => services.BuildServiceProvider().GetRequiredKeyedService<IExchangeClient>(ExchangeId.Bitget);
         act.Should().Throw<Microsoft.Extensions.Options.OptionsValidationException>();
-    }
-
-    [Fact]
-    public async Task Di_AddCryptoExchanges_ResolvesBitgetOkxBybitAndBinance()
-    {
-        var services = new ServiceCollection();
-        services.AddCryptoExchanges();
-        await using var sp = services.BuildServiceProvider();
-
-        sp.GetRequiredKeyedService<IExchangeClient>(ExchangeId.Bitget).ExchangeId.Should().Be(ExchangeId.Bitget);
-        sp.GetRequiredKeyedService<IExchangeClient>(ExchangeId.Okx).ExchangeId.Should().Be(ExchangeId.Okx);
-        sp.GetRequiredKeyedService<IExchangeClient>(ExchangeId.Bybit).ExchangeId.Should().Be(ExchangeId.Bybit);
-        sp.GetRequiredKeyedService<IExchangeClient>(ExchangeId.Binance).ExchangeId.Should().Be(ExchangeId.Binance);
     }
 
     [Fact]

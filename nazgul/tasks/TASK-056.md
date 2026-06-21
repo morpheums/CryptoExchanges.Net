@@ -1,6 +1,6 @@
 ---
 id: TASK-056
-status: READY
+status: IMPLEMENTED
 depends_on: []
 ---
 # TASK-056: Scaffold `CryptoExchanges.Net.Kucoin` package + Unit/Integration test projects (clone OKX)
@@ -15,9 +15,9 @@ depends_on: []
 - **Wave**: 1
 - **Traces to**: PRD-FEAT-006 AC-1, AC-6; TRD-FEAT-006 §"Project Layout (mirrors OKX/Bitget)", §"Build Requirements"; FEAT-006 spec §"Build approach" step 1
 - **Created at**: 2026-06-20T19:00:00Z
-- **Claimed at**:
-- **Base SHA**:
-- **Implemented at**:
+- **Claimed at**: 2026-06-20T19:30:00Z
+- **Base SHA**: ad0385cbbb38e6af28a296c5de301be40dd8f9e2
+- **Implemented at**: 2026-06-21T00:00:00Z
 - **Completed at**:
 - **Blocked at**:
 - **Retry count**: 0/3
@@ -55,9 +55,9 @@ Create:
 Add all three new projects to `CryptoExchanges.Net.sln`. Do NOT reference any other exchange project.
 
 ## Acceptance Criteria
-- [ ] `CryptoExchanges.Net.Kucoin.csproj` + Unit + Integration test csprojs exist (cloned from OKX shape: net10.0, Nullable, TreatWarningsAsErrors, AnalysisLevel=latest-all, GenerateDocumentationFile, InternalsVisibleTo, Core+Http refs only), all added to `CryptoExchanges.Net.sln`; solution builds 0W/0E.
-- [ ] `KucoinOptions` (BaseUrl default `https://api.kucoin.com`, ApiKey/SecretKey/Passphrase/TimeoutSeconds) and `KucoinSymbolFormat` (delimiter `-`, upper casing → `BTC-USDT`) exist with full XML docs, one type per file.
-- [ ] `ScaffoldSmokeTests` passes; existing non-integration suite stays 100% green (`dotnet test --filter 'Category!=Integration'`).
+- [x] `CryptoExchanges.Net.Kucoin.csproj` + Unit + Integration test csprojs exist (cloned from OKX shape: net10.0, Nullable, TreatWarningsAsErrors, AnalysisLevel=latest-all, GenerateDocumentationFile, InternalsVisibleTo, Core+Http refs only), all added to `CryptoExchanges.Net.sln`; solution builds 0W/0E.
+- [x] `KucoinOptions` (BaseUrl default `https://api.kucoin.com`, ApiKey/SecretKey/Passphrase/TimeoutSeconds) and `KucoinSymbolFormat` (delimiter `-`, upper casing → `BTC-USDT`) exist with full XML docs, one type per file.
+- [x] `ScaffoldSmokeTests` passes; existing non-integration suite stays 100% green (`dotnet test --filter 'Category!=Integration'`).
 
 ## Pattern Reference
 - Project/csproj shape to clone: `src/CryptoExchanges.Net.Okx/CryptoExchanges.Net.Okx.csproj` (full file — TFM, analyzers, package metadata, InternalsVisibleTo, project refs).
@@ -86,8 +86,15 @@ Add all three new projects to `CryptoExchanges.Net.sln`. Do NOT reference any ot
 
 ## Commits
 
-<!-- implementer fills SHAs -->
+- `2b9c308` — feat(FEAT-006): scaffold CryptoExchanges.Net.Kucoin + Unit/Integration test projects (TASK-056)
 
 ## Implementation Log
+
+- Created `src/CryptoExchanges.Net.Kucoin/` with 4 files: csproj, GlobalUsings.cs, KucoinOptions.cs, KucoinSymbolFormat.cs
+- Created `tests/CryptoExchanges.Net.Kucoin.Tests.Unit/` with csproj + ScaffoldSmokeTests.cs (7 tests)
+- Created `tests/CryptoExchanges.Net.Kucoin.Tests.Integration/` with csproj + KucoinIntegrationPlaceholder.cs
+- Wired all 3 projects into CryptoExchanges.Net.sln with new GUIDs + configuration entries + NestedProjects
+- Build result: 0W/0E
+- Test result: 7 new KuCoin unit tests pass; full non-integration suite (563 tests) green
 
 ## Review Results

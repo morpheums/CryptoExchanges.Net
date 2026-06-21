@@ -54,7 +54,7 @@ Authoritative inputs (read fully before any task):
 
 | Task     | Status     | Wave | Description                                                                  |
 |----------|------------|------|------------------------------------------------------------------------------|
-| TASK-056 | ◇ READY    | 1    | Scaffold `CryptoExchanges.Net.Kucoin` + Unit/Integration test projects (OKX clone) |
+| TASK-056 | ✦ IMPLEMENTED | 1    | Scaffold `CryptoExchanges.Net.Kucoin` + Unit/Integration test projects (OKX clone) |
 | TASK-061 | ◇ READY    | 1    | ADR-002 streaming endpoint seam → async `ResolveConnectionAsync` + migrate Binance |
 | TASK-057 | ◇ PLANNED  | 2    | KC-API passphrase-v2 signing service + mark-and-strip signing handler        |
 | TASK-058 | ◇ PLANNED  | 2    | Bespoke `ISymbolMapper` + REST wire DTOs + DeltaMapper profiles + parsers    |
@@ -134,19 +134,16 @@ Nothing in PRD "Out of Scope" (futures/margin, private streams, order-book maint
 
 ## Recovery Pointer
 
-- **Current stage**: ◆ PLANNING COMPLETE — FEAT-006 decomposed into 9 tasks (TASK-056..064). Numbering
-  continues from FEAT-005's TASK-055 (do NOT reuse 001..055; all DONE). TASK-056 + TASK-061 are READY
-  (no deps); the rest are PLANNED with an explicit `depends_on` chain.
-- **Next action**: begin **Wave 1** — TASK-056 (scaffold) and TASK-061 (ADR-002 seam) are independent
-  and parallel-safe (no shared files). Create the `feat/FEAT-006-kucoin` branch, then implement.
-- **Active task**: none (no task IN_PROGRESS yet).
+- **Current stage**: ✦ TASK-056 IMPLEMENTED (commit 2b9c308) — awaiting review gate.
+- **Next action**: Review TASK-056; then begin TASK-061 (ADR-002 seam, Wave 1, READY).
+- **Active task**: none (TASK-056 at IMPLEMENTED, pending review).
 - **Files are truth**: the task manifests under `nazgul/tasks/` carry full state; each manifest's
   frontmatter is the canonical record.
 
 ─── ◈ NEXT ─────────────────────────────────────────────
-  ◇ TASK-056 — Scaffold Kucoin package + test projects (Wave 1, no deps). READY.
-  ◇ TASK-061 — ADR-002 streaming endpoint seam + migrate Binance (Wave 1, no deps, parallel-safe). READY.
-  ◇ TASK-057 / TASK-058 — signing + data layer (Wave 2, after 056).
+  ✦ TASK-056 — Scaffold complete; IMPLEMENTED (commit 2b9c308). Awaiting review.
+  ◇ TASK-061 — ADR-002 streaming endpoint seam + migrate Binance (Wave 1, no deps, READY).
+  ◇ TASK-057 / TASK-058 — signing + data layer (Wave 2, after 056 APPROVED).
 ────────────────────────────────────────────────────────
 
 

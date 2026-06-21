@@ -62,7 +62,7 @@ Authoritative inputs (read fully before any task):
 | TASK-060 | ✦ DONE     | 4    | `AddKucoinExchange` DI + `AddCryptoExchanges` + MCP wiring                   |
 | TASK-062 | ✦ DONE     | 5    | `KucoinStreamProtocol` + bullet-public + 4 decoders + `AddKucoinStreams`     |
 | TASK-063 | ✦ DONE     | 6    | Live integration smokes — REST + one streaming (self-skip)                   |
-| TASK-064 | ◇ PLANNED  | 6    | Docs — README KuCoin row → supported + MCP/exchanges/streaming reference     |
+| TASK-064 | ✦ IMPLEMENTED | 6    | Docs — README KuCoin row → supported + MCP/exchanges/streaming reference     |
 
 Tasks: 8/9 DONE.
 
@@ -134,9 +134,9 @@ Nothing in PRD "Out of Scope" (futures/margin, private streams, order-book maint
 
 ## Recovery Pointer
 
-- **Current stage**: ✦ TASK-063 DONE — Live integration smokes (REST + streaming, self-skip) approved (4/4, Fix-First Cycle 1; completion commit b365dbb). Wave 6 half-complete.
-- **Next action**: TASK-064 — Docs (README KuCoin row → supported + MCP/exchanges/streaming reference). Wave 6, final task.
-- **Active task**: none (TASK-063 complete; TASK-064 next — Wave 6 final).
+- **Current stage**: ✦ TASK-064 IMPLEMENTED — Docs (README KuCoin row → supported + MCP/exchanges/streaming reference). Commit 425b66b. Awaiting review.
+- **Next action**: Review gate for TASK-064 (4/4 reviewers).
+- **Active task**: TASK-064 IMPLEMENTED (commit 425b66b).
 - **Files are truth**: the task manifests under `nazgul/tasks/` carry full state; each manifest's
   frontmatter is the canonical record.
 

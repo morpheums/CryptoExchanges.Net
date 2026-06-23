@@ -142,6 +142,24 @@ public class BinanceStreamDecodeTests
         result.Asks[0].Price.Should().Be(67010.00m);
     }
 
+    [Fact]
+    public void OrderBook_NonStringStreamToken_DoesNotThrow_ResolvesFromDataSymbol()
+    {
+        var registry = BuildRegistry();
+        var decoder = registry.Resolve(StreamKind.OrderBook);
+
+        // A malformed/non-string "stream" must not throw from GetString(); the diff-depth
+        // payload still carries "s", so the symbol resolves from the data element.
+        var frame = Utf8Bytes(
+            "{\"stream\":null,\"data\":{\"s\":\"BTCUSDT\",\"lastUpdateId\":42," +
+            "\"bids\":[[\"66990.00\",\"0.5\"]],\"asks\":[[\"67010.00\",\"0.3\"]]}}");
+
+        var result = (OrderBook)decoder(frame);
+
+        result.Symbol.Should().Be(BtcUsdt);
+        result.LastUpdateId.Should().Be(42L);
+    }
+
     // ── Kline ─────────────────────────────────────────────────────────────────
 
     [Fact]

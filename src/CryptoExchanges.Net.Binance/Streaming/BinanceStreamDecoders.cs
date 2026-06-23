@@ -161,6 +161,7 @@ internal static class BinanceStreamDecoders
             throw new InvalidOperationException(
                 "Combined-stream frame has no 'data' element; cannot decode the order book.");
         var streamToken = root.TryGetProperty("stream"u8, out var streamProp)
+            && streamProp.ValueKind == JsonValueKind.String
             ? streamProp.GetString()
             : null;
         return (dataProp.Deserialize<StreamDepthDto>(JsonOpts)!, streamToken);
@@ -173,7 +174,7 @@ internal static class BinanceStreamDecoders
         if (string.IsNullOrEmpty(streamToken))
             return null;
         var at = streamToken.IndexOf('@', StringComparison.Ordinal);
-        var symbol = at > 0 ? streamToken[..at] : streamToken;
-        return symbol.Length > 0 ? symbol.ToUpperInvariant() : null;
+        // at <= 0 (no '@', or token starts with '@') yields no usable symbol → null.
+        return at > 0 ? streamToken[..at].ToUpperInvariant() : null;
     }
 }

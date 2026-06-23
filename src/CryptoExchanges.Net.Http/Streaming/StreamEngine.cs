@@ -111,15 +111,13 @@ internal sealed class StreamEngine : IAsyncDisposable
 
     private readonly SemaphoreSlim _gate = new(1, 1);
 
-    // Serialises ALL outbound control frames independently of _gate so a pacing delay never
-    // blocks the subscribe/reconnect critical section (and so the heartbeat ping, which runs
-    // outside _gate, can no longer race a subscribe send on the same socket).
+    // Serialises every outbound control frame (separate from _gate) so a pacing delay never blocks
+    // the subscribe/reconnect critical section, and the heartbeat ping can't race a subscribe send.
     private readonly SemaphoreSlim _sendSemaphore = new(1, 1);
 
     private readonly CancellationTokenSource _disposeCts = new();
 
-    // Active connection's pacing floor + last-send instant (monotonic). Set on every
-    // socket open / reconnect from the resolved StreamConnectionInfo.MinOutboundInterval.
+    // Active connection's pacing floor + last-send instant; set on every open/reconnect.
     private TimeSpan _minOutboundInterval;
     private long _lastSendTicks;
 
@@ -192,9 +190,8 @@ internal sealed class StreamEngine : IAsyncDisposable
     /// <param name="ct">A token to cancel the subscribe operation.</param>
     /// <returns>An <see cref="IStreamSubscription"/> whose <c>DisposeAsync</c> unsubscribes.</returns>
     /// <remarks>
-    /// Under per-venue throttling (<see cref="StreamConnectionInfo.MinOutboundInterval"/> &gt;
-    /// <see cref="TimeSpan.Zero"/>) the returned task may be delayed up to one interval while the
-    /// engine paces the subscribe frame. The subscribe gate is held across that delay by design.
+    /// Under throttling (<see cref="StreamConnectionInfo.MinOutboundInterval"/> &gt; zero) the task
+    /// may be delayed up to one interval while pacing the subscribe frame; the gate is held meanwhile.
     /// </remarks>
     public async Task<IStreamSubscription> SubscribeAsync<T>(
         StreamRequest request,
@@ -241,7 +238,6 @@ internal sealed class StreamEngine : IAsyncDisposable
             _subscriptions[routingKey] = entry;
             _subscribeSet[routingKey] = request;
 
-            // Send the subscribe message (paced + serialised via SendControlAsync).
             var subscribeText = _protocol.BuildSubscribe(request);
             await SendControlAsync(subscribeText, ct).ConfigureAwait(false);
 
@@ -312,21 +308,17 @@ internal sealed class StreamEngine : IAsyncDisposable
         StartPump(info.Heartbeat);
     }
 
-    // Captures the active connection's pacing floor and resets the last-send clock so the first
-    // frame on a freshly opened socket is never artificially delayed.
+    // Applies the new connection's pacing floor; backdates the clock so the first frame isn't delayed.
     private void ApplyConnectionPacing(StreamConnectionInfo info)
     {
         _minOutboundInterval = info.MinOutboundInterval;
-        _lastSendTicks = Stopwatch.GetTimestamp() - Stopwatch.Frequency; // older than any interval
+        _lastSendTicks = Stopwatch.GetTimestamp() - Stopwatch.Frequency;
     }
 
     /// <summary>
-    /// Serialises and paces a single outbound control frame. All sends (subscribe, unsubscribe,
-    /// reconnect-replay, client-ping) route through here so that (a) at most one
-    /// <see cref="IWebSocketConnection.SendTextAsync"/> is ever in flight, and (b) consecutive
-    /// frames are spaced by at least <see cref="StreamConnectionInfo.MinOutboundInterval"/> for the
-    /// active connection. When the interval is <see cref="TimeSpan.Zero"/> no delay is applied and
-    /// behaviour is byte-identical to an un-throttled send (apart from the serialisation guarantee).
+    /// Serialises and paces a single outbound control frame: at most one send is in flight, and
+    /// consecutive frames are spaced by at least the connection's
+    /// <see cref="StreamConnectionInfo.MinOutboundInterval"/> (zero = no delay).
     /// </summary>
     /// <param name="text">The control-frame text to send.</param>
     /// <param name="ct">A token to cancel the send; linked with the engine dispose token internally.</param>
@@ -596,11 +588,7 @@ internal sealed class StreamEngine : IAsyncDisposable
                 // Connected — restart pump and heartbeat.
                 StartPump(info.Heartbeat);
 
-                // K2: replay the stored subscribe set. Chunk into ≤100-entry groups and try a single
-                // batched frame per chunk (BuildSubscribeBatch); fall back to the per-frame loop when
-                // the venue returns null. Either way every frame routes through SendControlAsync, so a
-                // large reconnect stays throttled (e.g. 300 symbols → 3 frames × interval, not 300).
-                await ReplaySubscribeSetAsync().ConfigureAwait(false);
+                await ReplaySubscribeSetAsync().ConfigureAwait(false); // K2
 
                 // Transition all subscriptions back to Live.
                 foreach (var entry in _subscriptions.Values)
@@ -618,12 +606,9 @@ internal sealed class StreamEngine : IAsyncDisposable
         }
     }
 
-    // K2 replay (chunked + batched). Snapshots the stored subscribe set, chunks it into ≤MaxBatchSize
-    // groups, and prefers a single BuildSubscribeBatch frame per chunk; on a null (batching
-    // unsupported / heterogeneous) chunk it replays that chunk frame-by-frame. Every send routes
-    // through SendControlAsync so batched and per-frame replay alike stay throttled. A broad catch
-    // around each frame preserves the prior per-item semantics: one replay failure must not abort the
-    // rest of the set (K2).
+    // K2 replay: chunk the subscribe set into ≤MaxBatchSize groups, sending one batched frame per
+    // chunk (or per-frame when the venue can't batch). All sends go through SendControlAsync (stay
+    // throttled); a per-frame broad catch keeps one failure from aborting the rest.
     private async Task ReplaySubscribeSetAsync()
     {
         var requests = _subscribeSet.Values.ToList();
@@ -730,7 +715,7 @@ internal sealed class StreamEngine : IAsyncDisposable
 
     private async Task ClientPingLoopAsync(HeartbeatPolicy policy, CancellationToken ct)
     {
-        // Decode once per connection; payload is immutable for the lifetime of the connection.
+        // Decode once — the ping payload is constant for the connection.
         var pingText = policy.PingFormat is PingFormat.Text or PingFormat.Json
             ? Encoding.UTF8.GetString(policy.ClientPingPayload.Span)
             : null;
@@ -767,9 +752,7 @@ internal sealed class StreamEngine : IAsyncDisposable
                                 break;
                             case PingFormat.Text:
                             case PingFormat.Json:
-                                // Route through SendControlAsync so the ping is serialised against
-                                // subscribe/replay sends (previously it ran outside _gate and could
-                                // race ClientWebSocket.SendAsync on KuCoin) and is itself paced.
+                                // Via SendControlAsync so the ping is serialised against other sends and paced.
                                 await SendControlAsync(pingText!, ct).ConfigureAwait(false);
                                 break;
                         }

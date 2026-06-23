@@ -24,8 +24,7 @@ public class KucoinStreamingSmokeTests
     private static readonly Symbol BtcUsdt = new(Asset.Btc, Asset.Usdt);
     private static readonly TimeSpan ReceiveTimeout = TimeSpan.FromSeconds(30);
 
-    // ≥13 liquid KuCoin USDT pairs: the multi-symbol fan-out that, unpaced, bursts the venue's
-    // control-frame rate limit. The FEAT-008 throttle/batched-replay fix must still deliver data.
+    // The multi-symbol fan-out that, unpaced, bursts the venue's control-frame rate limit.
     private static readonly Symbol[] MultiSymbolSet =
     [
         new(Asset.Btc, Asset.Usdt),  new(Asset.Eth, Asset.Usdt),  new(Asset.Sol, Asset.Usdt),
@@ -35,7 +34,6 @@ public class KucoinStreamingSmokeTests
         new(Asset.Of("ATOM"), Asset.Usdt), new(Asset.Of("UNI"), Asset.Usdt),
     ];
 
-    // Generous: ~14 throttled subscribes before the last frame is even placed, then await first book.
     private static readonly TimeSpan MultiSymbolReceiveTimeout = TimeSpan.FromSeconds(40);
 
     /// <summary>
@@ -109,11 +107,8 @@ public class KucoinStreamingSmokeTests
     }
 
     /// <summary>
-    /// Regression test for the FEAT-008 multi-symbol burst bug: subscribing to many L2 order books
-    /// at once on a single client previously fired an unpaced control-frame burst that the venue
-    /// closed before any data arrived, then replayed the same burst on every reconnect (zero updates).
-    /// With the TASK-071 throttle + TASK-072 batched replay in place, at least one book diff is
-    /// delivered and at least one subscription reaches Live.
+    /// Regression test for the multi-symbol burst bug: many L2 subscriptions on one client must
+    /// deliver at least one book diff (pre-fix the burst was venue-closed before any data arrived).
     /// </summary>
     [Fact]
     public async Task OrderBook_MultiSymbol_LiveStream_DeliversAtLeastOneUpdate()

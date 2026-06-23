@@ -33,8 +33,7 @@ internal sealed class BinanceStreamProtocol : IStreamProtocol
     {
         ArgumentNullException.ThrowIfNull(options);
         var endpoint = new Uri(options.StreamBaseUrl.TrimEnd('/') + "/stream");
-        // Binance closes the socket with PolicyViolation above 5 inbound msgs/sec; 200 ms between
-        // control frames yields 5 msg/s with margin.
+        // Binance closes above 5 inbound msgs/sec; 200 ms ⇒ 5 msg/s with margin.
         _connectionInfo = new StreamConnectionInfo(
             endpoint,
             s_heartbeatPolicy,
@@ -124,15 +123,13 @@ internal sealed class BinanceStreamProtocol : IStreamProtocol
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 
-    // Builds one combined SUBSCRIBE/UNSUBSCRIBE frame with a multi-token params array. The engine
-    // pre-chunks the replay set to ≤100 tokens per call, so the whole list maps to a single frame.
+    // One SUBSCRIBE/UNSUBSCRIBE frame with a multi-token params array.
     private string? BuildBatch(IReadOnlyList<StreamRequest> requests, string method)
     {
         ArgumentNullException.ThrowIfNull(requests);
         if (requests.Count == 0)
             return null;
 
-        // Pre-size to avoid resizes: prefix (~20) + method + per-token avg (~20 chars) + suffix (~10).
         var builder = new StringBuilder(method.Length + requests.Count * 20 + 32);
         builder.Append("{\"method\":\"").Append(method).Append("\",\"params\":[");
         for (var i = 0; i < requests.Count; i++)

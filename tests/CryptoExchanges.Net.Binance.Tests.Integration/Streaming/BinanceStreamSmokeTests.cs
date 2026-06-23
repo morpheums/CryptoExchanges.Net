@@ -27,8 +27,7 @@ public class BinanceStreamSmokeTests
     private static readonly Symbol BtcUsdt = new(Asset.Btc, Asset.Usdt);
     private static readonly TimeSpan ReceiveTimeout = TimeSpan.FromSeconds(20);
 
-    // ≥17 liquid pairs: subscribing to all at once on one client is the unpaced burst that
-    // pre-FEAT-008 tripped Binance's 5-msg/sec inbound cap (PolicyViolation → zero data).
+    // The multi-symbol burst that pre-fix tripped Binance's 5-msg/sec cap.
     private static readonly Symbol[] MultiSymbolSet =
     [
         new(Asset.Btc, Asset.Usdt),  new(Asset.Eth, Asset.Usdt),  new(Asset.Bnb, Asset.Usdt),
@@ -39,13 +38,10 @@ public class BinanceStreamSmokeTests
         new(Asset.Xrp, Asset.Usdc),  new(Asset.Bnb, Asset.Usdc),  new(Asset.Doge, Asset.Usdc),
     ];
 
-    // Generous: ~18 throttled subscribes at 200 ms each ≈ 3.6 s before the last frame is even placed.
     private static readonly TimeSpan MultiSymbolReceiveTimeout = TimeSpan.FromSeconds(30);
 
     /// <summary>
-    /// Verifies the Binance combined-stream WebSocket endpoint is reachable. Returns <c>null</c>
-    /// when reachable, or a skip-reason string when not. A successful TLS handshake proves the host
-    /// is reachable; the actual decode/delivery is asserted by the tests themselves.
+    /// Returns <c>null</c> when the WebSocket endpoint is reachable, else a skip-reason string.
     /// </summary>
     private static async Task<string?> CheckReachabilityAsync()
     {
@@ -158,11 +154,8 @@ public class BinanceStreamSmokeTests
     }
 
     /// <summary>
-    /// Regression test for the FEAT-008 multi-symbol burst bug: subscribing to many L2 order books
-    /// at once on a single client previously fired an unpaced control-frame burst that Binance
-    /// closed with PolicyViolation before any data arrived, then replayed the same burst on every
-    /// reconnect (infinite loop, zero updates). With the TASK-071 throttle + TASK-072 batched replay
-    /// in place, at least one book is delivered and at least one subscription reaches Live.
+    /// Regression test for the multi-symbol burst bug: many L2 subscriptions on one client must
+    /// deliver at least one book (pre-fix the burst was venue-closed before any data arrived).
     /// </summary>
     [Fact]
     public async Task OrderBook_MultiSymbol_LiveStream_DeliversAtLeastOneUpdate()

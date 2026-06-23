@@ -50,8 +50,7 @@ internal sealed class KucoinStreamProtocol : IStreamProtocol
             ClientPingPayload: pingPayload,
             PingFormat: PingFormat.Json);
 
-        // The bullet-public response carries no outbound rate-limit field, so use a safe 100 ms
-        // floor — KuCoin is more lenient than Binance, and 10 msg/s stays well inside its limits.
+        // bullet-public carries no rate-limit field; 100 ms (10 msg/s) stays well inside KuCoin's limits.
         return new StreamConnectionInfo(uri, heartbeat, MinOutboundInterval: TimeSpan.FromMilliseconds(100));
     }
 
@@ -130,10 +129,8 @@ internal sealed class KucoinStreamProtocol : IStreamProtocol
         return new StreamFrame(FrameKind.Data, routingKey);
     }
 
-    // Builds one comma-joined subscribe/unsubscribe frame for a homogeneous channel group. KuCoin
-    // joins multiple symbols under one channel prefix (e.g. "/market/level2:BTC-USDT,ETH-USDT"); a
-    // batch is only valid when every request shares the same prefix, so a mixed set returns null and
-    // the engine falls back to its per-frame loop. The engine pre-chunks to ≤100 symbols per call.
+    // One frame joining symbols under a shared channel prefix (e.g. "/market/level2:BTC-USDT,ETH-USDT").
+    // Only valid for a single channel, so a mixed-channel set returns null (engine falls back per-frame).
     private string? BuildBatch(IReadOnlyList<StreamRequest> requests, string type)
     {
         ArgumentNullException.ThrowIfNull(requests);
@@ -144,14 +141,12 @@ internal sealed class KucoinStreamProtocol : IStreamProtocol
         var colon = firstTopic.LastIndexOf(':');
         var channelPrefix = firstTopic[..colon];
 
-        // Seed with the already-computed first topic to avoid a redundant BuildTopic call at i=0.
         var symbols = new StringBuilder();
         symbols.Append(firstTopic.AsSpan(colon + 1));
         for (var i = 1; i < requests.Count; i++)
         {
             var topic = BuildTopic(requests[i]);
             var sep = topic.LastIndexOf(':');
-            // Mixed channels cannot be joined into one KuCoin frame — defer to the per-frame loop.
             if (!topic.AsSpan(0, sep).SequenceEqual(channelPrefix))
                 return null;
 

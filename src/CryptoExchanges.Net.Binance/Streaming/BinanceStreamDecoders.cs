@@ -67,9 +67,6 @@ internal static class BinanceStreamDecoders
 
         // ── OrderBook ─────────────────────────────────────────────────────────
         // Hand-mapped following the REST GetOrderBookAsync convention.
-        // The diff-depth ('@depth') data payload carries the symbol in 's'; the partial-book
-        // ('@depthN') payload does not, so fall back to the combined-stream 'stream' token
-        // (e.g. "btcusdt@depth20"), which always names the symbol.
         registry.Register(StreamKind.OrderBook, bytes =>
         {
             var (dto, streamToken) = DeserializeDepth(bytes);
@@ -136,10 +133,7 @@ internal static class BinanceStreamDecoders
         _ => null
     };
 
-    // The /stream endpoint is always combined-stream: every data frame is the envelope
-    // {"stream":"<token>","data":{...}}. The engine pump passes the whole envelope here, so
-    // the leaf DTO lives under "data" — deserializing the envelope directly leaves every field
-    // unset. Unwrap "data" first; a missing "data" is a malformed combined-stream frame.
+    // Combined-stream frames wrap the leaf payload as {"stream":..,"data":{..}}; unwrap "data" first.
     private static T? DeserializeData<T>(ReadOnlyMemory<byte> frame)
     {
         var reader = new Utf8JsonReader(frame.Span);
@@ -150,8 +144,7 @@ internal static class BinanceStreamDecoders
         return dataProp.Deserialize<T>(JsonOpts);
     }
 
-    // Order books need both the unwrapped "data" payload and the "stream" token: partial-book
-    // ('@depthN') frames omit the symbol from "data", so the token is the only symbol source.
+    // Partial-book ('@depthN') frames omit the symbol from "data", so also return the "stream" token.
     private static (StreamDepthDto Dto, string? StreamToken) DeserializeDepth(ReadOnlyMemory<byte> frame)
     {
         var reader = new Utf8JsonReader(frame.Span);
@@ -167,14 +160,12 @@ internal static class BinanceStreamDecoders
         return (dataProp.Deserialize<StreamDepthDto>(JsonOpts)!, streamToken);
     }
 
-    // Extracts the wire symbol from a combined-stream token (e.g. "btcusdt@depth20" -> "BTCUSDT").
-    // The token is lower-cased on the wire; FromWire's warm table is keyed upper-case.
+    // "btcusdt@depth20" -> "BTCUSDT" (upper-cased to match FromWire's table).
     private static string? WireSymbolFromStreamToken(string? streamToken)
     {
         if (string.IsNullOrEmpty(streamToken))
             return null;
         var at = streamToken.IndexOf('@', StringComparison.Ordinal);
-        // at <= 0 (no '@', or token starts with '@') yields no usable symbol → null.
         return at > 0 ? streamToken[..at].ToUpperInvariant() : null;
     }
 }

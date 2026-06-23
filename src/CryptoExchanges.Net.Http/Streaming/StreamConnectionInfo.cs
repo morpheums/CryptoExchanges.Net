@@ -22,11 +22,8 @@ namespace CryptoExchanges.Net.Http.Streaming;
 /// describes the policy; no timers or threads belong in the protocol).
 /// </param>
 /// <param name="MinOutboundInterval">
-/// The minimum wall-clock spacing the engine enforces between consecutive outbound control
-/// frames (subscribe / unsubscribe / client-ping / reconnect-replay) on this connection.
-/// <see cref="TimeSpan.Zero"/> (the default) means unthrottled — the engine sends back to back.
-/// This is a <strong>venue property</strong> (like <see cref="Heartbeat"/>), set by the protocol
-/// to honour the exchange's inbound message-rate limit; it is never a consumer setting.
+/// Minimum spacing the engine enforces between outbound control frames, honouring the venue's
+/// inbound message-rate limit. <see cref="TimeSpan.Zero"/> (the default) means unthrottled.
 /// </param>
 internal sealed record StreamConnectionInfo(
     Uri Endpoint,

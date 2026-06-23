@@ -39,10 +39,7 @@ internal sealed class FakeStreamProtocol : IStreamProtocol
         Interval: TimeSpan.FromSeconds(30),
         Timeout: TimeSpan.FromSeconds(60));
 
-    /// <summary>
-    /// Outbound-frame pacing floor carried on the <see cref="StreamConnectionInfo"/> returned by
-    /// <see cref="ResolveConnectionAsync"/>. Defaults to <see cref="TimeSpan.Zero"/> (unthrottled).
-    /// </summary>
+    /// <summary>Pacing floor placed on the resolved <see cref="StreamConnectionInfo"/> (default unthrottled).</summary>
     public TimeSpan MinOutboundInterval { get; set; } = TimeSpan.Zero;
 
     /// <summary>
@@ -51,18 +48,10 @@ internal sealed class FakeStreamProtocol : IStreamProtocol
     /// </summary>
     public int ResolveCount { get; private set; }
 
-    /// <summary>
-    /// When <see langword="true"/> (the default) <see cref="BuildSubscribeBatch"/> /
-    /// <see cref="BuildUnsubscribeBatch"/> return a recognisable batched frame
-    /// (<c>SUBSCRIBE_BATCH:{count}</c>). Set to <see langword="false"/> to return
-    /// <see langword="null"/> and exercise the engine's per-frame fallback path.
-    /// </summary>
+    /// <summary>When false, the batch builders return null to exercise the engine's per-frame fallback.</summary>
     public bool SupportsBatch { get; set; } = true;
 
-    /// <summary>
-    /// Records the size of every chunk the engine passes to <see cref="BuildSubscribeBatch"/>,
-    /// in call order. Use to assert the engine chunks the replay set at the venue cap (≤100).
-    /// </summary>
+    /// <summary>Records each chunk size passed to <see cref="BuildSubscribeBatch"/>, in call order.</summary>
     public ConcurrentQueue<int> SubscribeBatchChunkSizes { get; } = new();
 
     /// <summary>

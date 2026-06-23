@@ -69,55 +69,19 @@ internal interface IStreamProtocol
     string BuildUnsubscribe(StreamRequest request);
 
     /// <summary>
-    /// Builds a single control frame that subscribes to <strong>all</strong> of
-    /// <paramref name="requests"/> at once (e.g. a multi-param subscribe array or a
-    /// comma-joined topic), or returns <see langword="null"/> when the venue does not
-    /// support batched subscribes.
+    /// Builds one subscribe frame covering all of <paramref name="requests"/>, or
+    /// <see langword="null"/> if the venue cannot batch this set (the engine then falls back to the
+    /// per-frame <see cref="BuildSubscribe"/> loop). The engine pre-chunks to one frame's worth.
     /// </summary>
-    /// <remarks>
-    /// <para>
-    /// <strong>Null contract</strong>: a <see langword="null"/> return means "batching
-    /// unsupported" — the engine then falls back to its per-frame
-    /// <see cref="BuildSubscribe"/> loop (each frame still paced/serialised). The default
-    /// implementation returns <see langword="null"/> so existing protocols and test fakes
-    /// compile unchanged; the interface is <c>internal</c>, so adding a defaulted member is
-    /// non-breaking.
-    /// </para>
-    /// <para>
-    /// <strong>Chunking contract</strong>: the <em>engine</em> chunks the replay set before
-    /// calling, so each invocation receives a list that already fits one frame (≤ the venue
-    /// per-frame cap of 100 tokens/symbols). Implementations must <strong>not</strong> re-chunk;
-    /// they emit exactly one frame covering the whole <paramref name="requests"/> list. An
-    /// implementation may additionally return <see langword="null"/> if the supplied set is not a
-    /// valid single batch for the venue (e.g. mixed channels the venue cannot join in one frame),
-    /// in which case the engine falls back to the per-frame loop for that chunk.
-    /// </para>
-    /// </remarks>
-    /// <param name="requests">The subscription descriptors to cover in one frame; assumed by the
-    /// implementation to already fit a single venue frame.</param>
-    /// <returns>A single wire-format subscribe frame covering every entry in
-    /// <paramref name="requests"/>, or <see langword="null"/> when batching is not supported for
-    /// this venue or this set.</returns>
+    /// <param name="requests">Descriptors to cover in a single frame.</param>
+    /// <returns>The batched subscribe payload, or <see langword="null"/> if unsupported.</returns>
     string? BuildSubscribeBatch(IReadOnlyList<StreamRequest> requests) => null;
 
     /// <summary>
-    /// Builds a single control frame that unsubscribes from <strong>all</strong> of
-    /// <paramref name="requests"/> at once, or returns <see langword="null"/> when the venue
-    /// does not support batched unsubscribes.
+    /// Unsubscribe counterpart to <see cref="BuildSubscribeBatch"/>; same null-and-prechunk contract.
     /// </summary>
-    /// <remarks>
-    /// The same null and chunking contract as <see cref="BuildSubscribeBatch"/> applies:
-    /// <see langword="null"/> means "batching unsupported, caller falls back to the per-frame
-    /// <see cref="BuildUnsubscribe"/> loop"; the engine pre-chunks so each call receives a list
-    /// that fits one frame and the implementation emits exactly one frame without re-chunking.
-    /// The default implementation returns <see langword="null"/> (non-breaking on this
-    /// <c>internal</c> interface).
-    /// </remarks>
-    /// <param name="requests">The subscription descriptors to cancel in one frame; assumed by the
-    /// implementation to already fit a single venue frame.</param>
-    /// <returns>A single wire-format unsubscribe frame covering every entry in
-    /// <paramref name="requests"/>, or <see langword="null"/> when batching is not supported for
-    /// this venue or this set.</returns>
+    /// <param name="requests">Descriptors to cancel in a single frame.</param>
+    /// <returns>The batched unsubscribe payload, or <see langword="null"/> if unsupported.</returns>
     string? BuildUnsubscribeBatch(IReadOnlyList<StreamRequest> requests) => null;
 
     /// <summary>

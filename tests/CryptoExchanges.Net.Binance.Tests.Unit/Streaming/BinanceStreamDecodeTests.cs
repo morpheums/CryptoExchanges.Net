@@ -16,11 +16,8 @@ using Microsoft.Extensions.DependencyInjection;
 namespace CryptoExchanges.Net.Binance.Tests.Unit.Streaming;
 
 /// <summary>
-/// No-network unit tests for the four Binance stream decoder closures.
-/// Each test feeds a full combined-stream envelope (<c>{"stream":"&lt;token&gt;","data":{...}}</c>) —
-/// the exact shape the engine pump delivers — through the registered closure and asserts the
-/// resulting <see cref="Core.Models"/> values. Feeding bare <c>data</c>-level JSON would test a
-/// contract the engine never produces (and previously hid the missing-unwrap decode bug).
+/// No-network unit tests for the four Binance stream decoder closures. Each feeds a full
+/// combined-stream envelope (the exact shape the engine pump delivers), not bare data-level JSON.
 /// </summary>
 public class BinanceStreamDecodeTests
 {

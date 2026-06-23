@@ -984,16 +984,13 @@ public sealed class StreamEngineTests
 
         await using (engine)
         {
-            // Fire several subscribes concurrently — without _sendSemaphore their SendTextAsync
-            // calls would overlap inside the recording fake.
+            // Fire subscribes concurrently; the recording fake flags any overlapping SendTextAsync.
             var tasks = new List<Task>();
             for (var i = 0; i < 4; i++)
             {
                 var key = $"btcusdt@ticker{i}";
                 tasks.Add(Task.Run(async () =>
                 {
-                    // Each task sets its key immediately before subscribing; the engine serialises
-                    // the actual sends, so even racing callers cannot overlap a SendTextAsync.
                     protocol.NextRoutingKey = key;
                     await engine.SubscribeAsync(
                         new StreamRequest(StreamKind.Ticker, "BTCUSDT"),
@@ -1040,9 +1037,7 @@ public sealed class StreamEngineTests
     public async Task Engine_Throttle_ReconnectReplay_IsPaced()
     {
         var interval = TimeSpan.FromMilliseconds(120);
-        // Per-frame replay path (batching unsupported): each of the three subscriptions replays as its
-        // own frame, so this test asserts per-frame replay pacing. Batched replay pacing is covered by
-        // Engine_ReconnectReplay_Batched_IsPacedByMinOutboundInterval (TASK-072).
+        // Per-frame replay path (SupportsBatch = false); batched-replay pacing is tested separately.
         var protocol = new FakeStreamProtocol { SupportsBatch = false, MinOutboundInterval = interval };
         var recording = new RecordingWebSocketConnection();
         var options = new StreamEngineOptions

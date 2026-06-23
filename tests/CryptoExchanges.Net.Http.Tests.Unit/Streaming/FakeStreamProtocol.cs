@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using CryptoExchanges.Net.Core.Streaming;
 using CryptoExchanges.Net.Http.Streaming;
 
@@ -38,11 +39,20 @@ internal sealed class FakeStreamProtocol : IStreamProtocol
         Interval: TimeSpan.FromSeconds(30),
         Timeout: TimeSpan.FromSeconds(60));
 
+    /// <summary>Pacing floor placed on the resolved <see cref="StreamConnectionInfo"/> (default unthrottled).</summary>
+    public TimeSpan MinOutboundInterval { get; set; } = TimeSpan.Zero;
+
     /// <summary>
     /// Number of times <see cref="ResolveConnectionAsync"/> has been called.
     /// Use to assert the engine calls resolve on every connect/reconnect.
     /// </summary>
     public int ResolveCount { get; private set; }
+
+    /// <summary>When false, the batch builders return null to exercise the engine's per-frame fallback.</summary>
+    public bool SupportsBatch { get; set; } = true;
+
+    /// <summary>Records each chunk size passed to <see cref="BuildSubscribeBatch"/>, in call order.</summary>
+    public ConcurrentQueue<int> SubscribeBatchChunkSizes { get; } = new();
 
     /// <summary>
     /// Initialises the fake with an optional endpoint URI (defaults to <c>wss://fake.test/ws</c>).
@@ -56,7 +66,7 @@ internal sealed class FakeStreamProtocol : IStreamProtocol
     public ValueTask<StreamConnectionInfo> ResolveConnectionAsync(CancellationToken ct)
     {
         ResolveCount++;
-        var info = new StreamConnectionInfo(_endpoint, HeartbeatPolicy);
+        var info = new StreamConnectionInfo(_endpoint, HeartbeatPolicy, MinOutboundInterval);
         return new ValueTask<StreamConnectionInfo>(info);
     }
 
@@ -71,6 +81,22 @@ internal sealed class FakeStreamProtocol : IStreamProtocol
     /// <inheritdoc/>
     public string BuildUnsubscribe(StreamRequest request)
         => $"UNSUBSCRIBE:{NextRoutingKey}";
+
+    /// <inheritdoc/>
+    public string? BuildSubscribeBatch(IReadOnlyList<StreamRequest> requests)
+    {
+        if (!SupportsBatch)
+            return null;
+        SubscribeBatchChunkSizes.Enqueue(requests.Count);
+        // Echo the routing keys so K2 replay assertions can find the resubscribed streams.
+        return $"SUBSCRIBE_BATCH:{requests.Count}:{string.Join(',', requests.Select(RoutingKeyFor))}";
+    }
+
+    /// <inheritdoc/>
+    public string? BuildUnsubscribeBatch(IReadOnlyList<StreamRequest> requests)
+        => SupportsBatch
+            ? $"UNSUBSCRIBE_BATCH:{requests.Count}:{string.Join(',', requests.Select(RoutingKeyFor))}"
+            : null;
 
     /// <inheritdoc/>
     public StreamFrame Classify(ReadOnlySpan<byte> frame)

@@ -69,6 +69,22 @@ internal interface IStreamProtocol
     string BuildUnsubscribe(StreamRequest request);
 
     /// <summary>
+    /// Builds one subscribe frame covering all of <paramref name="requests"/>, or
+    /// <see langword="null"/> if the venue cannot batch this set (the engine then falls back to the
+    /// per-frame <see cref="BuildSubscribe"/> loop). The engine pre-chunks to one frame's worth.
+    /// </summary>
+    /// <param name="requests">Descriptors to cover in a single frame.</param>
+    /// <returns>The batched subscribe payload, or <see langword="null"/> if unsupported.</returns>
+    string? BuildSubscribeBatch(IReadOnlyList<StreamRequest> requests) => null;
+
+    /// <summary>
+    /// Unsubscribe counterpart to <see cref="BuildSubscribeBatch"/>; same null-and-prechunk contract.
+    /// </summary>
+    /// <param name="requests">Descriptors to cancel in a single frame.</param>
+    /// <returns>The batched unsubscribe payload, or <see langword="null"/> if unsupported.</returns>
+    string? BuildUnsubscribeBatch(IReadOnlyList<StreamRequest> requests) => null;
+
+    /// <summary>
     /// Returns the routing key the engine must use to register and look up subscriptions for
     /// the given <paramref name="request"/>. The key produced here must be identical to the
     /// <see cref="StreamFrame.RoutingKey"/> that <see cref="Classify"/> returns for a data frame

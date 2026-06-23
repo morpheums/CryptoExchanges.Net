@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+---
+
+## [0.5.0-preview.2] — 2026-06-24
+
+### Fixed
+
+- **WebSocket multi-symbol streaming — reconnect loop on subscribe burst (Binance, KuCoin)**
+  Subscribing to many symbols sent all control frames in an unpaced burst. Binance rejected the
+  burst with a `PolicyViolation` / "Too many requests" close, causing the engine to reconnect and
+  immediately replay the full subscribe set as another burst — an infinite reconnect loop. KuCoin
+  shared the same unpaced design and was equally affected.
+  Fix: every outbound control frame (subscribe, unsubscribe, reconnect-replay, client ping) now
+  passes through a per-connection serialized queue with a configurable minimum inter-frame interval
+  (`StreamConnectionInfo.MinOutboundInterval`). Reconnect-replay is also batched — Binance packs up
+  to 100 symbols per multi-param array frame; KuCoin comma-joins up to 100 topics per frame —
+  reducing frame count in addition to pacing each send.
+
+- **Binance combined-stream order-book decoder — updates never reached the callback**
+  The Binance combined-stream envelope (`{"stream":"…","data":{…}}`) was being deserialized
+  directly into the leaf depth-update DTO instead of unwrapping the `data` field first. All four
+  Binance stream types (ticker, trade, order-book, kline) now unwrap the envelope before decoding,
+  matching the pattern already used by the KuCoin decoder. Order-book callbacks now fire correctly
+  for all symbol counts.
+
 ## [0.5.0-preview.1] — 2026-06-21
 
 ### Changed
@@ -127,7 +151,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Account operations: balances, trade history
 - Comprehensive unit and integration test suite
 
-[Unreleased]: https://github.com/OrodruinLabs/CryptoExchanges.Net/compare/v0.5.0-preview.1...HEAD
+[Unreleased]: https://github.com/OrodruinLabs/CryptoExchanges.Net/compare/v0.5.0-preview.2...HEAD
+[0.5.0-preview.2]: https://github.com/OrodruinLabs/CryptoExchanges.Net/compare/v0.5.0-preview.1...v0.5.0-preview.2
 [0.5.0-preview.1]: https://github.com/OrodruinLabs/CryptoExchanges.Net/compare/v0.4.0-preview.1...v0.5.0-preview.1
 [0.4.0-preview.1]: https://github.com/OrodruinLabs/CryptoExchanges.Net/compare/v0.3.0-preview.1...v0.4.0-preview.1
 [0.3.0-preview.1]: https://github.com/OrodruinLabs/CryptoExchanges.Net/compare/v0.2.0-preview.1...v0.3.0-preview.1

@@ -50,7 +50,8 @@ internal sealed class KucoinStreamProtocol : IStreamProtocol
             ClientPingPayload: pingPayload,
             PingFormat: PingFormat.Json);
 
-        return new StreamConnectionInfo(uri, heartbeat);
+        // bullet-public carries no rate-limit field; 100 ms (10 msg/s) stays well inside KuCoin's limits.
+        return new StreamConnectionInfo(uri, heartbeat, MinOutboundInterval: TimeSpan.FromMilliseconds(100));
     }
 
     /// <inheritdoc />
@@ -70,6 +71,14 @@ internal sealed class KucoinStreamProtocol : IStreamProtocol
         var id = Interlocked.Increment(ref _nextId);
         return $"{{\"id\":\"{id}\",\"type\":\"unsubscribe\",\"topic\":\"{topic}\",\"privateChannel\":false,\"response\":true}}";
     }
+
+    /// <inheritdoc />
+    public string? BuildSubscribeBatch(IReadOnlyList<StreamRequest> requests)
+        => BuildBatch(requests, "subscribe");
+
+    /// <inheritdoc />
+    public string? BuildUnsubscribeBatch(IReadOnlyList<StreamRequest> requests)
+        => BuildBatch(requests, "unsubscribe");
 
     /// <inheritdoc />
     public string RoutingKeyFor(StreamRequest request)
@@ -118,6 +127,35 @@ internal sealed class KucoinStreamProtocol : IStreamProtocol
 
         var routingKey = topicProp.GetString();
         return new StreamFrame(FrameKind.Data, routingKey);
+    }
+
+    // One frame joining symbols under a shared channel prefix (e.g. "/market/level2:BTC-USDT,ETH-USDT").
+    // Only valid for a single channel, so a mixed-channel set returns null (engine falls back per-frame).
+    private string? BuildBatch(IReadOnlyList<StreamRequest> requests, string type)
+    {
+        ArgumentNullException.ThrowIfNull(requests);
+        if (requests.Count == 0)
+            return null;
+
+        var firstTopic = BuildTopic(requests[0]);
+        var colon = firstTopic.LastIndexOf(':');
+        var channelPrefix = firstTopic[..colon];
+
+        var symbols = new StringBuilder();
+        symbols.Append(firstTopic.AsSpan(colon + 1));
+        for (var i = 1; i < requests.Count; i++)
+        {
+            var topic = BuildTopic(requests[i]);
+            var sep = topic.LastIndexOf(':');
+            if (!topic.AsSpan(0, sep).SequenceEqual(channelPrefix))
+                return null;
+
+            symbols.Append(',');
+            symbols.Append(topic.AsSpan(sep + 1));
+        }
+
+        var id = Interlocked.Increment(ref _nextId);
+        return $"{{\"id\":\"{id}\",\"type\":\"{type}\",\"topic\":\"{channelPrefix}:{symbols}\",\"privateChannel\":false,\"response\":true}}";
     }
 
     /// <summary>

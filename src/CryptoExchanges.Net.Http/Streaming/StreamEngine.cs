@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Text;
 using CryptoExchanges.Net.Core.Streaming;
 using Microsoft.Extensions.Logging;
@@ -73,6 +74,9 @@ internal sealed class StreamEngine : IAsyncDisposable
     private static readonly Action<ILogger, string?, Exception?> s_logReplayFailed =
         LoggerMessage.Define<string?>(LogLevel.Warning, new EventId(11, "ReplayFailed"), "Failed to replay subscribe for routing key '{Key}' on reconnect.");
 
+    private static readonly Action<ILogger, int, int, Exception?> s_logBatchedReplay =
+        LoggerMessage.Define<int, int>(LogLevel.Information, new EventId(18, "BatchedReplay"), "Replaying {Count} subscriptions in {Frames} frame(s) on reconnect.");
+
     private static readonly Action<ILogger, Exception?> s_logSocketCloseException =
         LoggerMessage.Define(LogLevel.Debug, new EventId(12, "SocketCloseException"), "Socket close raised an exception during idle-close (ignored).");
 
@@ -101,8 +105,21 @@ internal sealed class StreamEngine : IAsyncDisposable
 
     // ── Engine state ─────────────────────────────────────────────────────────
 
+    // Both Binance (stream tokens) and KuCoin (joined symbols) cap a single control frame at 100
+    // entries; the reconnect-replay chunker groups the subscribe set into batches of this size.
+    private const int MaxBatchSize = 100;
+
     private readonly SemaphoreSlim _gate = new(1, 1);
+
+    // Serialises every outbound control frame (separate from _gate) so a pacing delay never blocks
+    // the subscribe/reconnect critical section, and the heartbeat ping can't race a subscribe send.
+    private readonly SemaphoreSlim _sendSemaphore = new(1, 1);
+
     private readonly CancellationTokenSource _disposeCts = new();
+
+    // Active connection's pacing floor + last-send instant; set on every open/reconnect.
+    private TimeSpan _minOutboundInterval;
+    private long _lastSendTicks;
 
     private IWebSocketConnection? _socket;
     private Task? _pumpTask;
@@ -121,7 +138,7 @@ internal sealed class StreamEngine : IAsyncDisposable
     // Heartbeat / liveness
     private CancellationTokenSource? _heartbeatCts;
     private Task? _heartbeatTask;
-    private volatile int _livenessFlag; // set to 1 on pong/liveness; watchdog clears to 0
+    private int _livenessFlag; // set to 1 on pong/liveness; watchdog clears to 0
 
     // Reconnect backoff
     private readonly BackoffSchedule _backoff;
@@ -161,7 +178,7 @@ internal sealed class StreamEngine : IAsyncDisposable
             options.BackoffMultiplier);
     }
 
-    // ── Public subscribe API (used by StreamClient in TASK-045) ───────────────
+    // ── Public subscribe API ──────────────────────────────────────────────────
 
     /// <summary>
     /// Subscribes a new stream, lazily opens the socket if necessary, and returns a
@@ -172,6 +189,10 @@ internal sealed class StreamEngine : IAsyncDisposable
     /// <param name="handlers">The typed callback bundle.</param>
     /// <param name="ct">A token to cancel the subscribe operation.</param>
     /// <returns>An <see cref="IStreamSubscription"/> whose <c>DisposeAsync</c> unsubscribes.</returns>
+    /// <remarks>
+    /// Under throttling (<see cref="StreamConnectionInfo.MinOutboundInterval"/> &gt; zero) the task
+    /// may be delayed up to one interval while pacing the subscribe frame; the gate is held meanwhile.
+    /// </remarks>
     public async Task<IStreamSubscription> SubscribeAsync<T>(
         StreamRequest request,
         StreamHandlers<T> handlers,
@@ -217,10 +238,8 @@ internal sealed class StreamEngine : IAsyncDisposable
             _subscriptions[routingKey] = entry;
             _subscribeSet[routingKey] = request;
 
-            // Send the subscribe message.
             var subscribeText = _protocol.BuildSubscribe(request);
-            if (_socket is not null && _socket.IsOpen)
-                await _socket.SendTextAsync(subscribeText, ct).ConfigureAwait(false);
+            await SendControlAsync(subscribeText, ct).ConfigureAwait(false);
 
             handle.SetState(StreamConnectionState.Live);
             return handle;
@@ -254,7 +273,7 @@ internal sealed class StreamEngine : IAsyncDisposable
                     try
                     {
                         var unsubText = _protocol.BuildUnsubscribe(request);
-                        await _socket.SendTextAsync(unsubText, _disposeCts.Token).ConfigureAwait(false);
+                        await SendControlAsync(unsubText, _disposeCts.Token).ConfigureAwait(false);
                     }
 #pragma warning disable CA1031 // intentional broad catch: unsubscribe failure must not propagate
                     catch (Exception ex)
@@ -285,7 +304,48 @@ internal sealed class StreamEngine : IAsyncDisposable
         var info = await _protocol.ResolveConnectionAsync(ct).ConfigureAwait(false);
         _socket = _connectionFactory();
         await _socket.ConnectAsync(info.Endpoint, ct).ConfigureAwait(false);
+        ApplyConnectionPacing(info);
         StartPump(info.Heartbeat);
+    }
+
+    // Applies the new connection's pacing floor; backdates the clock so the first frame isn't delayed.
+    private void ApplyConnectionPacing(StreamConnectionInfo info)
+    {
+        _minOutboundInterval = info.MinOutboundInterval;
+        _lastSendTicks = Stopwatch.GetTimestamp() - Stopwatch.Frequency;
+    }
+
+    /// <summary>
+    /// Serialises and paces a single outbound control frame: at most one send is in flight, and
+    /// consecutive frames are spaced by at least the connection's
+    /// <see cref="StreamConnectionInfo.MinOutboundInterval"/> (zero = no delay).
+    /// </summary>
+    /// <param name="text">The control-frame text to send.</param>
+    /// <param name="ct">A token to cancel the send; linked with the engine dispose token internally.</param>
+    private async Task SendControlAsync(string text, CancellationToken ct)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(text);
+
+        using var linked = CancellationTokenSource.CreateLinkedTokenSource(ct, _disposeCts.Token);
+        await _sendSemaphore.WaitAsync(linked.Token).ConfigureAwait(false);
+        try
+        {
+            if (_minOutboundInterval > TimeSpan.Zero)
+            {
+                var elapsed = Stopwatch.GetElapsedTime(_lastSendTicks);
+                if (elapsed < _minOutboundInterval)
+                    await Task.Delay(_minOutboundInterval - elapsed, linked.Token).ConfigureAwait(false);
+            }
+
+            if (_socket is not null && _socket.IsOpen)
+                await _socket.SendTextAsync(text, linked.Token).ConfigureAwait(false);
+
+            _lastSendTicks = Stopwatch.GetTimestamp();
+        }
+        finally
+        {
+            _sendSemaphore.Release();
+        }
     }
 
     private async Task CloseSocketAsync()
@@ -523,25 +583,12 @@ internal sealed class StreamEngine : IAsyncDisposable
                 }
 
                 _socket = newSocket;
+                ApplyConnectionPacing(info);
 
                 // Connected — restart pump and heartbeat.
                 StartPump(info.Heartbeat);
 
-                // K2: replay the stored subscribe set.
-                foreach (var (routingKey, request) in _subscribeSet)
-                {
-                    try
-                    {
-                        var subscribeText = _protocol.BuildSubscribe(request);
-                        await _socket.SendTextAsync(subscribeText, _disposeCts.Token).ConfigureAwait(false);
-                    }
-#pragma warning disable CA1031 // intentional: replay failure for one subscription must not block others
-                    catch (Exception ex)
-#pragma warning restore CA1031
-                    {
-                        s_logReplayFailed(_logger, routingKey, ex);
-                    }
-                }
+                await ReplaySubscribeSetAsync().ConfigureAwait(false); // K2
 
                 // Transition all subscriptions back to Live.
                 foreach (var entry in _subscriptions.Values)
@@ -557,6 +604,58 @@ internal sealed class StreamEngine : IAsyncDisposable
                 _gate.Release();
             }
         }
+    }
+
+    // K2 replay: chunk the subscribe set into ≤MaxBatchSize groups, sending one batched frame per
+    // chunk (or per-frame when the venue can't batch). All sends go through SendControlAsync (stay
+    // throttled); a per-frame broad catch keeps one failure from aborting the rest.
+    private async Task ReplaySubscribeSetAsync()
+    {
+        var requests = _subscribeSet.Values.ToList();
+        if (requests.Count == 0)
+            return;
+
+        var frames = 0;
+        for (var offset = 0; offset < requests.Count; offset += MaxBatchSize)
+        {
+            var chunk = requests.GetRange(offset, Math.Min(MaxBatchSize, requests.Count - offset));
+            var batchText = _protocol.BuildSubscribeBatch(chunk);
+
+            if (batchText is not null)
+            {
+                try
+                {
+                    await SendControlAsync(batchText, _disposeCts.Token).ConfigureAwait(false);
+                    frames++;
+                }
+#pragma warning disable CA1031 // intentional: a batched replay failure must not block remaining chunks
+                catch (Exception ex)
+#pragma warning restore CA1031
+                {
+                    s_logReplayFailed(_logger, _protocol.RoutingKeyFor(chunk[0]), ex);
+                }
+                continue;
+            }
+
+            // Batching unsupported for this chunk — fall back to the per-frame throttled loop.
+            foreach (var request in chunk)
+            {
+                try
+                {
+                    var subscribeText = _protocol.BuildSubscribe(request);
+                    await SendControlAsync(subscribeText, _disposeCts.Token).ConfigureAwait(false);
+                    frames++;
+                }
+#pragma warning disable CA1031 // intentional: replay failure for one subscription must not block others
+                catch (Exception ex)
+#pragma warning restore CA1031
+                {
+                    s_logReplayFailed(_logger, _protocol.RoutingKeyFor(request), ex);
+                }
+            }
+        }
+
+        s_logBatchedReplay(_logger, requests.Count, frames, null);
     }
 
     private async Task CloseAllSubscriptionsAsync()
@@ -616,7 +715,10 @@ internal sealed class StreamEngine : IAsyncDisposable
 
     private async Task ClientPingLoopAsync(HeartbeatPolicy policy, CancellationToken ct)
     {
-        Interlocked.Exchange(ref _livenessFlag, 1);
+        // Decode once — the ping payload is constant for the connection.
+        var pingText = policy.PingFormat is PingFormat.Text or PingFormat.Json
+            ? Encoding.UTF8.GetString(policy.ClientPingPayload.Span)
+            : null;
 
         using var watchdogCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
         var watchdogTask = WatchdogAsync(policy.Timeout, watchdogCts.Token);
@@ -650,8 +752,8 @@ internal sealed class StreamEngine : IAsyncDisposable
                                 break;
                             case PingFormat.Text:
                             case PingFormat.Json:
-                                var text = Encoding.UTF8.GetString(policy.ClientPingPayload.Span);
-                                await _socket.SendTextAsync(text, ct).ConfigureAwait(false);
+                                // Via SendControlAsync so the ping is serialised against other sends and paced.
+                                await SendControlAsync(pingText!, ct).ConfigureAwait(false);
                                 break;
                         }
                         Interlocked.Exchange(ref _livenessFlag, 1);
@@ -817,6 +919,7 @@ internal sealed class StreamEngine : IAsyncDisposable
         }
 
         _gate.Dispose();
+        _sendSemaphore.Dispose();
         _disposeCts.Dispose();
     }
 

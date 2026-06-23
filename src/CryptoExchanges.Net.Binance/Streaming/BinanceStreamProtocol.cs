@@ -1,3 +1,4 @@
+using System.Text;
 using CryptoExchanges.Net.Binance.Internal;
 using CryptoExchanges.Net.Http.Streaming;
 
@@ -32,7 +33,11 @@ internal sealed class BinanceStreamProtocol : IStreamProtocol
     {
         ArgumentNullException.ThrowIfNull(options);
         var endpoint = new Uri(options.StreamBaseUrl.TrimEnd('/') + "/stream");
-        _connectionInfo = new StreamConnectionInfo(endpoint, s_heartbeatPolicy);
+        // Binance closes above 5 inbound msgs/sec; 200 ms ⇒ 5 msg/s with margin.
+        _connectionInfo = new StreamConnectionInfo(
+            endpoint,
+            s_heartbeatPolicy,
+            MinOutboundInterval: TimeSpan.FromMilliseconds(200));
     }
 
     /// <inheritdoc/>
@@ -67,6 +72,14 @@ internal sealed class BinanceStreamProtocol : IStreamProtocol
         var id = Interlocked.Increment(ref _nextId);
         return $"{{\"method\":\"UNSUBSCRIBE\",\"params\":[\"{token}\"],\"id\":{id}}}";
     }
+
+    /// <inheritdoc/>
+    public string? BuildSubscribeBatch(IReadOnlyList<StreamRequest> requests)
+        => BuildBatch(requests, "SUBSCRIBE");
+
+    /// <inheritdoc/>
+    public string? BuildUnsubscribeBatch(IReadOnlyList<StreamRequest> requests)
+        => BuildBatch(requests, "UNSUBSCRIBE");
 
     /// <inheritdoc/>
     public StreamFrame Classify(ReadOnlySpan<byte> frame)
@@ -109,6 +122,27 @@ internal sealed class BinanceStreamProtocol : IStreamProtocol
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
+
+    // One SUBSCRIBE/UNSUBSCRIBE frame with a multi-token params array.
+    private string? BuildBatch(IReadOnlyList<StreamRequest> requests, string method)
+    {
+        ArgumentNullException.ThrowIfNull(requests);
+        if (requests.Count == 0)
+            return null;
+
+        var builder = new StringBuilder(method.Length + requests.Count * 20 + 32);
+        builder.Append("{\"method\":\"").Append(method).Append("\",\"params\":[");
+        for (var i = 0; i < requests.Count; i++)
+        {
+            if (i > 0)
+                builder.Append(',');
+            builder.Append('"').Append(BuildStreamToken(requests[i])).Append('"');
+        }
+
+        var id = Interlocked.Increment(ref _nextId);
+        builder.Append("],\"id\":").Append(id).Append('}');
+        return builder.ToString();
+    }
 
     /// <summary>
     /// Builds the venue stream-name token (e.g. <c>"btcusdt@ticker"</c>) from a

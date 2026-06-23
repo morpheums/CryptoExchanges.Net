@@ -1,218 +1,148 @@
-# Nazgul Plan — FEAT-007
+# Nazgul Plan — FEAT-008
 
 ## Recovery Pointer
-**Active task**: FEAT-007 COMPLETE — all 6/6 tasks DONE; consolidated review approved 4/4; post-loop PR pending.
-**Next action**: Create PR `feat/FEAT-007-root-metapackage` → `main`.
+**Active task**: FEAT-008 COMPLETE — all 4/4 tasks DONE; consolidated review APPROVED 4/4 (`nazgul/reviews/FEAT-008-consolidated/`; one HIGH code-review finding fixed in `9866a21` and re-approved). Post-loop + PR pending.
+**Next action**: Run post-loop (documentation, release-manager) then open PR `feat/FEAT-008-stream-control-msg-rate-limit` → `main`. Both venues PASS the multi-symbol live L2 regression (Binance 18 / KuCoin 14). Build 0W/0E; non-integration suite green (754 tests). Scope grew by one user-approved task: TASK-074 fixed a pre-existing Binance combined-stream decode bug (data-envelope unwrap) — the second cause of "no Binance order book delivered". Commits: TASK-071 `2d2a3aa`, TASK-072 `4563126`, TASK-073 `dc49327`, TASK-074 `da818db` + review-fix `9866a21`.
 
 ─── ◈ NAZGUL ▸ PLANNING ────────────────────────────────
 
 ## Objective
 
-**FEAT-007 — Rename DI aggregator → root meta-package `CryptoExchanges.Net`.** Rename the
-all-exchanges DI aggregator from `CryptoExchanges.Net.DependencyInjection` to the bare root id
-`CryptoExchanges.Net` so the "install one package → get all exchanges + one-call
-`AddCryptoExchanges()`" bundle is honestly named and discoverable. Move `AddCryptoExchanges` +
-`CryptoExchangesOptions` to the `CryptoExchanges.Net` namespace (method name + options shape
-unchanged). Decouple the five per-exchange `.Tests.Unit` projects from the aggregator and consolidate
-the all-exchanges resolution test into the renamed `CryptoExchanges.Net.Tests.Unit`. Repoint MCP +
-samples + sln. Bump to `0.5.0-preview.1`; published set stays 9 (DI out, `CryptoExchanges.Net` in).
-Clean swap — no consumers yet, no shim. **No runtime behavior change.**
+**FEAT-008 — Fix the multi-symbol WebSocket streaming burst that Binance rejects with PolicyViolation.**
+The shared `StreamEngine` sends one control frame per subscription with no pacing. Subscribing to N
+symbols fires an N-frame burst; Binance enforces 5 inbound msgs/sec and closes the socket (~300 ms,
+before any data) with PolicyViolation "Too many requests". `ReconnectCoreAsync` then replays the whole
+`_subscribeSet` as another burst on every reconnect → infinite reconnect loop, zero order-book data.
+KuCoin shares the design (more lenient). Single-symbol works, so existing single-symbol smoke tests
+never caught it. Transport/wire/URL/keep-alive are healthy and **out of scope**.
 
-**Objective type**: Refactor (brownfield package rename + namespace move + test decoupling). Public
-surface changes only in package id and namespace.
+The fix is two composing steps, both required: **(1) per-venue outbound throttling** —
+`StreamConnectionInfo.MinOutboundInterval` + a serialized, paced `SendControlAsync` in `StreamEngine`
+that every send site routes through; **(2) batched reconnect-replay** — additive `IStreamProtocol`
+batch builders (default-null) implemented for Binance/KuCoin, with a chunked batched-replay path in
+`ReconnectCoreAsync` that still sends each frame through `SendControlAsync`. Plus a multi-symbol live
+L2 regression test for both venues. **Zero public API change** — every type touched is `internal`;
+public `IStreamClient` is unchanged.
+
+**Objective type**: Bug fix (correctness) + scale optimisation. Brownfield. No public surface change.
+
+**Approach is architect-validated — do NOT re-evaluate.** Full pre-implementation advisory (APPROVED):
+`nazgul/reviews/FEAT-008/architect-reviewer.md`. The design below is mandated, not a proposal.
 
 Authoritative inputs (read fully before any task):
-- Objective spec: `nazgul/context/objectives/FEAT-007-spec.md` (PRIMARY)
-- `nazgul/docs/PRD-FEAT-007.md`, `nazgul/docs/TRD-FEAT-007.md`,
-  `nazgul/docs/ADR-003-root-packageid-for-all-exchanges-meta-bundle.md`,
-  `nazgul/docs/TEST-PLAN-FEAT-007.md`
-- Approved design: `docs/superpowers/specs/2026-06-21-rename-di-aggregator-root-metapackage-design.md`
+- Objective: `nazgul/config.json` → `objectives_history[FEAT-008].objective`.
+- Architect advisory (mandated design): `nazgul/reviews/FEAT-008/architect-reviewer.md`.
 
 ## Branch
 
 - **Base**: `main` (protected — ship via PR).
-- **Feature**: `feat/FEAT-007-root-metapackage`.
+- **Feature**: `feat/FEAT-008-stream-control-msg-rate-limit` (already created + checked out).
+- **Commit prefix**: `feat(FEAT-008):`.
 
 ## Hard Constraints (recorded for implementer + reviewers)
 
-- **4-layer chain** preserved (Core → Http → Exchange → DI/meta). The meta-package may reference all
-  exchange layers; nothing downstream adds a new transitive dependency.
-- **One type per file** for all moved/renamed source files.
-- **LEAN comments + LEAN XML docs**: short `<summary>`, one `<param>` per parameter, `<exception>`
-  where thrown; `<inheritdoc/>` on impls. The aggregator's two source files implement no interface, so
-  they keep concrete-class doc comments (no `<inheritdoc/>`), and NO `<remarks>` (the LEAN mandate that
-  bit FEAT-006).
-- **Build 0W/0E**: `dotnet build CryptoExchanges.Net.sln` under `TreatWarningsAsErrors`,
-  `AnalysisLevel=latest-all`, `GenerateDocumentationFile=true`.
-- **Clean swap — NO shim / type-forwarder** (no consumers yet). Stop producing
-  `…DependencyInjection`; nuget.org deprecate/unlist is a documented manual post-merge step, NOT a
-  build action.
-- **Method/options shape unchanged** — only the package id + namespace change. `AddCryptoExchanges`
-  name and `CryptoExchangesOptions` properties are byte-stable.
-- **Published set stays 9** — `…DependencyInjection` out, `CryptoExchanges.Net` in; `release.yml`
-  packs by solution glob (no workflow change).
-- **No opsec leakage** in public artifacts (README/CHANGELOG/commits/PR).
-- Non-integration suite stays green after every task (`dotnet test --filter 'Category!=Integration'`);
-  aggregator-resolution coverage exists exactly once.
-
-## Real-code corrections vs. the docs (recorded for implementers)
-
-- **All five** per-exchange `.Tests.Unit` csprojs reference the aggregator (line 15) — including
-  Binance, which the TRD baseline said had no reference. Binance needs csproj-ref removal only (no
-  aggregator `using`/test in its `.cs`). Handled in TASK-067.
-- `samples/BasicUsage/Program.cs` uses `AddBinanceExchange` directly and imports
-  `CryptoExchanges.Net.Binance`; it has NO aggregator `using` and NO `AddCryptoExchanges` call — only
-  its csproj ProjectReference needs repointing (TASK-068).
-- `docs/library-usage.md` also contains a `…DependencyInjection` reference (not enumerated in the TRD)
-  — included in TASK-069 so AC-8 holds.
-- `LoggingTest/` is a scratch project NOT in the solution and does not reference the aggregator —
-  left untouched.
+- **Zero public API change.** `IStreamProtocol`, `StreamConnectionInfo`, `StreamEngineOptions`,
+  `StreamEngine` are all `internal`; public `IStreamClient` (Core) is untouched. The rate-limit value
+  lives on `StreamConnectionInfo` (a venue property, like `HeartbeatPolicy`) — NOT `StreamEngineOptions`
+  (a consumer setting that could break exchange policy).
+- **One type per file.** No new top-level types are expected; the new members are a private method
+  (`SendControlAsync`), a record parameter (`MinOutboundInterval`), and two interface default members.
+- **LEAN comments** — only for non-obvious venue quirks (e.g. the 5/sec Binance cap, the ping→send-
+  semaphore race fix). No banner separators, no restating code. Full XML docs on the new **interface**
+  members (incl. defaults); `<inheritdoc/>` on impls.
+- **Build 0W/0E** every task: `dotnet build CryptoExchanges.Net.sln` under `TreatWarningsAsErrors`,
+  `AnalysisLevel=latest-all`, `GenerateDocumentationFile=true`. Mind CA2007 (ConfigureAwait), CA1031
+  (the intentional broad catches are already `#pragma`-suppressed — keep that pattern), CA2213
+  (dispose `_sendSemaphore`).
+- **New logging** uses `LoggerMessage` delegates following the existing `s_log*` pattern.
+- **Strict layering Core → Http → Exchange → DI.** The pacing primitive + batch **dispatch** live in
+  Http (`StreamEngine` + `StreamConnectionInfo` + `IStreamProtocol`); per-venue **values** (200 ms /
+  bullet-derived) + batch **wire format** live in each exchange protocol.
+- **Composition:** batched replay frames are still sent through `SendControlAsync`, so they remain
+  throttled. 300-symbol replay → ~3 frames × 200 ms ≈ 600 ms.
+- **Tests mandatory, gated:** fast unit tests (fakes, no network) prove pacing/serialization/batching/
+  chunking/zero-preserves-behavior; the multi-symbol live regression is `[Trait("Category","Integration")]`
+  and excluded from `dotnet test --filter 'Category!=Integration'`, self-skipping offline.
+- Non-integration suite stays green after every task.
 
 ## Status Summary
 
 | Task     | Status     | Wave | Description                                                                  |
 |----------|------------|------|------------------------------------------------------------------------------|
-| TASK-065 | ✦ DONE     | 1    | Rename aggregator project → `CryptoExchanges.Net` (folder/csproj/ids/namespace + 2 src files + sln) |
-| TASK-066 | ✦ DONE     | 2    | Rename + consolidate aggregator test project → `CryptoExchanges.Net.Tests.Unit` (+ `AddCryptoExchangesTests`) |
-| TASK-067 | ✦ DONE     | 3    | Decouple the 5 per-exchange `.Tests.Unit` projects (drop ref + using + moved tests) |
-| TASK-068 | ✦ DONE     | 4    | Repoint consumers — MCP (src+tests), samples/BasicUsage, sln                  |
-| TASK-069 | ✦ DONE     | 5    | Docs (README/NUGET/docs/*) + CHANGELOG + version bump → `0.5.0-preview.1`     |
-| TASK-070 | ✦ DONE     | 6    | Final gate — build 0W/0E, suite green, `dotnet pack` 9-package swap verified  |
+| TASK-071 | ✦ DONE     | 1    | `StreamConnectionInfo.MinOutboundInterval` + `SendControlAsync` (throttle/serialize) + route all send sites + Binance 200ms/KuCoin 100ms values + unit tests. Review ✦ APPROVED (4/4). Commits `2d2a3aa` + simplify `a45059f6`. |
+| TASK-072 | ◆ IMPLEMENTED | 2 | `IStreamProtocol` batch builders (default-null) + Binance/KuCoin impls + chunked batched `ReconnectCoreAsync` replay + unit tests. Impl commit `4563126`; build 0W0E, non-integration suite green. Awaiting review gate. |
+| TASK-073 | ◆ IMPLEMENTED | 3 | Multi-symbol Binance (18) + KuCoin (14) L2 order-book LIVE regression test. KuCoin live PASS; Binance self-skips (pre-existing decode bug). Impl commit `dc49327`. Awaiting review gate. |
+| TASK-074 | ◆ IMPLEMENTED | 4 | Fix Binance combined-stream `data`-envelope decode (mirror KuCoin `DeserializeData<T>`; OrderBook symbol from `stream` token for partial-book `@depthN`) + restore clean reachability probe + envelope-level unit tests. Binance live multi-symbol now PASSES (real book); KuCoin still PASS. Impl commit `da818db`; build 0W0E, non-integration green. Awaiting review gate. |
 
-Tasks: 6/6 DONE. ✦ FEAT-007 COMPLETE.
+Tasks: 1/4 DONE. ◆ TASK-072 + TASK-073 + TASK-074 IMPLEMENTED (awaiting review gate).
 
 ## Wave Groups
 
-The loop orchestrator reads this section to determine parallel execution order. Tasks in the same
-wave have NO dependency on each other AND NO file overlap. For this small refactor there is **no
-genuine parallelism**: the `.sln` is a shared file edited by steps 1, 2, and 4, and each step depends
-serially on the previous one staying green. Every wave therefore holds exactly one task and runs
-sequentially.
+The loop orchestrator reads this section to determine parallel execution order. Tasks in the same wave
+have NO dependency on each other AND NO file overlap. FEAT-008 is a single dependency chain (each task
+edits `StreamEngine.cs` and the two protocol files, and each builds on the prior step), so every wave
+holds exactly one task and runs sequentially.
 
 ### Wave 1
-- **TASK-065** — Rename the aggregator project (folder, csproj, ids, namespace, 2 source files) +
-  its `.sln` project entry. No deps. Touches `src/CryptoExchanges.Net/*` + `CryptoExchanges.Net.sln`
-  (line 10).
+- **TASK-071** — Throttling primitive (`MinOutboundInterval`) + `SendControlAsync` + route every send
+  site + per-venue interval values + unit tests. No deps. Touches `StreamConnectionInfo.cs`,
+  `StreamEngine.cs`, both protocol files, `StreamEngineTests.cs`. **DONE.**
 
 ### Wave 2
-- **TASK-066** — Rename + consolidate the aggregator test project; add the single
-  `AddCryptoExchanges_ResolvesAllFiveExchanges` (+ options-flow) test. Depends on TASK-065 (refs the
-  renamed src; edits the shared `.sln` line 28).
+- **TASK-072** — Batch builders + chunked batched reconnect replay + unit tests. **Depends on
+  TASK-071** (`SendControlAsync` is the dispatch path for batched frames). File overlap with TASK-071
+  on `StreamEngine.cs` + both protocol files → must follow sequentially. **READY.**
 
 ### Wave 3
-- **TASK-067** — Decouple the 5 per-exchange test projects (remove aggregator ProjectReference +
-  `using` + moved tests). Depends on TASK-066 (the consolidated test must exist before deleting the
-  per-exchange copies). Touches 5 csprojs + 4 `.cs` files; does NOT touch the `.sln`.
-
-### Wave 4
-- **TASK-068** — Repoint MCP (src + tests), samples/BasicUsage, sln. Depends on TASK-066 (renamed src
-  + sln baseline). Touches MCP/sample files; shares the `.sln` lineage → sequenced after 065/066.
-
-### Wave 5
-- **TASK-069** — Docs + CHANGELOG + version bump. Depends on TASK-068 (consumer-facing text accurate).
-  Touches `Directory.Build.props` + docs + CHANGELOG only.
-
-### Wave 6
-- **TASK-070** — Final verification gate (build/test/pack/grep). Depends on TASK-067 + TASK-068 +
-  TASK-069 (all product changes landed). Verification-only.
+- **TASK-073** — Multi-symbol live L2 regression test (both venues). **Depends on TASK-071 + TASK-072**
+  (the fix must be in place to pass). Tests-only; no file overlap with 071/072 (separate integration
+  test projects), but logically gated on the fix being complete.
 
 ## Dependency Order
 
 ```
-TASK-065 -> TASK-066 -> TASK-067 -+
-                     \-> TASK-068 -+-> TASK-070
-                                    |
-            TASK-068 -> TASK-069 --+
+TASK-071 -> TASK-072 -> TASK-073
 ```
 
-(TASK-067 and TASK-068 both depend on TASK-066; TASK-069 depends on TASK-068; TASK-070 depends on
-067 + 068 + 069. Executed single-lane sequentially 065 → 066 → 067 → 068 → 069 → 070 to avoid `.sln`
-contention and keep each boundary green.)
+(TASK-072 depends on TASK-071's `SendControlAsync`; TASK-073 depends on both 071 and 072. Single-lane
+sequential execution avoids `StreamEngine.cs` / protocol-file contention and keeps every boundary
+green and individually reviewable.)
 
-## Traceability (PRD -> tasks)
+## Traceability (objective -> tasks)
 
-Every PRD-FEAT-007 acceptance criterion maps to at least one task:
+The FEAT-008 objective decomposes into three verifiable outcomes; each maps to a task:
 
-- **AC-1** (`dotnet pack` → 9 `.nupkg` incl. `CryptoExchanges.Net.0.5.0-preview.1`, none
-  `…DependencyInjection`) -> TASK-069 (version), TASK-070 (pack verification).
-- **AC-2** (single `AddCryptoExchanges_ResolvesAllFiveExchanges` test) -> TASK-066.
-- **AC-3** (no `…DependencyInjection` project remains) -> TASK-065 (src), TASK-066 (test), verified
-  TASK-070.
-- **AC-4** (per-exchange `.Tests.Unit` has no aggregator ref/using; `AddXxxExchange` tests pass) ->
-  TASK-067.
-- **AC-5** (MCP + MCP tests + samples reference `CryptoExchanges.Net`; MCP resolves all) -> TASK-068.
-- **AC-6** (0W/0E) -> acceptance criterion on EVERY task; final gate TASK-070.
-- **AC-7** (non-integration suite green; coverage exactly once) -> TASK-066 (consolidate) + TASK-067
-  (remove dups); verified TASK-070.
-- **AC-8** (README/NUGET/docs/CHANGELOG reference `CryptoExchanges.Net`) -> TASK-069.
+- **"respect a per-venue message-rate limit (pacing)"** → TASK-071 (`MinOutboundInterval` +
+  `SendControlAsync`; Binance 200 ms / KuCoin bullet-or-default; serialize all sends, fixing the
+  KuCoin concurrent-send race).
+- **"batching ... per exchange" for the reconnect replay** → TASK-072 (`IStreamProtocol` batch
+  builders + chunked batched `ReconnectCoreAsync`, frames still throttled via `SendControlAsync`).
+- **"multi-symbol Binance+KuCoin L2 order-book regression test asserting ≥1 book update is
+  delivered"** → TASK-073 (≥17 Binance / ≥13 KuCoin live L2 streams; reproduces the original burst
+  failure; Integration-gated + self-skip).
+- **"do not change transport/wire/URL/keep-alive"** → out of scope in all tasks (no edits to those
+  layers).
 
-Nothing in PRD "Out of Scope" (shim/type-forwarder, `AddXxxExchange`/signing/mapping/streaming
-changes, plugin auto-discovery, method/options-shape change, the manual nuget.org unlist) is planned.
-
-## Recovery Pointer
-
-- **Current stage**: FEAT-007 COMPLETE — all 6 tasks DONE. Consolidated review: 4/4 APPROVED.
-- **Next action**: Post-loop — create PR `feat/FEAT-007-root-metapackage` → `main`.
-- **Active task**: (none — all DONE)
-- **Files are truth**: the task manifests under `nazgul/tasks/TASK-065..070.md` carry full state; each
-  manifest's frontmatter `status:` is the canonical record.
-
-─── ◈ NEXT ─────────────────────────────────────────────
-  ✦ FEAT-007 COMPLETE — all 6 tasks DONE; PR ready.
-────────────────────────────────────────────────────────
+Architect advisory mapping: Step 1 (Throttling) → TASK-071; Step 2 (Batching) → TASK-072; Bug-confirmed
+reproducer → TASK-073. Risk register: concurrent-send + dispose-during-delay → TASK-071;
+reconnect-replay burst → TASK-072.
 
 ## Completed
 
-- **TASK-065** — DONE. `961df87` — rename aggregator project to CryptoExchanges.Net.
-- **TASK-066** — DONE. `998525f` — rename + consolidate aggregator test project → CryptoExchanges.Net.Tests.Unit.
-- **TASK-067** — DONE. `31207d5` — decouple 5 per-exchange test projects from aggregator.
-- **TASK-068** — DONE. `58f6313` — repoint MCP + samples consumers to renamed CryptoExchanges.Net.
-- **TASK-069** — DONE. `5d0ec52` — docs + CHANGELOG + version 0.5.0-preview.1.
-- **TASK-070** — DONE. Consolidated review 4/4 APPROVED (2026-06-21). Build 0W/0E; 778 tests passed; 9-package swap confirmed.
+- **TASK-071** — Throttle + serialize outbound control frames in `StreamEngine`. DONE 2026-06-23.
+  Review gate ✦ APPROVED (architect / code / security / api — all 4). Pre-checks: test 197✦ / lint 0W0E✦ /
+  build 0W0E✦ / smoke n-a. Commits `2d2a3aa` (impl) + `a45059f6` (per-task simplify). Evidence:
+  `nazgul/reviews/TASK-071/{architect,code,security,api}-reviewer.md`.
 
----
+## Recovery Pointer
 
-## Archived — FEAT-006 (KuCoin Exchange Integration) — COMPLETE
+- **Current stage**: Loop — TASK-071 DONE; TASK-072 IMPLEMENTED; TASK-073 IMPLEMENTED (Wave 3), awaiting review gate.
+- **Next action**: Run the review gate for TASK-072 (`4563126`) and TASK-073 (`dc49327`) on branch `feat/FEAT-008-stream-control-msg-rate-limit`.
+- **Active task**: TASK-073.
+- **Files are truth**: `nazgul/tasks/TASK-071..073.md` carry full state; each manifest's frontmatter
+  `status:` is the canonical record.
 
-> Preserved below for history. FEAT-006 shipped via PR #35 (9/9 tasks DONE, post-loop complete).
-> FEAT-001..005 archived under `nazgul/archive/`. Active objective is FEAT-007 (above).
-
-### FEAT-006 Objective
-
-**FEAT-006 — KuCoin Exchange Integration (full parity: REST + WebSocket streaming).** Added KuCoin as
-the 5th exchange at full parity: REST market data + account + trading (KC-API passphrase-v2 HMAC
-signing, bespoke `ISymbolMapper` for `BTC-USDT`, DeltaMapper DTO→model, `AddKucoinExchange` DI, MCP
-wiring) plus public WebSocket streaming (ticker/trade/order book/kline) with auto-reconnect + token
-re-negotiation + auto-resubscribe; generalized the shared streaming endpoint seam (ADR-002).
-
-### FEAT-006 Status Summary
-
-| Task     | Status     | Wave | Description                                                                  |
-|----------|------------|------|------------------------------------------------------------------------------|
-| TASK-056 | ✦ DONE     | 1    | Scaffold `CryptoExchanges.Net.Kucoin` + Unit/Integration test projects (OKX clone) |
-| TASK-061 | ✦ DONE     | 1    | ADR-002 streaming endpoint seam → async `ResolveConnectionAsync` + migrate Binance |
-| TASK-057 | ✦ DONE     | 2    | KC-API passphrase-v2 signing service + mark-and-strip signing handler        |
-| TASK-058 | ✦ DONE     | 2    | Bespoke `ISymbolMapper` + REST wire DTOs + DeltaMapper profiles + parsers    |
-| TASK-059 | ✦ DONE     | 3    | REST services (market/account/trading) + http client + composer + entry     |
-| TASK-060 | ✦ DONE     | 4    | `AddKucoinExchange` DI + `AddCryptoExchanges` + MCP wiring                   |
-| TASK-062 | ✦ DONE     | 5    | `KucoinStreamProtocol` + bullet-public + 4 decoders + `AddKucoinStreams` (bugfix: snapshot channel) |
-| TASK-063 | ✦ DONE     | 6    | Live integration smokes — REST + one streaming (self-skip)                   |
-| TASK-064 | ✦ DONE     | 6    | Docs — README KuCoin row → supported + MCP/exchanges/streaming reference     |
-
-FEAT-006 Tasks: 9/9 DONE. PR #35. Completion SHAs recorded in each `nazgul/tasks/TASK-056..064.md`.
-
-### FEAT-006 Completed (key SHAs)
-
-- **TASK-056** — DONE. Impl `2b9c308`, completion `40ab130`.
-- **TASK-061** — DONE. Impl `f25dc9d`, simplify/completion `f04dfc4`.
-- **TASK-057** — DONE (Cycle 2). Impl `a754e9f` + `d3bf817` + simplify `4799140`, completion `ffc7e3f`.
-- **TASK-058** — DONE (Cycle 1). Impl `c59600f`, simplify `5a20da1`.
-- **TASK-059** — DONE (Cycle 2). Impl `95a6066`, simplifies `dc8aac9`/`272ded8`/`12fffb6`, fix/completion `ee97d43`.
-- **TASK-060** — DONE (Cycle 1). Impl `ad607d6`, completion `0940957`.
-- **TASK-062** — DONE (Bugfix Cycle 3). Impl `af4d08a`, simplify `d6988f7`, fixes `2039654`/`32f75f7`, completion `d34f1b8`.
-- **TASK-063** — DONE (Fix-First Cycle 1). Impl `5dc88fa`, fix/completion `b365dbb`.
-- **TASK-064** — DONE (Fix-First Cycle 2). Impl `425b66b`, fix `d54e9f1`, completion `76a2798`.
-- **POST-LOOP** — documentation + release-manager → PR to main (#35).
-
-## Patches
-- [x] PATCH-001: Add NuGet download-count badges to README.md (sha: be0fa75)
+─── ◈ NEXT ─────────────────────────────────────────────
+  ◆ TASK-072 — Batched reconnect-replay (`IStreamProtocol` batch builders + chunked replay).
+  ◇ TASK-073 — Multi-symbol live L2 regression test (after 072).
+────────────────────────────────────────────────────────

@@ -1,17 +1,24 @@
-# PATCH-001: Add NuGet download-count badges to README.md
+---
+status: DONE
+---
 
-## Metadata
-- **Status**: DONE
-- **Created**: 2026-06-21T22:11:49Z
-- **Source**: /nazgul:patch
-- **Flags**: none
+# PATCH-001 — Post-loop documentation for FEAT-008
+
+**Type**: documentation
+**Created**: 2026-06-24
 
 ## Description
-Add NuGet download-count badges to README.md: (1) a downloads badge in the header badge row immediately after the ".NET 10.0" badge, using https://img.shields.io/nuget/dt/CryptoExchanges.Net.svg linking to the package; (2) a new "Downloads" column in the Supported Exchanges table, placed after the "Package" column, with a per-package downloads badge (https://img.shields.io/nuget/dt/CryptoExchanges.Net.<Exchange>?logo=nuget&label=downloads) for each Supported exchange (Binance, Bybit, OKX, Bitget, KuCoin) and "—" for the Coming soon rows (Coinbase, Kraken). Match the existing shields.io badge style. README.md only; no source/behavior change.
 
-## Subtasks
-1. Add header downloads badge after the .NET 10.0 badge linking to the CryptoExchanges.Net package.
-2. Add a "Downloads" column to the Supported Exchanges table after "Package", with per-package downloads badges for Supported rows and "—" for Coming soon rows.
+Post-loop documentation pass for FEAT-008 (stream control-message rate limit / multi-symbol
+streaming reconnect-loop fix). Adds CHANGELOG.md entry covering:
 
-## Implementation Log
-- Both subtasks applied to README.md.
+1. WebSocket multi-symbol streaming reconnect-loop fix (Binance + KuCoin)
+2. Binance combined-stream order-book decoder fix (data-envelope unwrap)
+
+## Files
+
+- `CHANGELOG.md` — added `### Fixed` entries under `## [Unreleased]`
+
+## Commits
+
+feat(FEAT-008): post-loop CHANGELOG entry for streaming reconnect-loop + order-book decode fix

@@ -54,7 +54,7 @@ index b19d471..fe331e9 100644
 +    HeartbeatPolicy Heartbeat,
 +    TimeSpan MinOutboundInterval = default);
 diff --git a/src/CryptoExchanges.Net.Http/Streaming/StreamEngine.cs b/src/CryptoExchanges.Net.Http/Streaming/StreamEngine.cs
-index 47910a2..0b4b263 100644
+index 47910a2..b3a10d9 100644
 --- a/src/CryptoExchanges.Net.Http/Streaming/StreamEngine.cs
 +++ b/src/CryptoExchanges.Net.Http/Streaming/StreamEngine.cs
 @@ -1,4 +1,5 @@
@@ -83,6 +83,24 @@ index 47910a2..0b4b263 100644
      private IWebSocketConnection? _socket;
      private Task? _pumpTask;
      private CancellationTokenSource? _pumpCts;
+@@ -121,7 +133,7 @@ internal sealed class StreamEngine : IAsyncDisposable
+     // Heartbeat / liveness
+     private CancellationTokenSource? _heartbeatCts;
+     private Task? _heartbeatTask;
+-    private volatile int _livenessFlag; // set to 1 on pong/liveness; watchdog clears to 0
++    private int _livenessFlag; // set to 1 on pong/liveness; watchdog clears to 0
+ 
+     // Reconnect backoff
+     private readonly BackoffSchedule _backoff;
+@@ -161,7 +173,7 @@ internal sealed class StreamEngine : IAsyncDisposable
+             options.BackoffMultiplier);
+     }
+ 
+-    // ── Public subscribe API (used by StreamClient in TASK-045) ───────────────
++    // ── Public subscribe API ──────────────────────────────────────────────────
+ 
+     /// <summary>
+     /// Subscribes a new stream, lazily opens the socket if necessary, and returns a
 @@ -172,6 +184,11 @@ internal sealed class StreamEngine : IAsyncDisposable
      /// <param name="handlers">The typed callback bundle.</param>
      /// <param name="ct">A token to cancel the subscribe operation.</param>
@@ -193,20 +211,32 @@ index 47910a2..0b4b263 100644
                      }
  #pragma warning disable CA1031 // intentional: replay failure for one subscription must not block others
                      catch (Exception ex)
-@@ -650,8 +712,11 @@ internal sealed class StreamEngine : IAsyncDisposable
+@@ -616,7 +678,10 @@ internal sealed class StreamEngine : IAsyncDisposable
+ 
+     private async Task ClientPingLoopAsync(HeartbeatPolicy policy, CancellationToken ct)
+     {
+-        Interlocked.Exchange(ref _livenessFlag, 1);
++        // Decode once per connection; payload is immutable for the lifetime of the connection.
++        var pingText = policy.PingFormat is PingFormat.Text or PingFormat.Json
++            ? Encoding.UTF8.GetString(policy.ClientPingPayload.Span)
++            : null;
+ 
+         using var watchdogCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+         var watchdogTask = WatchdogAsync(policy.Timeout, watchdogCts.Token);
+@@ -650,8 +715,10 @@ internal sealed class StreamEngine : IAsyncDisposable
                                  break;
                              case PingFormat.Text:
                              case PingFormat.Json:
+-                                var text = Encoding.UTF8.GetString(policy.ClientPingPayload.Span);
+-                                await _socket.SendTextAsync(text, ct).ConfigureAwait(false);
 +                                // Route through SendControlAsync so the ping is serialised against
 +                                // subscribe/replay sends (previously it ran outside _gate and could
 +                                // race ClientWebSocket.SendAsync on KuCoin) and is itself paced.
-                                 var text = Encoding.UTF8.GetString(policy.ClientPingPayload.Span);
--                                await _socket.SendTextAsync(text, ct).ConfigureAwait(false);
-+                                await SendControlAsync(text, ct).ConfigureAwait(false);
++                                await SendControlAsync(pingText!, ct).ConfigureAwait(false);
                                  break;
                          }
                          Interlocked.Exchange(ref _livenessFlag, 1);
-@@ -817,6 +882,7 @@ internal sealed class StreamEngine : IAsyncDisposable
+@@ -817,6 +884,7 @@ internal sealed class StreamEngine : IAsyncDisposable
          }
  
          _gate.Dispose();
@@ -229,34 +259,8 @@ index efa0afc..354512d 100644
      }
  
      /// <inheritdoc />
-diff --git a/tests/CryptoExchanges.Net.Http.Tests.Unit/Streaming/FakeStreamProtocol.cs b/tests/CryptoExchanges.Net.Http.Tests.Unit/Streaming/FakeStreamProtocol.cs
-index b1bc80e..a47c8c8 100644
---- a/tests/CryptoExchanges.Net.Http.Tests.Unit/Streaming/FakeStreamProtocol.cs
-+++ b/tests/CryptoExchanges.Net.Http.Tests.Unit/Streaming/FakeStreamProtocol.cs
-@@ -38,6 +38,12 @@ internal sealed class FakeStreamProtocol : IStreamProtocol
-         Interval: TimeSpan.FromSeconds(30),
-         Timeout: TimeSpan.FromSeconds(60));
- 
-+    /// <summary>
-+    /// Outbound-frame pacing floor carried on the <see cref="StreamConnectionInfo"/> returned by
-+    /// <see cref="ResolveConnectionAsync"/>. Defaults to <see cref="TimeSpan.Zero"/> (unthrottled).
-+    /// </summary>
-+    public TimeSpan MinOutboundInterval { get; set; } = TimeSpan.Zero;
-+
-     /// <summary>
-     /// Number of times <see cref="ResolveConnectionAsync"/> has been called.
-     /// Use to assert the engine calls resolve on every connect/reconnect.
-@@ -56,7 +62,7 @@ internal sealed class FakeStreamProtocol : IStreamProtocol
-     public ValueTask<StreamConnectionInfo> ResolveConnectionAsync(CancellationToken ct)
-     {
-         ResolveCount++;
--        var info = new StreamConnectionInfo(_endpoint, HeartbeatPolicy);
-+        var info = new StreamConnectionInfo(_endpoint, HeartbeatPolicy, MinOutboundInterval);
-         return new ValueTask<StreamConnectionInfo>(info);
-     }
- 
 diff --git a/tests/CryptoExchanges.Net.Http.Tests.Unit/Streaming/StreamEngineTests.cs b/tests/CryptoExchanges.Net.Http.Tests.Unit/Streaming/StreamEngineTests.cs
-index f18c6e6..9996b76 100644
+index f18c6e6..6921bb0 100644
 --- a/tests/CryptoExchanges.Net.Http.Tests.Unit/Streaming/StreamEngineTests.cs
 +++ b/tests/CryptoExchanges.Net.Http.Tests.Unit/Streaming/StreamEngineTests.cs
 @@ -1,4 +1,5 @@
@@ -265,7 +269,7 @@ index f18c6e6..9996b76 100644
  using System.Text;
  using AwesomeAssertions;
  using Xunit;
-@@ -936,4 +937,339 @@ public sealed class StreamEngineTests
+@@ -936,4 +937,340 @@ public sealed class StreamEngineTests
                  "DisposeAsync must trigger an unsubscribe wire message.");
          }
      }
@@ -578,12 +582,13 @@ index f18c6e6..9996b76 100644
 +
 +        public ValueTask DisposeAsync()
 +        {
-+            State = WebSocketState.Closed;
++            Dispose();
 +            return ValueTask.CompletedTask;
 +        }
 +
 +        public void Dispose()
 +        {
++            State = WebSocketState.Closed;
 +            lock (_semLock)
 +            {
 +                _available.Dispose();

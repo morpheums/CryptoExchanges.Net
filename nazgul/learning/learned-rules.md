@@ -8,7 +8,7 @@
 - **Status**: active
 - **Scope-Agents**: implementer, code-reviewer
 - **Scope-Globs**: src/**/*.cs
-- **Hits**: 9
+- **Hits**: 10
 - **Added**: 2026-06-18
 - **Evidence**: TASK-002 (code-reviewer REJECT@85 — BuildGetSignString/BuildPostSignString missing guards), TASK-005 (code-reviewer REJECT@97 — BybitHttpClient.GetAsync/PostAsync/DeleteAsync missing endpoint guard), TASK-003 (api-reviewer non-blocking concern on ctor params)
 
@@ -64,7 +64,7 @@ a REJECT. Correct reference: `OkxValueParsers.ParseMs` / `BitgetValueParsers.Par
 - **Status**: active
 - **Scope-Agents**: implementer, api-reviewer
 - **Scope-Globs**: src/**/*.cs
-- **Hits**: 5
+- **Hits**: 6
 - **Added**: 2026-06-18
 - **Evidence**: TASK-007 (api-reviewer REJECT@95 — BybitTimeSync.ApplyOffset null-checked offsetHolder but did not guard Length, causing IndexOutOfRangeException on new long[0]), TASK-015 (code-reviewer PASS@100 — OkxTimeSync.ApplyOffset correctly adds zero-length guard; unit test ApplyOffset_RejectsZeroLengthHolder), TASK-022 (code-reviewer PASS@100 — BitgetTimeSync.ApplyOffset zero-length guard confirmed present), TASK-059 (api-reviewer REJECT@95 — KucoinClientComposer.BuildResilientHttpClient null-checked offsetHolder but missed the Length guard before offsetHolder[0] access inside the signing closure; Fix-First commit ee97d43 added the guard + Array.Empty<long>() test)
 
@@ -86,7 +86,7 @@ client composers.
 - **Status**: active
 - **Scope-Agents**: implementer, code-reviewer
 - **Scope-Globs**: src/**/Services/*.cs, tests/**/*.cs
-- **Hits**: 7
+- **Hits**: 8
 - **Added**: 2026-06-18
 - **Evidence**: TASK-015 (code-reviewer REJECT@95 — GetCandlesticksAsync had zero test coverage; the missing test was paired with and hid the unguarded long.Parse bug at the exact same site), TASK-006 (api-reviewer/code-reviewer blocked on service methods with broken default-parameter behaviour that was undetected by insufficient test coverage)
 
@@ -188,7 +188,7 @@ fixture). Capturing one live frame (a few lines of WS client) is the cheapest ve
 - **Status**: active
 - **Scope-Agents**: implementer, code-reviewer
 - **Scope-Globs**: tests/**/*.cs
-- **Hits**: 1
+- **Hits**: 2
 - **Added**: 2026-06-21
 - **Evidence**: TASK-063 Cycle 1 (code-reviewer REJECT@90 — KucoinStreamingSmokeTests had a <remarks> block restating visible code: "no Thread.Sleep — uses TaskCompletionSource"; REJECT@85 — two boolean locals reconnectingFired/reconnectedFired silenced with `_ = x` discards, never asserted)
 

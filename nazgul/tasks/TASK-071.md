@@ -1,6 +1,6 @@
 ---
 id: TASK-071
-status: IMPLEMENTED
+status: DONE
 depends_on: []
 ---
 # TASK-071: Throttle + serialize outbound control frames in StreamEngine (`MinOutboundInterval` + `SendControlAsync`)
@@ -18,7 +18,7 @@ depends_on: []
 - **Claimed at**: 2026-06-23T22:50:00Z
 - **Base SHA**: ac49fca0717de18899a918d9b25b91212a38fadc
 - **Implemented at**: 2026-06-23T23:10:00Z
-- **Completed at**:
+- **Completed at**: 2026-06-23T23:55:00Z
 - **Blocked at**:
 - **Retry count**: 0/3
 - **Test failures**: 0
@@ -147,6 +147,7 @@ CA2213 dispose of `_sendSemaphore`). Strict layering: the pacing primitive lives
 ## Commits
 
 - `2d2a3aaa271cd2b4490962323afb9f2fe103593a` — feat(FEAT-008): throttle + serialize outbound control frames in StreamEngine
+- `a45059f6b5b4595a670e9a775fe5f77e1ad5a16f` — feat(FEAT-008): post-review simplify (per-task simplifier — 5 safe fixes; build 0/0, tests green)
 
 ## Implementation Log
 
@@ -181,4 +182,11 @@ CA2213 dispose of `_sendSemaphore`). Strict layering: the pacing primitive lives
 
 ## Review Results
 
-- (pending)
+- **Gate decision**: ✦ APPROVED (require_all_approve satisfied — all 4 reviewers APPROVED). 2026-06-23.
+- **Pre-checks**: test (197 passed / 0 failed) ✦, lint (0W/0E) ✦, build (0W/0E) ✦, smoke (not configured — skipped).
+- **Simplify pass (Step 0)**: 5 safe fixes applied (removed redundant `volatile` on `_livenessFlag`; hoisted `Encoding.UTF8.GetString` out of the ping loop; removed duplicate `Interlocked.Exchange`; stripped a stale task-id banner reference; fixed `RecordingWebSocketConnection.DisposeAsync` to release the semaphore). Build 0/0, tests green. Squash commit `a45059f6`.
+- **architect-reviewer**: ✦ APPROVED — layering intact (pacing primitive in Http, per-venue values in protocols); advisory Step-1 conformance verified; no public API change; no deadlock (no `_sendSemaphore`→`_gate` ordering). Non-blocking CONCERNs: memory-visibility comment suggestion (conf 55); Step-2 batching deferred (conf 70, → TASK-072, already planned). See `nazgul/reviews/TASK-071/architect-reviewer.md`.
+- **code-reviewer**: ✦ APPROVED — concurrency/dispose correctness confirmed; LR-001 guard present; LR-005 (5 tests) and LR-010 satisfied; CA2007/CA2213 clean. One non-blocking CONCERN (conf 72): `SubscribeAsync` `<remarks>` borderline-LEAN but describes caller-observable behavior. See `nazgul/reviews/TASK-071/code-reviewer.md`.
+- **security-reviewer**: ✦ APPROVED — no credential/signing path touched; no secret leakage; linked-CTS disposed per call (no leak); bounded waiters; dispose-mid-delay cancels cleanly. Non-blocking CONCERNs only (conf ≤ 60). See `nazgul/reviews/TASK-071/security-reviewer.md`.
+- **api-reviewer**: ✦ APPROVED — all touched types `internal`; public surface byte-identical; additive defaulted record param (TimeSpan.Zero = unthrottled); no SemVer/NuGet impact; LR-004 N/A. See `nazgul/reviews/TASK-071/api-reviewer.md`.
+- **Rule citations bumped**: LR-001, LR-004, LR-005, LR-010.

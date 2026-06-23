@@ -1,8 +1,8 @@
 # Nazgul Plan — FEAT-008
 
 ## Recovery Pointer
-**Active task**: TASK-071 (IMPLEMENTED) — Throttle + serialize outbound control frames in `StreamEngine`.
-**Next action**: Review gate for TASK-071 (commit `2d2a3aa`; diff at `nazgul/reviews/TASK-071/diff.patch`). On APPROVE, TASK-072 becomes READY. TASK-073 stays PLANNED until 072 is DONE.
+**Active task**: TASK-072 (READY) — Batched reconnect-replay (`IStreamProtocol` batch builders + chunked `ReconnectCoreAsync`).
+**Next action**: Implementer claims TASK-072 (Wave 2) on branch `feat/FEAT-008-stream-control-msg-rate-limit`. TASK-071 is DONE (review gate ✦ APPROVED by all 4 reviewers; commits `2d2a3aa` + simplify `a45059f6`). TASK-073 stays PLANNED until 072 is DONE.
 
 ─── ◈ NAZGUL ▸ PLANNING ────────────────────────────────
 
@@ -69,11 +69,11 @@ Authoritative inputs (read fully before any task):
 
 | Task     | Status     | Wave | Description                                                                  |
 |----------|------------|------|------------------------------------------------------------------------------|
-| TASK-071 | ◆ IMPLEMENTED | 1 | `StreamConnectionInfo.MinOutboundInterval` + `SendControlAsync` (throttle/serialize) + route all send sites + Binance 200ms/KuCoin 100ms values + unit tests (commit `2d2a3aa`) |
-| TASK-072 | ◇ PLANNED  | 2    | `IStreamProtocol` batch builders (default-null) + Binance/KuCoin impls + chunked batched `ReconnectCoreAsync` replay + unit tests |
+| TASK-071 | ✦ DONE     | 1    | `StreamConnectionInfo.MinOutboundInterval` + `SendControlAsync` (throttle/serialize) + route all send sites + Binance 200ms/KuCoin 100ms values + unit tests. Review ✦ APPROVED (4/4). Commits `2d2a3aa` + simplify `a45059f6`. |
+| TASK-072 | ◆ READY    | 2    | `IStreamProtocol` batch builders (default-null) + Binance/KuCoin impls + chunked batched `ReconnectCoreAsync` replay + unit tests |
 | TASK-073 | ◇ PLANNED  | 3    | Multi-symbol Binance (≥17) + KuCoin (≥13) L2 order-book LIVE regression test (Integration, self-skip) |
 
-Tasks: 0/3 DONE. ◆ TASK-071 READY.
+Tasks: 1/3 DONE. ◆ TASK-072 READY.
 
 ## Wave Groups
 
@@ -85,12 +85,12 @@ holds exactly one task and runs sequentially.
 ### Wave 1
 - **TASK-071** — Throttling primitive (`MinOutboundInterval`) + `SendControlAsync` + route every send
   site + per-venue interval values + unit tests. No deps. Touches `StreamConnectionInfo.cs`,
-  `StreamEngine.cs`, both protocol files, `StreamEngineTests.cs`.
+  `StreamEngine.cs`, both protocol files, `StreamEngineTests.cs`. **DONE.**
 
 ### Wave 2
 - **TASK-072** — Batch builders + chunked batched reconnect replay + unit tests. **Depends on
   TASK-071** (`SendControlAsync` is the dispatch path for batched frames). File overlap with TASK-071
-  on `StreamEngine.cs` + both protocol files → must follow sequentially.
+  on `StreamEngine.cs` + both protocol files → must follow sequentially. **READY.**
 
 ### Wave 3
 - **TASK-073** — Multi-symbol live L2 regression test (both venues). **Depends on TASK-071 + TASK-072**
@@ -126,16 +126,22 @@ Architect advisory mapping: Step 1 (Throttling) → TASK-071; Step 2 (Batching) 
 reproducer → TASK-073. Risk register: concurrent-send + dispose-during-delay → TASK-071;
 reconnect-replay burst → TASK-072.
 
+## Completed
+
+- **TASK-071** — Throttle + serialize outbound control frames in `StreamEngine`. DONE 2026-06-23.
+  Review gate ✦ APPROVED (architect / code / security / api — all 4). Pre-checks: test 197✦ / lint 0W0E✦ /
+  build 0W0E✦ / smoke n-a. Commits `2d2a3aa` (impl) + `a45059f6` (per-task simplify). Evidence:
+  `nazgul/reviews/TASK-071/{architect,code,security,api}-reviewer.md`.
+
 ## Recovery Pointer
 
-- **Current stage**: Planning complete — 3 tasks written; TASK-071 READY, TASK-072/073 PLANNED.
-- **Next action**: Implementer claims TASK-071 (Wave 1) on branch `feat/FEAT-008-stream-control-msg-rate-limit`.
-- **Active task**: TASK-071.
+- **Current stage**: Loop — TASK-071 DONE; TASK-072 READY (Wave 2).
+- **Next action**: Implementer claims TASK-072 (Wave 2) on branch `feat/FEAT-008-stream-control-msg-rate-limit`.
+- **Active task**: TASK-072.
 - **Files are truth**: `nazgul/tasks/TASK-071..073.md` carry full state; each manifest's frontmatter
   `status:` is the canonical record.
 
 ─── ◈ NEXT ─────────────────────────────────────────────
-  ◆ TASK-071 — Throttle + serialize outbound control frames in StreamEngine.
-  ◇ TASK-072 — Batched reconnect-replay (after 071).
-  ◇ TASK-073 — Multi-symbol live L2 regression test (after 071 + 072).
+  ◆ TASK-072 — Batched reconnect-replay (`IStreamProtocol` batch builders + chunked replay).
+  ◇ TASK-073 — Multi-symbol live L2 regression test (after 072).
 ────────────────────────────────────────────────────────

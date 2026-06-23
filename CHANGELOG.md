@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+---
+
+## [0.5.0-preview.2] — 2026-06-24
+
 ### Fixed
 
 - **WebSocket multi-symbol streaming — reconnect loop on subscribe burst (Binance, KuCoin)**
@@ -147,7 +151,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Account operations: balances, trade history
 - Comprehensive unit and integration test suite
 
-[Unreleased]: https://github.com/OrodruinLabs/CryptoExchanges.Net/compare/v0.5.0-preview.1...HEAD
+[Unreleased]: https://github.com/OrodruinLabs/CryptoExchanges.Net/compare/v0.5.0-preview.2...HEAD
+[0.5.0-preview.2]: https://github.com/OrodruinLabs/CryptoExchanges.Net/compare/v0.5.0-preview.1...v0.5.0-preview.2
 [0.5.0-preview.1]: https://github.com/OrodruinLabs/CryptoExchanges.Net/compare/v0.4.0-preview.1...v0.5.0-preview.1
 [0.4.0-preview.1]: https://github.com/OrodruinLabs/CryptoExchanges.Net/compare/v0.3.0-preview.1...v0.4.0-preview.1
 [0.3.0-preview.1]: https://github.com/OrodruinLabs/CryptoExchanges.Net/compare/v0.2.0-preview.1...v0.3.0-preview.1

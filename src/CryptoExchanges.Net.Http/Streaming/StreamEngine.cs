@@ -75,7 +75,7 @@ internal sealed class StreamEngine : IAsyncDisposable
         LoggerMessage.Define<string?>(LogLevel.Warning, new EventId(11, "ReplayFailed"), "Failed to replay subscribe for routing key '{Key}' on reconnect.");
 
     private static readonly Action<ILogger, int, int, Exception?> s_logBatchedReplay =
-        LoggerMessage.Define<int, int>(LogLevel.Information, new EventId(18, "BatchedReplay"), "Replaying {Count} subscriptions in {Frames} batched frame(s) on reconnect.");
+        LoggerMessage.Define<int, int>(LogLevel.Information, new EventId(18, "BatchedReplay"), "Replaying {Count} subscriptions in {Frames} frame(s) on reconnect.");
 
     private static readonly Action<ILogger, Exception?> s_logSocketCloseException =
         LoggerMessage.Define(LogLevel.Debug, new EventId(12, "SocketCloseException"), "Socket close raised an exception during idle-close (ignored).");

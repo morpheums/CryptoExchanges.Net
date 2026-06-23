@@ -137,7 +137,6 @@ internal sealed class KucoinStreamProtocol : IStreamProtocol
     private string? BuildBatch(IReadOnlyList<StreamRequest> requests, string type)
     {
         ArgumentNullException.ThrowIfNull(requests);
-        ArgumentException.ThrowIfNullOrWhiteSpace(type);
         if (requests.Count == 0)
             return null;
 
@@ -145,8 +144,10 @@ internal sealed class KucoinStreamProtocol : IStreamProtocol
         var colon = firstTopic.LastIndexOf(':');
         var channelPrefix = firstTopic[..colon];
 
+        // Seed with the already-computed first topic to avoid a redundant BuildTopic call at i=0.
         var symbols = new StringBuilder();
-        for (var i = 0; i < requests.Count; i++)
+        symbols.Append(firstTopic.AsSpan(colon + 1));
+        for (var i = 1; i < requests.Count; i++)
         {
             var topic = BuildTopic(requests[i]);
             var sep = topic.LastIndexOf(':');
@@ -154,8 +155,7 @@ internal sealed class KucoinStreamProtocol : IStreamProtocol
             if (!topic.AsSpan(0, sep).SequenceEqual(channelPrefix))
                 return null;
 
-            if (i > 0)
-                symbols.Append(',');
+            symbols.Append(',');
             symbols.Append(topic.AsSpan(sep + 1));
         }
 

@@ -1,6 +1,6 @@
 ---
 id: TASK-072
-status: IMPLEMENTED
+status: IN_PROGRESS
 depends_on: [TASK-071]
 ---
 # TASK-072: Batched reconnect-replay — `IStreamProtocol` batch builders + Binance/KuCoin impls + batched `ReconnectCoreAsync`

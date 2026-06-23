@@ -132,7 +132,8 @@ internal sealed class BinanceStreamProtocol : IStreamProtocol
         if (requests.Count == 0)
             return null;
 
-        var builder = new StringBuilder();
+        // Pre-size to avoid resizes: prefix (~20) + method + per-token avg (~20 chars) + suffix (~10).
+        var builder = new StringBuilder(method.Length + requests.Count * 20 + 32);
         builder.Append("{\"method\":\"").Append(method).Append("\",\"params\":[");
         for (var i = 0; i < requests.Count; i++)
         {

@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Net.WebSockets;
 using System.Text;
 using AwesomeAssertions;
 using Xunit;
@@ -934,6 +935,341 @@ public sealed class StreamEngineTests
             var allSent = fake.SentText.ToArray();
             allSent.Should().Contain(m => m.Contains("UNSUBSCRIBE"),
                 "DisposeAsync must trigger an unsubscribe wire message.");
+        }
+    }
+
+
+    // ── TASK-071: outbound control-frame throttling + serialisation ───────────
+
+    [Fact]
+    public async Task Engine_Throttle_InitialMultiSubscribe_FramesSpacedByMinOutboundInterval()
+    {
+        var interval = TimeSpan.FromMilliseconds(120);
+        var protocol = new FakeStreamProtocol { MinOutboundInterval = interval };
+        var recording = new RecordingWebSocketConnection();
+        var engine = BuildEngineWith(protocol, recording);
+
+        await using (engine)
+        {
+            // Subscribe to three distinct routing keys; each subscribe sends one control frame.
+            for (var i = 0; i < 3; i++)
+            {
+                protocol.NextRoutingKey = $"btcusdt@ticker{i}";
+                await engine.SubscribeAsync(
+                    new StreamRequest(StreamKind.Ticker, "BTCUSDT"),
+                    MakeHandlers(),
+                    TestContext.Current.CancellationToken);
+            }
+
+            var stamps = recording.SendStartStamps.ToArray();
+            stamps.Should().HaveCountGreaterThanOrEqualTo(3, "each subscribe sends one control frame.");
+
+            // Consecutive sends must be spaced by at least the interval (minus a scheduler tolerance).
+            var tolerance = TimeSpan.FromMilliseconds(30);
+            for (var i = 1; i < stamps.Length; i++)
+            {
+                var gap = stamps[i] - stamps[i - 1];
+                gap.Should().BeGreaterThanOrEqualTo(interval - tolerance,
+                    "consecutive control frames must be paced by MinOutboundInterval.");
+            }
+        }
+    }
+
+    [Fact]
+    public async Task Engine_Throttle_SendsAreSerialised_MaxConcurrencyOne()
+    {
+        var protocol = new FakeStreamProtocol { MinOutboundInterval = TimeSpan.FromMilliseconds(40) };
+        var recording = new RecordingWebSocketConnection { SendDuration = TimeSpan.FromMilliseconds(60) };
+        var engine = BuildEngineWith(protocol, recording);
+
+        await using (engine)
+        {
+            // Fire several subscribes concurrently — without _sendSemaphore their SendTextAsync
+            // calls would overlap inside the recording fake.
+            var tasks = new List<Task>();
+            for (var i = 0; i < 4; i++)
+            {
+                var key = $"btcusdt@ticker{i}";
+                tasks.Add(Task.Run(async () =>
+                {
+                    // Each task sets its key immediately before subscribing; the engine serialises
+                    // the actual sends, so even racing callers cannot overlap a SendTextAsync.
+                    protocol.NextRoutingKey = key;
+                    await engine.SubscribeAsync(
+                        new StreamRequest(StreamKind.Ticker, "BTCUSDT"),
+                        MakeHandlers(),
+                        TestContext.Current.CancellationToken);
+                }, TestContext.Current.CancellationToken));
+            }
+
+            await Task.WhenAll(tasks);
+
+            recording.MaxObservedConcurrency.Should().Be(1,
+                "SendControlAsync must serialise all sends — never two SendTextAsync in flight.");
+        }
+    }
+
+    [Fact]
+    public async Task Engine_Throttle_ZeroInterval_PreservesUnthrottledBehavior()
+    {
+        var protocol = new FakeStreamProtocol { MinOutboundInterval = TimeSpan.Zero };
+        var recording = new RecordingWebSocketConnection();
+        var engine = BuildEngineWith(protocol, recording);
+
+        await using (engine)
+        {
+            var start = DateTimeOffset.UtcNow;
+            for (var i = 0; i < 5; i++)
+            {
+                protocol.NextRoutingKey = $"btcusdt@ticker{i}";
+                await engine.SubscribeAsync(
+                    new StreamRequest(StreamKind.Ticker, "BTCUSDT"),
+                    MakeHandlers(),
+                    TestContext.Current.CancellationToken);
+            }
+            var elapsed = DateTimeOffset.UtcNow - start;
+
+            recording.SendStartStamps.Should().HaveCountGreaterThanOrEqualTo(5,
+                "all five subscribe frames must still be sent.");
+            elapsed.Should().BeLessThan(TimeSpan.FromMilliseconds(500),
+                "with MinOutboundInterval == Zero the engine must not artificially delay sends.");
+        }
+    }
+
+    [Fact]
+    public async Task Engine_Throttle_ReconnectReplay_IsPaced()
+    {
+        var interval = TimeSpan.FromMilliseconds(120);
+        var protocol = new FakeStreamProtocol { MinOutboundInterval = interval };
+        var recording = new RecordingWebSocketConnection();
+        var options = new StreamEngineOptions
+        {
+            IdleCloseDelay = TimeSpan.FromSeconds(5),
+            BackoffInitial = TimeSpan.FromMilliseconds(10),
+            BackoffMax = TimeSpan.FromMilliseconds(30),
+            BackoffMultiplier = 2.0,
+        };
+        var engine = BuildEngineWith(protocol, recording, options);
+
+        await using (engine)
+        {
+            // Register three distinct subscriptions in the replay set.
+            for (var i = 0; i < 3; i++)
+            {
+                protocol.NextRoutingKey = $"btcusdt@ticker{i}";
+                await engine.SubscribeAsync(
+                    new StreamRequest(StreamKind.Ticker, "BTCUSDT"),
+                    MakeHandlers(),
+                    TestContext.Current.CancellationToken);
+            }
+
+            recording.ClearStamps();
+
+            // Force a reconnect; the engine replays all three subscribes.
+            recording.SimulateDisconnect();
+
+            var deadline = Task.Delay(5000, TestContext.Current.CancellationToken);
+            while (recording.SendStartStamps.Length < 3 && !deadline.IsCompleted)
+                await Task.Delay(20, TestContext.Current.CancellationToken);
+
+            var stamps = recording.SendStartStamps.ToArray();
+            stamps.Length.Should().BeGreaterThanOrEqualTo(3, "all three subscriptions must replay.");
+
+            var tolerance = TimeSpan.FromMilliseconds(30);
+            for (var i = 1; i < stamps.Length; i++)
+            {
+                var gap = stamps[i] - stamps[i - 1];
+                gap.Should().BeGreaterThanOrEqualTo(interval - tolerance,
+                    "reconnect-replay frames must also be paced by MinOutboundInterval.");
+            }
+        }
+    }
+
+    [Fact]
+    public async Task Engine_Throttle_DisposeDuringDelay_CompletesCleanly()
+    {
+        var interval = TimeSpan.FromMilliseconds(400);
+        var payload = Encoding.UTF8.GetBytes("{\"op\":\"ping\"}");
+        var protocol = new FakeStreamProtocol
+        {
+            MinOutboundInterval = interval,
+            // Client-ping loop sends a control frame quickly; it routes through SendControlAsync
+            // and will be mid pacing-delay when we dispose.
+            HeartbeatPolicy = new HeartbeatPolicy(
+                Direction: HeartbeatDirection.ClientPing,
+                Interval: TimeSpan.FromMilliseconds(30),
+                Timeout: TimeSpan.FromSeconds(10),
+                ClientPingPayload: payload,
+                PingFormat: PingFormat.Text),
+        };
+        var recording = new RecordingWebSocketConnection();
+        var engine = BuildEngineWith(protocol, recording);
+
+        var unobserved = new ConcurrentQueue<Exception>();
+        void Handler(object? s, UnobservedTaskExceptionEventArgs e) => unobserved.Enqueue(e.Exception);
+        TaskScheduler.UnobservedTaskException += Handler;
+        try
+        {
+            await engine.SubscribeAsync(
+                new StreamRequest(StreamKind.Ticker, "BTCUSDT"),
+                MakeHandlers(),
+                TestContext.Current.CancellationToken);
+
+            // Let the ping loop enter a pacing delay, then dispose mid-delay.
+            await Task.Delay(80, TestContext.Current.CancellationToken);
+
+            var dispose = engine.DisposeAsync();
+            await dispose.AsTask().WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
+
+            // Force any abandoned Task.Delay continuations to be collected/observed.
+            await Task.Delay(50, TestContext.Current.CancellationToken);
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            GC.Collect();
+
+            unobserved.Should().BeEmpty("dispose mid-throttle must cancel the paced send cleanly with no unobserved exception.");
+        }
+        finally
+        {
+            TaskScheduler.UnobservedTaskException -= Handler;
+        }
+    }
+
+    // ── TASK-071 test helpers ─────────────────────────────────────────────────
+
+    private static StreamEngine BuildEngineWith(
+        FakeStreamProtocol protocol,
+        IWebSocketConnection fake,
+        StreamEngineOptions? options = null)
+    {
+        options ??= new StreamEngineOptions
+        {
+            IdleCloseDelay = TimeSpan.FromSeconds(5),
+            BackoffInitial = TimeSpan.FromMilliseconds(10),
+            BackoffMax = TimeSpan.FromMilliseconds(50),
+            BackoffMultiplier = 2.0,
+        };
+
+        var registry = new StreamDecoderRegistry();
+        registry.Register(StreamKind.Ticker, bytes => Encoding.UTF8.GetString(bytes.Span));
+        registry.Register(StreamKind.Trade, bytes => Encoding.UTF8.GetString(bytes.Span));
+        registry.Register(StreamKind.OrderBook, bytes => Encoding.UTF8.GetString(bytes.Span));
+        registry.Register(StreamKind.Kline, bytes => Encoding.UTF8.GetString(bytes.Span));
+
+        return new StreamEngine(protocol, registry, options, () => fake, NullLogger.Instance);
+    }
+
+    /// <summary>
+    /// An <see cref="IWebSocketConnection"/> test double that records the start instant of every
+    /// <see cref="SendTextAsync"/> call (to assert pacing) and the maximum number of sends ever in
+    /// flight simultaneously (to assert serialisation). An optional <see cref="SendDuration"/>
+    /// widens the in-flight window so overlap is detectable if serialisation were broken.
+    /// </summary>
+    private sealed class RecordingWebSocketConnection : IWebSocketConnection, IDisposable
+    {
+        private readonly ConcurrentQueue<DateTimeOffset> _stamps = new();
+        private int _inFlight;
+        private int _maxConcurrency;
+
+        public TimeSpan SendDuration { get; set; } = TimeSpan.Zero;
+
+        public DateTimeOffset[] SendStartStamps => _stamps.ToArray();
+
+        public int MaxObservedConcurrency => Volatile.Read(ref _maxConcurrency);
+
+        public WebSocketState State { get; private set; } = WebSocketState.None;
+
+        public bool IsOpen => State == WebSocketState.Open;
+
+        public Task ConnectAsync(Uri uri, CancellationToken ct)
+        {
+            State = WebSocketState.Open;
+            lock (_semLock)
+            {
+                while (_inbound.TryDequeue(out _)) { }
+                var old = _available;
+                _available = new SemaphoreSlim(0);
+                old.Dispose();
+            }
+            return Task.CompletedTask;
+        }
+
+        public async Task SendTextAsync(string text, CancellationToken ct)
+        {
+            _stamps.Enqueue(DateTimeOffset.UtcNow);
+            var now = Interlocked.Increment(ref _inFlight);
+            UpdateMax(now);
+            try
+            {
+                if (SendDuration > TimeSpan.Zero)
+                    await Task.Delay(SendDuration, ct).ConfigureAwait(false);
+            }
+            finally
+            {
+                Interlocked.Decrement(ref _inFlight);
+            }
+        }
+
+        private void UpdateMax(int observed)
+        {
+            int current;
+            do
+            {
+                current = Volatile.Read(ref _maxConcurrency);
+                if (observed <= current) return;
+            }
+            while (Interlocked.CompareExchange(ref _maxConcurrency, observed, current) != current);
+        }
+
+        public Task SendPingAsync(ReadOnlyMemory<byte> payload, CancellationToken ct) => Task.CompletedTask;
+
+        public Task SendPongAsync(ReadOnlyMemory<byte> payload, CancellationToken ct) => Task.CompletedTask;
+
+        private readonly ConcurrentQueue<ReadOnlyMemory<byte>?> _inbound = new();
+        private SemaphoreSlim _available = new(0);
+        private readonly object _semLock = new();
+
+        public async ValueTask<ReadOnlyMemory<byte>?> ReceiveAsync(CancellationToken ct)
+        {
+            SemaphoreSlim sem;
+            lock (_semLock) { sem = _available; }
+            await sem.WaitAsync(ct).ConfigureAwait(false);
+            _inbound.TryDequeue(out var frame);
+            return frame;
+        }
+
+        public Task CloseAsync(WebSocketCloseStatus status, string description, CancellationToken ct)
+        {
+            State = WebSocketState.Closed;
+            return Task.CompletedTask;
+        }
+
+        public ValueTask DisposeAsync()
+        {
+            State = WebSocketState.Closed;
+            return ValueTask.CompletedTask;
+        }
+
+        public void Dispose()
+        {
+            lock (_semLock)
+            {
+                _available.Dispose();
+            }
+        }
+
+        public void ClearStamps()
+        {
+            while (_stamps.TryDequeue(out _)) { }
+        }
+
+        public void SimulateDisconnect()
+        {
+            State = WebSocketState.Closed;
+            SemaphoreSlim sem;
+            lock (_semLock) { sem = _available; }
+            _inbound.Enqueue(null);
+            sem.Release();
         }
     }
 }

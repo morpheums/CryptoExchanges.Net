@@ -50,7 +50,9 @@ internal sealed class KucoinStreamProtocol : IStreamProtocol
             ClientPingPayload: pingPayload,
             PingFormat: PingFormat.Json);
 
-        return new StreamConnectionInfo(uri, heartbeat);
+        // The bullet-public response carries no outbound rate-limit field, so use a safe 100 ms
+        // floor — KuCoin is more lenient than Binance, and 10 msg/s stays well inside its limits.
+        return new StreamConnectionInfo(uri, heartbeat, MinOutboundInterval: TimeSpan.FromMilliseconds(100));
     }
 
     /// <inheritdoc />

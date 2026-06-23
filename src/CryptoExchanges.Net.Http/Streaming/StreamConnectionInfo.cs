@@ -1,12 +1,13 @@
 namespace CryptoExchanges.Net.Http.Streaming;
 
 /// <summary>
-/// Immutable record carrying the resolved WebSocket endpoint URI and the heartbeat
-/// policy for a single connection attempt. Returned by
+/// Immutable record carrying the resolved WebSocket endpoint URI, the heartbeat
+/// policy, and the outbound-frame pacing floor for a single connection attempt. Returned by
 /// <see cref="IStreamProtocol.ResolveConnectionAsync"/> before every connect and reconnect.
 /// </summary>
 /// <remarks>
-/// Constraint K1: this record carries ONLY <see cref="Uri"/> and <see cref="HeartbeatPolicy"/>.
+/// Constraint K1: this record carries ONLY venue/transport policy data —
+/// <see cref="Uri"/>, <see cref="HeartbeatPolicy"/>, and <see cref="TimeSpan"/> pacing.
 /// No <c>Core.Models</c> and no DeltaMapper references are permitted under
 /// <c>CryptoExchanges.Net.Http</c>. The engine stays byte/opaque.
 /// </remarks>
@@ -20,4 +21,14 @@ namespace CryptoExchanges.Net.Http.Streaming;
 /// send, and pong logic from this policy (binding constraint C1 — the protocol only
 /// describes the policy; no timers or threads belong in the protocol).
 /// </param>
-internal sealed record StreamConnectionInfo(Uri Endpoint, HeartbeatPolicy Heartbeat);
+/// <param name="MinOutboundInterval">
+/// The minimum wall-clock spacing the engine enforces between consecutive outbound control
+/// frames (subscribe / unsubscribe / client-ping / reconnect-replay) on this connection.
+/// <see cref="TimeSpan.Zero"/> (the default) means unthrottled — the engine sends back to back.
+/// This is a <strong>venue property</strong> (like <see cref="Heartbeat"/>), set by the protocol
+/// to honour the exchange's inbound message-rate limit; it is never a consumer setting.
+/// </param>
+internal sealed record StreamConnectionInfo(
+    Uri Endpoint,
+    HeartbeatPolicy Heartbeat,
+    TimeSpan MinOutboundInterval = default);

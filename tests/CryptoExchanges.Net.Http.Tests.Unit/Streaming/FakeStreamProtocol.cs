@@ -39,6 +39,12 @@ internal sealed class FakeStreamProtocol : IStreamProtocol
         Timeout: TimeSpan.FromSeconds(60));
 
     /// <summary>
+    /// Outbound-frame pacing floor carried on the <see cref="StreamConnectionInfo"/> returned by
+    /// <see cref="ResolveConnectionAsync"/>. Defaults to <see cref="TimeSpan.Zero"/> (unthrottled).
+    /// </summary>
+    public TimeSpan MinOutboundInterval { get; set; } = TimeSpan.Zero;
+
+    /// <summary>
     /// Number of times <see cref="ResolveConnectionAsync"/> has been called.
     /// Use to assert the engine calls resolve on every connect/reconnect.
     /// </summary>
@@ -56,7 +62,7 @@ internal sealed class FakeStreamProtocol : IStreamProtocol
     public ValueTask<StreamConnectionInfo> ResolveConnectionAsync(CancellationToken ct)
     {
         ResolveCount++;
-        var info = new StreamConnectionInfo(_endpoint, HeartbeatPolicy);
+        var info = new StreamConnectionInfo(_endpoint, HeartbeatPolicy, MinOutboundInterval);
         return new ValueTask<StreamConnectionInfo>(info);
     }
 

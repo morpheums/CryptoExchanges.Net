@@ -32,7 +32,12 @@ internal sealed class BinanceStreamProtocol : IStreamProtocol
     {
         ArgumentNullException.ThrowIfNull(options);
         var endpoint = new Uri(options.StreamBaseUrl.TrimEnd('/') + "/stream");
-        _connectionInfo = new StreamConnectionInfo(endpoint, s_heartbeatPolicy);
+        // Binance closes the socket with PolicyViolation above 5 inbound msgs/sec; 200 ms between
+        // control frames yields 5 msg/s with margin.
+        _connectionInfo = new StreamConnectionInfo(
+            endpoint,
+            s_heartbeatPolicy,
+            MinOutboundInterval: TimeSpan.FromMilliseconds(200));
     }
 
     /// <inheritdoc/>

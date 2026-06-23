@@ -54,7 +54,9 @@
     {
       "feat_id": "FEAT-008",
       "objective": "Fix the WebSocket public market-data streaming bug in CryptoExchanges.Net.Http.Streaming (StreamEngine): subscribing to N symbols emits an unpaced N-message control-frame burst that Binance rejects with PolicyViolation \"Too many requests\" (>5 msgs/sec), closing the socket before any data; reconnect replays the full subscribe-set as another burst, yielding an infinite reconnect loop with no order-book callback. Fix the shared StreamEngine so outbound control messages (subscribe/unsubscribe + reconnect replay) respect a per-venue message-rate limit (batching and/or pacing, configurable per exchange; Binance ~5/sec, KuCoin its own limit). Add a multi-symbol Binance+KuCoin L2 order-book regression test asserting at least one book update is delivered. Transport/wire/URL/keep-alive verified healthy — do not change those.",
-      "started_at": "2026-06-23T21:28:47Z"
+      "started_at": "2026-06-23T21:28:47Z",
+      "completed_at": "2026-06-23T23:27:52Z",
+      "pr": "#42"
     }
   ],
   "max_iterations": 40,

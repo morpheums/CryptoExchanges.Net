@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using CryptoExchanges.Net.Core.Streaming;
 using CryptoExchanges.Net.Http.Streaming;
 
@@ -51,6 +52,20 @@ internal sealed class FakeStreamProtocol : IStreamProtocol
     public int ResolveCount { get; private set; }
 
     /// <summary>
+    /// When <see langword="true"/> (the default) <see cref="BuildSubscribeBatch"/> /
+    /// <see cref="BuildUnsubscribeBatch"/> return a recognisable batched frame
+    /// (<c>SUBSCRIBE_BATCH:{count}</c>). Set to <see langword="false"/> to return
+    /// <see langword="null"/> and exercise the engine's per-frame fallback path.
+    /// </summary>
+    public bool SupportsBatch { get; set; } = true;
+
+    /// <summary>
+    /// Records the size of every chunk the engine passes to <see cref="BuildSubscribeBatch"/>,
+    /// in call order. Use to assert the engine chunks the replay set at the venue cap (≤100).
+    /// </summary>
+    public ConcurrentQueue<int> SubscribeBatchChunkSizes { get; } = new();
+
+    /// <summary>
     /// Initialises the fake with an optional endpoint URI (defaults to <c>wss://fake.test/ws</c>).
     /// </summary>
     public FakeStreamProtocol(Uri? endpoint = null)
@@ -77,6 +92,22 @@ internal sealed class FakeStreamProtocol : IStreamProtocol
     /// <inheritdoc/>
     public string BuildUnsubscribe(StreamRequest request)
         => $"UNSUBSCRIBE:{NextRoutingKey}";
+
+    /// <inheritdoc/>
+    public string? BuildSubscribeBatch(IReadOnlyList<StreamRequest> requests)
+    {
+        if (!SupportsBatch)
+            return null;
+        SubscribeBatchChunkSizes.Enqueue(requests.Count);
+        // Echo the routing keys so K2 replay assertions can find the resubscribed streams.
+        return $"SUBSCRIBE_BATCH:{requests.Count}:{string.Join(',', requests.Select(RoutingKeyFor))}";
+    }
+
+    /// <inheritdoc/>
+    public string? BuildUnsubscribeBatch(IReadOnlyList<StreamRequest> requests)
+        => SupportsBatch
+            ? $"UNSUBSCRIBE_BATCH:{requests.Count}:{string.Join(',', requests.Select(RoutingKeyFor))}"
+            : null;
 
     /// <inheritdoc/>
     public StreamFrame Classify(ReadOnlySpan<byte> frame)

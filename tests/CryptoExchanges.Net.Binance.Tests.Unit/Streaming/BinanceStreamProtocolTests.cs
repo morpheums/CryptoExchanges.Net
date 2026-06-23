@@ -122,6 +122,88 @@ public class BinanceStreamProtocolTests
         doc.RootElement.GetProperty("params")[0].GetString().Should().Be("btcusdt@trade");
     }
 
+    // ── BuildSubscribeBatch / BuildUnsubscribeBatch (TASK-072) ─────────────────
+
+    [Fact]
+    public void BuildSubscribeBatch_MultipleRequests_EmitsOneFrameWithAllParams()
+    {
+        var protocol = MakeProtocol();
+        var requests = new[]
+        {
+            new StreamRequest(StreamKind.OrderBook, "BTCUSDT", Depth: 20),
+            new StreamRequest(StreamKind.OrderBook, "ETHUSDT", Depth: 20),
+            new StreamRequest(StreamKind.Ticker, "BNBUSDT"),
+        };
+
+        var wire = protocol.BuildSubscribeBatch(requests);
+        using var doc = JsonDocument.Parse(wire!);
+
+        doc.RootElement.GetProperty("method").GetString().Should().Be("SUBSCRIBE");
+        var paramsArr = doc.RootElement.GetProperty("params");
+        paramsArr.GetArrayLength().Should().Be(3);
+        paramsArr[0].GetString().Should().Be("btcusdt@depth20");
+        paramsArr[1].GetString().Should().Be("ethusdt@depth20");
+        paramsArr[2].GetString().Should().Be("bnbusdt@ticker");
+        doc.RootElement.GetProperty("id").GetInt32().Should().BeGreaterThan(0);
+    }
+
+    [Fact]
+    public void BuildUnsubscribeBatch_MultipleRequests_EmitsOneUnsubscribeFrame()
+    {
+        var protocol = MakeProtocol();
+        var requests = new[]
+        {
+            new StreamRequest(StreamKind.Ticker, "BTCUSDT"),
+            new StreamRequest(StreamKind.Ticker, "ETHUSDT"),
+        };
+
+        var wire = protocol.BuildUnsubscribeBatch(requests);
+        using var doc = JsonDocument.Parse(wire!);
+
+        doc.RootElement.GetProperty("method").GetString().Should().Be("UNSUBSCRIBE");
+        var paramsArr = doc.RootElement.GetProperty("params");
+        paramsArr.GetArrayLength().Should().Be(2);
+        paramsArr[0].GetString().Should().Be("btcusdt@ticker");
+        paramsArr[1].GetString().Should().Be("ethusdt@ticker");
+    }
+
+    [Fact]
+    public void BuildSubscribeBatch_SingleRequest_EmitsSingleParamArray()
+    {
+        var protocol = MakeProtocol();
+        var requests = new[] { new StreamRequest(StreamKind.Trade, "BTCUSDT") };
+
+        var wire = protocol.BuildSubscribeBatch(requests);
+        using var doc = JsonDocument.Parse(wire!);
+
+        var paramsArr = doc.RootElement.GetProperty("params");
+        paramsArr.GetArrayLength().Should().Be(1);
+        paramsArr[0].GetString().Should().Be("btcusdt@trade");
+    }
+
+    [Fact]
+    public void BuildSubscribeBatch_OneHundredRequests_EmitsExactlyOneHundredParams()
+    {
+        var protocol = MakeProtocol();
+        var requests = Enumerable.Range(0, 100)
+            .Select(i => new StreamRequest(StreamKind.Ticker, $"SYM{i}USDT"))
+            .ToArray();
+
+        var wire = protocol.BuildSubscribeBatch(requests);
+        using var doc = JsonDocument.Parse(wire!);
+
+        doc.RootElement.GetProperty("params").GetArrayLength().Should().Be(100,
+            "the engine pre-chunks at 100, so one frame may carry exactly 100 tokens.");
+    }
+
+    [Fact]
+    public void BuildSubscribeBatch_EmptyList_ReturnsNull()
+    {
+        var protocol = MakeProtocol();
+        protocol.BuildSubscribeBatch([]).Should().BeNull(
+            "an empty request list has no batch frame to build.");
+    }
+
     // ── RoutingKeyFor ─────────────────────────────────────────────────────────
     // Regression for Finding 1 (subscribe/classify keyspace mismatch).
     // RoutingKeyFor (used by the engine at subscribe time) must equal Classify(frame).RoutingKey

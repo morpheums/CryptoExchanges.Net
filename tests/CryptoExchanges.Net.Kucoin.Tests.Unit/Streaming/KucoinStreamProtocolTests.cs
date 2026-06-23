@@ -204,6 +204,97 @@ public class KucoinStreamProtocolTests
         doc.RootElement.GetProperty("topic").GetString().Should().Be("/market/snapshot:BTC-USDT");
     }
 
+    // ── BuildSubscribeBatch / BuildUnsubscribeBatch (TASK-072) ─────────────────
+
+    [Fact]
+    public void BuildSubscribeBatch_SameChannel_CommaJoinsSymbolsUnderOnePrefix()
+    {
+        var protocol = MakeProtocol();
+        var requests = new[]
+        {
+            new StreamRequest(StreamKind.OrderBook, "BTC-USDT"),
+            new StreamRequest(StreamKind.OrderBook, "ETH-USDT"),
+            new StreamRequest(StreamKind.OrderBook, "BNB-USDT"),
+        };
+
+        var wire = protocol.BuildSubscribeBatch(requests);
+        using var doc = JsonDocument.Parse(wire!);
+
+        doc.RootElement.GetProperty("type").GetString().Should().Be("subscribe");
+        doc.RootElement.GetProperty("topic").GetString()
+            .Should().Be("/market/level2:BTC-USDT,ETH-USDT,BNB-USDT");
+        doc.RootElement.GetProperty("privateChannel").GetBoolean().Should().BeFalse();
+        doc.RootElement.GetProperty("response").GetBoolean().Should().BeTrue();
+    }
+
+    [Fact]
+    public void BuildUnsubscribeBatch_SameChannel_CommaJoinsSymbols()
+    {
+        var protocol = MakeProtocol();
+        var requests = new[]
+        {
+            new StreamRequest(StreamKind.Trade, "BTC-USDT"),
+            new StreamRequest(StreamKind.Trade, "ETH-USDT"),
+        };
+
+        var wire = protocol.BuildUnsubscribeBatch(requests);
+        using var doc = JsonDocument.Parse(wire!);
+
+        doc.RootElement.GetProperty("type").GetString().Should().Be("unsubscribe");
+        doc.RootElement.GetProperty("topic").GetString()
+            .Should().Be("/market/match:BTC-USDT,ETH-USDT");
+    }
+
+    [Fact]
+    public void BuildSubscribeBatch_MixedChannels_ReturnsNull()
+    {
+        var protocol = MakeProtocol();
+        var requests = new[]
+        {
+            new StreamRequest(StreamKind.OrderBook, "BTC-USDT"),
+            new StreamRequest(StreamKind.Trade, "ETH-USDT"),
+        };
+
+        protocol.BuildSubscribeBatch(requests).Should().BeNull(
+            "a heterogeneous channel set cannot be joined into one KuCoin frame; the engine falls back per-frame.");
+    }
+
+    [Fact]
+    public void BuildSubscribeBatch_SingleRequest_ProducesSingleSymbolTopic()
+    {
+        var protocol = MakeProtocol();
+        var requests = new[] { new StreamRequest(StreamKind.OrderBook, "BTC-USDT") };
+
+        var wire = protocol.BuildSubscribeBatch(requests);
+        using var doc = JsonDocument.Parse(wire!);
+
+        doc.RootElement.GetProperty("topic").GetString().Should().Be("/market/level2:BTC-USDT");
+    }
+
+    [Fact]
+    public void BuildSubscribeBatch_OneHundredSymbols_JoinsAllUnderOnePrefix()
+    {
+        var protocol = MakeProtocol();
+        var requests = Enumerable.Range(0, 100)
+            .Select(i => new StreamRequest(StreamKind.OrderBook, $"SYM{i}-USDT"))
+            .ToArray();
+
+        var wire = protocol.BuildSubscribeBatch(requests);
+        using var doc = JsonDocument.Parse(wire!);
+
+        var topic = doc.RootElement.GetProperty("topic").GetString()!;
+        topic.Should().StartWith("/market/level2:");
+        var symbols = topic["/market/level2:".Length..].Split(',');
+        symbols.Should().HaveCount(100, "the engine pre-chunks at 100, so one frame may carry exactly 100 symbols.");
+    }
+
+    [Fact]
+    public void BuildSubscribeBatch_EmptyList_ReturnsNull()
+    {
+        var protocol = MakeProtocol();
+        protocol.BuildSubscribeBatch([]).Should().BeNull("an empty request list has no batch frame to build.");
+    }
+
     [Fact]
     public void RoutingKeyFor_Ticker_MatchesClassifyRoutingKey()
     {

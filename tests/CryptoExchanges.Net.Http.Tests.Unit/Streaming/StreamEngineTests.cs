@@ -1040,7 +1040,10 @@ public sealed class StreamEngineTests
     public async Task Engine_Throttle_ReconnectReplay_IsPaced()
     {
         var interval = TimeSpan.FromMilliseconds(120);
-        var protocol = new FakeStreamProtocol { MinOutboundInterval = interval };
+        // Per-frame replay path (batching unsupported): each of the three subscriptions replays as its
+        // own frame, so this test asserts per-frame replay pacing. Batched replay pacing is covered by
+        // Engine_ReconnectReplay_Batched_IsPacedByMinOutboundInterval (TASK-072).
+        var protocol = new FakeStreamProtocol { SupportsBatch = false, MinOutboundInterval = interval };
         var recording = new RecordingWebSocketConnection();
         var options = new StreamEngineOptions
         {
@@ -1132,6 +1135,155 @@ public sealed class StreamEngineTests
         finally
         {
             TaskScheduler.UnobservedTaskException -= Handler;
+        }
+    }
+
+    // ── TASK-072: batched + chunked reconnect-replay ──────────────────────────
+
+    [Fact]
+    public async Task Engine_ReconnectReplay_UsesBatchBuilder_FewFramesNotPerSubscription()
+    {
+        // Five subscriptions replay as a SINGLE batched frame (≤100/chunk), not five frames.
+        var protocol = new FakeStreamProtocol { SupportsBatch = true };
+        var recording = new RecordingWebSocketConnection();
+        var engine = BuildEngineWith(protocol, recording);
+
+        await using (engine)
+        {
+            for (var i = 0; i < 5; i++)
+            {
+                protocol.NextRoutingKey = $"btcusdt@ticker{i}";
+                await engine.SubscribeAsync(
+                    new StreamRequest(StreamKind.Ticker, "BTCUSDT"),
+                    MakeHandlers(),
+                    TestContext.Current.CancellationToken);
+            }
+
+            recording.ClearStamps();
+            recording.SimulateDisconnect();
+
+            // Wait for the single batched replay frame to land.
+            var deadline = Task.Delay(5000, TestContext.Current.CancellationToken);
+            while (recording.SendStartStamps.Length < 1 && !deadline.IsCompleted)
+                await Task.Delay(20, TestContext.Current.CancellationToken);
+
+            recording.SendStartStamps.Length.Should().Be(1,
+                "five subscriptions must replay as ONE batched frame, not five per-frame sends.");
+            protocol.SubscribeBatchChunkSizes.Should().ContainSingle()
+                .Which.Should().Be(5, "the single chunk must carry all five subscriptions.");
+        }
+    }
+
+    [Fact]
+    public async Task Engine_ReconnectReplay_ChunksAt100_Produces3FramesFor250()
+    {
+        // 250 subscriptions → ⌈250/100⌉ = 3 batched frames with chunk sizes 100/100/50.
+        var protocol = new FakeStreamProtocol { SupportsBatch = true };
+        var recording = new RecordingWebSocketConnection();
+        var engine = BuildEngineWith(protocol, recording);
+
+        await using (engine)
+        {
+            for (var i = 0; i < 250; i++)
+            {
+                protocol.NextRoutingKey = $"btcusdt@ticker{i}";
+                await engine.SubscribeAsync(
+                    new StreamRequest(StreamKind.Ticker, "BTCUSDT"),
+                    MakeHandlers(),
+                    TestContext.Current.CancellationToken);
+            }
+
+            recording.ClearStamps();
+            protocol.SubscribeBatchChunkSizes.Clear();
+            recording.SimulateDisconnect();
+
+            var deadline = Task.Delay(10000, TestContext.Current.CancellationToken);
+            while (recording.SendStartStamps.Length < 3 && !deadline.IsCompleted)
+                await Task.Delay(20, TestContext.Current.CancellationToken);
+
+            recording.SendStartStamps.Length.Should().Be(3,
+                "250 subscriptions must replay as exactly 3 batched frames (100/100/50).");
+            var chunks = protocol.SubscribeBatchChunkSizes.ToArray();
+            chunks.Should().Equal(100, 100, 50);
+            chunks.Should().OnlyContain(size => size <= 100, "no chunk may exceed the venue cap of 100.");
+        }
+    }
+
+    [Fact]
+    public async Task Engine_ReconnectReplay_Batched_IsPacedByMinOutboundInterval()
+    {
+        // Batched replay frames must still be spaced ≥ MinOutboundInterval (they route through
+        // SendControlAsync). Drive >100 subscriptions so at least two batched frames are sent.
+        var interval = TimeSpan.FromMilliseconds(120);
+        var protocol = new FakeStreamProtocol { SupportsBatch = true, MinOutboundInterval = interval };
+        var recording = new RecordingWebSocketConnection();
+        var engine = BuildEngineWith(protocol, recording);
+
+        await using (engine)
+        {
+            for (var i = 0; i < 150; i++)
+            {
+                protocol.NextRoutingKey = $"btcusdt@ticker{i}";
+                await engine.SubscribeAsync(
+                    new StreamRequest(StreamKind.Ticker, "BTCUSDT"),
+                    MakeHandlers(),
+                    TestContext.Current.CancellationToken);
+            }
+
+            recording.ClearStamps();
+            recording.SimulateDisconnect();
+
+            var deadline = Task.Delay(10000, TestContext.Current.CancellationToken);
+            while (recording.SendStartStamps.Length < 2 && !deadline.IsCompleted)
+                await Task.Delay(20, TestContext.Current.CancellationToken);
+
+            var stamps = recording.SendStartStamps.ToArray();
+            stamps.Length.Should().Be(2, "150 subscriptions replay as two batched frames (100/50).");
+
+            var tolerance = TimeSpan.FromMilliseconds(30);
+            (stamps[1] - stamps[0]).Should().BeGreaterThanOrEqualTo(interval - tolerance,
+                "batched replay frames must remain paced by MinOutboundInterval via SendControlAsync.");
+        }
+    }
+
+    [Fact]
+    public async Task Engine_ReconnectReplay_FallsBackToPerFrame_WhenBatchReturnsNull()
+    {
+        // A protocol that does not support batching replays per-frame: N subscriptions → N frames,
+        // still paced by MinOutboundInterval.
+        var interval = TimeSpan.FromMilliseconds(100);
+        var protocol = new FakeStreamProtocol { SupportsBatch = false, MinOutboundInterval = interval };
+        var recording = new RecordingWebSocketConnection();
+        var engine = BuildEngineWith(protocol, recording);
+
+        await using (engine)
+        {
+            for (var i = 0; i < 3; i++)
+            {
+                protocol.NextRoutingKey = $"btcusdt@ticker{i}";
+                await engine.SubscribeAsync(
+                    new StreamRequest(StreamKind.Ticker, "BTCUSDT"),
+                    MakeHandlers(),
+                    TestContext.Current.CancellationToken);
+            }
+
+            recording.ClearStamps();
+            recording.SimulateDisconnect();
+
+            var deadline = Task.Delay(8000, TestContext.Current.CancellationToken);
+            while (recording.SendStartStamps.Length < 3 && !deadline.IsCompleted)
+                await Task.Delay(20, TestContext.Current.CancellationToken);
+
+            var stamps = recording.SendStartStamps.ToArray();
+            stamps.Length.Should().Be(3,
+                "with batching unsupported the engine must fall back to one frame per subscription.");
+            protocol.SubscribeBatchChunkSizes.Should().BeEmpty(
+                "the batch builder returned null, so no chunk should have been recorded as batched.");
+
+            var tolerance = TimeSpan.FromMilliseconds(30);
+            for (var i = 1; i < stamps.Length; i++)
+                (stamps[i] - stamps[i - 1]).Should().BeGreaterThanOrEqualTo(interval - tolerance,
+                    "per-frame fallback replay must still be paced by MinOutboundInterval.");
         }
     }
 

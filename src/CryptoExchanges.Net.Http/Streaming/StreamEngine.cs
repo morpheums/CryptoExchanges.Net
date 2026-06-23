@@ -74,6 +74,9 @@ internal sealed class StreamEngine : IAsyncDisposable
     private static readonly Action<ILogger, string?, Exception?> s_logReplayFailed =
         LoggerMessage.Define<string?>(LogLevel.Warning, new EventId(11, "ReplayFailed"), "Failed to replay subscribe for routing key '{Key}' on reconnect.");
 
+    private static readonly Action<ILogger, int, int, Exception?> s_logBatchedReplay =
+        LoggerMessage.Define<int, int>(LogLevel.Information, new EventId(18, "BatchedReplay"), "Replaying {Count} subscriptions in {Frames} batched frame(s) on reconnect.");
+
     private static readonly Action<ILogger, Exception?> s_logSocketCloseException =
         LoggerMessage.Define(LogLevel.Debug, new EventId(12, "SocketCloseException"), "Socket close raised an exception during idle-close (ignored).");
 
@@ -101,6 +104,10 @@ internal sealed class StreamEngine : IAsyncDisposable
     private readonly ILogger _logger;
 
     // ── Engine state ─────────────────────────────────────────────────────────
+
+    // Both Binance (stream tokens) and KuCoin (joined symbols) cap a single control frame at 100
+    // entries; the reconnect-replay chunker groups the subscribe set into batches of this size.
+    private const int MaxBatchSize = 100;
 
     private readonly SemaphoreSlim _gate = new(1, 1);
 
@@ -589,21 +596,11 @@ internal sealed class StreamEngine : IAsyncDisposable
                 // Connected — restart pump and heartbeat.
                 StartPump(info.Heartbeat);
 
-                // K2: replay the stored subscribe set (each frame paced via SendControlAsync).
-                foreach (var (routingKey, request) in _subscribeSet)
-                {
-                    try
-                    {
-                        var subscribeText = _protocol.BuildSubscribe(request);
-                        await SendControlAsync(subscribeText, _disposeCts.Token).ConfigureAwait(false);
-                    }
-#pragma warning disable CA1031 // intentional: replay failure for one subscription must not block others
-                    catch (Exception ex)
-#pragma warning restore CA1031
-                    {
-                        s_logReplayFailed(_logger, routingKey, ex);
-                    }
-                }
+                // K2: replay the stored subscribe set. Chunk into ≤100-entry groups and try a single
+                // batched frame per chunk (BuildSubscribeBatch); fall back to the per-frame loop when
+                // the venue returns null. Either way every frame routes through SendControlAsync, so a
+                // large reconnect stays throttled (e.g. 300 symbols → 3 frames × interval, not 300).
+                await ReplaySubscribeSetAsync().ConfigureAwait(false);
 
                 // Transition all subscriptions back to Live.
                 foreach (var entry in _subscriptions.Values)
@@ -619,6 +616,61 @@ internal sealed class StreamEngine : IAsyncDisposable
                 _gate.Release();
             }
         }
+    }
+
+    // K2 replay (chunked + batched). Snapshots the stored subscribe set, chunks it into ≤MaxBatchSize
+    // groups, and prefers a single BuildSubscribeBatch frame per chunk; on a null (batching
+    // unsupported / heterogeneous) chunk it replays that chunk frame-by-frame. Every send routes
+    // through SendControlAsync so batched and per-frame replay alike stay throttled. A broad catch
+    // around each frame preserves the prior per-item semantics: one replay failure must not abort the
+    // rest of the set (K2).
+    private async Task ReplaySubscribeSetAsync()
+    {
+        var requests = _subscribeSet.Values.ToList();
+        if (requests.Count == 0)
+            return;
+
+        var frames = 0;
+        for (var offset = 0; offset < requests.Count; offset += MaxBatchSize)
+        {
+            var chunk = requests.GetRange(offset, Math.Min(MaxBatchSize, requests.Count - offset));
+            var batchText = _protocol.BuildSubscribeBatch(chunk);
+
+            if (batchText is not null)
+            {
+                try
+                {
+                    await SendControlAsync(batchText, _disposeCts.Token).ConfigureAwait(false);
+                    frames++;
+                }
+#pragma warning disable CA1031 // intentional: a batched replay failure must not block remaining chunks
+                catch (Exception ex)
+#pragma warning restore CA1031
+                {
+                    s_logReplayFailed(_logger, _protocol.RoutingKeyFor(chunk[0]), ex);
+                }
+                continue;
+            }
+
+            // Batching unsupported for this chunk — fall back to the per-frame throttled loop.
+            foreach (var request in chunk)
+            {
+                try
+                {
+                    var subscribeText = _protocol.BuildSubscribe(request);
+                    await SendControlAsync(subscribeText, _disposeCts.Token).ConfigureAwait(false);
+                    frames++;
+                }
+#pragma warning disable CA1031 // intentional: replay failure for one subscription must not block others
+                catch (Exception ex)
+#pragma warning restore CA1031
+                {
+                    s_logReplayFailed(_logger, _protocol.RoutingKeyFor(request), ex);
+                }
+            }
+        }
+
+        s_logBatchedReplay(_logger, requests.Count, frames, null);
     }
 
     private async Task CloseAllSubscriptionsAsync()

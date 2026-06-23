@@ -74,6 +74,14 @@ internal sealed class KucoinStreamProtocol : IStreamProtocol
     }
 
     /// <inheritdoc />
+    public string? BuildSubscribeBatch(IReadOnlyList<StreamRequest> requests)
+        => BuildBatch(requests, "subscribe");
+
+    /// <inheritdoc />
+    public string? BuildUnsubscribeBatch(IReadOnlyList<StreamRequest> requests)
+        => BuildBatch(requests, "unsubscribe");
+
+    /// <inheritdoc />
     public string RoutingKeyFor(StreamRequest request)
     {
         ArgumentNullException.ThrowIfNull(request);
@@ -120,6 +128,39 @@ internal sealed class KucoinStreamProtocol : IStreamProtocol
 
         var routingKey = topicProp.GetString();
         return new StreamFrame(FrameKind.Data, routingKey);
+    }
+
+    // Builds one comma-joined subscribe/unsubscribe frame for a homogeneous channel group. KuCoin
+    // joins multiple symbols under one channel prefix (e.g. "/market/level2:BTC-USDT,ETH-USDT"); a
+    // batch is only valid when every request shares the same prefix, so a mixed set returns null and
+    // the engine falls back to its per-frame loop. The engine pre-chunks to ≤100 symbols per call.
+    private string? BuildBatch(IReadOnlyList<StreamRequest> requests, string type)
+    {
+        ArgumentNullException.ThrowIfNull(requests);
+        ArgumentException.ThrowIfNullOrWhiteSpace(type);
+        if (requests.Count == 0)
+            return null;
+
+        var firstTopic = BuildTopic(requests[0]);
+        var colon = firstTopic.LastIndexOf(':');
+        var channelPrefix = firstTopic[..colon];
+
+        var symbols = new StringBuilder();
+        for (var i = 0; i < requests.Count; i++)
+        {
+            var topic = BuildTopic(requests[i]);
+            var sep = topic.LastIndexOf(':');
+            // Mixed channels cannot be joined into one KuCoin frame — defer to the per-frame loop.
+            if (!topic.AsSpan(0, sep).SequenceEqual(channelPrefix))
+                return null;
+
+            if (i > 0)
+                symbols.Append(',');
+            symbols.Append(topic.AsSpan(sep + 1));
+        }
+
+        var id = Interlocked.Increment(ref _nextId);
+        return $"{{\"id\":\"{id}\",\"type\":\"{type}\",\"topic\":\"{channelPrefix}:{symbols}\",\"privateChannel\":false,\"response\":true}}";
     }
 
     /// <summary>

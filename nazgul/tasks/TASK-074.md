@@ -1,8 +1,9 @@
 ---
 id: TASK-074
-status: IN_PROGRESS
+status: IMPLEMENTED
 depends_on: [TASK-073]
 claimed_at: 2026-06-24T00:00:00Z
+implemented_at: 2026-06-24T00:00:00Z
 ---
 # TASK-074: Fix Binance combined-stream decode (missing `data`-envelope unwrap) + activate the Binance multi-symbol regression test
 
@@ -73,7 +74,7 @@ symptom (the first — the unpaced subscribe burst → PolicyViolation close —
 
 ## Commits
 - **Base SHA**: 840e4fdc00372113bec18df54ca8d44415a3c21f
-- (impl SHA recorded on IMPLEMENTED)
+- **Impl SHA**: da818dbee3f27634ec2cc9983bcbdb61e9197a0e — `feat(FEAT-008): unwrap Binance combined-stream `data` envelope before decode (TASK-074)`
 
 ## Implementation Log
 

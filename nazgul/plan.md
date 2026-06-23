@@ -1,8 +1,8 @@
 # Nazgul Plan — FEAT-008
 
 ## Recovery Pointer
-**Active task**: TASK-074 (IN_PROGRESS) — Fix Binance combined-stream `data`-envelope decode + activate Binance multi-symbol regression test.
-**Next action**: Mirror KuCoin's `DeserializeData<T>` helper in `BinanceStreamDecoders`; route all four decoders through it; restore the Binance integration `CheckReachabilityAsync` to a clean TLS-handshake probe (it was weakened to require a delivered OrderBook, which masked the decode bug); update unit decode tests to envelope-level; verify build 0/0 + non-integration green + live both venues. Base SHA `840e4fd`. TASK-071 DONE; TASK-072/073 IMPLEMENTED (awaiting review gate).
+**Active task**: TASK-074 (IMPLEMENTED) — Fix Binance combined-stream `data`-envelope decode + activate Binance multi-symbol regression test.
+**Next action**: Run the review gate for TASK-074 (impl commit `da818db`; diff at `nazgul/reviews/TASK-074/diff.patch`), plus the still-pending gates for TASK-072 (`4563126`) and TASK-073 (`dc49327`). TASK-074 result: build 0W/0E; non-integration suite green; LIVE multi-symbol regression now PASSES for BOTH venues — Binance `OrderBook_MultiSymbol_LiveStream_DeliversAtLeastOneUpdate` executed (not skipped, 10 s) delivering a real book + ≥1 subscription Live; KuCoin PASS (5 s). Decode unit tests were testing the wrong (bare `data`-level) shape and were moved to full combined-stream envelopes (+ a partial-book `@depth20` case). TASK-071 DONE; TASK-072/073 IMPLEMENTED.
 
 ─── ◈ NAZGUL ▸ PLANNING ────────────────────────────────
 
@@ -72,8 +72,9 @@ Authoritative inputs (read fully before any task):
 | TASK-071 | ✦ DONE     | 1    | `StreamConnectionInfo.MinOutboundInterval` + `SendControlAsync` (throttle/serialize) + route all send sites + Binance 200ms/KuCoin 100ms values + unit tests. Review ✦ APPROVED (4/4). Commits `2d2a3aa` + simplify `a45059f6`. |
 | TASK-072 | ◆ IMPLEMENTED | 2 | `IStreamProtocol` batch builders (default-null) + Binance/KuCoin impls + chunked batched `ReconnectCoreAsync` replay + unit tests. Impl commit `4563126`; build 0W0E, non-integration suite green. Awaiting review gate. |
 | TASK-073 | ◆ IMPLEMENTED | 3 | Multi-symbol Binance (18) + KuCoin (14) L2 order-book LIVE regression test. KuCoin live PASS; Binance self-skips (pre-existing decode bug). Impl commit `dc49327`. Awaiting review gate. |
+| TASK-074 | ◆ IMPLEMENTED | 4 | Fix Binance combined-stream `data`-envelope decode (mirror KuCoin `DeserializeData<T>`; OrderBook symbol from `stream` token for partial-book `@depthN`) + restore clean reachability probe + envelope-level unit tests. Binance live multi-symbol now PASSES (real book); KuCoin still PASS. Impl commit `da818db`; build 0W0E, non-integration green. Awaiting review gate. |
 
-Tasks: 1/3 DONE. ◆ TASK-072 + TASK-073 IMPLEMENTED (awaiting review gate).
+Tasks: 1/4 DONE. ◆ TASK-072 + TASK-073 + TASK-074 IMPLEMENTED (awaiting review gate).
 
 ## Wave Groups
 

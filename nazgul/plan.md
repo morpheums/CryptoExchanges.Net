@@ -1,8 +1,8 @@
 # Nazgul Plan — FEAT-008
 
 ## Recovery Pointer
-**Active task**: TASK-072 (READY) — Batched reconnect-replay (`IStreamProtocol` batch builders + chunked `ReconnectCoreAsync`).
-**Next action**: Implementer claims TASK-072 (Wave 2) on branch `feat/FEAT-008-stream-control-msg-rate-limit`. TASK-071 is DONE (review gate ✦ APPROVED by all 4 reviewers; commits `2d2a3aa` + simplify `a45059f6`). TASK-073 stays PLANNED until 072 is DONE.
+**Active task**: TASK-072 (IMPLEMENTED) — Batched reconnect-replay (`IStreamProtocol` batch builders + chunked `ReconnectCoreAsync`).
+**Next action**: Review gate for TASK-072 (architect / code / security / api) on branch `feat/FEAT-008-stream-control-msg-rate-limit`. Impl commit `4563126`; diff captured at `nazgul/reviews/TASK-072/diff.patch`. TASK-071 DONE. TASK-073 stays PLANNED until 072 is DONE.
 
 ─── ◈ NAZGUL ▸ PLANNING ────────────────────────────────
 
@@ -70,10 +70,10 @@ Authoritative inputs (read fully before any task):
 | Task     | Status     | Wave | Description                                                                  |
 |----------|------------|------|------------------------------------------------------------------------------|
 | TASK-071 | ✦ DONE     | 1    | `StreamConnectionInfo.MinOutboundInterval` + `SendControlAsync` (throttle/serialize) + route all send sites + Binance 200ms/KuCoin 100ms values + unit tests. Review ✦ APPROVED (4/4). Commits `2d2a3aa` + simplify `a45059f6`. |
-| TASK-072 | ◆ READY    | 2    | `IStreamProtocol` batch builders (default-null) + Binance/KuCoin impls + chunked batched `ReconnectCoreAsync` replay + unit tests |
+| TASK-072 | ◆ IMPLEMENTED | 2 | `IStreamProtocol` batch builders (default-null) + Binance/KuCoin impls + chunked batched `ReconnectCoreAsync` replay + unit tests. Impl commit `4563126`; build 0W0E, non-integration suite green. Awaiting review gate. |
 | TASK-073 | ◇ PLANNED  | 3    | Multi-symbol Binance (≥17) + KuCoin (≥13) L2 order-book LIVE regression test (Integration, self-skip) |
 
-Tasks: 1/3 DONE. ◆ TASK-072 READY.
+Tasks: 1/3 DONE. ◆ TASK-072 IMPLEMENTED (awaiting review gate).
 
 ## Wave Groups
 
@@ -135,8 +135,8 @@ reconnect-replay burst → TASK-072.
 
 ## Recovery Pointer
 
-- **Current stage**: Loop — TASK-071 DONE; TASK-072 READY (Wave 2).
-- **Next action**: Implementer claims TASK-072 (Wave 2) on branch `feat/FEAT-008-stream-control-msg-rate-limit`.
+- **Current stage**: Loop — TASK-071 DONE; TASK-072 IMPLEMENTED (Wave 2), awaiting review gate.
+- **Next action**: Run the review gate for TASK-072 on branch `feat/FEAT-008-stream-control-msg-rate-limit` (impl commit `4563126`).
 - **Active task**: TASK-072.
 - **Files are truth**: `nazgul/tasks/TASK-071..073.md` carry full state; each manifest's frontmatter
   `status:` is the canonical record.

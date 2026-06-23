@@ -1,6 +1,6 @@
 ---
 id: TASK-072
-status: READY
+status: IMPLEMENTED
 depends_on: [TASK-071]
 ---
 # TASK-072: Batched reconnect-replay — `IStreamProtocol` batch builders + Binance/KuCoin impls + batched `ReconnectCoreAsync`
@@ -15,8 +15,9 @@ depends_on: [TASK-071]
 - **Wave**: 2
 - **Traces to**: FEAT-008 objective (config.json) — "respect a per-venue message-rate limit (batching ... per exchange)"; architect-reviewer advisory §"Step 2 — Batching"; risk register row "Reconnect-replay burst"
 - **Created at**: 2026-06-23T22:35:00Z
-- **Claimed at**:
-- **Base SHA**:
+- **Claimed at**: 2026-06-23T23:00:00Z
+- **Base SHA**: 288eb2fffc3ccb5d425f6fd1d959ae2c02c7a7b1
+- **Implemented at**: 2026-06-23T23:40:00Z
 - **Implemented at**:
 - **Completed at**:
 - **Blocked at**:
@@ -141,11 +142,22 @@ format** lives in each exchange protocol.
 
 ## Commits
 
-- (pending)
+- `45631261a5bfa27fb37f0b4e31bba546057d0c2c` — feat(FEAT-008): batched reconnect-replay via IStreamProtocol batch builders (impl + tests).
 
 ## Implementation Log
 
-- (pending)
+- **IStreamProtocol.cs**: added two default interface members — `string? BuildSubscribeBatch(IReadOnlyList<StreamRequest>)` and `string? BuildUnsubscribeBatch(...)` — returning `null`. Full XML docs document the null contract (null = batching unsupported → engine falls back per-frame) and the engine-chunks-before-calling contract (impls emit exactly one frame, never re-chunk; may return null on a set the venue cannot join). Non-breaking: interface is `internal`, existing impls/fakes compile unchanged.
+- **BinanceStreamProtocol.cs**: implemented both via a private `BuildBatch(requests, method)` that emits one `{"method":"SUBSCRIBE"|"UNSUBSCRIBE","params":[token,...],"id":N}` frame (one id per frame via `Interlocked.Increment`), reusing the existing `BuildStreamToken`. `<inheritdoc/>` on both. Added `using System.Text;` for `StringBuilder`. Returns null on empty list.
+- **KucoinStreamProtocol.cs**: implemented both via a private `BuildBatch(requests, type)` that splits each topic at the last `:` into channel-prefix + symbol, verifies all requests share the prefix (returns null on a heterogeneous set so the engine falls back per-frame), and comma-joins the symbols under one prefix: `/market/level2:BTC-USDT,ETH-USDT,...`. `<inheritdoc/>` on both; string guard on `type`.
+- **StreamEngine.cs**: added `const int MaxBatchSize = 100;`, a `s_logBatchedReplay` LoggerMessage delegate (EventId 18), and `ReplaySubscribeSetAsync()`. `ReconnectCoreAsync` now calls it instead of the per-request foreach. The helper snapshots `_subscribeSet.Values`, chunks into ≤100 groups, calls `BuildSubscribeBatch(chunk)` and sends the single frame via `SendControlAsync` (still throttled), falling back to the per-request `BuildSubscribe` + `SendControlAsync` loop when the builder returns null. K2 full-replay and the per-frame broad-catch/`s_logReplayFailed` semantics are preserved (each frame send wrapped; one failure does not abort the rest).
+- **Tests** (all fast, fakes, no network):
+  - `FakeStreamProtocol`: implemented batch members with a `SupportsBatch` toggle (false → null to exercise fallback) and a `SubscribeBatchChunkSizes` recorder; the batched frame echoes routing keys so K2 replay assertions still match.
+  - Http engine (`StreamEngineTests`): `Engine_ReconnectReplay_UsesBatchBuilder_FewFramesNotPerSubscription` (5 subs → 1 frame), `Engine_ReconnectReplay_ChunksAt100_Produces3FramesFor250` (250 → 3 frames, chunk sizes 100/100/50, all ≤100), `Engine_ReconnectReplay_Batched_IsPacedByMinOutboundInterval` (150 → 2 frames spaced ≥ interval), `Engine_ReconnectReplay_FallsBackToPerFrame_WhenBatchReturnsNull` (3 frames, no batch recorded, paced). Updated TASK-071's `Engine_Throttle_ReconnectReplay_IsPaced` to set `SupportsBatch=false` so it keeps exercising the per-frame replay pacing path.
+  - Binance (`BinanceStreamProtocolTests`): batch emits one frame with N params, single-param, exactly 100 params, unsubscribe variant, empty → null.
+  - KuCoin (`KucoinStreamProtocolTests`): comma-joins same-channel symbols, unsubscribe variant, mixed channels → null, single symbol, exactly 100 symbols, empty → null.
+- **Build**: `dotnet build CryptoExchanges.Net.sln` → 0 Warning(s) / 0 Error(s) (TreatWarningsAsErrors + AnalysisLevel=latest-all).
+- **Tests**: `dotnet test --filter 'Category!=Integration'` → all green. New/changed projects: Http.Tests.Unit 96 (+4), Binance.Tests.Unit 27 (+5), Kucoin.Tests.Unit 203 (+6). No regressions across the solution.
+- **Learned rules applied**: LR-001 (string guard on KuCoin `BuildBatch` `type`; array/list params guarded with `ArgumentNullException.ThrowIfNull`), LR-005 (every new method has happy-path + edge tests), LR-010 (no self-evident `<remarks>`, no dead `_ = x` test vars).
 
 ## Review Results
 

@@ -1,6 +1,6 @@
 ---
 id: TASK-071
-status: IMPLEMENTED
+status: IN_PROGRESS
 depends_on: []
 ---
 # TASK-071: Throttle + serialize outbound control frames in StreamEngine (`MinOutboundInterval` + `SendControlAsync`)

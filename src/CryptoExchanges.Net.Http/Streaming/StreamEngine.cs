@@ -133,7 +133,7 @@ internal sealed class StreamEngine : IAsyncDisposable
     // Heartbeat / liveness
     private CancellationTokenSource? _heartbeatCts;
     private Task? _heartbeatTask;
-    private volatile int _livenessFlag; // set to 1 on pong/liveness; watchdog clears to 0
+    private int _livenessFlag; // set to 1 on pong/liveness; watchdog clears to 0
 
     // Reconnect backoff
     private readonly BackoffSchedule _backoff;
@@ -173,7 +173,7 @@ internal sealed class StreamEngine : IAsyncDisposable
             options.BackoffMultiplier);
     }
 
-    // ── Public subscribe API (used by StreamClient in TASK-045) ───────────────
+    // ── Public subscribe API ──────────────────────────────────────────────────
 
     /// <summary>
     /// Subscribes a new stream, lazily opens the socket if necessary, and returns a
@@ -678,7 +678,10 @@ internal sealed class StreamEngine : IAsyncDisposable
 
     private async Task ClientPingLoopAsync(HeartbeatPolicy policy, CancellationToken ct)
     {
-        Interlocked.Exchange(ref _livenessFlag, 1);
+        // Decode once per connection; payload is immutable for the lifetime of the connection.
+        var pingText = policy.PingFormat is PingFormat.Text or PingFormat.Json
+            ? Encoding.UTF8.GetString(policy.ClientPingPayload.Span)
+            : null;
 
         using var watchdogCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
         var watchdogTask = WatchdogAsync(policy.Timeout, watchdogCts.Token);
@@ -715,8 +718,7 @@ internal sealed class StreamEngine : IAsyncDisposable
                                 // Route through SendControlAsync so the ping is serialised against
                                 // subscribe/replay sends (previously it ran outside _gate and could
                                 // race ClientWebSocket.SendAsync on KuCoin) and is itself paced.
-                                var text = Encoding.UTF8.GetString(policy.ClientPingPayload.Span);
-                                await SendControlAsync(text, ct).ConfigureAwait(false);
+                                await SendControlAsync(pingText!, ct).ConfigureAwait(false);
                                 break;
                         }
                         Interlocked.Exchange(ref _livenessFlag, 1);

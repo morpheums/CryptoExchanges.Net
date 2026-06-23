@@ -1246,12 +1246,13 @@ public sealed class StreamEngineTests
 
         public ValueTask DisposeAsync()
         {
-            State = WebSocketState.Closed;
+            Dispose();
             return ValueTask.CompletedTask;
         }
 
         public void Dispose()
         {
+            State = WebSocketState.Closed;
             lock (_semLock)
             {
                 _available.Dispose();

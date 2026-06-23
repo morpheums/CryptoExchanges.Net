@@ -24,6 +24,20 @@ public class KucoinStreamingSmokeTests
     private static readonly Symbol BtcUsdt = new(Asset.Btc, Asset.Usdt);
     private static readonly TimeSpan ReceiveTimeout = TimeSpan.FromSeconds(30);
 
+    // ≥13 liquid KuCoin USDT pairs: the multi-symbol fan-out that, unpaced, bursts the venue's
+    // control-frame rate limit. The FEAT-008 throttle/batched-replay fix must still deliver data.
+    private static readonly Symbol[] MultiSymbolSet =
+    [
+        new(Asset.Btc, Asset.Usdt),  new(Asset.Eth, Asset.Usdt),  new(Asset.Sol, Asset.Usdt),
+        new(Asset.Xrp, Asset.Usdt),  new(Asset.Ada, Asset.Usdt),  new(Asset.Doge, Asset.Usdt),
+        new(Asset.Trx, Asset.Usdt),  new(Asset.Of("LINK"), Asset.Usdt), new(Asset.Of("AVAX"), Asset.Usdt),
+        new(Asset.Of("DOT"), Asset.Usdt),  new(Asset.Of("LTC"), Asset.Usdt),  new(Asset.Of("MATIC"), Asset.Usdt),
+        new(Asset.Of("ATOM"), Asset.Usdt), new(Asset.Of("UNI"), Asset.Usdt),
+    ];
+
+    // Generous: ~14 throttled subscribes before the last frame is even placed, then await first book.
+    private static readonly TimeSpan MultiSymbolReceiveTimeout = TimeSpan.FromSeconds(40);
+
     /// <summary>
     /// Verifies the KuCoin bullet-public WebSocket gateway is reachable. Returns <c>null</c>
     /// when reachable, or a skip-reason string when not.
@@ -91,6 +105,52 @@ public class KucoinStreamingSmokeTests
             ticker.Should().NotBeNull();
             ticker.LastPrice.Should().BeGreaterThan(0);
             subscription.State.Should().Be(StreamConnectionState.Live);
+        }
+    }
+
+    /// <summary>
+    /// Regression test for the FEAT-008 multi-symbol burst bug: subscribing to many L2 order books
+    /// at once on a single client previously fired an unpaced control-frame burst that the venue
+    /// closed before any data arrived, then replayed the same burst on every reconnect (zero updates).
+    /// With the TASK-071 throttle + TASK-072 batched replay in place, at least one book diff is
+    /// delivered and at least one subscription reaches Live.
+    /// </summary>
+    [Fact]
+    public async Task OrderBook_MultiSymbol_LiveStream_DeliversAtLeastOneUpdate()
+    {
+        var skipReason = await CheckReachabilityAsync();
+        Assert.SkipWhen(skipReason is not null, skipReason ?? string.Empty);
+
+        await using var client = BuildStreamClient();
+        var received = new TaskCompletionSource<OrderBook>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var subscriptions = new List<IStreamSubscription>(MultiSymbolSet.Length);
+
+        try
+        {
+            foreach (var symbol in MultiSymbolSet)
+            {
+                var subscription = await client.SubscribeToOrderBookAsync(
+                    symbol,
+                    depth: 20,
+                    new StreamHandlers<OrderBook>(ob =>
+                    {
+                        received.TrySetResult(ob);
+                        return ValueTask.CompletedTask;
+                    }),
+                    TestContext.Current.CancellationToken);
+                subscriptions.Add(subscription);
+            }
+
+            var orderBook = await received.Task.WaitAsync(MultiSymbolReceiveTimeout, TestContext.Current.CancellationToken);
+            orderBook.Should().NotBeNull();
+            // KuCoin level2 frames are incremental diffs; a frame carries changes on at least one side.
+            (orderBook.Bids.Count + orderBook.Asks.Count).Should().BeGreaterThan(0);
+            subscriptions.Should().Contain(s => s.State == StreamConnectionState.Live);
+        }
+        finally
+        {
+            foreach (var subscription in subscriptions)
+                await subscription.DisposeAsync();
         }
     }
 

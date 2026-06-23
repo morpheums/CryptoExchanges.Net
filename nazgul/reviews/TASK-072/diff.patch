@@ -1,5 +1,5 @@
 diff --git a/src/CryptoExchanges.Net.Binance/Streaming/BinanceStreamProtocol.cs b/src/CryptoExchanges.Net.Binance/Streaming/BinanceStreamProtocol.cs
-index 1d48594..ce1b8fb 100644
+index 1d48594..fc1226c 100644
 --- a/src/CryptoExchanges.Net.Binance/Streaming/BinanceStreamProtocol.cs
 +++ b/src/CryptoExchanges.Net.Binance/Streaming/BinanceStreamProtocol.cs
 @@ -1,3 +1,4 @@
@@ -22,7 +22,7 @@ index 1d48594..ce1b8fb 100644
      /// <inheritdoc/>
      public StreamFrame Classify(ReadOnlySpan<byte> frame)
      {
-@@ -115,6 +124,28 @@ internal sealed class BinanceStreamProtocol : IStreamProtocol
+@@ -115,6 +124,29 @@ internal sealed class BinanceStreamProtocol : IStreamProtocol
  
      // ── Helpers ───────────────────────────────────────────────────────────────
  
@@ -34,7 +34,8 @@ index 1d48594..ce1b8fb 100644
 +        if (requests.Count == 0)
 +            return null;
 +
-+        var builder = new StringBuilder();
++        // Pre-size to avoid resizes: prefix (~20) + method + per-token avg (~20 chars) + suffix (~10).
++        var builder = new StringBuilder(method.Length + requests.Count * 20 + 32);
 +        builder.Append("{\"method\":\"").Append(method).Append("\",\"params\":[");
 +        for (var i = 0; i < requests.Count; i++)
 +        {
@@ -115,7 +116,7 @@ index 6651db7..d35bdaf 100644
      /// Returns the routing key the engine must use to register and look up subscriptions for
      /// the given <paramref name="request"/>. The key produced here must be identical to the
 diff --git a/src/CryptoExchanges.Net.Http/Streaming/StreamEngine.cs b/src/CryptoExchanges.Net.Http/Streaming/StreamEngine.cs
-index b3a10d9..877ef09 100644
+index b3a10d9..a29e87b 100644
 --- a/src/CryptoExchanges.Net.Http/Streaming/StreamEngine.cs
 +++ b/src/CryptoExchanges.Net.Http/Streaming/StreamEngine.cs
 @@ -74,6 +74,9 @@ internal sealed class StreamEngine : IAsyncDisposable
@@ -123,7 +124,7 @@ index b3a10d9..877ef09 100644
          LoggerMessage.Define<string?>(LogLevel.Warning, new EventId(11, "ReplayFailed"), "Failed to replay subscribe for routing key '{Key}' on reconnect.");
  
 +    private static readonly Action<ILogger, int, int, Exception?> s_logBatchedReplay =
-+        LoggerMessage.Define<int, int>(LogLevel.Information, new EventId(18, "BatchedReplay"), "Replaying {Count} subscriptions in {Frames} batched frame(s) on reconnect.");
++        LoggerMessage.Define<int, int>(LogLevel.Information, new EventId(18, "BatchedReplay"), "Replaying {Count} subscriptions in {Frames} frame(s) on reconnect.");
 +
      private static readonly Action<ILogger, Exception?> s_logSocketCloseException =
          LoggerMessage.Define(LogLevel.Debug, new EventId(12, "SocketCloseException"), "Socket close raised an exception during idle-close (ignored).");
@@ -229,7 +230,7 @@ index b3a10d9..877ef09 100644
      {
          await _gate.WaitAsync(CancellationToken.None).ConfigureAwait(false);
 diff --git a/src/CryptoExchanges.Net.Kucoin/Streaming/KucoinStreamProtocol.cs b/src/CryptoExchanges.Net.Kucoin/Streaming/KucoinStreamProtocol.cs
-index 354512d..92c58cf 100644
+index 354512d..ee469ba 100644
 --- a/src/CryptoExchanges.Net.Kucoin/Streaming/KucoinStreamProtocol.cs
 +++ b/src/CryptoExchanges.Net.Kucoin/Streaming/KucoinStreamProtocol.cs
 @@ -73,6 +73,14 @@ internal sealed class KucoinStreamProtocol : IStreamProtocol
@@ -258,7 +259,6 @@ index 354512d..92c58cf 100644
 +    private string? BuildBatch(IReadOnlyList<StreamRequest> requests, string type)
 +    {
 +        ArgumentNullException.ThrowIfNull(requests);
-+        ArgumentException.ThrowIfNullOrWhiteSpace(type);
 +        if (requests.Count == 0)
 +            return null;
 +
@@ -266,8 +266,10 @@ index 354512d..92c58cf 100644
 +        var colon = firstTopic.LastIndexOf(':');
 +        var channelPrefix = firstTopic[..colon];
 +
++        // Seed with the already-computed first topic to avoid a redundant BuildTopic call at i=0.
 +        var symbols = new StringBuilder();
-+        for (var i = 0; i < requests.Count; i++)
++        symbols.Append(firstTopic.AsSpan(colon + 1));
++        for (var i = 1; i < requests.Count; i++)
 +        {
 +            var topic = BuildTopic(requests[i]);
 +            var sep = topic.LastIndexOf(':');
@@ -275,8 +277,7 @@ index 354512d..92c58cf 100644
 +            if (!topic.AsSpan(0, sep).SequenceEqual(channelPrefix))
 +                return null;
 +
-+            if (i > 0)
-+                symbols.Append(',');
++            symbols.Append(',');
 +            symbols.Append(topic.AsSpan(sep + 1));
 +        }
 +
@@ -287,99 +288,6 @@ index 354512d..92c58cf 100644
      /// <summary>
      /// Builds the KuCoin venue topic string for the given subscription request.
      /// </summary>
-diff --git a/tests/CryptoExchanges.Net.Binance.Tests.Unit/Streaming/BinanceStreamProtocolTests.cs b/tests/CryptoExchanges.Net.Binance.Tests.Unit/Streaming/BinanceStreamProtocolTests.cs
-index fecd1db..f2146df 100644
---- a/tests/CryptoExchanges.Net.Binance.Tests.Unit/Streaming/BinanceStreamProtocolTests.cs
-+++ b/tests/CryptoExchanges.Net.Binance.Tests.Unit/Streaming/BinanceStreamProtocolTests.cs
-@@ -122,6 +122,88 @@ public class BinanceStreamProtocolTests
-         doc.RootElement.GetProperty("params")[0].GetString().Should().Be("btcusdt@trade");
-     }
- 
-+    // ── BuildSubscribeBatch / BuildUnsubscribeBatch (TASK-072) ─────────────────
-+
-+    [Fact]
-+    public void BuildSubscribeBatch_MultipleRequests_EmitsOneFrameWithAllParams()
-+    {
-+        var protocol = MakeProtocol();
-+        var requests = new[]
-+        {
-+            new StreamRequest(StreamKind.OrderBook, "BTCUSDT", Depth: 20),
-+            new StreamRequest(StreamKind.OrderBook, "ETHUSDT", Depth: 20),
-+            new StreamRequest(StreamKind.Ticker, "BNBUSDT"),
-+        };
-+
-+        var wire = protocol.BuildSubscribeBatch(requests);
-+        using var doc = JsonDocument.Parse(wire!);
-+
-+        doc.RootElement.GetProperty("method").GetString().Should().Be("SUBSCRIBE");
-+        var paramsArr = doc.RootElement.GetProperty("params");
-+        paramsArr.GetArrayLength().Should().Be(3);
-+        paramsArr[0].GetString().Should().Be("btcusdt@depth20");
-+        paramsArr[1].GetString().Should().Be("ethusdt@depth20");
-+        paramsArr[2].GetString().Should().Be("bnbusdt@ticker");
-+        doc.RootElement.GetProperty("id").GetInt32().Should().BeGreaterThan(0);
-+    }
-+
-+    [Fact]
-+    public void BuildUnsubscribeBatch_MultipleRequests_EmitsOneUnsubscribeFrame()
-+    {
-+        var protocol = MakeProtocol();
-+        var requests = new[]
-+        {
-+            new StreamRequest(StreamKind.Ticker, "BTCUSDT"),
-+            new StreamRequest(StreamKind.Ticker, "ETHUSDT"),
-+        };
-+
-+        var wire = protocol.BuildUnsubscribeBatch(requests);
-+        using var doc = JsonDocument.Parse(wire!);
-+
-+        doc.RootElement.GetProperty("method").GetString().Should().Be("UNSUBSCRIBE");
-+        var paramsArr = doc.RootElement.GetProperty("params");
-+        paramsArr.GetArrayLength().Should().Be(2);
-+        paramsArr[0].GetString().Should().Be("btcusdt@ticker");
-+        paramsArr[1].GetString().Should().Be("ethusdt@ticker");
-+    }
-+
-+    [Fact]
-+    public void BuildSubscribeBatch_SingleRequest_EmitsSingleParamArray()
-+    {
-+        var protocol = MakeProtocol();
-+        var requests = new[] { new StreamRequest(StreamKind.Trade, "BTCUSDT") };
-+
-+        var wire = protocol.BuildSubscribeBatch(requests);
-+        using var doc = JsonDocument.Parse(wire!);
-+
-+        var paramsArr = doc.RootElement.GetProperty("params");
-+        paramsArr.GetArrayLength().Should().Be(1);
-+        paramsArr[0].GetString().Should().Be("btcusdt@trade");
-+    }
-+
-+    [Fact]
-+    public void BuildSubscribeBatch_OneHundredRequests_EmitsExactlyOneHundredParams()
-+    {
-+        var protocol = MakeProtocol();
-+        var requests = Enumerable.Range(0, 100)
-+            .Select(i => new StreamRequest(StreamKind.Ticker, $"SYM{i}USDT"))
-+            .ToArray();
-+
-+        var wire = protocol.BuildSubscribeBatch(requests);
-+        using var doc = JsonDocument.Parse(wire!);
-+
-+        doc.RootElement.GetProperty("params").GetArrayLength().Should().Be(100,
-+            "the engine pre-chunks at 100, so one frame may carry exactly 100 tokens.");
-+    }
-+
-+    [Fact]
-+    public void BuildSubscribeBatch_EmptyList_ReturnsNull()
-+    {
-+        var protocol = MakeProtocol();
-+        protocol.BuildSubscribeBatch([]).Should().BeNull(
-+            "an empty request list has no batch frame to build.");
-+    }
-+
-     // ── RoutingKeyFor ─────────────────────────────────────────────────────────
-     // Regression for Finding 1 (subscribe/classify keyspace mismatch).
-     // RoutingKeyFor (used by the engine at subscribe time) must equal Classify(frame).RoutingKey
 diff --git a/tests/CryptoExchanges.Net.Http.Tests.Unit/Streaming/FakeStreamProtocol.cs b/tests/CryptoExchanges.Net.Http.Tests.Unit/Streaming/FakeStreamProtocol.cs
 index a47c8c8..1fced94 100644
 --- a/tests/CryptoExchanges.Net.Http.Tests.Unit/Streaming/FakeStreamProtocol.cs
@@ -605,105 +513,3 @@ index 6921bb0..58ac73b 100644
      // ── TASK-071 test helpers ─────────────────────────────────────────────────
  
      private static StreamEngine BuildEngineWith(
-diff --git a/tests/CryptoExchanges.Net.Kucoin.Tests.Unit/Streaming/KucoinStreamProtocolTests.cs b/tests/CryptoExchanges.Net.Kucoin.Tests.Unit/Streaming/KucoinStreamProtocolTests.cs
-index 12bfa29..f8a5f5f 100644
---- a/tests/CryptoExchanges.Net.Kucoin.Tests.Unit/Streaming/KucoinStreamProtocolTests.cs
-+++ b/tests/CryptoExchanges.Net.Kucoin.Tests.Unit/Streaming/KucoinStreamProtocolTests.cs
-@@ -204,6 +204,97 @@ public class KucoinStreamProtocolTests
-         doc.RootElement.GetProperty("topic").GetString().Should().Be("/market/snapshot:BTC-USDT");
-     }
- 
-+    // ── BuildSubscribeBatch / BuildUnsubscribeBatch (TASK-072) ─────────────────
-+
-+    [Fact]
-+    public void BuildSubscribeBatch_SameChannel_CommaJoinsSymbolsUnderOnePrefix()
-+    {
-+        var protocol = MakeProtocol();
-+        var requests = new[]
-+        {
-+            new StreamRequest(StreamKind.OrderBook, "BTC-USDT"),
-+            new StreamRequest(StreamKind.OrderBook, "ETH-USDT"),
-+            new StreamRequest(StreamKind.OrderBook, "BNB-USDT"),
-+        };
-+
-+        var wire = protocol.BuildSubscribeBatch(requests);
-+        using var doc = JsonDocument.Parse(wire!);
-+
-+        doc.RootElement.GetProperty("type").GetString().Should().Be("subscribe");
-+        doc.RootElement.GetProperty("topic").GetString()
-+            .Should().Be("/market/level2:BTC-USDT,ETH-USDT,BNB-USDT");
-+        doc.RootElement.GetProperty("privateChannel").GetBoolean().Should().BeFalse();
-+        doc.RootElement.GetProperty("response").GetBoolean().Should().BeTrue();
-+    }
-+
-+    [Fact]
-+    public void BuildUnsubscribeBatch_SameChannel_CommaJoinsSymbols()
-+    {
-+        var protocol = MakeProtocol();
-+        var requests = new[]
-+        {
-+            new StreamRequest(StreamKind.Trade, "BTC-USDT"),
-+            new StreamRequest(StreamKind.Trade, "ETH-USDT"),
-+        };
-+
-+        var wire = protocol.BuildUnsubscribeBatch(requests);
-+        using var doc = JsonDocument.Parse(wire!);
-+
-+        doc.RootElement.GetProperty("type").GetString().Should().Be("unsubscribe");
-+        doc.RootElement.GetProperty("topic").GetString()
-+            .Should().Be("/market/match:BTC-USDT,ETH-USDT");
-+    }
-+
-+    [Fact]
-+    public void BuildSubscribeBatch_MixedChannels_ReturnsNull()
-+    {
-+        var protocol = MakeProtocol();
-+        var requests = new[]
-+        {
-+            new StreamRequest(StreamKind.OrderBook, "BTC-USDT"),
-+            new StreamRequest(StreamKind.Trade, "ETH-USDT"),
-+        };
-+
-+        protocol.BuildSubscribeBatch(requests).Should().BeNull(
-+            "a heterogeneous channel set cannot be joined into one KuCoin frame; the engine falls back per-frame.");
-+    }
-+
-+    [Fact]
-+    public void BuildSubscribeBatch_SingleRequest_ProducesSingleSymbolTopic()
-+    {
-+        var protocol = MakeProtocol();
-+        var requests = new[] { new StreamRequest(StreamKind.OrderBook, "BTC-USDT") };
-+
-+        var wire = protocol.BuildSubscribeBatch(requests);
-+        using var doc = JsonDocument.Parse(wire!);
-+
-+        doc.RootElement.GetProperty("topic").GetString().Should().Be("/market/level2:BTC-USDT");
-+    }
-+
-+    [Fact]
-+    public void BuildSubscribeBatch_OneHundredSymbols_JoinsAllUnderOnePrefix()
-+    {
-+        var protocol = MakeProtocol();
-+        var requests = Enumerable.Range(0, 100)
-+            .Select(i => new StreamRequest(StreamKind.OrderBook, $"SYM{i}-USDT"))
-+            .ToArray();
-+
-+        var wire = protocol.BuildSubscribeBatch(requests);
-+        using var doc = JsonDocument.Parse(wire!);
-+
-+        var topic = doc.RootElement.GetProperty("topic").GetString()!;
-+        topic.Should().StartWith("/market/level2:");
-+        var symbols = topic["/market/level2:".Length..].Split(',');
-+        symbols.Should().HaveCount(100, "the engine pre-chunks at 100, so one frame may carry exactly 100 symbols.");
-+    }
-+
-+    [Fact]
-+    public void BuildSubscribeBatch_EmptyList_ReturnsNull()
-+    {
-+        var protocol = MakeProtocol();
-+        protocol.BuildSubscribeBatch([]).Should().BeNull("an empty request list has no batch frame to build.");
-+    }
-+
-     [Fact]
-     public void RoutingKeyFor_Ticker_MatchesClassifyRoutingKey()
-     {

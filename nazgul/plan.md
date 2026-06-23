@@ -1,8 +1,8 @@
 # Nazgul Plan — FEAT-008
 
 ## Recovery Pointer
-**Active task**: TASK-072 (IMPLEMENTED) — Batched reconnect-replay (`IStreamProtocol` batch builders + chunked `ReconnectCoreAsync`).
-**Next action**: Review gate for TASK-072 (architect / code / security / api) on branch `feat/FEAT-008-stream-control-msg-rate-limit`. Impl commit `4563126`; diff captured at `nazgul/reviews/TASK-072/diff.patch`. TASK-071 DONE. TASK-073 stays PLANNED until 072 is DONE.
+**Active task**: TASK-073 (READY) — Multi-symbol Binance + KuCoin L2 order-book LIVE regression test (reproduces the original burst failure).
+**Next action**: Implement TASK-073 on branch `feat/FEAT-008-stream-control-msg-rate-limit`. TASK-071 DONE (review 4/4 APPROVED). TASK-072 DONE (review 4/4 APPROVED, impl commit `4563126`; reviews at `nazgul/reviews/TASK-072/`).
 
 ─── ◈ NAZGUL ▸ PLANNING ────────────────────────────────
 

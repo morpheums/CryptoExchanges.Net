@@ -1,6 +1,6 @@
 ---
 id: TASK-071
-status: IN_PROGRESS
+status: IMPLEMENTED
 depends_on: []
 ---
 # TASK-071: Throttle + serialize outbound control frames in StreamEngine (`MinOutboundInterval` + `SendControlAsync`)
@@ -17,7 +17,7 @@ depends_on: []
 - **Created at**: 2026-06-23T22:35:00Z
 - **Claimed at**: 2026-06-23T22:50:00Z
 - **Base SHA**: ac49fca0717de18899a918d9b25b91212a38fadc
-- **Implemented at**:
+- **Implemented at**: 2026-06-23T23:10:00Z
 - **Completed at**:
 - **Blocked at**:
 - **Retry count**: 0/3
@@ -113,9 +113,9 @@ CA2213 dispose of `_sendSemaphore`). Strict layering: the pacing primitive lives
 (`StreamEngine` + `StreamConnectionInfo`); per-venue values live in each exchange protocol.
 
 ## Acceptance Criteria
-- [ ] `StreamConnectionInfo` carries `TimeSpan MinOutboundInterval` (default `TimeSpan.Zero`); `BinanceStreamProtocol` sets it to 200 ms and `KucoinStreamProtocol` sets it from bullet data or a safe default; **zero public API change** (all three types remain `internal`; `IStreamClient` untouched). `dotnet build CryptoExchanges.Net.sln` succeeds 0W/0E.
-- [ ] `StreamEngine.SendControlAsync` exists, uses the dedicated `_sendSemaphore` (not `_gate`), enforces `MinOutboundInterval` via monotonic timing + `Task.Delay`, and a linked token of caller-ct + `_disposeCts.Token`; **every** former `_socket.SendTextAsync` call site (`SubscribeAsync`, `UnsubscribeAsync`, reconnect replay `foreach`, `ClientPingLoopAsync`) now routes through it; `_sendSemaphore` is disposed in `DisposeAsync`.
-- [ ] New fast unit tests (no network) pass and prove: (a) initial multi-subscribe frames are spaced ≥ `MinOutboundInterval`; (b) sends are serialized (max in-flight concurrency = 1); (c) `MinOutboundInterval == Zero` preserves current un-delayed behavior; (d) dispose mid-throttle completes cleanly with no unobserved exception. `dotnet test --filter 'Category!=Integration'` green.
+- [x] `StreamConnectionInfo` carries `TimeSpan MinOutboundInterval` (default `TimeSpan.Zero`); `BinanceStreamProtocol` sets it to 200 ms and `KucoinStreamProtocol` sets it from bullet data or a safe default (100 ms — bullet response carries no rate-limit field); **zero public API change** (all three types remain `internal`; `IStreamClient` untouched). `dotnet build CryptoExchanges.Net.sln` succeeds 0W/0E.
+- [x] `StreamEngine.SendControlAsync` exists, uses the dedicated `_sendSemaphore` (not `_gate`), enforces `MinOutboundInterval` via monotonic timing (`Stopwatch.GetTimestamp`/`GetElapsedTime`) + `Task.Delay`, and a linked token of caller-ct + `_disposeCts.Token`; **every** former `_socket.SendTextAsync` call site (`SubscribeAsync`, `UnsubscribeAsync`, reconnect replay `foreach`, `ClientPingLoopAsync`) now routes through it; `_sendSemaphore` is disposed in `DisposeAsync`.
+- [x] New fast unit tests (no network) pass and prove: (a) initial multi-subscribe frames are spaced ≥ `MinOutboundInterval`; (b) sends are serialized (max in-flight concurrency = 1); (c) `MinOutboundInterval == Zero` preserves current un-delayed behavior; (d) dispose mid-throttle completes cleanly with no unobserved exception; plus (e) reconnect-replay path is paced. `dotnet test --filter 'Category!=Integration'` green.
 
 ## Pattern Reference
 - Record-with-defaulted-positional-param + K1 `<remarks>`: `src/CryptoExchanges.Net.Http/Streaming/StreamConnectionInfo.cs:23` (the record being extended) and `HeartbeatPolicy` (same folder) for the venue-property precedent.
@@ -146,11 +146,38 @@ CA2213 dispose of `_sendSemaphore`). Strict layering: the pacing primitive lives
 
 ## Commits
 
-- (pending)
+- `2d2a3aaa271cd2b4490962323afb9f2fe103593a` — feat(FEAT-008): throttle + serialize outbound control frames in StreamEngine
 
 ## Implementation Log
 
-- (pending)
+- Base SHA: `ac49fca0717de18899a918d9b25b91212a38fadc` (branch `feat/FEAT-008-stream-control-msg-rate-limit`).
+- `StreamConnectionInfo.cs`: added `TimeSpan MinOutboundInterval = default` positional record param
+  with `<param>` doc (venue property, like `HeartbeatPolicy`; `Zero` = unthrottled); updated the K1
+  `<remarks>` to note it still carries only venue/transport policy data.
+- `StreamEngine.cs`:
+  - Added `private readonly SemaphoreSlim _sendSemaphore = new(1, 1)` (separate from `_gate`),
+    `private TimeSpan _minOutboundInterval`, `private long _lastSendTicks`.
+  - Added `SendControlAsync(string text, CancellationToken ct)`: linked CTS (caller ct + `_disposeCts`),
+    `_sendSemaphore` WaitAsync/try/finally Release, monotonic pacing via `Stopwatch.GetElapsedTime` +
+    `Task.Delay` (skipped when interval is `Zero`), sends only if socket open, updates `_lastSendTicks`.
+    Guards `text` per LR-001 (`ArgumentException.ThrowIfNullOrWhiteSpace`).
+  - Added `ApplyConnectionPacing(info)` called in `OpenSocketAsync` and the reconnect connect block to
+    capture the interval and reset the last-send clock (first frame never delayed).
+  - Routed all four send sites through `SendControlAsync`: `SubscribeAsync`, `UnsubscribeAsync`,
+    reconnect-replay `foreach`, `ClientPingLoopAsync` (Text/Json branch) — the ping route also removes
+    the latent concurrent-`SendAsync` race (documented inline).
+  - Added an XML-doc `<remarks>` on `SubscribeAsync` noting the task may be delayed up to one interval.
+  - Disposed `_sendSemaphore` in `DisposeAsync`.
+- `BinanceStreamProtocol.cs`: `MinOutboundInterval: 200 ms` (5 msg/s with margin; comment cites the cap).
+- `KucoinStreamProtocol.cs`: `MinOutboundInterval: 100 ms` safe default — verified `BulletPublicDto`/
+  `InstanceServerDto` carry only Token/Endpoint/PingInterval/PingTimeout (no rate-limit field), comment notes source.
+- Tests (`StreamEngineTests.cs`): added a `RecordingWebSocketConnection` fake (records send-start
+  timestamps + max in-flight concurrency, optional `SendDuration` to widen the overlap window) and a
+  `BuildEngineWith` helper. Added `MinOutboundInterval` knob to `FakeStreamProtocol`. Five new `[Fact]`s
+  (LR-005 coverage; LR-010: no dead vars / self-evident remarks).
+- Build: `dotnet build CryptoExchanges.Net.sln` → 0 Warning(s) / 0 Error(s).
+- Tests: `dotnet test --filter 'Category!=Integration'` → all projects green; Http unit project 92 passed
+  (was 87, +5 new). No regressions across the suite.
 
 ## Review Results
 

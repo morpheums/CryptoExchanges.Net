@@ -1,8 +1,8 @@
 # Nazgul Plan — FEAT-008
 
 ## Recovery Pointer
-**Active task**: TASK-071 (IN_PROGRESS) — Throttle + serialize outbound control frames in `StreamEngine`.
-**Next action**: Implement `MinOutboundInterval` + `SendControlAsync`, route all send sites, set per-venue values, add unit tests, build + test, commit, set IMPLEMENTED. TASK-072 and TASK-073 stay PLANNED until their deps are DONE.
+**Active task**: TASK-071 (IMPLEMENTED) — Throttle + serialize outbound control frames in `StreamEngine`.
+**Next action**: Review gate for TASK-071 (commit `2d2a3aa`; diff at `nazgul/reviews/TASK-071/diff.patch`). On APPROVE, TASK-072 becomes READY. TASK-073 stays PLANNED until 072 is DONE.
 
 ─── ◈ NAZGUL ▸ PLANNING ────────────────────────────────
 
@@ -69,7 +69,7 @@ Authoritative inputs (read fully before any task):
 
 | Task     | Status     | Wave | Description                                                                  |
 |----------|------------|------|------------------------------------------------------------------------------|
-| TASK-071 | ◆ READY    | 1    | `StreamConnectionInfo.MinOutboundInterval` + `SendControlAsync` (throttle/serialize) + route all send sites + Binance 200ms/KuCoin bullet values + unit tests |
+| TASK-071 | ◆ IMPLEMENTED | 1 | `StreamConnectionInfo.MinOutboundInterval` + `SendControlAsync` (throttle/serialize) + route all send sites + Binance 200ms/KuCoin 100ms values + unit tests (commit `2d2a3aa`) |
 | TASK-072 | ◇ PLANNED  | 2    | `IStreamProtocol` batch builders (default-null) + Binance/KuCoin impls + chunked batched `ReconnectCoreAsync` replay + unit tests |
 | TASK-073 | ◇ PLANNED  | 3    | Multi-symbol Binance (≥17) + KuCoin (≥13) L2 order-book LIVE regression test (Integration, self-skip) |
 

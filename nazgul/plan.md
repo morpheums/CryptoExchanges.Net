@@ -1,8 +1,8 @@
 # Nazgul Plan — FEAT-008
 
 ## Recovery Pointer
-**Active task**: TASK-074 (IMPLEMENTED) — Fix Binance combined-stream `data`-envelope decode + activate Binance multi-symbol regression test.
-**Next action**: Run the review gate for TASK-074 (impl commit `da818db`; diff at `nazgul/reviews/TASK-074/diff.patch`), plus the still-pending gates for TASK-072 (`4563126`) and TASK-073 (`dc49327`). TASK-074 result: build 0W/0E; non-integration suite green; LIVE multi-symbol regression now PASSES for BOTH venues — Binance `OrderBook_MultiSymbol_LiveStream_DeliversAtLeastOneUpdate` executed (not skipped, 10 s) delivering a real book + ≥1 subscription Live; KuCoin PASS (5 s). Decode unit tests were testing the wrong (bare `data`-level) shape and were moved to full combined-stream envelopes (+ a partial-book `@depth20` case). TASK-071 DONE; TASK-072/073 IMPLEMENTED.
+**Active task**: FEAT-008 COMPLETE — all 4/4 tasks DONE; consolidated review APPROVED 4/4 (`nazgul/reviews/FEAT-008-consolidated/`; one HIGH code-review finding fixed in `9866a21` and re-approved). Post-loop + PR pending.
+**Next action**: Run post-loop (documentation, release-manager) then open PR `feat/FEAT-008-stream-control-msg-rate-limit` → `main`. Both venues PASS the multi-symbol live L2 regression (Binance 18 / KuCoin 14). Build 0W/0E; non-integration suite green (754 tests). Scope grew by one user-approved task: TASK-074 fixed a pre-existing Binance combined-stream decode bug (data-envelope unwrap) — the second cause of "no Binance order book delivered". Commits: TASK-071 `2d2a3aa`, TASK-072 `4563126`, TASK-073 `dc49327`, TASK-074 `da818db` + review-fix `9866a21`.
 
 ─── ◈ NAZGUL ▸ PLANNING ────────────────────────────────
 

@@ -1,6 +1,6 @@
 ---
 id: TASK-073
-status: IMPLEMENTED
+status: DONE
 depends_on: [TASK-071, TASK-072]
 ---
 # TASK-073: Multi-symbol Binance + KuCoin L2 order-book LIVE regression test (reproduces the original burst failure)

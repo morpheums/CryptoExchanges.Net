@@ -1,6 +1,6 @@
 ---
 id: TASK-074
-status: IMPLEMENTED
+status: DONE
 depends_on: [TASK-073]
 claimed_at: 2026-06-24T00:00:00Z
 implemented_at: 2026-06-24T00:00:00Z

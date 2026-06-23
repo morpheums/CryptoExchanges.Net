@@ -43,7 +43,7 @@ internal static class BinanceStreamDecoders
         // ── Ticker ────────────────────────────────────────────────────────────
         registry.Register(StreamKind.Ticker, bytes =>
         {
-            var dto = JsonSerializer.Deserialize<StreamTickerDto>(bytes.Span, JsonOpts)!;
+            var dto = DeserializeData<StreamTickerDto>(bytes)!;
             return mapper.Map<StreamTickerDto, Ticker>(dto);
         });
 
@@ -52,7 +52,7 @@ internal static class BinanceStreamDecoders
         // matches the REST convention: FillDto -> Trade is skipped in the profile).
         registry.Register(StreamKind.Trade, bytes =>
         {
-            var dto = JsonSerializer.Deserialize<StreamTradeDto>(bytes.Span, JsonOpts)!;
+            var dto = DeserializeData<StreamTradeDto>(bytes)!;
             var symbol = symbolMapper.FromWire(dto.Symbol);
             return new Trade(
                 Symbol: symbol,
@@ -67,15 +67,19 @@ internal static class BinanceStreamDecoders
 
         // ── OrderBook ─────────────────────────────────────────────────────────
         // Hand-mapped following the REST GetOrderBookAsync convention.
-        // The diff-depth stream payload includes the symbol wire string; partial-book frames do not.
+        // The diff-depth ('@depth') data payload carries the symbol in 's'; the partial-book
+        // ('@depthN') payload does not, so fall back to the combined-stream 'stream' token
+        // (e.g. "btcusdt@depth20"), which always names the symbol.
         registry.Register(StreamKind.OrderBook, bytes =>
         {
-            var dto = JsonSerializer.Deserialize<StreamDepthDto>(bytes.Span, JsonOpts)!;
-            var symbol = !string.IsNullOrEmpty(dto.Symbol)
-                ? symbolMapper.FromWire(dto.Symbol)
-                : throw new InvalidOperationException(
-                    "Order-book depth frame does not carry a symbol field. " +
-                    "Use the diff-depth stream (e.g. '@depth') which includes 's'.");
+            var (dto, streamToken) = DeserializeDepth(bytes);
+            var wire = !string.IsNullOrEmpty(dto.Symbol)
+                ? dto.Symbol
+                : WireSymbolFromStreamToken(streamToken)
+                    ?? throw new InvalidOperationException(
+                        "Order-book depth frame carries neither a 's' symbol field nor a resolvable " +
+                        "'stream' token; cannot resolve the symbol.");
+            var symbol = symbolMapper.FromWire(wire);
             var bids = dto.Bids
                 .Select(b => new OrderBookEntry(
                     BinanceValueParsers.ParseDecimal(b[0]),
@@ -93,7 +97,7 @@ internal static class BinanceStreamDecoders
         // Hand-mapped following the REST GetCandlesticksAsync convention.
         registry.Register(StreamKind.Kline, bytes =>
         {
-            var dto = JsonSerializer.Deserialize<StreamKlineDto>(bytes.Span, JsonOpts)!;
+            var dto = DeserializeData<StreamKlineDto>(bytes)!;
             var k = dto.Kline;
             var interval = MapWireInterval(k.Interval);
             return new Candlestick(
@@ -131,4 +135,45 @@ internal static class BinanceStreamDecoders
         "1M" => KlineInterval.OneMonth,
         _ => null
     };
+
+    // The /stream endpoint is always combined-stream: every data frame is the envelope
+    // {"stream":"<token>","data":{...}}. The engine pump passes the whole envelope here, so
+    // the leaf DTO lives under "data" — deserializing the envelope directly leaves every field
+    // unset. Unwrap "data" first; a missing "data" is a malformed combined-stream frame.
+    private static T? DeserializeData<T>(ReadOnlyMemory<byte> frame)
+    {
+        var reader = new Utf8JsonReader(frame.Span);
+        using var doc = JsonDocument.ParseValue(ref reader);
+        if (!doc.RootElement.TryGetProperty("data"u8, out var dataProp))
+            throw new InvalidOperationException(
+                "Combined-stream frame has no 'data' element; cannot decode the payload.");
+        return dataProp.Deserialize<T>(JsonOpts);
+    }
+
+    // Order books need both the unwrapped "data" payload and the "stream" token: partial-book
+    // ('@depthN') frames omit the symbol from "data", so the token is the only symbol source.
+    private static (StreamDepthDto Dto, string? StreamToken) DeserializeDepth(ReadOnlyMemory<byte> frame)
+    {
+        var reader = new Utf8JsonReader(frame.Span);
+        using var doc = JsonDocument.ParseValue(ref reader);
+        var root = doc.RootElement;
+        if (!root.TryGetProperty("data"u8, out var dataProp))
+            throw new InvalidOperationException(
+                "Combined-stream frame has no 'data' element; cannot decode the order book.");
+        var streamToken = root.TryGetProperty("stream"u8, out var streamProp)
+            ? streamProp.GetString()
+            : null;
+        return (dataProp.Deserialize<StreamDepthDto>(JsonOpts)!, streamToken);
+    }
+
+    // Extracts the wire symbol from a combined-stream token (e.g. "btcusdt@depth20" -> "BTCUSDT").
+    // The token is lower-cased on the wire; FromWire's warm table is keyed upper-case.
+    private static string? WireSymbolFromStreamToken(string? streamToken)
+    {
+        if (string.IsNullOrEmpty(streamToken))
+            return null;
+        var at = streamToken.IndexOf('@', StringComparison.Ordinal);
+        var symbol = at > 0 ? streamToken[..at] : streamToken;
+        return symbol.Length > 0 ? symbol.ToUpperInvariant() : null;
+    }
 }

@@ -1,8 +1,8 @@
 # Nazgul Plan — FEAT-008
 
 ## Recovery Pointer
-**Active task**: TASK-073 (IMPLEMENTED) — Multi-symbol Binance + KuCoin L2 order-book LIVE regression test.
-**Next action**: Run the review gate for TASK-073 (impl commit `dc49327`; diff at `nazgul/reviews/TASK-073/diff.patch`). KuCoin live regression PASSES (5 s, 14 symbols). Binance test self-skips due to a pre-existing FEAT-008-unrelated Binance stream decode bug (documented in the TASK-073 manifest log; recommend a follow-up production task). Build 0W/0E; non-integration suite green. TASK-071 DONE; TASK-072 DONE (impl `4563126`).
+**Active task**: TASK-074 (IN_PROGRESS) — Fix Binance combined-stream `data`-envelope decode + activate Binance multi-symbol regression test.
+**Next action**: Mirror KuCoin's `DeserializeData<T>` helper in `BinanceStreamDecoders`; route all four decoders through it; restore the Binance integration `CheckReachabilityAsync` to a clean TLS-handshake probe (it was weakened to require a delivered OrderBook, which masked the decode bug); update unit decode tests to envelope-level; verify build 0/0 + non-integration green + live both venues. Base SHA `840e4fd`. TASK-071 DONE; TASK-072/073 IMPLEMENTED (awaiting review gate).
 
 ─── ◈ NAZGUL ▸ PLANNING ────────────────────────────────
 

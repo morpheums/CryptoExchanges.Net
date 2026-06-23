@@ -1,3 +1,4 @@
+using System.Net.WebSockets;
 using Xunit;
 using AwesomeAssertions;
 using CryptoExchanges.Net.Binance;
@@ -42,36 +43,25 @@ public class BinanceStreamSmokeTests
     private static readonly TimeSpan MultiSymbolReceiveTimeout = TimeSpan.FromSeconds(30);
 
     /// <summary>
-    /// Checks whether a Binance market-data stream actually delivers a decoded model through the
-    /// library from this host. Returns <c>null</c> when a book arrives, or a skip-reason string
-    /// when not. A bare TLS handshake is insufficient (Binance.com accepts the WebSocket from
-    /// geo-restricted networks yet pushes no data), so the probe drives the real subscribe path
-    /// and requires a delivered <see cref="OrderBook"/> before declaring the venue usable.
+    /// Verifies the Binance combined-stream WebSocket endpoint is reachable. Returns <c>null</c>
+    /// when reachable, or a skip-reason string when not. A successful TLS handshake proves the host
+    /// is reachable; the actual decode/delivery is asserted by the tests themselves.
     /// </summary>
     private static async Task<string?> CheckReachabilityAsync()
     {
         try
         {
-            await using var client = BuildClient();
-            var probe = new TaskCompletionSource<OrderBook>(TaskCreationOptions.RunContinuationsAsynchronously);
-            var subscription = await client.SubscribeToOrderBookAsync(
-                BtcUsdt,
-                depth: 20,
-                new StreamHandlers<OrderBook>(ob =>
-                {
-                    probe.TrySetResult(ob);
-                    return ValueTask.CompletedTask;
-                }),
-                CancellationToken.None);
-            await using (subscription)
-            {
-                await probe.Task.WaitAsync(TimeSpan.FromSeconds(10), CancellationToken.None);
-                return null;
-            }
+            using var ws = new ClientWebSocket();
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(8));
+            await ws.ConnectAsync(new Uri("wss://stream.binance.com:9443/stream"), cts.Token)
+                    .ConfigureAwait(false);
+            await ws.CloseAsync(WebSocketCloseStatus.NormalClosure, "probe", CancellationToken.None)
+                    .ConfigureAwait(false);
+            return null;
         }
         catch
         {
-            return "Binance stream delivered no order-book data from this host — skipping integration smoke tests.";
+            return "Binance WebSocket endpoint unreachable — skipping integration smoke tests.";
         }
     }
 

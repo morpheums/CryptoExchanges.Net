@@ -17,8 +17,10 @@ namespace CryptoExchanges.Net.Binance.Tests.Unit.Streaming;
 
 /// <summary>
 /// No-network unit tests for the four Binance stream decoder closures.
-/// Each test feeds a canned combined-stream <c>data</c> payload (raw bytes) through
-/// the registered closure and asserts the resulting <see cref="Core.Models"/> values.
+/// Each test feeds a full combined-stream envelope (<c>{"stream":"&lt;token&gt;","data":{...}}</c>) —
+/// the exact shape the engine pump delivers — through the registered closure and asserts the
+/// resulting <see cref="Core.Models"/> values. Feeding bare <c>data</c>-level JSON would test a
+/// contract the engine never produces (and previously hid the missing-unwrap decode bug).
 /// </summary>
 public class BinanceStreamDecodeTests
 {
@@ -41,6 +43,10 @@ public class BinanceStreamDecodeTests
     private static ReadOnlyMemory<byte> Utf8Bytes(string json) =>
         new ReadOnlyMemory<byte>(Encoding.UTF8.GetBytes(json));
 
+    // Wraps a leaf payload in the combined-stream envelope the engine actually delivers to decoders.
+    private static ReadOnlyMemory<byte> Envelope(string streamToken, string dataJson) =>
+        Utf8Bytes($"{{\"stream\":\"{streamToken}\",\"data\":{dataJson}}}");
+
     // ── Ticker ───────────────────────────────────────────────────────────────
 
     [Fact]
@@ -49,13 +55,13 @@ public class BinanceStreamDecodeTests
         var registry = BuildRegistry();
         var decoder = registry.Resolve(StreamKind.Ticker);
 
-        // Real combined-stream ticker data payload (abbreviated).
-        var data = Utf8Bytes(
+        // Full combined-stream ticker envelope (abbreviated data payload).
+        var frame = Envelope("btcusdt@ticker",
             "{\"s\":\"BTCUSDT\",\"c\":\"67000.00\",\"o\":\"65000.00\",\"h\":\"68000.00\"," +
             "\"l\":\"64000.00\",\"v\":\"12345.678\",\"q\":\"820000000.00\"," +
             "\"p\":\"2000.00\",\"P\":\"3.08\",\"C\":1718784000000}");
 
-        var result = (Ticker)decoder(data);
+        var result = (Ticker)decoder(frame);
 
         result.Symbol.Should().Be(BtcUsdt);
         result.LastPrice.Should().Be(67000.00m);
@@ -75,11 +81,11 @@ public class BinanceStreamDecodeTests
         var registry = BuildRegistry();
         var decoder = registry.Resolve(StreamKind.Trade);
 
-        var data = Utf8Bytes(
+        var frame = Envelope("btcusdt@trade",
             "{\"s\":\"BTCUSDT\",\"t\":999001,\"p\":\"67050.00\",\"q\":\"0.001\"," +
             "\"T\":1718784001000,\"m\":false}");
 
-        var result = (Trade)decoder(data);
+        var result = (Trade)decoder(frame);
 
         result.Symbol.Should().Be(BtcUsdt);
         result.Id.Should().Be("999001");
@@ -92,24 +98,47 @@ public class BinanceStreamDecodeTests
     // ── OrderBook ─────────────────────────────────────────────────────────────
 
     [Fact]
-    public void OrderBook_CannedFrame_MapsBidsAndAsks()
+    public void OrderBook_DiffDepthEnvelope_MapsBidsAndAsks()
     {
         var registry = BuildRegistry();
         var decoder = registry.Resolve(StreamKind.OrderBook);
 
-        // Diff-depth stream payload — includes "s" field.
-        var data = Utf8Bytes(
+        // Diff-depth ('@depth') data payload — carries the symbol in "s".
+        var frame = Envelope("btcusdt@depth",
             "{\"s\":\"BTCUSDT\",\"lastUpdateId\":99999," +
             "\"bids\":[[\"66990.00\",\"0.5\"],[\"66980.00\",\"1.2\"]]," +
             "\"asks\":[[\"67010.00\",\"0.3\"],[\"67020.00\",\"0.8\"]]}");
 
-        var result = (OrderBook)decoder(data);
+        var result = (OrderBook)decoder(frame);
 
         result.Symbol.Should().Be(BtcUsdt);
         result.LastUpdateId.Should().Be(99999L);
         result.Bids.Should().HaveCount(2);
         result.Bids[0].Price.Should().Be(66990.00m);
         result.Asks.Should().HaveCount(2);
+        result.Asks[0].Price.Should().Be(67010.00m);
+    }
+
+    [Fact]
+    public void OrderBook_PartialBookEnvelope_ResolvesSymbolFromStreamToken()
+    {
+        var registry = BuildRegistry();
+        var decoder = registry.Resolve(StreamKind.OrderBook);
+
+        // Partial-book ('@depth20') data payload — no "s"; the symbol lives only in the stream token.
+        // This is the exact shape the live multi-symbol regression test subscribes to (depth: 20).
+        var frame = Envelope("btcusdt@depth20",
+            "{\"lastUpdateId\":12345," +
+            "\"bids\":[[\"66990.00\",\"0.5\"]]," +
+            "\"asks\":[[\"67010.00\",\"0.3\"]]}");
+
+        var result = (OrderBook)decoder(frame);
+
+        result.Symbol.Should().Be(BtcUsdt);
+        result.LastUpdateId.Should().Be(12345L);
+        result.Bids.Should().ContainSingle();
+        result.Bids[0].Price.Should().Be(66990.00m);
+        result.Asks.Should().ContainSingle();
         result.Asks[0].Price.Should().Be(67010.00m);
     }
 
@@ -121,12 +150,12 @@ public class BinanceStreamDecodeTests
         var registry = BuildRegistry();
         var decoder = registry.Resolve(StreamKind.Kline);
 
-        var data = Utf8Bytes(
+        var frame = Envelope("btcusdt@kline_1m",
             "{\"s\":\"BTCUSDT\",\"k\":{\"t\":1718784000000,\"T\":1718784059999," +
             "\"o\":\"66900.00\",\"h\":\"67100.00\",\"l\":\"66850.00\",\"c\":\"67050.00\"," +
             "\"v\":\"45.678\",\"q\":\"3060000.00\",\"n\":1500,\"i\":\"1m\"}}");
 
-        var result = (Candlestick)decoder(data);
+        var result = (Candlestick)decoder(frame);
 
         result.Open.Should().Be(66900.00m);
         result.High.Should().Be(67100.00m);

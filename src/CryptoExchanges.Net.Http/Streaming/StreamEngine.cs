@@ -145,6 +145,11 @@ internal sealed class StreamEngine : IAsyncDisposable
     private volatile bool _isDisposed;
     private int _reconnecting; // 0=idle, 1=in-progress; prevents concurrent reconnect loops
 
+    // The most-recently fired fire-and-forget reconnect task. Awaited (best-effort) in DisposeAsync
+    // before the gate/semaphore/CTS are disposed, so an in-flight reconnect never re-acquires a
+    // disposed primitive (which would surface as an unobserved ObjectDisposedException).
+    private Task? _reconnectTask;
+
     /// <summary>
     /// Initialises a new <see cref="StreamEngine"/> with the injected dependencies.
     /// </summary>
@@ -207,8 +212,17 @@ internal sealed class StreamEngine : IAsyncDisposable
             // Cancel any pending idle-close since we now have a subscriber.
             CancelIdleClose();
 
-            // Lazy-open the socket.
-            if (_socket is null || !_socket.IsOpen)
+            // If a reconnect is in progress, the _socket field and pump are owned by
+            // ReconnectCoreAsync (which holds the gate across teardown and each connect attempt,
+            // releasing it only during the backoff delay — the window we can win here). Do NOT
+            // open a socket or send on it: that would race the reconnect's socket teardown and
+            // surface as ObjectDisposedException. Just register the subscription and return a
+            // Reconnecting handle; the reconnect's K2 replay (ReplaySubscribeSetAsync) sends it
+            // on the new socket once connected.
+            var reconnecting = Volatile.Read(ref _reconnecting) == 1;
+
+            // Lazy-open the socket (only when not mid-reconnect).
+            if (!reconnecting && (_socket is null || !_socket.IsOpen))
                 await OpenSocketAsync(ct).ConfigureAwait(false);
 
             var routingKey = _protocol.RoutingKeyFor(request);
@@ -237,6 +251,13 @@ internal sealed class StreamEngine : IAsyncDisposable
 
             _subscriptions[routingKey] = entry;
             _subscribeSet[routingKey] = request;
+
+            if (reconnecting)
+            {
+                // Deferred to K2 replay on the new socket; surface the in-progress reconnect.
+                handle.SetState(StreamConnectionState.Reconnecting);
+                return handle;
+            }
 
             var subscribeText = _protocol.BuildSubscribe(request);
             await SendControlAsync(subscribeText, ct).ConfigureAwait(false);
@@ -407,7 +428,7 @@ internal sealed class StreamEngine : IAsyncDisposable
 #pragma warning restore CA1031
             {
                 s_logReceiveError(_logger, ex);
-                _ = Task.Run(() => ReconnectAsync(), _disposeCts.Token);
+                _reconnectTask = Task.Run(() => ReconnectAsync(), _disposeCts.Token);
                 return;
             }
 
@@ -415,7 +436,7 @@ internal sealed class StreamEngine : IAsyncDisposable
             {
                 // Null = clean venue-initiated close → reconnect.
                 s_logVenueClose(_logger, null);
-                _ = Task.Run(() => ReconnectAsync(), _disposeCts.Token);
+                _reconnectTask = Task.Run(() => ReconnectAsync(), _disposeCts.Token);
                 return;
             }
 
@@ -484,6 +505,12 @@ internal sealed class StreamEngine : IAsyncDisposable
         {
             await ReconnectCoreAsync().ConfigureAwait(false);
         }
+        // Dispose races this fire-and-forget task: DisposeAsync cancels _disposeCts and disposes
+        // _gate/_disposeCts, so a re-acquire (_gate.WaitAsync(_disposeCts.Token)) after the backoff
+        // delay can throw OCE/ObjectDisposedException. Swallow ONLY when disposing — _isDisposed is
+        // a volatile bool set first in DisposeAsync; do NOT touch _disposeCts here (it may be disposed).
+        catch (OperationCanceledException) when (_isDisposed) { }
+        catch (ObjectDisposedException) when (_isDisposed) { }
         finally
         {
             Interlocked.Exchange(ref _reconnecting, 0);
@@ -494,71 +521,60 @@ internal sealed class StreamEngine : IAsyncDisposable
     {
         if (_isDisposed) return;
 
+        // The gate is held across the dead-socket teardown AND each connect attempt so the
+        // _socket field is never torn down or reassigned outside the gate — a concurrent
+        // gate-holding SubscribeAsync can no longer observe (or race) a half-disposed socket.
+        // It is released ONLY during the inter-attempt backoff Task.Delay below, which is the
+        // single window where a queued SubscribeAsync may run; that path is reconnect-aware
+        // (see SubscribeAsync) and defers its send to the K2 replay rather than opening a socket.
+        // Tracks whether we currently hold the gate so the finally releases exactly once even when
+        // re-acquisition after the backoff delay is cancelled (dispose) and throws.
+        var holdsGate = false;
         await _gate.WaitAsync(_disposeCts.Token).ConfigureAwait(false);
-
-        // Transition all live subscriptions to Reconnecting.
-        foreach (var entry in _subscriptions.Values)
+        holdsGate = true;
+        try
         {
-            entry.Handle.SetState(StreamConnectionState.Reconnecting);
-            await InvokeLifecycleAsync(entry.Handle.ReconnectingCallback).ConfigureAwait(false);
-        }
-
-        _gate.Release();
-
-        // Cancel the pump FIRST so it unblocks any pending ReceiveAsync before socket disposal.
-        if (_pumpCts is not null)
-        {
-            await _pumpCts.CancelAsync().ConfigureAwait(false);
-        }
-
-        // Stop old heartbeat.
-        StopHeartbeat();
-
-        if (_socket is not null)
-        {
-            try { await _socket.DisposeAsync().ConfigureAwait(false); }
-#pragma warning disable CA1031 // intentional: dispose failure must not block reconnect
-            catch (Exception ex) { s_logSocketDisposeOnReconnect(_logger, ex); }
-#pragma warning restore CA1031
-            _socket = null;
-        }
-        if (_pumpTask is not null)
-        {
-            try { await _pumpTask.ConfigureAwait(false); }
-#pragma warning disable CA1031 // intentional: old pump task is already done
-            catch (Exception) { /* already handled inside pump */ }
-#pragma warning restore CA1031
-            _pumpTask = null;
-        }
-        if (_pumpCts is not null)
-        {
-            _pumpCts.Dispose();
-            _pumpCts = null;
-        }
-
-        // Bounded backoff loop (K3).
-        var maxAttempts = _options.MaxReconnectAttempts;
-        while (!_isDisposed && !_disposeCts.IsCancellationRequested)
-        {
-            if (maxAttempts > 0 && _backoff.Attempt >= maxAttempts)
+            // Transition all live subscriptions to Reconnecting.
+            foreach (var entry in _subscriptions.Values)
             {
-                s_logMaxAttemptsReached(_logger, maxAttempts, null);
-                await CloseAllSubscriptionsAsync().ConfigureAwait(false);
-                return;
+                entry.Handle.SetState(StreamConnectionState.Reconnecting);
+                await InvokeLifecycleAsync(entry.Handle.ReconnectingCallback).ConfigureAwait(false);
             }
 
-            var delay = _backoff.Next();
-            s_logReconnectAttempt(_logger, _backoff.Attempt, delay, null);
+            // Tear down the dead socket (cancel + await pump BEFORE disposing the socket).
+            await TeardownSocketAsync().ConfigureAwait(false);
 
-            try
+            // Bounded backoff loop (K3).
+            var maxAttempts = _options.MaxReconnectAttempts;
+            while (!_isDisposed && !_disposeCts.IsCancellationRequested)
             {
-                await Task.Delay(delay, _disposeCts.Token).ConfigureAwait(false);
-            }
-            catch (OperationCanceledException) { return; }
+                if (maxAttempts > 0 && _backoff.Attempt >= maxAttempts)
+                {
+                    s_logMaxAttemptsReached(_logger, maxAttempts, null);
+                    // Gate-free helper: we already hold _gate in ReconnectCoreAsync.
+                    await CloseAllSubscriptionsAsync().ConfigureAwait(false);
+                    return;
+                }
 
-            await _gate.WaitAsync(_disposeCts.Token).ConfigureAwait(false);
-            try
-            {
+                var delay = _backoff.Next();
+                s_logReconnectAttempt(_logger, _backoff.Attempt, delay, null);
+
+                // Release the gate ONLY for the backoff delay so subscribe/unsubscribe can make
+                // progress between attempts; re-acquire before touching socket/pump state again.
+                _gate.Release();
+                holdsGate = false;
+                try
+                {
+                    await Task.Delay(delay, _disposeCts.Token).ConfigureAwait(false);
+                }
+                catch (OperationCanceledException) { return; }
+
+                // Re-acquire before touching socket/pump state. If dispose raced the delay this
+                // throws OperationCanceledException with the gate NOT held; holdsGate stays false
+                // so the finally does not over-release.
+                await _gate.WaitAsync(_disposeCts.Token).ConfigureAwait(false);
+                holdsGate = true;
+
                 IWebSocketConnection? newSocket = null;
                 StreamConnectionInfo info;
                 try
@@ -588,6 +604,13 @@ internal sealed class StreamEngine : IAsyncDisposable
                 // Connected — restart pump and heartbeat.
                 StartPump(info.Heartbeat);
 
+                // Clear the reconnect flag BEFORE the Live broadcast, while still under the gate.
+                // A SubscribeAsync that wins the gate after this returns must see _reconnecting==0
+                // and take the normal Live path — otherwise it would register a handle stuck in
+                // Reconnecting (the Live broadcast below has already passed). ReconnectAsync's
+                // finally re-clears it (idempotent 0→0).
+                Interlocked.Exchange(ref _reconnecting, 0);
+
                 await ReplaySubscribeSetAsync().ConfigureAwait(false); // K2
 
                 // Transition all subscriptions back to Live.
@@ -599,10 +622,49 @@ internal sealed class StreamEngine : IAsyncDisposable
 
                 return; // Success.
             }
-            finally
-            {
+        }
+        finally
+        {
+            if (holdsGate)
                 _gate.Release();
-            }
+        }
+    }
+
+    // Tears down the current socket and pump. Must be called under _gate. Cancels and AWAITS the
+    // pump BEFORE disposing the socket so no pending ReceiveAsync touches a disposed socket.
+    private async Task TeardownSocketAsync()
+    {
+        // Cancel the pump FIRST so it unblocks any pending ReceiveAsync before socket disposal.
+        if (_pumpCts is not null)
+        {
+            await _pumpCts.CancelAsync().ConfigureAwait(false);
+        }
+
+        // Stop old heartbeat.
+        StopHeartbeat();
+
+        // Await the pump to fully exit BEFORE disposing the socket.
+        if (_pumpTask is not null)
+        {
+            try { await _pumpTask.ConfigureAwait(false); }
+#pragma warning disable CA1031 // intentional: old pump task is already done
+            catch (Exception) { /* already handled inside pump */ }
+#pragma warning restore CA1031
+            _pumpTask = null;
+        }
+        if (_pumpCts is not null)
+        {
+            _pumpCts.Dispose();
+            _pumpCts = null;
+        }
+
+        if (_socket is not null)
+        {
+            try { await _socket.DisposeAsync().ConfigureAwait(false); }
+#pragma warning disable CA1031 // intentional: dispose failure must not block reconnect
+            catch (Exception ex) { s_logSocketDisposeOnReconnect(_logger, ex); }
+#pragma warning restore CA1031
+            _socket = null;
         }
     }
 
@@ -658,23 +720,17 @@ internal sealed class StreamEngine : IAsyncDisposable
         s_logBatchedReplay(_logger, requests.Count, frames, null);
     }
 
+    // Gate-free: the caller (ReconnectCoreAsync) already holds _gate. Closes every subscription
+    // channel and clears the replay set when the engine gives up reconnecting.
     private async Task CloseAllSubscriptionsAsync()
     {
-        await _gate.WaitAsync(CancellationToken.None).ConfigureAwait(false);
-        try
+        foreach (var entry in _subscriptions.Values)
         {
-            foreach (var entry in _subscriptions.Values)
-            {
-                entry.Handle.SetState(StreamConnectionState.Closed);
-                await entry.Channel.DisposeAsync().ConfigureAwait(false);
-            }
-            _subscriptions.Clear();
-            _subscribeSet.Clear();
+            entry.Handle.SetState(StreamConnectionState.Closed);
+            await entry.Channel.DisposeAsync().ConfigureAwait(false);
         }
-        finally
-        {
-            _gate.Release();
-        }
+        _subscriptions.Clear();
+        _subscribeSet.Clear();
     }
 
     // ── Pump + heartbeat wiring (shared by OpenSocketAsync and ReconnectCoreAsync) ─
@@ -794,7 +850,7 @@ internal sealed class StreamEngine : IAsyncDisposable
             if (was == 0)
             {
                 s_logWatchdogTriggered(_logger, timeout, null);
-                _ = Task.Run(() => ReconnectAsync(), _disposeCts.Token);
+                _reconnectTask = Task.Run(() => ReconnectAsync(), _disposeCts.Token);
                 return;
             }
         }
@@ -871,6 +927,18 @@ internal sealed class StreamEngine : IAsyncDisposable
 #pragma warning restore CA1031
         }
         await _disposeCts.CancelAsync().ConfigureAwait(false);
+
+        // Await the in-flight fire-and-forget reconnect (if any) BEFORE disposing the gate /
+        // send-semaphore / dispose-CTS below, so a reconnect mid-backoff can never re-acquire a
+        // disposed primitive (which would fault its untracked task as an unobserved exception).
+        var reconnectTask = _reconnectTask;
+        if (reconnectTask is not null)
+        {
+            try { await reconnectTask.ConfigureAwait(false); }
+#pragma warning disable CA1031 // intentional: reconnect task swallows its own dispose-induced exceptions
+            catch (Exception) { /* swallow — ReconnectAsync handles dispose-induced cancellation */ }
+#pragma warning restore CA1031
+        }
 
         // Dispose all subscription channels.
         foreach (var entry in _subscriptions.Values)

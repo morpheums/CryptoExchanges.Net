@@ -146,3 +146,8 @@ reconnect-replay burst → TASK-072.
   ◆ TASK-072 — Batched reconnect-replay (`IStreamProtocol` batch builders + chunked replay).
   ◇ TASK-073 — Multi-symbol live L2 regression test (after 072).
 ────────────────────────────────────────────────────────
+
+## Patches
+
+- [x] PATCH-003: Fix reconnect-vs-subscribe socket-disposal race in StreamEngine (sha: d970e91)
+- [x] PATCH-004: Await fire-and-forget reconnect task on dispose (CI follow-up to PATCH-003) (sha: 46e1608)

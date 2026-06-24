@@ -1,5 +1,5 @@
 ---
-status: IMPLEMENTED
+status: DONE
 ---
 # TASK-079: Bybit multi-symbol L2 order-book streaming integration smoke test (+ Bybit PR to main)
 

@@ -1,5 +1,5 @@
 ---
-status: IMPLEMENTED
+status: DONE
 ---
 # TASK-076: BybitStreamProtocol (IStreamProtocol) + protocol unit tests
 

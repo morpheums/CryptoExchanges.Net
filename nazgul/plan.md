@@ -1,8 +1,8 @@
 # Nazgul Plan — FEAT-009
 
 ## Recovery Pointer
-**Active task**: TASK-076 (IMPLEMENTED — review-fix) — Defensive ValueKind guards in BybitStreamProtocol.Classify + malformed-frame unit tests. Commit: 5c88e51. Build 0W/0E, all 130 Bybit unit tests green. Diff captured at nazgul/reviews/TASK-076/diff.patch.
-**Next action**: Review gate for TASK-079 (original next task resumes after this review-fix).
+**Active task**: Bybit group COMPLETE — TASK-075..079 all DONE. Consolidated group review APPROVED 4/4 (`nazgul/reviews/FEAT-009-bybit-consolidated/`); the one MEDIUM-confidence concern (Classify ValueKind guards) folded in at commit 5c88e51 (+3 malformed-frame tests). Build 0W/0E; 130 Bybit unit tests green; full non-integration suite green. TASK-078 worktree was merged back to the feature branch (verified).
+**Next action**: Open the Bybit PR (`feat/FEAT-009-ws-streaming-bybit-okx-bitget` → `main`). Per ADR-009-005, Bybit must MERGE before OKX (TASK-080) starts; OKX re-branches from updated `main`. Review granularity now `objective` (consolidated per group — no per-task gates).
 
 ─── ◈ NAZGUL ▸ PLANNING ────────────────────────────────
 

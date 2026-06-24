@@ -1,5 +1,5 @@
 ---
-status: IMPLEMENTED
+status: DONE
 ---
 # TASK-077: BybitStreamDecoders (DeltaMapper DTO→Core.Models) + decode unit tests
 

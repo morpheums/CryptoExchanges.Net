@@ -1,5 +1,5 @@
 ---
-status: IMPLEMENTED
+status: DONE
 ---
 # TASK-078: AddBybitStreams() DI extension + DI wiring tests
 

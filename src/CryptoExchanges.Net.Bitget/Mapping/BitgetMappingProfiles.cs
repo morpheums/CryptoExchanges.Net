@@ -1,4 +1,5 @@
 using DeltaMapper;
+using CryptoExchanges.Net.Bitget.Dtos.Streaming;
 using CryptoExchanges.Net.Bitget.Internal;
 using CryptoExchanges.Net.Bitget.Services;
 
@@ -40,6 +41,19 @@ internal sealed class BitgetResponseProfile : Profile
             .ForMember(d => d.CreatedAt, o => o.MapFrom(s => ParseTimestamp(s.CTime)))
             .ForMember(d => d.UpdatedAt, o => o.MapFrom(s => ParseTimestamp(s.UTime)));
 
+        // StreamTickerDto -> Ticker (WebSocket ticker push; change24h/open not present in stream frame).
+        CreateMap<StreamTickerDto, Ticker>()
+            .ForMember(d => d.Symbol, o => o.MapFrom(s => symbolMapper.FromWire(s.InstId)))
+            .ForMember(d => d.LastPrice, o => o.MapFrom(s => BitgetValueParsers.ParseDecimal(s.LastPr)))
+            .ForMember(d => d.OpenPrice, o => o.Ignore())
+            .ForMember(d => d.HighPrice, o => o.MapFrom(s => BitgetValueParsers.ParseDecimal(s.High24h)))
+            .ForMember(d => d.LowPrice, o => o.MapFrom(s => BitgetValueParsers.ParseDecimal(s.Low24h)))
+            .ForMember(d => d.Volume, o => o.MapFrom(s => BitgetValueParsers.ParseDecimal(s.BaseVolume)))
+            .ForMember(d => d.QuoteVolume, o => o.Ignore())
+            .ForMember(d => d.PriceChange, o => o.Ignore())
+            .ForMember(d => d.PriceChangePercent, o => o.Ignore())
+            .ForMember(d => d.Timestamp, o => o.MapFrom(s => ParseTimestamp(s.Ts)));
+
         // TickerDto -> Ticker. Bitget reports the fractional 24h change (change24h) directly, so
         // the percent is change24h * 100 and the absolute change is last - open.
         CreateMap<TickerDto, Ticker>()
@@ -67,9 +81,8 @@ internal sealed class BitgetResponseProfile : Profile
             .ForMember(d => d.StepSize, o => o.Ignore())
             .ForMember(d => d.MinNotional, o => o.Ignore());
 
-        // BalanceDto -> AssetBalance. Bitget splits unavailable balance across frozen (open orders)
-        // and locked (other holds); both count toward the domain Locked. Long-tail coins map to
-        // Asset.None rather than throwing.
+        // BalanceDto -> AssetBalance. Bitget splits unavailable into frozen (open orders) + locked (holds);
+        // both count toward domain Locked. Long-tail coins map to Asset.None rather than throwing.
         CreateMap<BalanceDto, AssetBalance>()
             .ForMember(d => d.Asset, o => o.MapFrom(s => BitgetValueParsers.ParseAssetOrNone(s.Coin)))
             .ForMember(d => d.Free, o => o.MapFrom(s => BitgetValueParsers.ParseDecimal(s.Available)))

@@ -151,3 +151,4 @@ reconnect-replay burst → TASK-072.
 
 - [x] PATCH-003: Fix reconnect-vs-subscribe socket-disposal race in StreamEngine (sha: d970e91)
 - [x] PATCH-004: Await fire-and-forget reconnect task on dispose (CI follow-up to PATCH-003) (sha: 46e1608)
+- [x] PATCH-005: Release prep for v0.5.0-preview.3 (sha: b22d3c1)

@@ -1,7 +1,7 @@
 # PATCH-005: Release prep for v0.5.0-preview.3
 
 ## Metadata
-- **Status**: IN_PROGRESS
+- **Status**: DONE
 - **Created**: 2026-06-24T00:00:00Z
 - **Source**: /nazgul:patch
 - **Flags**: none

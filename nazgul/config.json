@@ -2,9 +2,9 @@
   "schema_version": 12,
   "install_mode": "shared",
   "mode": "afk",
-  "objective": "Fix the WebSocket public market-data streaming bug in CryptoExchanges.Net.Http.Streaming (StreamEngine): subscribing to N symbols emits an unpaced N-message control-frame burst that Binance rejects with PolicyViolation \"Too many requests\" (>5 msgs/sec), closing the socket before any data; reconnect replays the full subscribe-set as another burst, yielding an infinite reconnect loop with no order-book callback. Fix the shared StreamEngine so outbound control messages (subscribe/unsubscribe + reconnect replay) respect a per-venue message-rate limit (batching and/or pacing, configurable per exchange; Binance ~5/sec, KuCoin its own limit). Add a multi-symbol Binance+KuCoin L2 order-book regression test asserting at least one book update is delivered. Transport/wire/URL/keep-alive verified healthy — do not change those.",
-  "feat_id": "FEAT-008",
-  "feat_display_id": "FEAT-008",
+  "objective": "Add public WebSocket market-data streaming to the three exchanges that currently ship REST only — Bybit, OKX, and Bitget — in strict priority order (1) Bybit, (2) OKX, (3) Bitget, for a global (non-US) audience. Each exchange reaches full parity with the existing Binance and KuCoin streaming clients: ticker, trade, order-book (L2), and kline streams exposed through the same public IStreamClient surface via a new AddXxxStreams() DI extension (opt-in; REST-only consumers pay nothing). Clone the verified shared-streaming design exactly — do NOT introduce a new transport or engine. Reuse the shared StreamEngine + StreamServiceRegistration.AddStreams<TOptions>() body in CryptoExchanges.Net.Http; each exchange supplies only its variation points: a per-venue IStreamProtocol (subscribe/unsubscribe wire format, frame Classify, RoutingKeyFor, batch builders, ResolveConnectionAsync, HeartbeatPolicy, MinOutboundInterval) and a StreamDecoderRegistry of DeltaMapper decode closures (DTO->Core.Models), plus internal {Concept}Dto wire DTOs in the exchange's Dtos/Streaming/ folder. Respect each venue's real connection model and rate/heartbeat rules (Bybit v5 public spot topics; OKX public wss ping/pong + per-channel subscribe; Bitget public channels), setting MinOutboundInterval and batch caps per venue like Binance(200ms/100) and KuCoin(100ms). Honor K1 (Http never references Core.Models/DeltaMapper), K2 (subscribe-set replay), K3 (engine backoff), C1 (heartbeat execution in the engine). Spot-only, public streams only, delta callbacks only (no order-book maintenance/snapshotting). Tests per exchange mirror existing suites: protocol unit tests, decode tests, DI wiring tests, and a multi-symbol L2 order-book streaming smoke/integration test asserting at least one book update is delivered. Ship one PR per exchange to main (Bybit merged before OKX, etc.). Zero breaking change to the public IStreamClient surface.",
+  "feat_id": "FEAT-009",
+  "feat_display_id": "FEAT-009",
   "objectives_history": [
     {
       "objective": "Add three new exchange integrations to CryptoExchanges.Net in strict priority order — (1) Bybit, (2) OKX, (3) Bitget — for a global (non-US) audience. Each exchange clones the verified Binance pattern (Core → Http → Exchange → DI, DeltaMapper DTO→model, bespoke ISymbolMapper, retry-only-on-GET, per-attempt re-signing). The signing/credential abstraction is generalized after Bybit, against OKX, and Bitget then reuses that abstraction.",
@@ -56,7 +56,13 @@
       "objective": "Fix the WebSocket public market-data streaming bug in CryptoExchanges.Net.Http.Streaming (StreamEngine): subscribing to N symbols emits an unpaced N-message control-frame burst that Binance rejects with PolicyViolation \"Too many requests\" (>5 msgs/sec), closing the socket before any data; reconnect replays the full subscribe-set as another burst, yielding an infinite reconnect loop with no order-book callback. Fix the shared StreamEngine so outbound control messages (subscribe/unsubscribe + reconnect replay) respect a per-venue message-rate limit (batching and/or pacing, configurable per exchange; Binance ~5/sec, KuCoin its own limit). Add a multi-symbol Binance+KuCoin L2 order-book regression test asserting at least one book update is delivered. Transport/wire/URL/keep-alive verified healthy — do not change those.",
       "started_at": "2026-06-23T21:28:47Z",
       "completed_at": "2026-06-23T23:27:52Z",
-      "pr": "#42"
+      "pr": "#42",
+      "plan_archived_to": "nazgul/archive/2026-06-24-072009-FEAT-008-stream-control-msg-rate-limit"
+    },
+    {
+      "feat_id": "FEAT-009",
+      "objective": "Add public WebSocket market-data streaming to the three exchanges that currently ship REST only — Bybit, OKX, and Bitget — in strict priority order (1) Bybit, (2) OKX, (3) Bitget, for a global (non-US) audience. Each exchange reaches full parity with the existing Binance and KuCoin streaming clients: ticker, trade, order-book (L2), and kline streams exposed through the same public IStreamClient surface via a new AddXxxStreams() DI extension (opt-in; REST-only consumers pay nothing). Clone the verified shared-streaming design exactly — do NOT introduce a new transport or engine. Reuse the shared StreamEngine + StreamServiceRegistration.AddStreams<TOptions>() body in CryptoExchanges.Net.Http; each exchange supplies only its variation points: a per-venue IStreamProtocol (subscribe/unsubscribe wire format, frame Classify, RoutingKeyFor, batch builders, ResolveConnectionAsync, HeartbeatPolicy, MinOutboundInterval) and a StreamDecoderRegistry of DeltaMapper decode closures (DTO->Core.Models), plus internal {Concept}Dto wire DTOs in the exchange's Dtos/Streaming/ folder. Respect each venue's real connection model and rate/heartbeat rules (Bybit v5 public spot topics; OKX public wss ping/pong + per-channel subscribe; Bitget public channels), setting MinOutboundInterval and batch caps per venue like Binance(200ms/100) and KuCoin(100ms). Honor K1 (Http never references Core.Models/DeltaMapper), K2 (subscribe-set replay), K3 (engine backoff), C1 (heartbeat execution in the engine). Spot-only, public streams only, delta callbacks only (no order-book maintenance/snapshotting). Tests per exchange mirror existing suites: protocol unit tests, decode tests, DI wiring tests, and a multi-symbol L2 order-book streaming smoke/integration test asserting at least one book update is delivered. Ship one PR per exchange to main (Bybit merged before OKX, etc.). Zero breaking change to the public IStreamClient surface.",
+      "started_at": "2026-06-24T07:20:00Z"
     }
   ],
   "max_iterations": 40,
@@ -188,7 +194,7 @@
     }
   },
   "branch": {
-    "feature": "feat/FEAT-008-stream-control-msg-rate-limit",
+    "feature": "feat/FEAT-009-ws-streaming-bybit-okx-bitget",
     "base": "main",
     "main_worktree_path": "/Users/josemejia/ai-platform/personal/workspace/repos/CryptoExchanges.Net",
     "worktree_dir": null,
@@ -199,12 +205,12 @@
   },
   "afk": {
     "enabled": true,
-    "yolo": true,
+    "yolo": false,
     "task_pr": false,
     "timeout_minutes": 90,
     "checkpoint_every_n_iterations": 5,
     "auto_commit": true,
-    "commit_prefix": "feat(FEAT-008):"
+    "commit_prefix": "feat(FEAT-009):"
   },
   "context": {
     "budget_strategy": "aggressive",
@@ -254,7 +260,7 @@
   "notifications": {
     "on_complete": null
   },
-  "objective_set_at": "2026-06-23T21:28:36Z",
+  "objective_set_at": "2026-06-24T07:20:00Z",
   "learning": {
     "enabled": true,
     "rules_doc": "nazgul/learning/learned-rules.md",

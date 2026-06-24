@@ -1,8 +1,8 @@
 # Nazgul Plan — FEAT-009
 
 ## Recovery Pointer
-**Active task**: TASK-075 (READY) — Bybit streaming wire DTOs + `BybitStreamOptions`. All other tasks PLANNED (blocked by deps). 15 tasks across 3 exchange groups; strict sequential merge order Bybit → OKX → Bitget (one PR per exchange).
-**Next action**: Implement TASK-075 (READY). Then proceed through the Bybit group (076→077→078→079) in order; TASK-079 opens the Bybit PR to `main`. OKX (TASK-080) is gated on the Bybit merge; Bitget (TASK-085) on the OKX merge.
+**Active task**: TASK-075 (IMPLEMENTED, commit a1909f9) — Bybit streaming wire DTOs + `BybitStreamOptions`. Awaiting review gate. 15 tasks across 3 exchange groups; strict sequential merge order Bybit → OKX → Bitget (one PR per exchange).
+**Next action**: Review gate for TASK-075. After APPROVED, implement TASK-076 (BybitStreamProtocol + protocol tests). Then proceed through the Bybit group (077→078→079) in order; TASK-079 opens the Bybit PR to `main`. OKX (TASK-080) is gated on the Bybit merge; Bitget (TASK-085) on the OKX merge.
 
 ─── ◈ NAZGUL ▸ PLANNING ────────────────────────────────
 
@@ -76,7 +76,7 @@ Tasks: 0/15 complete. Group 1 (Bybit) READY to start. Groups 2 (OKX) + 3 (Bitget
 
 | Task     | Status | Description                                   |
 |----------|--------|-----------------------------------------------|
-| TASK-075 | ◆      | Bybit DTOs + BybitStreamOptions               |
+| TASK-075 | ✦ IMPLEMENTED | Bybit DTOs + BybitStreamOptions         |
 | TASK-076 | ◇      | BybitStreamProtocol + protocol tests          |
 | TASK-077 | ◇      | BybitStreamDecoders + decode tests            |
 | TASK-078 | ◇      | AddBybitStreams() DI + DI tests               |

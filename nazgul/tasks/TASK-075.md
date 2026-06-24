@@ -1,5 +1,5 @@
 ---
-status: READY
+status: IMPLEMENTED
 ---
 # TASK-075: Bybit streaming wire DTOs + BybitStreamOptions
 
@@ -13,8 +13,9 @@ status: READY
 - **Wave**: 1
 - **Traces to**: PRD AC#1; TRD "Per-Exchange Variation Points" §1 (XxxStreamOptions) + §4 (Wire DTOs); ADR-009-001
 - **Created at**: 2026-06-24T07:40:00Z
-- **Claimed at**:
-- **Implemented at**:
+- **Claimed at**: 2026-06-24T08:00:00Z
+- **Base SHA**: 2bdd8837891be4c8b57c88918e6d2ed9a452ae90
+- **Implemented at**: 2026-06-24T08:05:00Z
 - **Completed at**:
 - **Blocked at**:
 - **Retry count**: 0/3
@@ -74,9 +75,36 @@ follow the Binance `StreamDepthDto` `[][]`/`PriceLevel` decode shape already in 
 - **TRD Component**: Bybit variation points §1 (BybitStreamOptions) + §4 (Dtos/Streaming/)
 - **ADR Reference**: ADR-009-001 (clone existing pattern), ADR-009-002 (static endpoint)
 
+## Commits
+- a1909f9 feat(FEAT-009): TASK-075 — Bybit streaming wire DTOs + BybitStreamOptions
+
 ## Implementation Log
 
 ### Attempt 1
+
+Created 5 files under `src/CryptoExchanges.Net.Bybit/`:
+
+- `Streaming/BybitStreamOptions.cs` — public sealed class, `StreamBaseUrl` defaulting to
+  `wss://stream.bybit.com/v5/public/spot`, full XML docs. Mirrors `BinanceStreamOptions`.
+
+- `Dtos/Streaming/StreamTickerDto.cs` — internal sealed record; maps Bybit v5 `tickers.<SYM>`
+  data frame. Fields: `symbol`, `lastPrice`, `highPrice24h`, `lowPrice24h`, `volume24h`,
+  `turnover24h`, `prevPrice24h`, `price24hPcnt` (all string-encoded decimals).
+
+- `Dtos/Streaming/StreamTradeDto.cs` — internal sealed record; one entry from the
+  `publicTrade.<SYM>` data array. Fields: `T` → TradeTime (long), `s` → Symbol, `S` → Side,
+  `v` → Quantity, `p` → Price, `i` → TradeId. Note: `S=="Sell"` → buyer-maker (documented).
+
+- `Dtos/Streaming/StreamDepthDto.cs` — internal sealed record; maps `orderbook.<DEPTH>.<SYM>`
+  data. Fields: `s` → Symbol, `b` → Bids, `a` → Asks (both `List<List<string>>`), `u` → UpdateId
+  (long), `seq` → Seq (long).
+
+- `Dtos/Streaming/StreamKlineDto.cs` — internal sealed record; one entry from the
+  `kline.<INTERVAL>.<SYM>` data array. Fields: `start` → OpenTime (long), OHLCV strings,
+  `interval` (string), `confirm` (bool — true when bar is closed).
+
+Build: 0W/0E. Tests: all green (no regressions — 0 Failed across all suites).
+Commit SHA: a1909f9
 
 ## Review Results
 

@@ -1,5 +1,5 @@
 ---
-status: READY
+status: IN_PROGRESS
 ---
 # TASK-076: BybitStreamProtocol (IStreamProtocol) + protocol unit tests
 
@@ -13,7 +13,8 @@ status: READY
 - **Wave**: 2
 - **Traces to**: PRD AC#1/#2/#3; TRD §"Per-Exchange Variation Points" §2 + §"Bybit v5 Public Spot"; ADR-009-003 (heartbeat), ADR-009-004 (pacing), ADR-009-006 (routing key)
 - **Created at**: 2026-06-24T07:40:00Z
-- **Claimed at**:
+- **Claimed at**: 2026-06-24T08:00:00Z
+- **Base SHA**: 7746044a5f51406874fc3b6195b3df497351bd6f
 - **Implemented at**:
 - **Completed at**:
 - **Blocked at**:

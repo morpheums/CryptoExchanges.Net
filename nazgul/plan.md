@@ -1,8 +1,8 @@
 # Nazgul Plan — FEAT-009
 
 ## Recovery Pointer
-**Active task**: TASK-076 (READY) — BybitStreamProtocol + protocol unit tests. TASK-075 is DONE: reviewed (4 verdicts in `nazgul/reviews/TASK-075/`), the one blocking finding (missing Bybit `turnover` field) fixed in commit 4fe3ff2; trivial one-line re-review skipped per maintainer's consolidated-review preference. Build 0W/0E, all tests green. 15 tasks across 3 exchange groups; strict sequential merge order Bybit → OKX → Bitget (one PR per exchange).
-**Next action**: Implement TASK-076 (BybitStreamProtocol: subscribe/unsubscribe/batch wire format, Classify, RoutingKeyFor, ResolveConnectionAsync, HeartbeatPolicy, MinOutboundInterval — confirm Bybit v5 heartbeat direction + order-book depth) with protocol unit tests mirroring BinanceStreamProtocolTests/KucoinStreamProtocolTests.
+**Active task**: TASK-076 (IN_PROGRESS) — BybitStreamProtocol + protocol unit tests.
+**Next action**: Implement BybitStreamProtocol.cs + BybitStreamProtocolTests.cs; dotnet build + dotnet test; commit.
 
 ─── ◈ NAZGUL ▸ PLANNING ────────────────────────────────
 

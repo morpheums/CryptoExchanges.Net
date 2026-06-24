@@ -1,5 +1,5 @@
 ---
-status: IMPLEMENTED
+status: CHANGES_REQUESTED
 ---
 # TASK-075: Bybit streaming wire DTOs + BybitStreamOptions
 
@@ -18,7 +18,7 @@ status: IMPLEMENTED
 - **Implemented at**: 2026-06-24T08:05:00Z
 - **Completed at**:
 - **Blocked at**:
-- **Retry count**: 0/3
+- **Retry count**: 1/3
 
 ## Description
 
@@ -38,7 +38,7 @@ goes ONLY in `[JsonPropertyName]`:
 - `StreamTickerDto` → maps to `Ticker` (Bybit `tickers.<SYM>` data: `symbol`, `lastPrice`, `highPrice24h`, `lowPrice24h`, `volume24h`, etc.)
 - `StreamTradeDto` → maps to `Trade` (Bybit `publicTrade.<SYM>` data is an array of trade rows: `T` ts, `s` symbol, `S` side, `v` size, `p` price, `i` id; `S=="Sell"` → buyer-maker semantics)
 - `StreamDepthDto` → maps to `OrderBook` (Bybit `orderbook.<DEPTH>.<SYM>` data: `s` symbol, `b` bids `[[price,qty],...]`, `a` asks, `u` updateId, `seq`)
-- `StreamKlineDto` → maps to `Candlestick` (Bybit `kline.<INTERVAL>.<SYM>` data row: `start`, `open`, `high`, `low`, `close`, `volume`, `interval`, `confirm`)
+- `StreamKlineDto` → maps to `Candlestick` (Bybit `kline.<INTERVAL>.<SYM>` data row: `start`, `open`, `high`, `low`, `close`, `volume`, `turnover`, `interval`, `confirm`)
 
 Model these from the Binance/KuCoin DTO files so the shape, nullability, and decimal-as-string
 handling match the existing pattern. Bybit's order-book levels are `[price, qty]` string pairs —
@@ -53,6 +53,7 @@ follow the Binance `StreamDepthDto` `[][]`/`PriceLevel` decode shape already in 
 ## Acceptance Criteria
 - [ ] `BybitStreamOptions` is a public sealed class with `StreamBaseUrl` defaulting to `wss://stream.bybit.com/v5/public/spot`, full XML docs.
 - [ ] Four internal `{Concept}Dto` records exist under `Dtos/Streaming/` (Ticker/Trade/Depth/Kline), one type per file, Bybit field names only in `[JsonPropertyName]`, matching the Binance DTO style at `src/CryptoExchanges.Net.Binance/Dtos/Streaming/`.
+- [ ] `StreamKlineDto` includes a `Turnover` property mapping Bybit v5 `"turnover"` (quote-asset volume): `[JsonPropertyName("turnover")] public string Turnover { get; init; } = "0";`
 - [ ] `dotnet build CryptoExchanges.Net.sln` → 0 Warning / 0 Error.
 
 ## Pattern Reference
@@ -109,3 +110,18 @@ Commit SHA: a1909f9
 ## Review Results
 
 ### Attempt 1
+
+**Gate**: CHANGES_REQUESTED (1/3 retries used)
+
+| Reviewer | Verdict | Blocking Findings |
+|----------|---------|-------------------|
+| architect-reviewer | APPROVED | none |
+| code-reviewer | CHANGES_REQUESTED | F1: Missing `turnover` field in StreamKlineDto (MEDIUM/90) |
+| security-reviewer | APPROVED | none |
+| api-reviewer | APPROVED | none |
+
+**Blocking fix required** (see `nazgul/reviews/TASK-075/consolidated-feedback.md`):
+
+1. [AUTO-FIX] Add `[JsonPropertyName("turnover")] public string Turnover { get; init; } = "0";`
+   to `StreamKlineDto.cs` after the `Volume` property. Bybit v5 kline frames always send this field.
+   Reference: `src/CryptoExchanges.Net.Binance/Dtos/Streaming/StreamKlineBarDto.cs` (QuoteVolume).

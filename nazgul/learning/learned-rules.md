@@ -8,7 +8,7 @@
 - **Status**: active
 - **Scope-Agents**: implementer, code-reviewer
 - **Scope-Globs**: src/**/*.cs
-- **Hits**: 10
+- **Hits**: 11
 - **Added**: 2026-06-18
 - **Evidence**: TASK-002 (code-reviewer REJECT@85 — BuildGetSignString/BuildPostSignString missing guards), TASK-005 (code-reviewer REJECT@97 — BybitHttpClient.GetAsync/PostAsync/DeleteAsync missing endpoint guard), TASK-003 (api-reviewer non-blocking concern on ctor params)
 
@@ -128,7 +128,7 @@ instance dependencies must be interface-typed. Reference:
 - **Status**: active
 - **Scope-Agents**: implementer, api-reviewer
 - **Scope-Globs**: src/**/*Options.cs, src/**/ServiceCollectionExtensions.cs, src/**/StreamServiceCollectionExtensions.cs
-- **Hits**: 1
+- **Hits**: 2
 - **Added**: 2026-06-21
 - **Evidence**: TASK-062 Cycle 1 (api-reviewer REJECT@98 — KucoinStreamOptions.RestBaseUrl was public and ValidateOnStart-registered but never read by the protocol factory; setting it was a silent no-op; fixed Cycle 2 by resolving the options in the factory and threading the value through, with a wiring test)
 
@@ -167,7 +167,7 @@ to a docs task forces a REJECT — the docs cannot honestly advertise the key as
 - **Status**: active
 - **Scope-Agents**: implementer, code-reviewer
 - **Scope-Globs**: src/**/Dtos/Streaming/*.cs, tests/**/Streaming/*.cs
-- **Hits**: 1
+- **Hits**: 2
 - **Added**: 2026-06-21
 - **Evidence**: TASK-062 bugfix cycle — StreamTickerDto.Time and StreamKlineDto.Time typed as `string` but the live wire sends JSON numbers (silent deserialize failure), and the ticker subscribed to `/market/ticker` (no `symbol`, no 24h stats) instead of `/market/snapshot`, crashing the decoder; all three bugs were invisible to unit tests (fixtures match the DTO, not reality) and only surfaced when live integration tests timed out
 

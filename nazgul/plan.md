@@ -1,8 +1,8 @@
 # Nazgul Plan — FEAT-009
 
 ## Recovery Pointer
-**Active task**: TASK-075 (IMPLEMENTED, commit a1909f9) — Bybit streaming wire DTOs + `BybitStreamOptions`. Awaiting review gate. 15 tasks across 3 exchange groups; strict sequential merge order Bybit → OKX → Bitget (one PR per exchange).
-**Next action**: Review gate for TASK-075. After APPROVED, implement TASK-076 (BybitStreamProtocol + protocol tests). Then proceed through the Bybit group (077→078→079) in order; TASK-079 opens the Bybit PR to `main`. OKX (TASK-080) is gated on the Bybit merge; Bitget (TASK-085) on the OKX merge.
+**Active task**: TASK-075 (CHANGES_REQUESTED, retry 1/3) — Bybit streaming wire DTOs + `BybitStreamOptions`. Review gate completed: 3/4 APPROVED, code-reviewer CHANGES_REQUESTED. Blocking fix: add `Turnover` field (`[JsonPropertyName("turnover")]`) to `StreamKlineDto`. 15 tasks across 3 exchange groups; strict sequential merge order Bybit → OKX → Bitget (one PR per exchange).
+**Next action**: Implementer fixes TASK-075 (add `Turnover` property to `StreamKlineDto`, commit, set IMPLEMENTED). Then re-run review gate. After APPROVED, proceed to TASK-076 (BybitStreamProtocol + protocol tests).
 
 ─── ◈ NAZGUL ▸ PLANNING ────────────────────────────────
 
@@ -72,11 +72,11 @@ Each implementor records the confirmed values in the protocol class summary and 
 
 ## Status Summary
 
-Tasks: 0/15 complete. Group 1 (Bybit) READY to start. Groups 2 (OKX) + 3 (Bitget) gated on prior merges.
+Tasks: 0/15 complete. TASK-075 in retry cycle (1/3). Groups 2 (OKX) + 3 (Bitget) gated on prior merges.
 
 | Task     | Status | Description                                   |
 |----------|--------|-----------------------------------------------|
-| TASK-075 | ✦ IMPLEMENTED | Bybit DTOs + BybitStreamOptions         |
+| TASK-075 | ⚠ CHANGES_REQUESTED | Bybit DTOs + BybitStreamOptions    |
 | TASK-076 | ◇      | BybitStreamProtocol + protocol tests          |
 | TASK-077 | ◇      | BybitStreamDecoders + decode tests            |
 | TASK-078 | ◇      | AddBybitStreams() DI + DI tests               |
@@ -95,7 +95,7 @@ Tasks: 0/15 complete. Group 1 (Bybit) READY to start. Groups 2 (OKX) + 3 (Bitget
 ## Task Groups (dependency-ordered, strict sequential merge order)
 
 ### Group 1 — Bybit (PR #1 to `main`, merged FIRST)
-- **TASK-075** — wire DTOs + `BybitStreamOptions`. Depends on: none. **READY.**
+- **TASK-075** — wire DTOs + `BybitStreamOptions`. Depends on: none. **CHANGES_REQUESTED (retry 1/3).**
 - **TASK-076** — `BybitStreamProtocol : IStreamProtocol` + protocol unit tests. Depends on: TASK-075.
 - **TASK-077** — `BybitStreamDecoders` + decode unit tests. Depends on: TASK-075, TASK-076.
 - **TASK-078** — `AddBybitStreams()` DI extension + DI wiring tests. Depends on: TASK-076, TASK-077.

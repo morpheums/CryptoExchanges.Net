@@ -1,8 +1,8 @@
 # Nazgul Plan — FEAT-009
 
 ## Recovery Pointer
-**Active task**: TASK-078 (IMPLEMENTED) — AddBybitStreams() DI extension + DI wiring tests. Commit: f9515ce. Build 0W/0E, 127 Bybit unit tests green (3 new DI tests). Diff captured at nazgul/reviews/TASK-078/diff.patch.
-**Next action**: Review gate for TASK-078.
+**Active task**: TASK-079 (IMPLEMENTED) — Bybit multi-symbol L2 order-book streaming integration smoke test. Commit: ba3d60a. Build 0W/0E, unit gate green (4 Bybit integration tests correctly excluded by Category filter). Diff captured at nazgul/reviews/TASK-079/diff.patch.
+**Next action**: Review gate for TASK-079.
 
 ─── ◈ NAZGUL ▸ PLANNING ────────────────────────────────
 
@@ -80,7 +80,7 @@ Tasks: 0/15 complete. TASK-075 in retry cycle (1/3). Groups 2 (OKX) + 3 (Bitget)
 | TASK-076 | ✦      | BybitStreamProtocol + protocol tests          |
 | TASK-077 | ✦      | BybitStreamDecoders + decode tests            |
 | TASK-078 | ✦      | AddBybitStreams() DI + DI tests               |
-| TASK-079 | ◇      | Bybit multi-symbol L2 smoke (+ Bybit PR)      |
+| TASK-079 | ✦      | Bybit multi-symbol L2 smoke (+ Bybit PR)      |
 | TASK-080 | ◇      | OKX DTOs + OkxStreamOptions                    |
 | TASK-081 | ◇      | OkxStreamProtocol (text-ping/pong) + tests     |
 | TASK-082 | ◇      | OkxStreamDecoders + decode tests               |

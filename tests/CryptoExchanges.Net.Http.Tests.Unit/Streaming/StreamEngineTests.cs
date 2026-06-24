@@ -1282,6 +1282,365 @@ public sealed class StreamEngineTests
         }
     }
 
+    // ── PATCH-003: reconnect-vs-subscribe socket-disposal race ────────────────
+
+    [Fact]
+    public async Task Engine_SubscribeMidReconnect_NoOrphanedSocket_FullReplayOnNewSocket()
+    {
+        // Regression for the reconnect-vs-subscribe socket-disposal race.
+        //
+        // Old behaviour: ReconnectCoreAsync released _gate after transitioning subscriptions to
+        // Reconnecting but BEFORE disposing the dead socket / opening the new one — so a
+        // concurrent gate-holding SubscribeAsync→OpenSocketAsync could open a second live socket
+        // (orphan) or touch the socket field mid-dispose, surfacing ObjectDisposedException from
+        // ConnectAsync on the new socket.
+        //
+        // Fixed behaviour: the gate is held across teardown + each connect attempt (released only
+        // during the backoff delay). A subscribe that arrives mid-reconnect registers the
+        // subscription and returns a Reconnecting handle WITHOUT opening a socket or sending; the
+        // reconnect's K2 replay then sends the FULL subscribe-set on the single new socket.
+        //
+        // Determinism: a single-use connection that throws ObjectDisposedException after dispose
+        // (so any use of an orphaned/disposed socket is caught as a live failure), plus a
+        // recording factory that hands out a fresh connection per connect and tracks how many are
+        // ever simultaneously live. We hold the reconnect inside its backoff window, fire the
+        // mid-reconnect subscribe there, then release it.
+
+        var factory = new RecordingSingleUseFactory();
+        // Per-request protocol (keys/subscribe text derived from the request, not a shared mutable
+        // field) so the K2 replay faithfully re-sends each distinct stored subscription.
+        var protocol = new PerRequestProtocol();
+        var options = new StreamEngineOptions
+        {
+            IdleCloseDelay = TimeSpan.FromSeconds(30),
+            // Long initial backoff gives a deterministic window to fire the mid-reconnect
+            // subscribe while the reconnect loop is parked in Task.Delay with the gate released.
+            BackoffInitial = TimeSpan.FromMilliseconds(400),
+            BackoffMax = TimeSpan.FromMilliseconds(400),
+            BackoffMultiplier = 2.0,
+        };
+
+        var registry = new StreamDecoderRegistry();
+        registry.Register(StreamKind.OrderBook, bytes => Encoding.UTF8.GetString(bytes.Span));
+
+        var engine = new StreamEngine(protocol, registry, options, factory.Create, NullLogger.Instance);
+
+        await using (engine)
+        {
+            // Subscribe the first order-book stream on the initial socket.
+            await engine.SubscribeAsync(
+                new StreamRequest(StreamKind.OrderBook, "BTCUSDT", Depth: 20),
+                MakeHandlers(),
+                TestContext.Current.CancellationToken);
+
+            factory.LiveCount.Should().Be(1, "exactly one socket is live after the first subscribe.");
+
+            // Trigger a venue close → reconnect begins; the first socket is torn down (disposed),
+            // then the reconnect loop enters its backoff Task.Delay with the gate RELEASED.
+            factory.SimulateDisconnect();
+
+            // Wait until the first socket has been disposed (reconnect teardown complete) so we
+            // are firing the subscribe during the backoff window, not before teardown.
+            var disposedDeadline = Task.Delay(5000, TestContext.Current.CancellationToken);
+            while (factory.LiveCount > 0 && !disposedDeadline.IsCompleted)
+                await Task.Delay(10, TestContext.Current.CancellationToken);
+            factory.LiveCount.Should().Be(0, "the dead socket must be disposed before the new one opens.");
+
+            // Fire a SECOND subscribe mid-reconnect. Under the fix this registers the subscription
+            // and returns a Reconnecting handle without opening a socket — it must NOT create a
+            // second live socket nor throw ObjectDisposedException.
+            var midSub = await engine.SubscribeAsync(
+                new StreamRequest(StreamKind.OrderBook, "ETHUSDT", Depth: 20),
+                MakeHandlers(),
+                TestContext.Current.CancellationToken);
+
+            midSub.State.Should().Be(StreamConnectionState.Reconnecting,
+                "a subscribe arriving mid-reconnect must defer to the K2 replay, not open its own socket.");
+
+            // Let the reconnect complete (backoff elapses, new socket connects, K2 replay runs).
+            var reconnectDeadline = Task.Delay(5000, TestContext.Current.CancellationToken);
+            while (factory.LiveCount < 1 && !reconnectDeadline.IsCompleted)
+                await Task.Delay(10, TestContext.Current.CancellationToken);
+
+            // Exactly one socket is live — no orphan was opened by the mid-reconnect subscribe.
+            factory.MaxSimultaneousLive.Should().Be(1,
+                "the mid-reconnect subscribe must not open a second live socket (no orphan).");
+            factory.LiveCount.Should().Be(1, "exactly one socket is live after reconnect completes.");
+            factory.NoUseAfterDispose.Should().BeTrue(
+                "no socket may be used after it was disposed (no ObjectDisposedException path).");
+
+            // The new socket must have received the FULL subscribe-set replay (both streams),
+            // proving the mid-reconnect subscription was sent on the new socket via K2 — not lost.
+            var newSocket = factory.LastConnection!;
+            var replayDeadline = Task.Delay(5000, TestContext.Current.CancellationToken);
+            while (newSocket.SentText.Count < 2 && !replayDeadline.IsCompleted)
+                await Task.Delay(10, TestContext.Current.CancellationToken);
+
+            var sent = newSocket.SentText.ToArray();
+            sent.Should().Contain(m => m.Contains("btcusdt@orderbook/20", StringComparison.Ordinal),
+                "the original subscription must be replayed on the new socket (K2).");
+            sent.Should().Contain(m => m.Contains("ethusdt@orderbook/20", StringComparison.Ordinal),
+                "the mid-reconnect subscription must be replayed on the new socket (K2).");
+
+            // The mid-reconnect handle must finish Live once the replay completes.
+            var liveDeadline = Task.Delay(5000, TestContext.Current.CancellationToken);
+            while (midSub.State != StreamConnectionState.Live && !liveDeadline.IsCompleted)
+                await Task.Delay(10, TestContext.Current.CancellationToken);
+            midSub.State.Should().Be(StreamConnectionState.Live,
+                "the deferred subscription must transition to Live after the K2 replay.");
+        }
+    }
+
+    [Fact]
+    public async Task Engine_DisposeDuringReconnectBackoff_ReleasesGateExactlyOnce_NoOverRelease()
+    {
+        // Regression: ReconnectCoreAsync releases _gate for the backoff Task.Delay then re-acquires
+        // it. If dispose cancels _disposeCts during that delay, both the Task.Delay AND the
+        // re-acquire WaitAsync throw OperationCanceledException — the gate must NOT be released a
+        // second time (which would corrupt the semaphore / throw SemaphoreFullException). We drive
+        // a reconnect into its backoff window, dispose mid-backoff, and assert dispose completes
+        // cleanly with no unobserved exception.
+        var factory = new RecordingSingleUseFactory();
+        var protocol = new PerRequestProtocol();
+        var options = new StreamEngineOptions
+        {
+            IdleCloseDelay = TimeSpan.FromSeconds(30),
+            BackoffInitial = TimeSpan.FromMilliseconds(800),
+            BackoffMax = TimeSpan.FromMilliseconds(800),
+            BackoffMultiplier = 2.0,
+        };
+        var registry = new StreamDecoderRegistry();
+        registry.Register(StreamKind.OrderBook, bytes => Encoding.UTF8.GetString(bytes.Span));
+        var engine = new StreamEngine(protocol, registry, options, factory.Create, NullLogger.Instance);
+
+        var unobserved = new ConcurrentQueue<Exception>();
+        void Handler(object? s, UnobservedTaskExceptionEventArgs e) => unobserved.Enqueue(e.Exception);
+        TaskScheduler.UnobservedTaskException += Handler;
+        try
+        {
+            await engine.SubscribeAsync(
+                new StreamRequest(StreamKind.OrderBook, "BTCUSDT", Depth: 20),
+                MakeHandlers(),
+                TestContext.Current.CancellationToken);
+
+            // Trigger reconnect; wait until the dead socket is disposed → loop is in backoff delay.
+            factory.SimulateDisconnect();
+            var disposedDeadline = Task.Delay(5000, TestContext.Current.CancellationToken);
+            while (factory.LiveCount > 0 && !disposedDeadline.IsCompleted)
+                await Task.Delay(10, TestContext.Current.CancellationToken);
+            factory.LiveCount.Should().Be(0, "the dead socket must be disposed before the backoff delay.");
+
+            // Dispose mid-backoff — cancels _disposeCts while the gate is released for Task.Delay.
+            var dispose = engine.DisposeAsync();
+            await dispose.AsTask().WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
+
+            await Task.Delay(50, TestContext.Current.CancellationToken);
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            GC.Collect();
+
+            unobserved.Should().BeEmpty(
+                "dispose mid-reconnect-backoff must release the gate exactly once — no SemaphoreFullException.");
+            factory.NoUseAfterDispose.Should().BeTrue("no socket may be used after dispose.");
+        }
+        finally
+        {
+            TaskScheduler.UnobservedTaskException -= Handler;
+        }
+    }
+
+    /// <summary>
+    /// A minimal protocol whose routing key and subscribe/unsubscribe text are derived from the
+    /// <see cref="StreamRequest"/> itself (lowercase venue-native key), mirroring a real
+    /// per-exchange protocol. Unlike <see cref="FakeStreamProtocol"/> it carries no shared mutable
+    /// "next key" field, so the K2 replay faithfully re-sends each distinct stored subscription.
+    /// Per-frame replay only (no batching) so each replayed subscription is one observable frame.
+    /// </summary>
+    private sealed class PerRequestProtocol : IStreamProtocol
+    {
+        private static readonly StreamConnectionInfo s_info = new(
+            new Uri("wss://fake.test/ws"),
+            new HeartbeatPolicy(
+                Direction: HeartbeatDirection.ServerPingClientPong,
+                Interval: TimeSpan.FromSeconds(30),
+                Timeout: TimeSpan.FromSeconds(60)));
+
+        // Venue-native lowercase keys (Binance style); CA1308 is suppressed at the two
+        // ToLowerInvariant call sites because lowercase is the on-the-wire form the venue
+        // expects, not a normalisation for comparison/security.
+        private static string Key(StreamRequest r)
+        {
+#pragma warning disable CA1308
+            var sym = r.WireSymbol.ToLowerInvariant();
+            var kind = r.Kind.ToString().ToLowerInvariant();
+#pragma warning restore CA1308
+            return r.Depth.HasValue ? $"{sym}@orderbook/{r.Depth}" : $"{sym}@{kind}";
+        }
+
+        public ValueTask<StreamConnectionInfo> ResolveConnectionAsync(CancellationToken ct) => new(s_info);
+
+        public string RoutingKeyFor(StreamRequest request) => Key(request);
+
+        public string BuildSubscribe(StreamRequest request) => $"SUBSCRIBE:{Key(request)}";
+
+        public string BuildUnsubscribe(StreamRequest request) => $"UNSUBSCRIBE:{Key(request)}";
+
+        public string? BuildSubscribeBatch(IReadOnlyList<StreamRequest> requests) => null;
+
+        public string? BuildUnsubscribeBatch(IReadOnlyList<StreamRequest> requests) => null;
+
+        public StreamFrame Classify(ReadOnlySpan<byte> frame) => new(FrameKind.Ack, null);
+    }
+
+    /// <summary>
+    /// A factory of faithful single-use <see cref="IWebSocketConnection"/> instances. Each
+    /// connect hands out a fresh connection that throws <see cref="ObjectDisposedException"/> if
+    /// any operation is attempted after it is disposed — mirroring real
+    /// <see cref="System.Net.WebSockets.ClientWebSocket"/> semantics. Tracks how many connections
+    /// are simultaneously live so a test can assert no orphaned/second socket is ever opened.
+    /// </summary>
+    private sealed class RecordingSingleUseFactory
+    {
+        private int _liveCount;
+        private int _maxSimultaneousLive;
+        private volatile bool _useAfterDispose;
+        private volatile SingleUseConnection? _last;
+
+        public int LiveCount => Volatile.Read(ref _liveCount);
+
+        public int MaxSimultaneousLive => Volatile.Read(ref _maxSimultaneousLive);
+
+        public bool NoUseAfterDispose => !_useAfterDispose;
+
+        public SingleUseConnection? LastConnection => _last;
+
+        // Return type is the interface because this is passed as the engine's
+        // Func<IWebSocketConnection> connection factory.
+#pragma warning disable CA1859
+        public IWebSocketConnection Create()
+#pragma warning restore CA1859
+        {
+            var conn = new SingleUseConnection(this);
+            _last = conn;
+            return conn;
+        }
+
+        // The currently live connection forwards a venue close to its receive loop.
+        public void SimulateDisconnect() => _last?.SimulateDisconnect();
+
+        internal void OnConnected()
+        {
+            var now = Interlocked.Increment(ref _liveCount);
+            int current;
+            do
+            {
+                current = Volatile.Read(ref _maxSimultaneousLive);
+                if (now <= current) break;
+            }
+            while (Interlocked.CompareExchange(ref _maxSimultaneousLive, now, current) != current);
+        }
+
+        internal void OnDisposed() => Interlocked.Decrement(ref _liveCount);
+
+        internal void OnUseAfterDispose() => _useAfterDispose = true;
+    }
+
+    /// <summary>
+    /// A single-use connection that becomes permanently unusable after dispose: every operation
+    /// post-dispose throws <see cref="ObjectDisposedException"/> (and flags the factory), exactly
+    /// as a real <see cref="System.Net.WebSockets.ClientWebSocket"/> would.
+    /// </summary>
+    private sealed class SingleUseConnection : IWebSocketConnection
+    {
+        private readonly RecordingSingleUseFactory _factory;
+        private readonly ConcurrentQueue<ReadOnlyMemory<byte>?> _inbound = new();
+        private readonly SemaphoreSlim _available = new(0);
+        private volatile bool _disposed;
+
+        public SingleUseConnection(RecordingSingleUseFactory factory) => _factory = factory;
+
+        public ConcurrentQueue<string> SentText { get; } = new();
+
+        public WebSocketState State { get; private set; } = WebSocketState.None;
+
+        public bool IsOpen => State == WebSocketState.Open && !_disposed;
+
+        public Task ConnectAsync(Uri uri, CancellationToken ct)
+        {
+            ThrowIfDisposed();
+            State = WebSocketState.Open;
+            _factory.OnConnected();
+            return Task.CompletedTask;
+        }
+
+        public Task SendTextAsync(string text, CancellationToken ct)
+        {
+            ThrowIfDisposed();
+            SentText.Enqueue(text);
+            return Task.CompletedTask;
+        }
+
+        public Task SendPingAsync(ReadOnlyMemory<byte> payload, CancellationToken ct)
+        {
+            ThrowIfDisposed();
+            return Task.CompletedTask;
+        }
+
+        public Task SendPongAsync(ReadOnlyMemory<byte> payload, CancellationToken ct)
+        {
+            ThrowIfDisposed();
+            return Task.CompletedTask;
+        }
+
+        public async ValueTask<ReadOnlyMemory<byte>?> ReceiveAsync(CancellationToken ct)
+        {
+            await _available.WaitAsync(ct).ConfigureAwait(false);
+            ThrowIfDisposed();
+            _inbound.TryDequeue(out var frame);
+            return frame;
+        }
+
+        public Task CloseAsync(WebSocketCloseStatus status, string description, CancellationToken ct)
+        {
+            ThrowIfDisposed();
+            State = WebSocketState.Closed;
+            return Task.CompletedTask;
+        }
+
+        public ValueTask DisposeAsync()
+        {
+            if (!_disposed)
+            {
+                _disposed = true;
+                State = WebSocketState.Closed;
+                _factory.OnDisposed();
+                // Unblock any pending ReceiveAsync so the pump can observe disposal/cancellation.
+                // Under the fix the engine cancels + awaits the pump BEFORE disposing the socket,
+                // so no waiter remains; dispose the semaphore to satisfy CA2213.
+                try { _available.Release(); } catch (ObjectDisposedException) { /* already disposed */ }
+                _available.Dispose();
+            }
+            return ValueTask.CompletedTask;
+        }
+
+        public void SimulateDisconnect()
+        {
+            if (_disposed) return;
+            State = WebSocketState.Closed;
+            _inbound.Enqueue(null);
+            _available.Release();
+        }
+
+        private void ThrowIfDisposed()
+        {
+            if (_disposed)
+            {
+                _factory.OnUseAfterDispose();
+                throw new ObjectDisposedException(nameof(System.Net.WebSockets.ClientWebSocket));
+            }
+        }
+    }
+
     // ── TASK-071 test helpers ─────────────────────────────────────────────────
 
     private static StreamEngine BuildEngineWith(

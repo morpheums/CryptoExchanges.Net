@@ -1,8 +1,8 @@
 # Nazgul Plan — FEAT-009
 
 ## Recovery Pointer
-**Active task**: TASK-076 (IMPLEMENTED) — BybitStreamProtocol + protocol unit tests. Commit: 3ec30eb. Build 0W/0E, 117 Bybit unit tests green. Diff captured at nazgul/reviews/TASK-076/diff.patch.
-**Next action**: Review gate for TASK-076.
+**Active task**: TASK-077 (IN_PROGRESS) — BybitStreamDecoders + decode unit tests.
+**Next action**: Implement BybitStreamDecoders.cs and BybitStreamDecodeTests.cs, build/test, commit.
 
 ─── ◈ NAZGUL ▸ PLANNING ────────────────────────────────
 

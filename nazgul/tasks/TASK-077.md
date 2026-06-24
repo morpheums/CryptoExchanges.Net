@@ -1,5 +1,5 @@
 ---
-status: PLANNED
+status: IN_PROGRESS
 ---
 # TASK-077: BybitStreamDecoders (DeltaMapper DTO→Core.Models) + decode unit tests
 
@@ -13,7 +13,8 @@ status: PLANNED
 - **Wave**: 3
 - **Traces to**: PRD AC#1/#2; TRD §"Per-Exchange Variation Points" §3 (XxxStreamDecoders); ADR-009-001; K1
 - **Created at**: 2026-06-24T07:40:00Z
-- **Claimed at**:
+- **Claimed at**: 2026-06-24T08:00:00Z
+- **Base SHA**: a61508b2d60b33f561e750162c91237fbef2dcc6
 - **Implemented at**:
 - **Completed at**:
 - **Blocked at**:

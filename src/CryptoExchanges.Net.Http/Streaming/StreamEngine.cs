@@ -145,6 +145,11 @@ internal sealed class StreamEngine : IAsyncDisposable
     private volatile bool _isDisposed;
     private int _reconnecting; // 0=idle, 1=in-progress; prevents concurrent reconnect loops
 
+    // The most-recently fired fire-and-forget reconnect task. Awaited (best-effort) in DisposeAsync
+    // before the gate/semaphore/CTS are disposed, so an in-flight reconnect never re-acquires a
+    // disposed primitive (which would surface as an unobserved ObjectDisposedException).
+    private Task? _reconnectTask;
+
     /// <summary>
     /// Initialises a new <see cref="StreamEngine"/> with the injected dependencies.
     /// </summary>
@@ -423,7 +428,7 @@ internal sealed class StreamEngine : IAsyncDisposable
 #pragma warning restore CA1031
             {
                 s_logReceiveError(_logger, ex);
-                _ = Task.Run(() => ReconnectAsync(), _disposeCts.Token);
+                _reconnectTask = Task.Run(() => ReconnectAsync(), _disposeCts.Token);
                 return;
             }
 
@@ -431,7 +436,7 @@ internal sealed class StreamEngine : IAsyncDisposable
             {
                 // Null = clean venue-initiated close → reconnect.
                 s_logVenueClose(_logger, null);
-                _ = Task.Run(() => ReconnectAsync(), _disposeCts.Token);
+                _reconnectTask = Task.Run(() => ReconnectAsync(), _disposeCts.Token);
                 return;
             }
 
@@ -500,6 +505,12 @@ internal sealed class StreamEngine : IAsyncDisposable
         {
             await ReconnectCoreAsync().ConfigureAwait(false);
         }
+        // Dispose races this fire-and-forget task: DisposeAsync cancels _disposeCts and disposes
+        // _gate/_disposeCts, so a re-acquire (_gate.WaitAsync(_disposeCts.Token)) after the backoff
+        // delay can throw OCE/ObjectDisposedException. Swallow ONLY when disposing — _isDisposed is
+        // a volatile bool set first in DisposeAsync; do NOT touch _disposeCts here (it may be disposed).
+        catch (OperationCanceledException) when (_isDisposed) { }
+        catch (ObjectDisposedException) when (_isDisposed) { }
         finally
         {
             Interlocked.Exchange(ref _reconnecting, 0);
@@ -839,7 +850,7 @@ internal sealed class StreamEngine : IAsyncDisposable
             if (was == 0)
             {
                 s_logWatchdogTriggered(_logger, timeout, null);
-                _ = Task.Run(() => ReconnectAsync(), _disposeCts.Token);
+                _reconnectTask = Task.Run(() => ReconnectAsync(), _disposeCts.Token);
                 return;
             }
         }
@@ -916,6 +927,18 @@ internal sealed class StreamEngine : IAsyncDisposable
 #pragma warning restore CA1031
         }
         await _disposeCts.CancelAsync().ConfigureAwait(false);
+
+        // Await the in-flight fire-and-forget reconnect (if any) BEFORE disposing the gate /
+        // send-semaphore / dispose-CTS below, so a reconnect mid-backoff can never re-acquire a
+        // disposed primitive (which would fault its untracked task as an unobserved exception).
+        var reconnectTask = _reconnectTask;
+        if (reconnectTask is not null)
+        {
+            try { await reconnectTask.ConfigureAwait(false); }
+#pragma warning disable CA1031 // intentional: reconnect task swallows its own dispose-induced exceptions
+            catch (Exception) { /* swallow — ReconnectAsync handles dispose-induced cancellation */ }
+#pragma warning restore CA1031
+        }
 
         // Dispose all subscription channels.
         foreach (var entry in _subscriptions.Values)

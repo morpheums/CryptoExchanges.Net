@@ -1,5 +1,5 @@
 ---
-status: IMPLEMENTED
+status: DONE
 ---
 # TASK-075: Bybit streaming wire DTOs + BybitStreamOptions
 

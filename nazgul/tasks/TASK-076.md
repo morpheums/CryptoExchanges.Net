@@ -1,5 +1,5 @@
 ---
-status: PLANNED
+status: READY
 ---
 # TASK-076: BybitStreamProtocol (IStreamProtocol) + protocol unit tests
 

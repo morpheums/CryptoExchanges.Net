@@ -90,7 +90,6 @@ internal sealed class BitgetStreamProtocol : IStreamProtocol
             using var doc = JsonDocument.ParseValue(ref reader);
             var root = doc.RootElement;
 
-            // Data frame: {"action":"snapshot"/"update","arg":{"channel":"...","instId":"..."},"data":[...]}
             if (root.TryGetProperty("action"u8, out _) &&
                 root.TryGetProperty("arg"u8, out var argProp) &&
                 root.TryGetProperty("data"u8, out _))
@@ -110,7 +109,6 @@ internal sealed class BitgetStreamProtocol : IStreamProtocol
                 return new StreamFrame(FrameKind.Data, key);
             }
 
-            // Ack frame: {"event":"subscribe","arg":{...},"code":"0"}
             if (root.TryGetProperty("event"u8, out var eventProp))
             {
                 if (eventProp.ValueKind != JsonValueKind.String)

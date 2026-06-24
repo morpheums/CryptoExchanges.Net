@@ -40,8 +40,7 @@ internal static class OkxStreamDecoders
             return result with { Symbol = symbolMapper.FromWire(instId) };
         });
 
-        // OKX trades frame: data is an ARRAY. v1 emits only the most recent (last) trade per
-        // frame; earlier trades in a batched push are not fanned out.
+        // v1 emits only the latest trade per frame (data batches oldest→newest).
         registry.Register(StreamKind.Trade, bytes =>
         {
             var instId = ReadInstId(bytes);
@@ -77,7 +76,7 @@ internal static class OkxStreamDecoders
             return new OrderBook(symbol, bids, asks, null, dto.SeqId > 0 ? dto.SeqId : null);
         });
 
-        // OKX kline data is a positional string array: [ts,o,h,l,c,vol,volCcy,volCcyQuote,confirm].
+        // Positional kline row: [ts,o,h,l,c,vol,volCcy,volCcyQuote,confirm].
         registry.Register(StreamKind.Kline, bytes =>
         {
             var instId = ReadInstId(bytes);
@@ -101,8 +100,7 @@ internal static class OkxStreamDecoders
         return registry;
     }
 
-    // OKX push frames: {"arg":{"channel":"...","instId":"BTC-USDT"},"data":[...]}
-    // Symbol is on arg.instId; data rows may not always repeat it.
+    // Symbol is on arg.instId, not in the data rows.
     private static string ReadInstId(ReadOnlyMemory<byte> frame)
     {
         var reader = new Utf8JsonReader(frame.Span);
@@ -115,7 +113,6 @@ internal static class OkxStreamDecoders
         return instId.GetString()!;
     }
 
-    // Unwrap the data array, take the first element (never deserialize the raw envelope).
     private static T? DeserializeFirstDataElement<T>(ReadOnlyMemory<byte> frame)
     {
         var reader = new Utf8JsonReader(frame.Span);
@@ -131,8 +128,6 @@ internal static class OkxStreamDecoders
         return enumerator.Current.Deserialize<T>(JsonOpts);
     }
 
-    // Unwrap data array and take the last element — OKX trade frames batch oldest→newest;
-    // v1 emits one model per frame, so earlier trades are not delivered.
     private static T? DeserializeLastDataElement<T>(ReadOnlyMemory<byte> frame)
     {
         var reader = new Utf8JsonReader(frame.Span);

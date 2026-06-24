@@ -12,8 +12,6 @@ namespace CryptoExchanges.Net.Bitget.Streaming;
 /// </summary>
 internal static class BitgetStreamDecoders
 {
-    // Case-insensitive is safe for Bitget v2 (no single-char key collisions), but keep false
-    // for consistency with the other exchange decoders and to avoid unexpected aliasing.
     private static readonly JsonSerializerOptions JsonOpts = new()
     {
         PropertyNameCaseInsensitive = false
@@ -39,8 +37,7 @@ internal static class BitgetStreamDecoders
             return mapper.Map<StreamTickerDto, Ticker>(dto);
         });
 
-        // Trade: data is an ARRAY (oldest→newest); v1 emits only the latest trade per frame.
-        // side == "sell" means the taker sold, so the buyer was resting — IsBuyerMaker = true.
+        // v1 emits only the latest trade per frame; "sell" is the taker side, so the buyer is the maker.
         registry.Register(StreamKind.Trade, bytes =>
         {
             var symbol = ResolveSymbolFromArg(bytes, symbolMapper);
@@ -72,7 +69,7 @@ internal static class BitgetStreamDecoders
             return new OrderBook(symbol, bids, asks, null, dto.SeqId);
         });
 
-        // Kline: data is an ARRAY of positional string rows: [ts,open,high,low,close,baseVol,quoteVol,...].
+        // Positional kline row: [ts,open,high,low,close,baseVol,quoteVol,...].
         registry.Register(StreamKind.Kline, bytes =>
         {
             var symbol = ResolveSymbolFromArg(bytes, symbolMapper);
@@ -94,8 +91,7 @@ internal static class BitgetStreamDecoders
         return registry;
     }
 
-    // Bitget push envelope: {"action":"snapshot"|"update","arg":{"instType":...,"channel":...,"instId":...},"data":[...]}.
-    // Symbol lives in arg.instId — not in the data element for trade/book/kline frames.
+    // Symbol lives in arg.instId, not in the data rows.
     private static Symbol ResolveSymbolFromArg(ReadOnlyMemory<byte> frame, ISymbolMapper symbolMapper)
     {
         var reader = new Utf8JsonReader(frame.Span);
@@ -110,7 +106,6 @@ internal static class BitgetStreamDecoders
         return symbolMapper.FromWire(instIdProp.GetString()!);
     }
 
-    // Unwrap "data" array and deserialize the first element as T.
     private static T? DeserializeFirstArrayElement<T>(ReadOnlyMemory<byte> frame)
     {
         var reader = new Utf8JsonReader(frame.Span);
@@ -128,7 +123,6 @@ internal static class BitgetStreamDecoders
         return enumerator.Current.Deserialize<T>(JsonOpts);
     }
 
-    // Unwrap "data" array and deserialize the last element as T (oldest→newest ordering; v1 emits only latest).
     private static T? DeserializeLastArrayElement<T>(ReadOnlyMemory<byte> frame)
     {
         var reader = new Utf8JsonReader(frame.Span);
@@ -148,7 +142,6 @@ internal static class BitgetStreamDecoders
         return last.Value.Deserialize<T>(JsonOpts);
     }
 
-    // Kline data rows are positional string arrays; data is [[ts,o,h,l,c,baseVol,quoteVol,...]].
     private static List<string> DeserializeFirstKlineRow(ReadOnlyMemory<byte> frame)
     {
         var reader = new Utf8JsonReader(frame.Span);

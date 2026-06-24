@@ -1,4 +1,5 @@
 using DeltaMapper;
+using CryptoExchanges.Net.Okx.Dtos.Streaming;
 using CryptoExchanges.Net.Okx.Internal;
 using CryptoExchanges.Net.Okx.Services;
 
@@ -56,6 +57,19 @@ internal sealed class OkxResponseProfile : Profile
                 OkxValueParsers.ParseDecimal(s.Open24h) == 0m
                     ? 0m
                     : (OkxValueParsers.ParseDecimal(s.Last) - OkxValueParsers.ParseDecimal(s.Open24h)) / OkxValueParsers.ParseDecimal(s.Open24h) * 100m))
+            .ForMember(d => d.Timestamp, o => o.MapFrom(s => ParseTimestamp(s.Ts)));
+
+        // StreamTickerDto -> Ticker. Symbol is set from arg.instId by the decoder; open24h/volCcyQuote absent in streaming push.
+        CreateMap<StreamTickerDto, Ticker>()
+            .ForMember(d => d.Symbol, o => o.Ignore())
+            .ForMember(d => d.LastPrice, o => o.MapFrom(s => OkxValueParsers.ParseDecimal(s.Last)))
+            .ForMember(d => d.OpenPrice, o => o.Ignore())
+            .ForMember(d => d.HighPrice, o => o.MapFrom(s => OkxValueParsers.ParseDecimal(s.High24h)))
+            .ForMember(d => d.LowPrice, o => o.MapFrom(s => OkxValueParsers.ParseDecimal(s.Low24h)))
+            .ForMember(d => d.Volume, o => o.MapFrom(s => OkxValueParsers.ParseDecimal(s.Vol24h)))
+            .ForMember(d => d.QuoteVolume, o => o.Ignore())
+            .ForMember(d => d.PriceChange, o => o.Ignore())
+            .ForMember(d => d.PriceChangePercent, o => o.Ignore())
             .ForMember(d => d.Timestamp, o => o.MapFrom(s => ParseTimestamp(s.Ts)));
 
         // SymbolInfoDto -> SymbolInfo. OKX instruments expose lot/tick filters under separate fields

@@ -9,6 +9,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.5.0-preview.3] — 2026-06-24
+
+### Fixed
+
+- **WebSocket streaming — Binance `ObjectDisposedException` on first order-book subscribe (multi-symbol)**
+  A multi-symbol subscribe burst that tripped an early venue close could race the reconnect path:
+  `StreamEngine.ReconnectCoreAsync` released its gate before tearing down and re-establishing the
+  socket, so the `_socket` field was disposed/reassigned outside the gate while a concurrent
+  `SubscribeAsync` was mid-`ConnectAsync` — surfacing as `ObjectDisposedException`
+  (`System.Net.WebSockets.ClientWebSocket`) on the first Binance order-book subscription. KuCoin in
+  the same process was unaffected.
+  Fix: the gate is now held across socket teardown and every reconnect connect attempt (released only
+  during the inter-attempt backoff delay); subscribes that arrive mid-reconnect register and defer
+  their send to the K2 replay instead of opening a second socket; the reconnect backoff releases its
+  gate exactly once; and dispose now awaits the in-flight reconnect task before disposing its
+  synchronization primitives. All changes are internal — no public API change.
+
 ## [0.5.0-preview.2] — 2026-06-24
 
 ### Fixed
@@ -151,7 +168,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Account operations: balances, trade history
 - Comprehensive unit and integration test suite
 
-[Unreleased]: https://github.com/OrodruinLabs/CryptoExchanges.Net/compare/v0.5.0-preview.2...HEAD
+[Unreleased]: https://github.com/OrodruinLabs/CryptoExchanges.Net/compare/v0.5.0-preview.3...HEAD
+[0.5.0-preview.3]: https://github.com/OrodruinLabs/CryptoExchanges.Net/compare/v0.5.0-preview.2...v0.5.0-preview.3
 [0.5.0-preview.2]: https://github.com/OrodruinLabs/CryptoExchanges.Net/compare/v0.5.0-preview.1...v0.5.0-preview.2
 [0.5.0-preview.1]: https://github.com/OrodruinLabs/CryptoExchanges.Net/compare/v0.4.0-preview.1...v0.5.0-preview.1
 [0.4.0-preview.1]: https://github.com/OrodruinLabs/CryptoExchanges.Net/compare/v0.3.0-preview.1...v0.4.0-preview.1

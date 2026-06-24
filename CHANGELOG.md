@@ -9,6 +9,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.5.0-preview.4] — 2026-06-24
+
+### Added
+
+- **WebSocket streaming for Bybit, OKX, and Bitget** — public spot ticker, trade, order-book (L2),
+  and kline streams for the three remaining REST-only exchanges, reaching parity with Binance and
+  KuCoin. Opt-in per exchange via `AddBybitStreams()` / `AddOkxStreams()` / `AddBitgetStreams()`,
+  exposed through the existing `IStreamClient` surface. Additive public surface only — each exchange
+  adds a `StreamOptions` (the namespace carries the exchange) plus its `AddXxxStreams()` extension;
+  the shared reconnecting `StreamEngine` is reused unchanged.
+
+### Notes / limitations
+
+- **Trade streams** deliver the most recent trade per frame; when a venue batches multiple trades in
+  one push, earlier trades in that frame are not individually delivered (the engine delivers one
+  model per frame).
+- **OKX kline** channels are served on OKX's separate *business* endpoint
+  (`wss://ws.okx.com:8443/ws/v5/business`). Ticker, trade, and order-book use the default public
+  endpoint; set `StreamOptions.StreamBaseUrl` to the business URL to receive OKX kline streams.
+
 ## [0.5.0-preview.3] — 2026-06-24
 
 ### Fixed
@@ -168,7 +188,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Account operations: balances, trade history
 - Comprehensive unit and integration test suite
 
-[Unreleased]: https://github.com/OrodruinLabs/CryptoExchanges.Net/compare/v0.5.0-preview.3...HEAD
+[Unreleased]: https://github.com/OrodruinLabs/CryptoExchanges.Net/compare/v0.5.0-preview.4...HEAD
+[0.5.0-preview.4]: https://github.com/OrodruinLabs/CryptoExchanges.Net/compare/v0.5.0-preview.3...v0.5.0-preview.4
 [0.5.0-preview.3]: https://github.com/OrodruinLabs/CryptoExchanges.Net/compare/v0.5.0-preview.2...v0.5.0-preview.3
 [0.5.0-preview.2]: https://github.com/OrodruinLabs/CryptoExchanges.Net/compare/v0.5.0-preview.1...v0.5.0-preview.2
 [0.5.0-preview.1]: https://github.com/OrodruinLabs/CryptoExchanges.Net/compare/v0.4.0-preview.1...v0.5.0-preview.1

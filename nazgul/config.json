@@ -198,7 +198,7 @@
     "base": "main",
     "main_worktree_path": "/Users/josemejia/ai-platform/personal/workspace/repos/CryptoExchanges.Net",
     "worktree_dir": null,
-    "last_task_branch": null,
+    "last_task_branch": "feat/FEAT-009/TASK-076",
     "created_at": "2026-06-21T17:52:30Z",
     "auto_pr_on_complete": true,
     "sparse_paths": null

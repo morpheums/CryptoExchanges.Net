@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Net.WebSockets;
 using Xunit;
 using AwesomeAssertions;
@@ -47,7 +48,9 @@ public class BybitStreamingSmokeTests
             using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(8));
             await ws.ConnectAsync(new Uri("wss://stream.bybit.com/v5/public/spot"), cts.Token)
                     .ConfigureAwait(false);
-            await ws.CloseAsync(WebSocketCloseStatus.NormalClosure, "probe", CancellationToken.None)
+            // Bound the close handshake with the probe timeout — CloseAsync waits for the peer's
+            // close frame and can hang indefinitely under CancellationToken.None if it never replies.
+            await ws.CloseAsync(WebSocketCloseStatus.NormalClosure, "probe", cts.Token)
                     .ConfigureAwait(false);
             return null;
         }
@@ -168,7 +171,13 @@ public class BybitStreamingSmokeTests
         Assert.SkipWhen(skipReason is not null, skipReason ?? string.Empty);
 
         await using var client = BuildStreamClient();
-        var received = new TaskCompletionSource<OrderBook>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        // Track which symbols actually streamed: a replay/rate-limit regression on later symbols
+        // would still let the first symbol through, so assert delivery across a majority of the set.
+        var delivered = new ConcurrentDictionary<Symbol, byte>();
+        var threshold = (MultiSymbolSet.Length + 1) / 2;
+        var enoughDelivered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var firstPopulated = new TaskCompletionSource<OrderBook>(TaskCreationOptions.RunContinuationsAsynchronously);
         var subscriptions = new List<IStreamSubscription>(MultiSymbolSet.Length);
 
         try
@@ -180,18 +189,26 @@ public class BybitStreamingSmokeTests
                     depth: 50,
                     new StreamHandlers<OrderBook>(ob =>
                     {
-                        received.TrySetResult(ob);
+                        if (ob.Bids.Count + ob.Asks.Count > 0)
+                            firstPopulated.TrySetResult(ob);
+                        delivered.TryAdd(ob.Symbol, 0);
+                        if (delivered.Count >= threshold)
+                            enoughDelivered.TrySetResult();
                         return ValueTask.CompletedTask;
                     }),
                     TestContext.Current.CancellationToken);
                 subscriptions.Add(subscription);
             }
 
-            var orderBook = await received.Task.WaitAsync(MultiSymbolReceiveTimeout, TestContext.Current.CancellationToken);
-            orderBook.Should().NotBeNull();
-            // Bybit v5 orderbook.50 sends a snapshot on subscribe; both sides must be populated.
+            await enoughDelivered.Task.WaitAsync(MultiSymbolReceiveTimeout, TestContext.Current.CancellationToken);
+
+            delivered.Count.Should().BeGreaterThanOrEqualTo(threshold,
+                "a majority of subscribed symbols must stream — a replay/rate-limit regression would starve later symbols in the batch");
+            firstPopulated.Task.IsCompletedSuccessfully.Should().BeTrue(
+                "Bybit v5 orderbook.50 sends a snapshot on subscribe; at least one must arrive with populated bids/asks");
+            var orderBook = await firstPopulated.Task;
             (orderBook.Bids.Count + orderBook.Asks.Count).Should().BeGreaterThan(0);
-            subscriptions.Should().Contain(s => s.State == StreamConnectionState.Live);
+            subscriptions.Should().OnlyContain(s => s.State == StreamConnectionState.Live);
         }
         finally
         {

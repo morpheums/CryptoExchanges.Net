@@ -115,6 +115,24 @@ public class BybitStreamDecodeTests
     }
 
     [Fact]
+    public void Trade_MultiElementArray_EmitsLatestTrade()
+    {
+        var registry = BuildRegistry();
+        var decoder = registry.Resolve(StreamKind.Trade);
+
+        // Bybit batches trades oldest→newest; v1 emits the most recent (last) entry per frame.
+        var frame = Envelope("publicTrade.BTCUSDT", "snapshot",
+            "[{\"T\":1718784003000,\"s\":\"BTCUSDT\",\"S\":\"Buy\",\"v\":\"0.001\",\"p\":\"100.00\",\"i\":\"old\"}," +
+            "{\"T\":1718784003500,\"s\":\"BTCUSDT\",\"S\":\"Sell\",\"v\":\"0.002\",\"p\":\"200.00\",\"i\":\"mid\"}," +
+            "{\"T\":1718784004000,\"s\":\"BTCUSDT\",\"S\":\"Buy\",\"v\":\"0.003\",\"p\":\"300.00\",\"i\":\"latest\"}]");
+
+        var result = (Trade)decoder(frame);
+
+        result.Id.Should().Be("latest");
+        result.Price.Should().Be(300.00m);
+    }
+
+    [Fact]
     public void OrderBook_SnapshotFrame_MapsBidsAndAsksAndSymbol()
     {
         var registry = BuildRegistry();

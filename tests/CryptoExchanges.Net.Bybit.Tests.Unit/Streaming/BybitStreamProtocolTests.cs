@@ -11,7 +11,7 @@ namespace CryptoExchanges.Net.Bybit.Tests.Unit.Streaming;
 [Trait("Category", "Unit")]
 public class BybitStreamProtocolTests
 {
-    private static readonly BybitStreamOptions DefaultOptions = new();
+    private static readonly StreamOptions DefaultOptions = new();
 
     private static BybitStreamProtocol MakeProtocol() => new(DefaultOptions);
 
@@ -569,7 +569,7 @@ public class BybitStreamProtocolTests
     [Fact]
     public async Task ResolveConnectionAsync_CustomBaseUrl_UsesConfiguredEndpoint()
     {
-        var options = new BybitStreamOptions { StreamBaseUrl = "wss://stream.bybit.com/v5/public/linear" };
+        var options = new StreamOptions { StreamBaseUrl = "wss://stream.bybit.com/v5/public/linear" };
         var protocol = new BybitStreamProtocol(options);
         var info = await protocol.ResolveConnectionAsync(CancellationToken.None);
 

@@ -22,7 +22,7 @@ internal sealed class BybitStreamProtocol : IStreamProtocol
 
     /// <summary>Caches the connection info from <paramref name="options"/> (static endpoint, no token negotiation).</summary>
     /// <param name="options">Stream options supplying the base URL.</param>
-    public BybitStreamProtocol(BybitStreamOptions options)
+    public BybitStreamProtocol(StreamOptions options)
     {
         ArgumentNullException.ThrowIfNull(options);
         var endpoint = new Uri(options.StreamBaseUrl);

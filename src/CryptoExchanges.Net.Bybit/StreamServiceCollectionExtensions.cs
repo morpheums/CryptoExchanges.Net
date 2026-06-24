@@ -19,22 +19,24 @@ public static class StreamServiceCollectionExtensions
     /// Options are validated with fail-fast (<c>ValidateOnStart</c>).
     /// </summary>
     /// <param name="services">The <see cref="IServiceCollection"/> to add services to.</param>
-    /// <param name="configure">An optional action to configure <see cref="BybitStreamOptions"/>.</param>
+    /// <param name="configure">An optional action to configure <see cref="StreamOptions"/>.</param>
     /// <returns>The <see cref="IServiceCollection"/> for chaining.</returns>
     public static IServiceCollection AddBybitStreams(
         this IServiceCollection services,
-        Action<BybitStreamOptions>? configure = null) =>
-        StreamServiceRegistration.AddStreams<BybitStreamOptions>(
+        Action<StreamOptions>? configure = null) =>
+        StreamServiceRegistration.AddStreams<StreamOptions>(
             services,
             ExchangeId.Bybit,
             protocolFactory: sp =>
             {
-                var opts = sp.GetRequiredService<BybitStreamOptions>();
+                var opts = sp.GetRequiredService<StreamOptions>();
                 return new BybitStreamProtocol(opts);
             },
             decoderRegistryFactory: sp =>
             {
-                var mapper = sp.GetRequiredKeyedService<IMapper>(ExchangeId.Bybit);
+                var mapper = sp.GetKeyedService<IMapper>(ExchangeId.Bybit)
+                    ?? throw new InvalidOperationException(
+                        "No keyed IMapper registered for 'Bybit'. Call AddBybitExchange before AddBybitStreams.");
                 var symbolMapper = sp.GetRequiredKeyedService<ISymbolMapper>(ExchangeId.Bybit);
                 return BybitStreamDecoders.Build(mapper, symbolMapper);
             },

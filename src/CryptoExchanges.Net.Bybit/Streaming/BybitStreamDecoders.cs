@@ -41,11 +41,12 @@ internal static class BybitStreamDecoders
             return mapper.Map<StreamTickerDto, Ticker>(dto);
         });
 
-        // Bybit v5 publicTrade frame: data is an ARRAY of trade objects; emit the first entry.
-        // S == "Sell" means the taker was a seller, so the buyer was the market maker.
+        // Bybit v5 publicTrade frame: data is an ARRAY of trades (oldest→newest). The engine
+        // delivers one model per frame, so v1 emits only the most recent trade in the batch —
+        // intra-frame trade batches are not fanned out. S == "Sell" ⇒ buyer was the maker.
         registry.Register(StreamKind.Trade, bytes =>
         {
-            var dto = DeserializeFirstArrayElement<StreamTradeDto>(bytes)!;
+            var dto = DeserializeLastArrayElement<StreamTradeDto>(bytes)!;
             var symbol = symbolMapper.FromWire(dto.Symbol);
             return new Trade(
                 Symbol: symbol,
@@ -77,7 +78,7 @@ internal static class BybitStreamDecoders
             return new OrderBook(symbol, bids, asks, null, dto.UpdateId);
         });
 
-        // Bybit v5 kline frame: data is an ARRAY of kline objects; emit the first entry.
+        // Bybit v5 kline frame: data is an ARRAY holding the current bar; emit its single entry.
         registry.Register(StreamKind.Kline, bytes =>
         {
             var dto = DeserializeFirstArrayElement<StreamKlineDto>(bytes)!;
@@ -111,7 +112,7 @@ internal static class BybitStreamDecoders
         return dataProp.Deserialize<T>(JsonOpts);
     }
 
-    // Bybit v5 publicTrade and kline frames carry data as an ARRAY; unwrap and take first element.
+    // Bybit v5 kline frames carry data as an ARRAY holding the current bar; take the first element.
     private static T? DeserializeFirstArrayElement<T>(ReadOnlyMemory<byte> frame)
     {
         var reader = new Utf8JsonReader(frame.Span);
@@ -127,6 +128,27 @@ internal static class BybitStreamDecoders
             throw new InvalidOperationException(
                 $"Bybit v5 'data' array is empty; cannot decode {typeof(T).Name}.");
         return enumerator.Current.Deserialize<T>(JsonOpts);
+    }
+
+    // Bybit v5 publicTrade frames carry data as an ARRAY (oldest→newest); take the last (latest)
+    // element. v1 emits one model per frame, so earlier trades in a batched frame are not delivered.
+    private static T? DeserializeLastArrayElement<T>(ReadOnlyMemory<byte> frame)
+    {
+        var reader = new Utf8JsonReader(frame.Span);
+        using var doc = JsonDocument.ParseValue(ref reader);
+        if (!doc.RootElement.TryGetProperty("data"u8, out var dataProp))
+            throw new InvalidOperationException(
+                "Bybit v5 push frame has no 'data' element; cannot decode the payload.");
+        if (dataProp.ValueKind != JsonValueKind.Array)
+            throw new InvalidOperationException(
+                $"Expected Bybit v5 'data' to be an array for type {typeof(T).Name}; got {dataProp.ValueKind}.");
+        JsonElement? last = null;
+        foreach (var element in dataProp.EnumerateArray())
+            last = element;
+        if (last is null)
+            throw new InvalidOperationException(
+                $"Bybit v5 'data' array is empty; cannot decode {typeof(T).Name}.");
+        return last.Value.Deserialize<T>(JsonOpts);
     }
 
     private static KlineInterval? MapWireInterval(string wire) => wire switch

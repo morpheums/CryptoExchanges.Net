@@ -172,6 +172,7 @@ internal sealed class OkxStreamProtocol : IStreamProtocol
         nameof(KlineInterval.SixHours) => "6H",
         nameof(KlineInterval.TwelveHours) => "12H",
         nameof(KlineInterval.OneDay) => "1D",
+        nameof(KlineInterval.ThreeDays) => "3Dutc",
         nameof(KlineInterval.OneWeek) => "1W",
         nameof(KlineInterval.OneMonth) => "1M",
         _ => throw new ArgumentOutOfRangeException(nameof(intervalToken), intervalToken,

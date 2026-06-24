@@ -82,6 +82,9 @@ internal static class OkxStreamDecoders
             var instId = ReadInstId(bytes);
             var symbol = symbolMapper.FromWire(instId);
             var row = DeserializeFirstDataElement<List<string>>(bytes)!;
+            if (row.Count < 6)
+                throw new InvalidOperationException(
+                    $"OKX kline row has {row.Count} elements; expected at least 6 (ts,o,h,l,c,vol).");
             return new Candlestick(
                 OpenTime: long.TryParse(row[0], out var ts) && ts > 0
                     ? DateTimeOffset.FromUnixTimeMilliseconds(ts)

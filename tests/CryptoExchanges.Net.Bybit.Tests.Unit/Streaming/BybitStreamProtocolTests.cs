@@ -174,6 +174,54 @@ public class BybitStreamProtocolTests
         result.Kind.Should().Be(FrameKind.Error);
     }
 
+    // ── Classify: malformed/wrong-typed frames (ValueKind guard) ─────────────
+
+    [Fact]
+    public void Classify_TopicFieldIsNumber_ReturnsErrorAndDoesNotThrow()
+    {
+        // "topic" with a numeric value: GetString() would throw InvalidOperationException
+        // without the ValueKind guard. Classify must absorb this as FrameKind.Error.
+        var protocol = MakeProtocol();
+        var frame = Utf8("{\"topic\":123,\"type\":\"snapshot\",\"ts\":1700000000000,\"data\":{}}");
+
+        var ex = Record.Exception(() => protocol.Classify(frame));
+        var result = protocol.Classify(frame);
+
+        ex.Should().BeNull("Classify must not throw on a malformed frame");
+        result.Kind.Should().Be(FrameKind.Error);
+        result.RoutingKey.Should().BeNull();
+    }
+
+    [Fact]
+    public void Classify_SuccessFieldIsString_ReturnsErrorAndDoesNotThrow()
+    {
+        // "success" with a string value: GetBoolean() would throw InvalidOperationException
+        // without the ValueKind guard. Classify must absorb this as FrameKind.Error.
+        var protocol = MakeProtocol();
+        var frame = Utf8("{\"success\":\"yes\",\"ret_msg\":\"subscribe\",\"op\":\"subscribe\",\"req_id\":\"1\"}");
+
+        var ex = Record.Exception(() => protocol.Classify(frame));
+        var result = protocol.Classify(frame);
+
+        ex.Should().BeNull("Classify must not throw on a malformed frame");
+        result.Kind.Should().Be(FrameKind.Error);
+    }
+
+    [Fact]
+    public void Classify_OpFieldIsNumber_ReturnsErrorAndDoesNotThrow()
+    {
+        // "op" with a numeric value: GetString() would throw InvalidOperationException
+        // without the ValueKind guard. Classify must absorb this as FrameKind.Error.
+        var protocol = MakeProtocol();
+        var frame = Utf8("{\"op\":99,\"success\":true,\"req_id\":\"1\"}");
+
+        var ex = Record.Exception(() => protocol.Classify(frame));
+        var result = protocol.Classify(frame);
+
+        ex.Should().BeNull("Classify must not throw on a malformed frame");
+        result.Kind.Should().Be(FrameKind.Error);
+    }
+
     // ── BuildSubscribe ────────────────────────────────────────────────────────
 
     [Fact]

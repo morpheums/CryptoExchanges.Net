@@ -1,8 +1,8 @@
 # Nazgul Plan — FEAT-009
 
 ## Recovery Pointer
-**Active task**: TASK-075 (IN_PROGRESS, retry 1/3) — Adding `Turnover` property to `StreamKlineDto` per code-reviewer F1 feedback. 15 tasks across 3 exchange groups; strict sequential merge order Bybit → OKX → Bitget (one PR per exchange).
-**Next action**: Commit the Turnover fix, set TASK-075 to IMPLEMENTED, re-run review gate. After APPROVED, proceed to TASK-076 (BybitStreamProtocol + protocol tests).
+**Active task**: TASK-075 (IMPLEMENTED, retry 1/3) — `Turnover` field added to `StreamKlineDto` (commit 4fe3ff2). Build 0W/0E, all tests green. Awaiting review gate re-run. 15 tasks across 3 exchange groups; strict sequential merge order Bybit → OKX → Bitget (one PR per exchange).
+**Next action**: Re-run review gate for TASK-075. After all reviewers APPROVED, advance to TASK-076 (BybitStreamProtocol + protocol tests).
 
 ─── ◈ NAZGUL ▸ PLANNING ────────────────────────────────
 

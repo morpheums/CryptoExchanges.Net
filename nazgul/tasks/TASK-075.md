@@ -1,5 +1,5 @@
 ---
-status: IN_PROGRESS
+status: IMPLEMENTED
 ---
 # TASK-075: Bybit streaming wire DTOs + BybitStreamOptions
 
@@ -15,7 +15,7 @@ status: IN_PROGRESS
 - **Created at**: 2026-06-24T07:40:00Z
 - **Claimed at**: 2026-06-24T08:00:00Z
 - **Base SHA**: 2bdd8837891be4c8b57c88918e6d2ed9a452ae90
-- **Implemented at**: 2026-06-24T08:05:00Z
+- **Implemented at**: 2026-06-24T08:20:00Z
 - **Completed at**:
 - **Blocked at**:
 - **Retry count**: 1/3
@@ -78,6 +78,7 @@ follow the Binance `StreamDepthDto` `[][]`/`PriceLevel` decode shape already in 
 
 ## Commits
 - a1909f9 feat(FEAT-009): TASK-075 — Bybit streaming wire DTOs + BybitStreamOptions
+- 4fe3ff2 feat(FEAT-009): TASK-075 retry — add Turnover field to StreamKlineDto
 
 ## Implementation Log
 
@@ -125,3 +126,16 @@ Commit SHA: a1909f9
 1. [AUTO-FIX] Add `[JsonPropertyName("turnover")] public string Turnover { get; init; } = "0";`
    to `StreamKlineDto.cs` after the `Volume` property. Bybit v5 kline frames always send this field.
    Reference: `src/CryptoExchanges.Net.Binance/Dtos/Streaming/StreamKlineBarDto.cs` (QuoteVolume).
+
+### Attempt 2
+
+Added `Turnover` property to `StreamKlineDto` after `Volume`, per code-reviewer F1 feedback:
+
+```csharp
+/// <summary>Quote-asset volume (turnover).</summary>
+[JsonPropertyName("turnover")]
+public string Turnover { get; init; } = "0";
+```
+
+Doc-comment pattern matches Binance `StreamKlineBarDto.QuoteVolume`. No other changes made.
+Build: 0W/0E. Tests: all green (0 Failed). Commit SHA: 4fe3ff2

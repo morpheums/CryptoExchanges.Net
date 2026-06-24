@@ -1,5 +1,5 @@
 ---
-status: IN_PROGRESS
+status: IMPLEMENTED
 ---
 # TASK-077: BybitStreamDecoders (DeltaMapper DTO→Core.Models) + decode unit tests
 
@@ -9,13 +9,13 @@ status: IN_PROGRESS
 - **Status**: (see `status:` in the frontmatter block at the top — that is canonical, read by scripts/lib/structured-state.sh; not duplicated here to avoid drift)
 - **Depends on**: TASK-075, TASK-076
 - **Delegates to**: none
-- **Files modified**: [src/CryptoExchanges.Net.Bybit/Streaming/BybitStreamDecoders.cs, tests/CryptoExchanges.Net.Bybit.Tests.Unit/Streaming/BybitStreamDecodeTests.cs]
+- **Files modified**: [src/CryptoExchanges.Net.Bybit/Streaming/BybitStreamDecoders.cs, tests/CryptoExchanges.Net.Bybit.Tests.Unit/Streaming/BybitStreamDecodeTests.cs, src/CryptoExchanges.Net.Bybit/Mapping/BybitMappingProfiles.cs]
 - **Wave**: 3
 - **Traces to**: PRD AC#1/#2; TRD §"Per-Exchange Variation Points" §3 (XxxStreamDecoders); ADR-009-001; K1
 - **Created at**: 2026-06-24T07:40:00Z
 - **Claimed at**: 2026-06-24T08:00:00Z
 - **Base SHA**: a61508b2d60b33f561e750162c91237fbef2dcc6
-- **Implemented at**:
+- **Implemented at**: 2026-06-24T08:15:00Z
 - **Completed at**:
 - **Blocked at**:
 - **Retry count**: 0/3
@@ -46,9 +46,9 @@ Tests (`BybitStreamDecodeTests.cs`, mirroring `BinanceStreamDecodeTests.cs`, TES
 5. `dotnet build` 0W/0E; `dotnet test --filter 'Category!=Integration'` green.
 
 ## Acceptance Criteria
-- [ ] `BybitStreamDecoders.Build(IMapper, ISymbolMapper)` returns a `StreamDecoderRegistry` with Ticker/Trade/OrderBook/Kline closures that unwrap the Bybit `data` envelope before deserializing (no raw-envelope decode), map to Core.Models, and return `object`; symbol resolved via the injected `ISymbolMapper`. No `Core.Models`/DeltaMapper reference leaks into Http (K1 preserved — closures stay in the Bybit package).
-- [ ] `BybitStreamDecodeTests.cs` feeds full push-frame envelopes through each closure and asserts populated models (Ticker, Trade incl. IsBuyerMaker, OrderBook bids+asks+symbol, Kline OHLCV), mirroring `BinanceStreamDecodeTests.cs`.
-- [ ] `dotnet build CryptoExchanges.Net.sln` → 0W/0E; `dotnet test --filter 'Category!=Integration'` green.
+- [x] `BybitStreamDecoders.Build(IMapper, ISymbolMapper)` returns a `StreamDecoderRegistry` with Ticker/Trade/OrderBook/Kline closures that unwrap the Bybit `data` envelope before deserializing (no raw-envelope decode), map to Core.Models, and return `object`; symbol resolved via the injected `ISymbolMapper`. No `Core.Models`/DeltaMapper reference leaks into Http (K1 preserved — closures stay in the Bybit package).
+- [x] `BybitStreamDecodeTests.cs` feeds full push-frame envelopes through each closure and asserts populated models (Ticker, Trade incl. IsBuyerMaker, OrderBook bids+asks+symbol, Kline OHLCV), mirroring `BinanceStreamDecodeTests.cs`.
+- [x] `dotnet build CryptoExchanges.Net.sln` → 0W/0E; `dotnet test --filter 'Category!=Integration'` green.
 
 ## Pattern Reference
 - Decoders + `data`-envelope unwrap + hand-map: `src/CryptoExchanges.Net.Binance/Streaming/BinanceStreamDecoders.cs`
@@ -68,9 +68,22 @@ Tests (`BybitStreamDecodeTests.cs`, mirroring `BinanceStreamDecodeTests.cs`, TES
 - **TRD Component**: Bybit variation §3 (BybitStreamDecoders)
 - **ADR Reference**: ADR-009-001; binding constraint K1
 
+## Commits
+- e04c313 — feat(FEAT-009): TASK-077 — BybitStreamDecoders + decode unit tests
+
 ## Implementation Log
 
 ### Attempt 1
+- Created `src/CryptoExchanges.Net.Bybit/Streaming/BybitStreamDecoders.cs` with all four closures.
+- Added `CreateMap<StreamTickerDto, Ticker>()` to `BybitMappingProfiles.cs` (required for DeltaMapper ticker path).
+- Created `tests/CryptoExchanges.Net.Bybit.Tests.Unit/Streaming/BybitStreamDecodeTests.cs` with 7 tests.
+- Key payload-shape decisions:
+  - Used `PropertyNameCaseInsensitive = false` (required: `"s"` symbol vs `"S"` taker side in StreamTradeDto would collide under case-insensitive mode).
+  - Trade and Kline: `data` is a JSON array — `DeserializeFirstArrayElement<T>` unwraps envelope `"data"`, asserts `Array`, emits first element.
+  - Ticker and OrderBook: `data` is a JSON object — `DeserializeData<T>` unwraps envelope `"data"` directly.
+  - `IsBuyerMaker = (dto.Side == "Sell")`: Bybit S=="Sell" means taker sold, buyer was maker.
+  - `Candlestick.IsClosed` does not exist in Core model; `dto.Confirm` (closed bar flag) is noted in comment only.
+- Build: 0W/0E. Tests: 124/124 Bybit unit pass (7 new + 117 existing). All solution tests green.
 
 ## Review Results
 

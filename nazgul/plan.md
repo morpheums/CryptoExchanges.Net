@@ -1,8 +1,8 @@
 # Nazgul Plan — FEAT-009
 
 ## Recovery Pointer
-**Active task**: TASK-077 (IN_PROGRESS) — BybitStreamDecoders + decode unit tests.
-**Next action**: Implement BybitStreamDecoders.cs and BybitStreamDecodeTests.cs, build/test, commit.
+**Active task**: TASK-077 (IMPLEMENTED) — BybitStreamDecoders + decode unit tests. Commit: e04c313. Build 0W/0E, 124 Bybit unit tests green. Diff captured at nazgul/reviews/TASK-077/diff.patch.
+**Next action**: Review gate for TASK-077.
 
 ─── ◈ NAZGUL ▸ PLANNING ────────────────────────────────
 
@@ -78,7 +78,7 @@ Tasks: 0/15 complete. TASK-075 in retry cycle (1/3). Groups 2 (OKX) + 3 (Bitget)
 |----------|--------|-----------------------------------------------|
 | TASK-075 | ⚠ CHANGES_REQUESTED | Bybit DTOs + BybitStreamOptions    |
 | TASK-076 | ✦      | BybitStreamProtocol + protocol tests          |
-| TASK-077 | ◇      | BybitStreamDecoders + decode tests            |
+| TASK-077 | ✦      | BybitStreamDecoders + decode tests            |
 | TASK-078 | ◇      | AddBybitStreams() DI + DI tests               |
 | TASK-079 | ◇      | Bybit multi-symbol L2 smoke (+ Bybit PR)      |
 | TASK-080 | ◇      | OKX DTOs + OkxStreamOptions                    |

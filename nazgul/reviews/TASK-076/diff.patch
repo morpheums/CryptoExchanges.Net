@@ -1,851 +1,98 @@
-diff --git a/nazgul/config.json b/nazgul/config.json
-index 0898444..7b562e2 100644
---- a/nazgul/config.json
-+++ b/nazgul/config.json
-@@ -198,7 +198,7 @@
-     "base": "main",
-     "main_worktree_path": "/Users/josemejia/ai-platform/personal/workspace/repos/CryptoExchanges.Net",
-     "worktree_dir": null,
--    "last_task_branch": null,
-+    "last_task_branch": "feat/FEAT-009/TASK-076",
-     "created_at": "2026-06-21T17:52:30Z",
-     "auto_pr_on_complete": true,
-     "sparse_paths": null
-diff --git a/nazgul/plan.md b/nazgul/plan.md
-index 057323f..6062324 100644
---- a/nazgul/plan.md
-+++ b/nazgul/plan.md
-@@ -1,8 +1,8 @@
- # Nazgul Plan — FEAT-009
- 
- ## Recovery Pointer
--**Active task**: TASK-076 (READY) — BybitStreamProtocol + protocol unit tests. TASK-075 is DONE: reviewed (4 verdicts in `nazgul/reviews/TASK-075/`), the one blocking finding (missing Bybit `turnover` field) fixed in commit 4fe3ff2; trivial one-line re-review skipped per maintainer's consolidated-review preference. Build 0W/0E, all tests green. 15 tasks across 3 exchange groups; strict sequential merge order Bybit → OKX → Bitget (one PR per exchange).
--**Next action**: Implement TASK-076 (BybitStreamProtocol: subscribe/unsubscribe/batch wire format, Classify, RoutingKeyFor, ResolveConnectionAsync, HeartbeatPolicy, MinOutboundInterval — confirm Bybit v5 heartbeat direction + order-book depth) with protocol unit tests mirroring BinanceStreamProtocolTests/KucoinStreamProtocolTests.
-+**Active task**: TASK-076 (IN_PROGRESS) — BybitStreamProtocol + protocol unit tests.
-+**Next action**: Implement BybitStreamProtocol.cs + BybitStreamProtocolTests.cs; dotnet build + dotnet test; commit.
- 
- ─── ◈ NAZGUL ▸ PLANNING ────────────────────────────────
- 
-diff --git a/nazgul/tasks/TASK-076.md b/nazgul/tasks/TASK-076.md
-index 343bcbf..4f1396c 100644
---- a/nazgul/tasks/TASK-076.md
-+++ b/nazgul/tasks/TASK-076.md
-@@ -1,5 +1,5 @@
- ---
--status: READY
-+status: IN_PROGRESS
- ---
- # TASK-076: BybitStreamProtocol (IStreamProtocol) + protocol unit tests
- 
-@@ -13,7 +13,8 @@ status: READY
- - **Wave**: 2
- - **Traces to**: PRD AC#1/#2/#3; TRD §"Per-Exchange Variation Points" §2 + §"Bybit v5 Public Spot"; ADR-009-003 (heartbeat), ADR-009-004 (pacing), ADR-009-006 (routing key)
- - **Created at**: 2026-06-24T07:40:00Z
--- **Claimed at**:
-+- **Claimed at**: 2026-06-24T08:00:00Z
-+- **Base SHA**: 7746044a5f51406874fc3b6195b3df497351bd6f
- - **Implemented at**:
- - **Completed at**:
- - **Blocked at**:
 diff --git a/src/CryptoExchanges.Net.Bybit/Streaming/BybitStreamProtocol.cs b/src/CryptoExchanges.Net.Bybit/Streaming/BybitStreamProtocol.cs
-new file mode 100644
-index 0000000..f2292aa
---- /dev/null
+index f2292aa..cfce803 100644
+--- a/src/CryptoExchanges.Net.Bybit/Streaming/BybitStreamProtocol.cs
 +++ b/src/CryptoExchanges.Net.Bybit/Streaming/BybitStreamProtocol.cs
-@@ -0,0 +1,221 @@
-+using System.Text;
-+using CryptoExchanges.Net.Http.Streaming;
-+
-+namespace CryptoExchanges.Net.Bybit.Streaming;
-+
-+/// <summary>
-+/// Per-exchange protocol strategy for the Bybit v5 public spot WebSocket endpoint
-+/// (<c>wss://stream.bybit.com/v5/public/spot</c>). Implements the subscribe/unsubscribe
-+/// wire format, frame classification, and heartbeat policy. Pure data + classification —
-+/// no timers or threads (binding constraint C1).
-+/// </summary>
-+/// <remarks>
-+/// <para>
-+/// Bybit v5 WebSocket confirmed specifics (verified against Bybit v5 WS API docs):
-+/// <list type="bullet">
-+///   <item><description><strong>Heartbeat</strong>: Bybit sends a server-side WebSocket
-+///   control Ping every ~20 s; <c>ClientWebSocket</c> auto-pongs RFC 6455 control Pong
-+///   frames. Protocol uses <see cref="HeartbeatDirection.ServerPingClientPong"/>,
-+///   Interval = 20 s, Timeout = 60 s.</description></item>
-+///   <item><description><strong>Order-book depth levels</strong>: 1, 50, 200 (spot).
-+///   Default depth = 50 (<c>orderbook.50.BTCUSDT</c>).</description></item>
-+///   <item><description><strong>Batch cap</strong>: 100 topics per frame (Bybit allows many
-+///   args per frame; 100 matches the engine pre-chunk cap).</description></item>
-+///   <item><description><strong>MinOutboundInterval</strong>: 100 ms (10 msg/s; conservative
-+///   per-venue pacing aligned with KuCoin).</description></item>
-+///   <item><description><strong>Snapshot vs delta</strong>: both classify as
-+///   <see cref="FrameKind.Data"/> on the same <c>topic</c> routing key — the decoder
-+///   handles shape differences (no local-book maintenance required).</description></item>
-+/// </list>
-+/// </para>
-+/// </remarks>
-+internal sealed class BybitStreamProtocol : IStreamProtocol
-+{
-+    // Confirmed: Bybit v5 public spot sends server-side control Ping every 20 s.
-+    // ClientWebSocket handles the Pong automatically (RFC 6455 control frames).
-+    private static readonly HeartbeatPolicy s_heartbeatPolicy = new(
-+        Direction: HeartbeatDirection.ServerPingClientPong,
-+        Interval: TimeSpan.FromSeconds(20),
-+        Timeout: TimeSpan.FromSeconds(60));
-+
-+    // Default order-book depth (Bybit v5 public spot supports 1, 50, 200).
-+    private const int DefaultOrderBookDepth = 50;
-+
-+    // Cached once — Bybit v5 public spot uses a static URL and static heartbeat policy.
-+    private readonly StreamConnectionInfo _connectionInfo;
-+
-+    private int _nextReqId;
-+
-+    /// <summary>
-+    /// Initialises the protocol with the streaming base URL from options.
-+    /// The resolved <see cref="StreamConnectionInfo"/> is cached in the constructor
-+    /// and returned on every <see cref="ResolveConnectionAsync"/> call (static URL — no token negotiation).
-+    /// </summary>
-+    /// <param name="options">Stream options supplying the base URL.</param>
-+    public BybitStreamProtocol(BybitStreamOptions options)
-+    {
-+        ArgumentNullException.ThrowIfNull(options);
-+        var endpoint = new Uri(options.StreamBaseUrl);
-+        // Bybit v5 public spot: conservative 100 ms pacing (10 msg/s).
-+        _connectionInfo = new StreamConnectionInfo(
-+            endpoint,
-+            s_heartbeatPolicy,
-+            MinOutboundInterval: TimeSpan.FromMilliseconds(100));
-+    }
-+
-+    /// <inheritdoc/>
-+    public ValueTask<StreamConnectionInfo> ResolveConnectionAsync(CancellationToken ct)
-+        => new(_connectionInfo);
-+
-+    /// <inheritdoc/>
-+    public string RoutingKeyFor(StreamRequest request)
-+    {
-+        ArgumentNullException.ThrowIfNull(request);
-+        // Returns the same venue-native topic that Classify reads from the "topic" field
-+        // of a Bybit v5 data frame (e.g. "tickers.BTCUSDT", "orderbook.50.BTCUSDT").
-+        // Single-sourcing through BuildTopic ensures subscribe-time and receive-time keyspaces agree.
-+        return BuildTopic(request);
-+    }
-+
-+    /// <inheritdoc/>
-+    public string BuildSubscribe(StreamRequest request)
-+    {
-+        ArgumentNullException.ThrowIfNull(request);
-+        var topic = BuildTopic(request);
-+        var reqId = Interlocked.Increment(ref _nextReqId);
-+        return $"{{\"req_id\":\"{reqId}\",\"op\":\"subscribe\",\"args\":[\"{topic}\"]}}";
-+    }
-+
-+    /// <inheritdoc/>
-+    public string BuildUnsubscribe(StreamRequest request)
-+    {
-+        ArgumentNullException.ThrowIfNull(request);
-+        var topic = BuildTopic(request);
-+        var reqId = Interlocked.Increment(ref _nextReqId);
-+        return $"{{\"req_id\":\"{reqId}\",\"op\":\"unsubscribe\",\"args\":[\"{topic}\"]}}";
-+    }
-+
-+    /// <inheritdoc/>
-+    public string? BuildSubscribeBatch(IReadOnlyList<StreamRequest> requests)
-+        => BuildBatch(requests, "subscribe");
-+
-+    /// <inheritdoc/>
-+    public string? BuildUnsubscribeBatch(IReadOnlyList<StreamRequest> requests)
-+        => BuildBatch(requests, "unsubscribe");
-+
-+    /// <inheritdoc/>
-+    public StreamFrame Classify(ReadOnlySpan<byte> frame)
-+    {
-+        if (frame.IsEmpty)
-+            return new StreamFrame(FrameKind.Error, null);
-+
-+        try
-+        {
-+            var reader = new Utf8JsonReader(frame);
-+            using var doc = JsonDocument.ParseValue(ref reader);
-+            var root = doc.RootElement;
-+
-+            // Data frames carry a "topic" field and a "type" field ("snapshot" or "delta").
-+            // Both snapshot and delta classify as Data on the same topic routing key.
-+            if (root.TryGetProperty("topic"u8, out var topicProp) &&
-+                root.TryGetProperty("type"u8, out _))
-+            {
-+                var routingKey = topicProp.GetString();
-+                return new StreamFrame(FrameKind.Data, routingKey);
-+            }
-+
-+            // Pong reply when Bybit v5 server responds to a client JSON ping:
-+            // {"success":true,"ret_msg":"pong","op":"pong","req_id":"...",...}
-+            if (root.TryGetProperty("op"u8, out var opProp))
-+            {
-+                var op = opProp.GetString();
-+                if (string.Equals(op, "pong", StringComparison.Ordinal))
-+                    return new StreamFrame(FrameKind.Pong, null);
-+
-+                // Subscribe/unsubscribe ack: {"success":true,"ret_msg":"subscribe","op":"subscribe",...}
-+                if (root.TryGetProperty("success"u8, out var successProp))
-+                {
-+                    return successProp.GetBoolean()
-+                        ? new StreamFrame(FrameKind.Ack, null)
-+                        : new StreamFrame(FrameKind.Error, null);
-+                }
-+            }
-+
-+            // Unrecognised frame shape.
-+            return new StreamFrame(FrameKind.Error, null);
-+        }
-+        catch (JsonException)
-+        {
-+            return new StreamFrame(FrameKind.Error, null);
-+        }
-+    }
-+
-+    // ── Helpers ───────────────────────────────────────────────────────────────
-+
-+    // One subscribe/unsubscribe frame with a multi-topic args array.
-+    // Bybit v5 allows many topics per frame; cap matches the engine pre-chunk limit (100).
-+    private string? BuildBatch(IReadOnlyList<StreamRequest> requests, string op)
-+    {
-+        ArgumentNullException.ThrowIfNull(requests);
-+        if (requests.Count == 0)
-+            return null;
-+
-+        var builder = new StringBuilder(op.Length + requests.Count * 24 + 48);
-+        var reqId = Interlocked.Increment(ref _nextReqId);
-+        builder.Append("{\"req_id\":\"").Append(reqId).Append("\",\"op\":\"").Append(op).Append("\",\"args\":[");
-+        for (var i = 0; i < requests.Count; i++)
-+        {
-+            if (i > 0)
-+                builder.Append(',');
-+            builder.Append('"').Append(BuildTopic(requests[i])).Append('"');
-+        }
-+        builder.Append("]}");
-+        return builder.ToString();
-+    }
-+
-+    /// <summary>
-+    /// Builds the Bybit v5 venue-native topic string from a canonical <see cref="StreamRequest"/>.
-+    /// This is the single source of truth for both <see cref="RoutingKeyFor"/> and
-+    /// <see cref="Classify"/>. Symbol wire format: UPPERCASE, no delimiter (per <c>BybitSymbolFormat</c>).
-+    /// </summary>
-+    /// <remarks>
-+    /// Kline interval mapping: canonical <see cref="KlineInterval"/> enum names → Bybit codes
-+    /// <c>1 3 5 15 30 60 120 240 360 720 D W M</c>.
-+    /// Order-book default depth = 50 (confirmed available levels: 1, 50, 200 on Bybit v5 spot).
-+    /// </remarks>
-+    private static string BuildTopic(StreamRequest request) => request.Kind switch
-+    {
-+        StreamKind.Ticker => $"tickers.{request.WireSymbol}",
-+        StreamKind.Trade => $"publicTrade.{request.WireSymbol}",
-+        StreamKind.OrderBook when request.Depth.HasValue => $"orderbook.{request.Depth}.{request.WireSymbol}",
-+        StreamKind.OrderBook => $"orderbook.{DefaultOrderBookDepth}.{request.WireSymbol}",
-+        StreamKind.Kline when request.Interval is not null =>
-+            $"kline.{MapInterval(request.Interval)}.{request.WireSymbol}",
-+        StreamKind.Kline => $"kline.1.{request.WireSymbol}",
-+        _ => throw new ArgumentOutOfRangeException(nameof(request), request.Kind,
-+            $"Unsupported stream kind: {request.Kind}")
-+    };
-+
-+    /// <summary>
-+    /// Maps the canonical <see cref="KlineInterval"/> enum name to the Bybit v5 wire interval code.
-+    /// Bybit v5 spot kline intervals: <c>1 3 5 15 30 60 120 240 360 720 D W M</c>.
-+    /// </summary>
-+    private static string MapInterval(string intervalToken) => intervalToken switch
-+    {
-+        nameof(KlineInterval.OneMinute) => "1",
-+        nameof(KlineInterval.ThreeMinutes) => "3",
-+        nameof(KlineInterval.FiveMinutes) => "5",
-+        nameof(KlineInterval.FifteenMinutes) => "15",
-+        nameof(KlineInterval.ThirtyMinutes) => "30",
-+        nameof(KlineInterval.OneHour) => "60",
-+        nameof(KlineInterval.TwoHours) => "120",
-+        nameof(KlineInterval.FourHours) => "240",
-+        nameof(KlineInterval.SixHours) => "360",
-+        nameof(KlineInterval.TwelveHours) => "720",
-+        nameof(KlineInterval.OneDay) => "D",
-+        nameof(KlineInterval.OneWeek) => "W",
-+        nameof(KlineInterval.OneMonth) => "M",
-+        _ => throw new ArgumentOutOfRangeException(nameof(intervalToken), intervalToken,
-+            $"Unsupported interval: {intervalToken}")
-+    };
-+}
-diff --git a/src/CryptoExchanges.Net.Http/CryptoExchanges.Net.Http.csproj b/src/CryptoExchanges.Net.Http/CryptoExchanges.Net.Http.csproj
-index 37ffbba..2fc8e01 100644
---- a/src/CryptoExchanges.Net.Http/CryptoExchanges.Net.Http.csproj
-+++ b/src/CryptoExchanges.Net.Http/CryptoExchanges.Net.Http.csproj
-@@ -13,6 +13,7 @@
-     <InternalsVisibleTo Include="CryptoExchanges.Net.Http.Tests.Unit" />
-     <InternalsVisibleTo Include="CryptoExchanges.Net.Binance.Tests.Unit" />
-     <InternalsVisibleTo Include="CryptoExchanges.Net.Kucoin.Tests.Unit" />
-+    <InternalsVisibleTo Include="CryptoExchanges.Net.Bybit.Tests.Unit" />
-   </ItemGroup>
-   <ItemGroup>
-     <PackageReference Include="Microsoft.Extensions.Http.Resilience" Version="10.7.0" />
+@@ -117,9 +117,13 @@ internal sealed class BybitStreamProtocol : IStreamProtocol
+ 
+             // Data frames carry a "topic" field and a "type" field ("snapshot" or "delta").
+             // Both snapshot and delta classify as Data on the same topic routing key.
++            // Guard ValueKind before GetString(): a non-string "topic" would throw
++            // InvalidOperationException (not JsonException), escaping the catch below.
+             if (root.TryGetProperty("topic"u8, out var topicProp) &&
+                 root.TryGetProperty("type"u8, out _))
+             {
++                if (topicProp.ValueKind != JsonValueKind.String)
++                    return new StreamFrame(FrameKind.Error, null);
+                 var routingKey = topicProp.GetString();
+                 return new StreamFrame(FrameKind.Data, routingKey);
+             }
+@@ -128,6 +132,9 @@ internal sealed class BybitStreamProtocol : IStreamProtocol
+             // {"success":true,"ret_msg":"pong","op":"pong","req_id":"...",...}
+             if (root.TryGetProperty("op"u8, out var opProp))
+             {
++                // Guard ValueKind before GetString() — same reasoning as "topic" above.
++                if (opProp.ValueKind != JsonValueKind.String)
++                    return new StreamFrame(FrameKind.Error, null);
+                 var op = opProp.GetString();
+                 if (string.Equals(op, "pong", StringComparison.Ordinal))
+                     return new StreamFrame(FrameKind.Pong, null);
+@@ -135,6 +142,10 @@ internal sealed class BybitStreamProtocol : IStreamProtocol
+                 // Subscribe/unsubscribe ack: {"success":true,"ret_msg":"subscribe","op":"subscribe",...}
+                 if (root.TryGetProperty("success"u8, out var successProp))
+                 {
++                    // Guard ValueKind: GetBoolean() throws InvalidOperationException for non-boolean.
++                    if (successProp.ValueKind != JsonValueKind.True &&
++                        successProp.ValueKind != JsonValueKind.False)
++                        return new StreamFrame(FrameKind.Error, null);
+                     return successProp.GetBoolean()
+                         ? new StreamFrame(FrameKind.Ack, null)
+                         : new StreamFrame(FrameKind.Error, null);
 diff --git a/tests/CryptoExchanges.Net.Bybit.Tests.Unit/Streaming/BybitStreamProtocolTests.cs b/tests/CryptoExchanges.Net.Bybit.Tests.Unit/Streaming/BybitStreamProtocolTests.cs
-new file mode 100644
-index 0000000..744a7d3
---- /dev/null
+index 744a7d3..de80f71 100644
+--- a/tests/CryptoExchanges.Net.Bybit.Tests.Unit/Streaming/BybitStreamProtocolTests.cs
 +++ b/tests/CryptoExchanges.Net.Bybit.Tests.Unit/Streaming/BybitStreamProtocolTests.cs
-@@ -0,0 +1,557 @@
-+using System.Text;
-+using System.Text.Json;
-+using Xunit;
-+using AwesomeAssertions;
-+using CryptoExchanges.Net.Bybit.Streaming;
-+using CryptoExchanges.Net.Http.Streaming;
-+using CryptoExchanges.Net.Core.Enums;
-+
-+namespace CryptoExchanges.Net.Bybit.Tests.Unit.Streaming;
-+
-+/// <summary>
-+/// No-network unit tests for <see cref="BybitStreamProtocol"/>: Classify, BuildSubscribe,
-+/// BuildUnsubscribe, BuildSubscribeBatch, BuildUnsubscribeBatch, RoutingKeyFor, and
-+/// ResolveConnectionAsync. Canned byte frames only — no sockets.
-+/// </summary>
-+/// <remarks>Excluded from CI integration-test runs via the Category trait where applicable.</remarks>
-+[Trait("Category", "Unit")]
-+public class BybitStreamProtocolTests
-+{
-+    private static readonly BybitStreamOptions DefaultOptions = new();
-+
-+    private static BybitStreamProtocol MakeProtocol() => new(DefaultOptions);
-+
-+    private static byte[] Utf8(string json) => Encoding.UTF8.GetBytes(json);
-+
-+    // ── Classify: data frames ─────────────────────────────────────────────────
+@@ -174,6 +174,54 @@ public class BybitStreamProtocolTests
+         result.Kind.Should().Be(FrameKind.Error);
+     }
+ 
++    // ── Classify: malformed/wrong-typed frames (ValueKind guard) ─────────────
 +
 +    [Fact]
-+    public void Classify_TickerDataFrame_ReturnsDataWithRoutingKey()
++    public void Classify_TopicFieldIsNumber_ReturnsErrorAndDoesNotThrow()
 +    {
++        // "topic" with a numeric value: GetString() would throw InvalidOperationException
++        // without the ValueKind guard. Classify must absorb this as FrameKind.Error.
 +        var protocol = MakeProtocol();
-+        var frame = Utf8("{\"topic\":\"tickers.BTCUSDT\",\"type\":\"snapshot\",\"ts\":1700000000000,\"data\":{\"symbol\":\"BTCUSDT\"}}");
++        var frame = Utf8("{\"topic\":123,\"type\":\"snapshot\",\"ts\":1700000000000,\"data\":{}}");
 +
++        var ex = Record.Exception(() => protocol.Classify(frame));
 +        var result = protocol.Classify(frame);
 +
-+        result.Kind.Should().Be(FrameKind.Data);
-+        result.RoutingKey.Should().Be("tickers.BTCUSDT");
-+    }
-+
-+    [Fact]
-+    public void Classify_TradeDataFrame_ReturnsDataWithRoutingKey()
-+    {
-+        var protocol = MakeProtocol();
-+        var frame = Utf8("{\"topic\":\"publicTrade.BTCUSDT\",\"type\":\"snapshot\",\"ts\":1700000000000,\"data\":[]}");
-+
-+        var result = protocol.Classify(frame);
-+
-+        result.Kind.Should().Be(FrameKind.Data);
-+        result.RoutingKey.Should().Be("publicTrade.BTCUSDT");
-+    }
-+
-+    [Fact]
-+    public void Classify_OrderBookSnapshotDataFrame_ReturnsDataWithRoutingKey()
-+    {
-+        var protocol = MakeProtocol();
-+        var frame = Utf8("{\"topic\":\"orderbook.50.BTCUSDT\",\"type\":\"snapshot\",\"ts\":1700000000000,\"data\":{\"s\":\"BTCUSDT\"}}");
-+
-+        var result = protocol.Classify(frame);
-+
-+        result.Kind.Should().Be(FrameKind.Data);
-+        result.RoutingKey.Should().Be("orderbook.50.BTCUSDT");
-+    }
-+
-+    [Fact]
-+    public void Classify_OrderBookDeltaDataFrame_ReturnsDataWithSameRoutingKey()
-+    {
-+        // Confirmed: snapshot and delta both classify as Data on the same topic routing key.
-+        var protocol = MakeProtocol();
-+        var frame = Utf8("{\"topic\":\"orderbook.50.BTCUSDT\",\"type\":\"delta\",\"ts\":1700000001000,\"data\":{\"s\":\"BTCUSDT\"}}");
-+
-+        var result = protocol.Classify(frame);
-+
-+        result.Kind.Should().Be(FrameKind.Data);
-+        result.RoutingKey.Should().Be("orderbook.50.BTCUSDT",
-+            "snapshot and delta frames share the same topic routing key — both classify as Data");
-+    }
-+
-+    [Fact]
-+    public void Classify_KlineDataFrame_ReturnsDataWithRoutingKey()
-+    {
-+        var protocol = MakeProtocol();
-+        var frame = Utf8("{\"topic\":\"kline.1.BTCUSDT\",\"type\":\"snapshot\",\"ts\":1700000000000,\"data\":[]}");
-+
-+        var result = protocol.Classify(frame);
-+
-+        result.Kind.Should().Be(FrameKind.Data);
-+        result.RoutingKey.Should().Be("kline.1.BTCUSDT");
-+    }
-+
-+    // ── Classify: ack frames ──────────────────────────────────────────────────
-+
-+    [Fact]
-+    public void Classify_SubscribeAckFrame_ReturnsAck()
-+    {
-+        var protocol = MakeProtocol();
-+        var frame = Utf8("{\"success\":true,\"ret_msg\":\"subscribe\",\"op\":\"subscribe\",\"req_id\":\"1\",\"conn_id\":\"abc\"}");
-+
-+        var result = protocol.Classify(frame);
-+
-+        result.Kind.Should().Be(FrameKind.Ack);
-+        result.RoutingKey.Should().BeNull();
-+    }
-+
-+    [Fact]
-+    public void Classify_UnsubscribeAckFrame_ReturnsAck()
-+    {
-+        var protocol = MakeProtocol();
-+        var frame = Utf8("{\"success\":true,\"ret_msg\":\"unsubscribe\",\"op\":\"unsubscribe\",\"req_id\":\"2\",\"conn_id\":\"abc\"}");
-+
-+        var result = protocol.Classify(frame);
-+
-+        result.Kind.Should().Be(FrameKind.Ack);
-+        result.RoutingKey.Should().BeNull();
-+    }
-+
-+    // ── Classify: pong frame ──────────────────────────────────────────────────
-+
-+    [Fact]
-+    public void Classify_PongFrame_ReturnsPong()
-+    {
-+        // Bybit v5 replies with {"op":"pong",...} when the server responds to a client ping.
-+        var protocol = MakeProtocol();
-+        var frame = Utf8("{\"success\":true,\"ret_msg\":\"pong\",\"op\":\"pong\",\"req_id\":\"hb1\",\"conn_id\":\"abc\"}");
-+
-+        var result = protocol.Classify(frame);
-+
-+        result.Kind.Should().Be(FrameKind.Pong);
-+        result.RoutingKey.Should().BeNull();
-+    }
-+
-+    // ── Classify: error frames ────────────────────────────────────────────────
-+
-+    [Fact]
-+    public void Classify_SubscribeErrorFrame_ReturnsError()
-+    {
-+        var protocol = MakeProtocol();
-+        var frame = Utf8("{\"success\":false,\"ret_msg\":\"error: invalid topic\",\"op\":\"subscribe\",\"req_id\":\"1\"}");
-+
-+        var result = protocol.Classify(frame);
-+
++        ex.Should().BeNull("Classify must not throw on a malformed frame");
 +        result.Kind.Should().Be(FrameKind.Error);
 +        result.RoutingKey.Should().BeNull();
 +    }
 +
 +    [Fact]
-+    public void Classify_UnrecognisedFrame_ReturnsError()
++    public void Classify_SuccessFieldIsString_ReturnsErrorAndDoesNotThrow()
 +    {
++        // "success" with a string value: GetBoolean() would throw InvalidOperationException
++        // without the ValueKind guard. Classify must absorb this as FrameKind.Error.
 +        var protocol = MakeProtocol();
-+        var frame = Utf8("{\"mystery\":true}");
++        var frame = Utf8("{\"success\":\"yes\",\"ret_msg\":\"subscribe\",\"op\":\"subscribe\",\"req_id\":\"1\"}");
 +
++        var ex = Record.Exception(() => protocol.Classify(frame));
 +        var result = protocol.Classify(frame);
 +
++        ex.Should().BeNull("Classify must not throw on a malformed frame");
 +        result.Kind.Should().Be(FrameKind.Error);
 +    }
 +
 +    [Fact]
-+    public void Classify_EmptyFrame_ReturnsError()
++    public void Classify_OpFieldIsNumber_ReturnsErrorAndDoesNotThrow()
 +    {
++        // "op" with a numeric value: GetString() would throw InvalidOperationException
++        // without the ValueKind guard. Classify must absorb this as FrameKind.Error.
 +        var protocol = MakeProtocol();
++        var frame = Utf8("{\"op\":99,\"success\":true,\"req_id\":\"1\"}");
 +
-+        var result = protocol.Classify(ReadOnlySpan<byte>.Empty);
-+
-+        result.Kind.Should().Be(FrameKind.Error);
-+    }
-+
-+    [Fact]
-+    public void Classify_InvalidJsonFrame_ReturnsError()
-+    {
-+        var protocol = MakeProtocol();
-+        var frame = Utf8("not json at all");
-+
++        var ex = Record.Exception(() => protocol.Classify(frame));
 +        var result = protocol.Classify(frame);
 +
++        ex.Should().BeNull("Classify must not throw on a malformed frame");
 +        result.Kind.Should().Be(FrameKind.Error);
 +    }
 +
-+    // ── BuildSubscribe ────────────────────────────────────────────────────────
-+
-+    [Fact]
-+    public void BuildSubscribe_Ticker_ProducesCorrectTopic()
-+    {
-+        var protocol = MakeProtocol();
-+        var request = new StreamRequest(StreamKind.Ticker, "BTCUSDT");
-+
-+        var wire = protocol.BuildSubscribe(request);
-+        using var doc = JsonDocument.Parse(wire);
-+
-+        doc.RootElement.GetProperty("op").GetString().Should().Be("subscribe");
-+        doc.RootElement.GetProperty("args")[0].GetString().Should().Be("tickers.BTCUSDT");
-+        doc.RootElement.GetProperty("req_id").GetString().Should().NotBeNullOrEmpty();
-+    }
-+
-+    [Fact]
-+    public void BuildSubscribe_Trade_ProducesCorrectTopic()
-+    {
-+        var protocol = MakeProtocol();
-+        var request = new StreamRequest(StreamKind.Trade, "ETHUSDT");
-+
-+        var wire = protocol.BuildSubscribe(request);
-+        using var doc = JsonDocument.Parse(wire);
-+
-+        doc.RootElement.GetProperty("op").GetString().Should().Be("subscribe");
-+        doc.RootElement.GetProperty("args")[0].GetString().Should().Be("publicTrade.ETHUSDT");
-+    }
-+
-+    [Fact]
-+    public void BuildSubscribe_OrderBook_DefaultDepth50()
-+    {
-+        // Confirmed default depth = 50 (Bybit v5 spot available levels: 1, 50, 200).
-+        var protocol = MakeProtocol();
-+        var request = new StreamRequest(StreamKind.OrderBook, "BTCUSDT");
-+
-+        var wire = protocol.BuildSubscribe(request);
-+        using var doc = JsonDocument.Parse(wire);
-+
-+        doc.RootElement.GetProperty("args")[0].GetString().Should().Be("orderbook.50.BTCUSDT");
-+    }
-+
-+    [Fact]
-+    public void BuildSubscribe_OrderBook_ExplicitDepth1()
-+    {
-+        var protocol = MakeProtocol();
-+        var request = new StreamRequest(StreamKind.OrderBook, "BTCUSDT", Depth: 1);
-+
-+        var wire = protocol.BuildSubscribe(request);
-+        using var doc = JsonDocument.Parse(wire);
-+
-+        doc.RootElement.GetProperty("args")[0].GetString().Should().Be("orderbook.1.BTCUSDT");
-+    }
-+
-+    [Fact]
-+    public void BuildSubscribe_OrderBook_ExplicitDepth200()
-+    {
-+        var protocol = MakeProtocol();
-+        var request = new StreamRequest(StreamKind.OrderBook, "BTCUSDT", Depth: 200);
-+
-+        var wire = protocol.BuildSubscribe(request);
-+        using var doc = JsonDocument.Parse(wire);
-+
-+        doc.RootElement.GetProperty("args")[0].GetString().Should().Be("orderbook.200.BTCUSDT");
-+    }
-+
-+    [Fact]
-+    public void BuildSubscribe_Kline_OneMinute()
-+    {
-+        var protocol = MakeProtocol();
-+        var request = new StreamRequest(StreamKind.Kline, "BTCUSDT", Interval: nameof(KlineInterval.OneMinute));
-+
-+        var wire = protocol.BuildSubscribe(request);
-+        using var doc = JsonDocument.Parse(wire);
-+
-+        doc.RootElement.GetProperty("args")[0].GetString().Should().Be("kline.1.BTCUSDT");
-+    }
-+
-+    [Fact]
-+    public void BuildSubscribe_Kline_OneHour()
-+    {
-+        var protocol = MakeProtocol();
-+        var request = new StreamRequest(StreamKind.Kline, "BTCUSDT", Interval: nameof(KlineInterval.OneHour));
-+
-+        var wire = protocol.BuildSubscribe(request);
-+        using var doc = JsonDocument.Parse(wire);
-+
-+        doc.RootElement.GetProperty("args")[0].GetString().Should().Be("kline.60.BTCUSDT");
-+    }
-+
-+    [Fact]
-+    public void BuildSubscribe_Kline_OneDay()
-+    {
-+        var protocol = MakeProtocol();
-+        var request = new StreamRequest(StreamKind.Kline, "BTCUSDT", Interval: nameof(KlineInterval.OneDay));
-+
-+        var wire = protocol.BuildSubscribe(request);
-+        using var doc = JsonDocument.Parse(wire);
-+
-+        doc.RootElement.GetProperty("args")[0].GetString().Should().Be("kline.D.BTCUSDT");
-+    }
-+
-+    [Fact]
-+    public void BuildSubscribe_Kline_OneWeek()
-+    {
-+        var protocol = MakeProtocol();
-+        var request = new StreamRequest(StreamKind.Kline, "BTCUSDT", Interval: nameof(KlineInterval.OneWeek));
-+
-+        var wire = protocol.BuildSubscribe(request);
-+        using var doc = JsonDocument.Parse(wire);
-+
-+        doc.RootElement.GetProperty("args")[0].GetString().Should().Be("kline.W.BTCUSDT");
-+    }
-+
-+    [Fact]
-+    public void BuildSubscribe_Kline_OneMonth()
-+    {
-+        var protocol = MakeProtocol();
-+        var request = new StreamRequest(StreamKind.Kline, "BTCUSDT", Interval: nameof(KlineInterval.OneMonth));
-+
-+        var wire = protocol.BuildSubscribe(request);
-+        using var doc = JsonDocument.Parse(wire);
-+
-+        doc.RootElement.GetProperty("args")[0].GetString().Should().Be("kline.M.BTCUSDT");
-+    }
-+
-+    // ── BuildUnsubscribe ──────────────────────────────────────────────────────
-+
-+    [Fact]
-+    public void BuildUnsubscribe_Ticker_ProducesUnsubscribeOp()
-+    {
-+        var protocol = MakeProtocol();
-+        var request = new StreamRequest(StreamKind.Ticker, "BTCUSDT");
-+
-+        var wire = protocol.BuildUnsubscribe(request);
-+        using var doc = JsonDocument.Parse(wire);
-+
-+        doc.RootElement.GetProperty("op").GetString().Should().Be("unsubscribe");
-+        doc.RootElement.GetProperty("args")[0].GetString().Should().Be("tickers.BTCUSDT");
-+    }
-+
-+    [Fact]
-+    public void BuildUnsubscribe_Trade_ProducesCorrectTopic()
-+    {
-+        var protocol = MakeProtocol();
-+        var request = new StreamRequest(StreamKind.Trade, "ETHUSDT");
-+
-+        var wire = protocol.BuildUnsubscribe(request);
-+        using var doc = JsonDocument.Parse(wire);
-+
-+        doc.RootElement.GetProperty("op").GetString().Should().Be("unsubscribe");
-+        doc.RootElement.GetProperty("args")[0].GetString().Should().Be("publicTrade.ETHUSDT");
-+    }
-+
-+    // ── BuildSubscribeBatch / BuildUnsubscribeBatch ───────────────────────────
-+
-+    [Fact]
-+    public void BuildSubscribeBatch_MultipleRequests_EmitsOneFrameWithAllTopics()
-+    {
-+        var protocol = MakeProtocol();
-+        var requests = new[]
-+        {
-+            new StreamRequest(StreamKind.Ticker, "BTCUSDT"),
-+            new StreamRequest(StreamKind.Trade, "ETHUSDT"),
-+            new StreamRequest(StreamKind.OrderBook, "BNBUSDT"),
-+        };
-+
-+        var wire = protocol.BuildSubscribeBatch(requests);
-+        using var doc = JsonDocument.Parse(wire!);
-+
-+        doc.RootElement.GetProperty("op").GetString().Should().Be("subscribe");
-+        var args = doc.RootElement.GetProperty("args");
-+        args.GetArrayLength().Should().Be(3);
-+        args[0].GetString().Should().Be("tickers.BTCUSDT");
-+        args[1].GetString().Should().Be("publicTrade.ETHUSDT");
-+        args[2].GetString().Should().Be("orderbook.50.BNBUSDT");
-+        doc.RootElement.GetProperty("req_id").GetString().Should().NotBeNullOrEmpty();
-+    }
-+
-+    [Fact]
-+    public void BuildUnsubscribeBatch_MultipleRequests_EmitsOneUnsubscribeFrame()
-+    {
-+        var protocol = MakeProtocol();
-+        var requests = new[]
-+        {
-+            new StreamRequest(StreamKind.Ticker, "BTCUSDT"),
-+            new StreamRequest(StreamKind.Ticker, "ETHUSDT"),
-+        };
-+
-+        var wire = protocol.BuildUnsubscribeBatch(requests);
-+        using var doc = JsonDocument.Parse(wire!);
-+
-+        doc.RootElement.GetProperty("op").GetString().Should().Be("unsubscribe");
-+        var args = doc.RootElement.GetProperty("args");
-+        args.GetArrayLength().Should().Be(2);
-+        args[0].GetString().Should().Be("tickers.BTCUSDT");
-+        args[1].GetString().Should().Be("tickers.ETHUSDT");
-+    }
-+
-+    [Fact]
-+    public void BuildSubscribeBatch_SingleRequest_EmitsSingleArgArray()
-+    {
-+        var protocol = MakeProtocol();
-+        var requests = new[] { new StreamRequest(StreamKind.Trade, "BTCUSDT") };
-+
-+        var wire = protocol.BuildSubscribeBatch(requests);
-+        using var doc = JsonDocument.Parse(wire!);
-+
-+        var args = doc.RootElement.GetProperty("args");
-+        args.GetArrayLength().Should().Be(1);
-+        args[0].GetString().Should().Be("publicTrade.BTCUSDT");
-+    }
-+
-+    [Fact]
-+    public void BuildSubscribeBatch_OneHundredRequests_EmitsExactlyOneHundredArgs()
-+    {
-+        // Engine pre-chunks to 100; Bybit allows many args per frame — batch cap = 100.
-+        var protocol = MakeProtocol();
-+        var requests = Enumerable.Range(0, 100)
-+            .Select(i => new StreamRequest(StreamKind.Ticker, $"SYM{i}USDT"))
-+            .ToArray();
-+
-+        var wire = protocol.BuildSubscribeBatch(requests);
-+        using var doc = JsonDocument.Parse(wire!);
-+
-+        doc.RootElement.GetProperty("args").GetArrayLength().Should().Be(100,
-+            "the engine pre-chunks at 100 — one Bybit batch frame may carry exactly 100 topics");
-+    }
-+
-+    [Fact]
-+    public void BuildSubscribeBatch_EmptyList_ReturnsNull()
-+    {
-+        var protocol = MakeProtocol();
-+        protocol.BuildSubscribeBatch([]).Should().BeNull(
-+            "an empty request list has no batch frame to build");
-+    }
-+
-+    [Fact]
-+    public void BuildUnsubscribeBatch_EmptyList_ReturnsNull()
-+    {
-+        var protocol = MakeProtocol();
-+        protocol.BuildUnsubscribeBatch([]).Should().BeNull(
-+            "an empty request list has no batch frame to build");
-+    }
-+
-+    // ── RoutingKeyFor matches Classify (single-sourced via BuildTopic) ─────────
-+
-+    [Fact]
-+    public void RoutingKeyFor_Ticker_MatchesClassifyDataFrame()
-+    {
-+        var protocol = MakeProtocol();
-+        var request = new StreamRequest(StreamKind.Ticker, "BTCUSDT");
-+        var frame = Utf8("{\"topic\":\"tickers.BTCUSDT\",\"type\":\"snapshot\",\"ts\":1700000000000,\"data\":{}}");
-+
-+        var subscribeKey = protocol.RoutingKeyFor(request);
-+        var classifiedKey = protocol.Classify(frame).RoutingKey;
-+
-+        subscribeKey.Should().Be("tickers.BTCUSDT");
-+        classifiedKey.Should().Be("tickers.BTCUSDT");
-+        subscribeKey.Should().Be(classifiedKey,
-+            "RoutingKeyFor and Classify must share one keyspace so frames reach their subscription");
-+    }
-+
-+    [Fact]
-+    public void RoutingKeyFor_Trade_MatchesClassifyDataFrame()
-+    {
-+        var protocol = MakeProtocol();
-+        var request = new StreamRequest(StreamKind.Trade, "ETHUSDT");
-+        var frame = Utf8("{\"topic\":\"publicTrade.ETHUSDT\",\"type\":\"snapshot\",\"ts\":1700000000000,\"data\":[]}");
-+
-+        var subscribeKey = protocol.RoutingKeyFor(request);
-+        var classifiedKey = protocol.Classify(frame).RoutingKey;
-+
-+        subscribeKey.Should().Be("publicTrade.ETHUSDT");
-+        classifiedKey.Should().Be("publicTrade.ETHUSDT");
-+        subscribeKey.Should().Be(classifiedKey,
-+            "RoutingKeyFor and Classify must share one keyspace so frames reach their subscription");
-+    }
-+
-+    [Fact]
-+    public void RoutingKeyFor_OrderBook_DefaultDepth_MatchesClassifyDataFrame()
-+    {
-+        var protocol = MakeProtocol();
-+        var request = new StreamRequest(StreamKind.OrderBook, "BTCUSDT");
-+        var frame = Utf8("{\"topic\":\"orderbook.50.BTCUSDT\",\"type\":\"snapshot\",\"ts\":1700000000000,\"data\":{}}");
-+
-+        var subscribeKey = protocol.RoutingKeyFor(request);
-+        var classifiedKey = protocol.Classify(frame).RoutingKey;
-+
-+        subscribeKey.Should().Be("orderbook.50.BTCUSDT");
-+        classifiedKey.Should().Be("orderbook.50.BTCUSDT");
-+        subscribeKey.Should().Be(classifiedKey,
-+            "RoutingKeyFor and Classify must share one keyspace so frames reach their subscription");
-+    }
-+
-+    [Fact]
-+    public void RoutingKeyFor_Kline_MatchesClassifyDataFrame()
-+    {
-+        var protocol = MakeProtocol();
-+        var request = new StreamRequest(StreamKind.Kline, "BTCUSDT", Interval: nameof(KlineInterval.OneMinute));
-+        var frame = Utf8("{\"topic\":\"kline.1.BTCUSDT\",\"type\":\"snapshot\",\"ts\":1700000000000,\"data\":[]}");
-+
-+        var subscribeKey = protocol.RoutingKeyFor(request);
-+        var classifiedKey = protocol.Classify(frame).RoutingKey;
-+
-+        subscribeKey.Should().Be("kline.1.BTCUSDT");
-+        classifiedKey.Should().Be("kline.1.BTCUSDT");
-+        subscribeKey.Should().Be(classifiedKey,
-+            "RoutingKeyFor and Classify must share one keyspace so frames reach their subscription");
-+    }
-+
-+    // ── ResolveConnectionAsync ────────────────────────────────────────────────
-+
-+    [Fact]
-+    public async Task ResolveConnectionAsync_ReturnsConfiguredEndpoint()
-+    {
-+        var protocol = MakeProtocol();
-+        var info = await protocol.ResolveConnectionAsync(CancellationToken.None);
-+
-+        info.Endpoint.Should().Be(new Uri("wss://stream.bybit.com/v5/public/spot"));
-+    }
-+
-+    [Fact]
-+    public async Task ResolveConnectionAsync_ReturnsServerPingClientPong()
-+    {
-+        // Confirmed: Bybit v5 sends server-side control Ping every 20 s; engine auto-pongs.
-+        var protocol = MakeProtocol();
-+        var info = await protocol.ResolveConnectionAsync(CancellationToken.None);
-+
-+        info.Heartbeat.Direction.Should().Be(HeartbeatDirection.ServerPingClientPong);
-+    }
-+
-+    [Fact]
-+    public async Task ResolveConnectionAsync_HeartbeatInterval_Is20Seconds()
-+    {
-+        var protocol = MakeProtocol();
-+        var info = await protocol.ResolveConnectionAsync(CancellationToken.None);
-+
-+        info.Heartbeat.Interval.Should().Be(TimeSpan.FromSeconds(20));
-+    }
-+
-+    [Fact]
-+    public async Task ResolveConnectionAsync_HeartbeatTimeout_Is60Seconds()
-+    {
-+        var protocol = MakeProtocol();
-+        var info = await protocol.ResolveConnectionAsync(CancellationToken.None);
-+
-+        info.Heartbeat.Timeout.Should().Be(TimeSpan.FromSeconds(60));
-+    }
-+
-+    [Fact]
-+    public async Task ResolveConnectionAsync_MinOutboundInterval_Is100Ms()
-+    {
-+        // Confirmed: 100 ms pacing (10 msg/s), conservative per-venue floor.
-+        var protocol = MakeProtocol();
-+        var info = await protocol.ResolveConnectionAsync(CancellationToken.None);
-+
-+        info.MinOutboundInterval.Should().Be(TimeSpan.FromMilliseconds(100));
-+    }
-+
-+    [Fact]
-+    public async Task ResolveConnectionAsync_ReturnsCachedInstance()
-+    {
-+        // Bybit uses a static URL + static policy — same reference on every call.
-+        var protocol = MakeProtocol();
-+        var info1 = await protocol.ResolveConnectionAsync(CancellationToken.None);
-+        var info2 = await protocol.ResolveConnectionAsync(CancellationToken.None);
-+
-+        info1.Should().BeSameAs(info2);
-+    }
-+
-+    [Fact]
-+    public async Task ResolveConnectionAsync_CustomBaseUrl_UsesConfiguredEndpoint()
-+    {
-+        var options = new BybitStreamOptions { StreamBaseUrl = "wss://stream.bybit.com/v5/public/linear" };
-+        var protocol = new BybitStreamProtocol(options);
-+        var info = await protocol.ResolveConnectionAsync(CancellationToken.None);
-+
-+        info.Endpoint.Should().Be(new Uri("wss://stream.bybit.com/v5/public/linear"));
-+    }
-+}
+     // ── BuildSubscribe ────────────────────────────────────────────────────────
+ 
+     [Fact]

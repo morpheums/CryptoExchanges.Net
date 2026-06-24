@@ -103,7 +103,17 @@ Tests (`BybitStreamProtocolTests.cs` under `tests/CryptoExchanges.Net.Bybit.Test
 ## Commits
 
 - **3ec30eb** — feat(FEAT-009): implement BybitStreamProtocol + protocol unit tests (TASK-076)
+- **5c88e51** — feat(FEAT-009): harden BybitStreamProtocol.Classify with ValueKind guards (TASK-076 review-fix)
 
 ## Review Results
 
-### Attempt 1
+### Attempt 1 — Follow-up fix (5c88e51)
+
+Addressed confidence-75 concern from `nazgul/reviews/FEAT-009-bybit-consolidated/code-reviewer.md`:
+added `ValueKind` guards before all three typed `JsonElement` accessor calls in `Classify()`:
+- `topicProp.ValueKind != JsonValueKind.String` before `GetString()` in the data-frame branch.
+- `opProp.ValueKind != JsonValueKind.String` before `GetString()` in the op/pong branch.
+- `successProp.ValueKind != JsonValueKind.True/False` before `GetBoolean()` in the ack branch.
+On any type mismatch returns `FrameKind.Error` — mirrors `BybitErrorTranslator.cs:59-65` pattern.
+Three new unit tests added: `topic=number`, `success=string`, `op=number` — all assert `FrameKind.Error` and no throw.
+Build: 0W/0E. Unit gate: 130 Bybit tests passed.

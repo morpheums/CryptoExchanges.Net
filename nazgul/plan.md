@@ -1,8 +1,8 @@
 # Nazgul Plan — FEAT-009
 
 ## Recovery Pointer
-**Active task**: TASK-079 (IMPLEMENTED) — Bybit multi-symbol L2 order-book streaming integration smoke test. Commit: ba3d60a. Build 0W/0E, unit gate green (4 Bybit integration tests correctly excluded by Category filter). Diff captured at nazgul/reviews/TASK-079/diff.patch.
-**Next action**: Review gate for TASK-079.
+**Active task**: TASK-076 (IMPLEMENTED — review-fix) — Defensive ValueKind guards in BybitStreamProtocol.Classify + malformed-frame unit tests. Commit: 5c88e51. Build 0W/0E, all 130 Bybit unit tests green. Diff captured at nazgul/reviews/TASK-076/diff.patch.
+**Next action**: Review gate for TASK-079 (original next task resumes after this review-fix).
 
 ─── ◈ NAZGUL ▸ PLANNING ────────────────────────────────
 

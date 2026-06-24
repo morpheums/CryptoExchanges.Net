@@ -31,17 +31,13 @@ namespace CryptoExchanges.Net.Bybit.Streaming;
 /// </remarks>
 internal sealed class BybitStreamProtocol : IStreamProtocol
 {
-    // Confirmed: Bybit v5 public spot sends server-side control Ping every 20 s.
-    // ClientWebSocket handles the Pong automatically (RFC 6455 control frames).
     private static readonly HeartbeatPolicy s_heartbeatPolicy = new(
         Direction: HeartbeatDirection.ServerPingClientPong,
         Interval: TimeSpan.FromSeconds(20),
         Timeout: TimeSpan.FromSeconds(60));
 
-    // Default order-book depth (Bybit v5 public spot supports 1, 50, 200).
     private const int DefaultOrderBookDepth = 50;
 
-    // Cached once — Bybit v5 public spot uses a static URL and static heartbeat policy.
     private readonly StreamConnectionInfo _connectionInfo;
 
     private int _nextReqId;
@@ -56,7 +52,6 @@ internal sealed class BybitStreamProtocol : IStreamProtocol
     {
         ArgumentNullException.ThrowIfNull(options);
         var endpoint = new Uri(options.StreamBaseUrl);
-        // Bybit v5 public spot: conservative 100 ms pacing (10 msg/s).
         _connectionInfo = new StreamConnectionInfo(
             endpoint,
             s_heartbeatPolicy,
@@ -71,9 +66,6 @@ internal sealed class BybitStreamProtocol : IStreamProtocol
     public string RoutingKeyFor(StreamRequest request)
     {
         ArgumentNullException.ThrowIfNull(request);
-        // Returns the same venue-native topic that Classify reads from the "topic" field
-        // of a Bybit v5 data frame (e.g. "tickers.BTCUSDT", "orderbook.50.BTCUSDT").
-        // Single-sourcing through BuildTopic ensures subscribe-time and receive-time keyspaces agree.
         return BuildTopic(request);
     }
 
@@ -115,10 +107,8 @@ internal sealed class BybitStreamProtocol : IStreamProtocol
             using var doc = JsonDocument.ParseValue(ref reader);
             var root = doc.RootElement;
 
-            // Data frames carry a "topic" field and a "type" field ("snapshot" or "delta").
-            // Both snapshot and delta classify as Data on the same topic routing key.
-            // Guard ValueKind before GetString(): a non-string "topic" would throw
-            // InvalidOperationException (not JsonException), escaping the catch below.
+            // ValueKind guards below: a wrong-typed field throws InvalidOperationException,
+            // which is not a JsonException and would escape the catch.
             if (root.TryGetProperty("topic"u8, out var topicProp) &&
                 root.TryGetProperty("type"u8, out _))
             {
@@ -128,21 +118,16 @@ internal sealed class BybitStreamProtocol : IStreamProtocol
                 return new StreamFrame(FrameKind.Data, routingKey);
             }
 
-            // Pong reply when Bybit v5 server responds to a client JSON ping:
-            // {"success":true,"ret_msg":"pong","op":"pong","req_id":"...",...}
+            // Control frames: {"op":"pong",...} and the subscribe/unsubscribe ack {"success":bool,"op":...}.
             if (root.TryGetProperty("op"u8, out var opProp))
             {
-                // Guard ValueKind before GetString() — same reasoning as "topic" above.
                 if (opProp.ValueKind != JsonValueKind.String)
                     return new StreamFrame(FrameKind.Error, null);
-                var op = opProp.GetString();
-                if (string.Equals(op, "pong", StringComparison.Ordinal))
+                if (string.Equals(opProp.GetString(), "pong", StringComparison.Ordinal))
                     return new StreamFrame(FrameKind.Pong, null);
 
-                // Subscribe/unsubscribe ack: {"success":true,"ret_msg":"subscribe","op":"subscribe",...}
                 if (root.TryGetProperty("success"u8, out var successProp))
                 {
-                    // Guard ValueKind: GetBoolean() throws InvalidOperationException for non-boolean.
                     if (successProp.ValueKind != JsonValueKind.True &&
                         successProp.ValueKind != JsonValueKind.False)
                         return new StreamFrame(FrameKind.Error, null);
@@ -152,7 +137,6 @@ internal sealed class BybitStreamProtocol : IStreamProtocol
                 }
             }
 
-            // Unrecognised frame shape.
             return new StreamFrame(FrameKind.Error, null);
         }
         catch (JsonException)
@@ -161,10 +145,6 @@ internal sealed class BybitStreamProtocol : IStreamProtocol
         }
     }
 
-    // ── Helpers ───────────────────────────────────────────────────────────────
-
-    // One subscribe/unsubscribe frame with a multi-topic args array.
-    // Bybit v5 allows many topics per frame; cap matches the engine pre-chunk limit (100).
     private string? BuildBatch(IReadOnlyList<StreamRequest> requests, string op)
     {
         ArgumentNullException.ThrowIfNull(requests);

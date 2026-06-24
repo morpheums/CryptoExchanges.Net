@@ -23,8 +23,6 @@ public class BybitStreamProtocolTests
 
     private static byte[] Utf8(string json) => Encoding.UTF8.GetBytes(json);
 
-    // ── Classify: data frames ─────────────────────────────────────────────────
-
     [Fact]
     public void Classify_TickerDataFrame_ReturnsDataWithRoutingKey()
     {
@@ -87,8 +85,6 @@ public class BybitStreamProtocolTests
         result.RoutingKey.Should().Be("kline.1.BTCUSDT");
     }
 
-    // ── Classify: ack frames ──────────────────────────────────────────────────
-
     [Fact]
     public void Classify_SubscribeAckFrame_ReturnsAck()
     {
@@ -113,8 +109,6 @@ public class BybitStreamProtocolTests
         result.RoutingKey.Should().BeNull();
     }
 
-    // ── Classify: pong frame ──────────────────────────────────────────────────
-
     [Fact]
     public void Classify_PongFrame_ReturnsPong()
     {
@@ -127,8 +121,6 @@ public class BybitStreamProtocolTests
         result.Kind.Should().Be(FrameKind.Pong);
         result.RoutingKey.Should().BeNull();
     }
-
-    // ── Classify: error frames ────────────────────────────────────────────────
 
     [Fact]
     public void Classify_SubscribeErrorFrame_ReturnsError()
@@ -173,8 +165,6 @@ public class BybitStreamProtocolTests
 
         result.Kind.Should().Be(FrameKind.Error);
     }
-
-    // ── Classify: malformed/wrong-typed frames (ValueKind guard) ─────────────
 
     [Fact]
     public void Classify_TopicFieldIsNumber_ReturnsErrorAndDoesNotThrow()
@@ -221,8 +211,6 @@ public class BybitStreamProtocolTests
         ex.Should().BeNull("Classify must not throw on a malformed frame");
         result.Kind.Should().Be(FrameKind.Error);
     }
-
-    // ── BuildSubscribe ────────────────────────────────────────────────────────
 
     [Fact]
     public void BuildSubscribe_Ticker_ProducesCorrectTopic()
@@ -348,8 +336,6 @@ public class BybitStreamProtocolTests
         doc.RootElement.GetProperty("args")[0].GetString().Should().Be("kline.M.BTCUSDT");
     }
 
-    // ── BuildUnsubscribe ──────────────────────────────────────────────────────
-
     [Fact]
     public void BuildUnsubscribe_Ticker_ProducesUnsubscribeOp()
     {
@@ -375,8 +361,6 @@ public class BybitStreamProtocolTests
         doc.RootElement.GetProperty("op").GetString().Should().Be("unsubscribe");
         doc.RootElement.GetProperty("args")[0].GetString().Should().Be("publicTrade.ETHUSDT");
     }
-
-    // ── BuildSubscribeBatch / BuildUnsubscribeBatch ───────────────────────────
 
     [Fact]
     public void BuildSubscribeBatch_MultipleRequests_EmitsOneFrameWithAllTopics()
@@ -467,8 +451,6 @@ public class BybitStreamProtocolTests
             "an empty request list has no batch frame to build");
     }
 
-    // ── RoutingKeyFor matches Classify (single-sourced via BuildTopic) ─────────
-
     [Fact]
     public void RoutingKeyFor_Ticker_MatchesClassifyDataFrame()
     {
@@ -532,8 +514,6 @@ public class BybitStreamProtocolTests
         subscribeKey.Should().Be(classifiedKey,
             "RoutingKeyFor and Classify must share one keyspace so frames reach their subscription");
     }
-
-    // ── ResolveConnectionAsync ────────────────────────────────────────────────
 
     [Fact]
     public async Task ResolveConnectionAsync_ReturnsConfiguredEndpoint()

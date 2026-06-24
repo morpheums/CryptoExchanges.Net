@@ -41,7 +41,6 @@ internal static class BybitStreamDecoders
 
         var registry = new StreamDecoderRegistry();
 
-        // ── Ticker ────────────────────────────────────────────────────────────
         // Bybit v5 ticker frame: data is a single object {"symbol":...,"lastPrice":...,...}.
         registry.Register(StreamKind.Ticker, bytes =>
         {
@@ -49,7 +48,6 @@ internal static class BybitStreamDecoders
             return mapper.Map<StreamTickerDto, Ticker>(dto);
         });
 
-        // ── Trade ─────────────────────────────────────────────────────────────
         // Bybit v5 publicTrade frame: data is an ARRAY of trade objects; emit the first entry.
         // S == "Sell" means the taker was a seller, so the buyer was the market maker.
         registry.Register(StreamKind.Trade, bytes =>
@@ -67,7 +65,6 @@ internal static class BybitStreamDecoders
                 IsBuyerMaker: string.Equals(dto.Side, "Sell", StringComparison.Ordinal));
         });
 
-        // ── OrderBook ─────────────────────────────────────────────────────────
         // Bybit v5 orderbook frame: data is a single object {"s":...,"b":[...],"a":[...],"u":...,"seq":...}.
         // Both snapshot and delta frames share this shape; no local-book maintenance required.
         registry.Register(StreamKind.OrderBook, bytes =>
@@ -87,7 +84,6 @@ internal static class BybitStreamDecoders
             return new OrderBook(symbol, bids, asks, null, dto.UpdateId);
         });
 
-        // ── Kline ─────────────────────────────────────────────────────────────
         // Bybit v5 kline frame: data is an ARRAY of kline objects; emit the first entry.
         registry.Register(StreamKind.Kline, bytes =>
         {
@@ -109,8 +105,6 @@ internal static class BybitStreamDecoders
 
         return registry;
     }
-
-    // ── Helpers ───────────────────────────────────────────────────────────────
 
     // Bybit v5 push frames: {"topic":..., "type":..., "ts":..., "data": <object>}
     // Unwrap "data" before deserializing the leaf DTO (FEAT-008/TASK-074 lesson).

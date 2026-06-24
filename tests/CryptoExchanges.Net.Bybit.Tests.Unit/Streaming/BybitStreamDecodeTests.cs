@@ -46,8 +46,6 @@ public class BybitStreamDecodeTests
     private static ReadOnlyMemory<byte> Envelope(string topic, string type, string dataJson) =>
         Utf8Bytes($"{{\"topic\":\"{topic}\",\"type\":\"{type}\",\"ts\":1700000000000,\"data\":{dataJson}}}");
 
-    // ── Ticker ───────────────────────────────────────────────────────────────
-
     [Fact]
     public void Ticker_CannedSnapshotFrame_MapsAllFields()
     {
@@ -75,8 +73,6 @@ public class BybitStreamDecodeTests
         // PriceChangePercent = price24hPcnt * 100
         result.PriceChangePercent.Should().Be(3.08m);
     }
-
-    // ── Trade ─────────────────────────────────────────────────────────────────
 
     [Fact]
     public void Trade_CannedFrame_BuySide_MapsAllFields()
@@ -117,8 +113,6 @@ public class BybitStreamDecodeTests
         result.IsBuyerMaker.Should().BeTrue();
         result.Price.Should().Be(66990.00m);
     }
-
-    // ── OrderBook ─────────────────────────────────────────────────────────────
 
     [Fact]
     public void OrderBook_SnapshotFrame_MapsBidsAndAsksAndSymbol()
@@ -168,8 +162,6 @@ public class BybitStreamDecodeTests
         result.Asks.Should().ContainSingle();
         result.Asks[0].Price.Should().Be(67015.00m);
     }
-
-    // ── Kline ─────────────────────────────────────────────────────────────────
 
     [Fact]
     public void Kline_CannedFrame_MapsOhlcvAndInterval()

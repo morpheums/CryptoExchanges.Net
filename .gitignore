@@ -60,14 +60,5 @@ Thumbs.db
 # Local planning artifacts (specs/plans) — kept local, never committed
 docs/superpowers/
 
-# Nazgul Framework — ephemeral runtime
-# (regenerable, machine-local — safe to delete; not shared across teammates)
-nazgul/checkpoints/
-nazgul/logs/
-nazgul/sessions/
-nazgul/.session_id
-nazgul/.compaction_count
-nazgul/archive/
-nazgul/reviews/*/test-failures.md
-nazgul/reviews/*/simplify-report.md
-nazgul/reviews/post-loop-simplify-report.md
+# Nazgul Framework (local mode — runtime untracked; reviewer agents kept tracked)
+nazgul/

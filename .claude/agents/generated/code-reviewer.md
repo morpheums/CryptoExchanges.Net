@@ -93,6 +93,8 @@ hooks:
 - [ ] **Docs live on the interface.** A public type that implements an interface uses `/// <inheritdoc />` — it must NOT repeat `<summary>`/`<param>`/`<returns>`. FLAG duplicated doc blocks on implementations as a defect.
 - [ ] An interface member has ONE concise `<summary>` (+ `<param>`/`<returns>`/`<exception>` only where they add information the signature doesn't). A public type with NO interface gets one short `<summary>`; skip `<param>`/`<returns>` when the names are self-explanatory.
 - [ ] **No comment noise.** FLAG: `<remarks>` essays, comments restating what the code already says, inline comments on routine lines. Comments should explain non-obvious *why*, not *what*. Over-commenting is a reviewable defect, not a nicety.
+- [ ] **No banner / section-separator comments.** FLAG any decorative divider line such as `// ── Helpers ──────`, `// ===== X =====`, `// ----- X -----`, or `#region`. These restate structure the code already shows and are a CLAUDE.md violation. This is a HARD rule even though existing files (e.g. `StreamEngine.cs`, `BinanceStreamProtocol.cs`) still contain them — **do NOT treat "the reference file does it" as justification.** Cloned code must be cleaned, not copied verbatim.
+- [ ] **Cloning ≠ excused.** When a file was created by cloning a reference implementation, the same comment-hygiene rules apply to the clone. Pre-existing comment noise in the source file is tech debt, not a license to replicate it.
 - [ ] Prefer self-documenting names over comments.
 
 ### Code style

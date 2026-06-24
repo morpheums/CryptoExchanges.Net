@@ -1,4 +1,5 @@
 using DeltaMapper;
+using CryptoExchanges.Net.Bybit.Dtos.Streaming;
 using CryptoExchanges.Net.Bybit.Internal;
 using CryptoExchanges.Net.Bybit.Services;
 
@@ -37,6 +38,21 @@ internal sealed class BybitResponseProfile : Profile
             .ForMember(d => d.CreatedAt, o => o.MapFrom(s => ParseTimestamp(s.CreatedTime)))
             .ForMember(d => d.UpdatedAt, o => o.MapFrom(s => ParseTimestamp(s.UpdatedTime)))
             .ForMember(d => d.CumulativeQuoteQuantity, o => o.MapFrom(s => BybitValueParsers.ParseDecimal(s.CumExecValue)));
+
+        // StreamTickerDto -> Ticker (WebSocket ticker push frame data payload).
+        // price24hPcnt is a fraction (0.01 = +1%); scale to a percent. Bybit v5 ticker push
+        // does not include a timestamp field, so Timestamp is left null.
+        CreateMap<StreamTickerDto, Ticker>()
+            .ForMember(d => d.Symbol, o => o.MapFrom(s => symbolMapper.FromWire(s.Symbol)))
+            .ForMember(d => d.LastPrice, o => o.MapFrom(s => BybitValueParsers.ParseDecimal(s.LastPrice)))
+            .ForMember(d => d.OpenPrice, o => o.MapFrom(s => BybitValueParsers.ParseDecimal(s.PrevPrice24h)))
+            .ForMember(d => d.HighPrice, o => o.MapFrom(s => BybitValueParsers.ParseDecimal(s.HighPrice24h)))
+            .ForMember(d => d.LowPrice, o => o.MapFrom(s => BybitValueParsers.ParseDecimal(s.LowPrice24h)))
+            .ForMember(d => d.Volume, o => o.MapFrom(s => BybitValueParsers.ParseDecimal(s.Volume24h)))
+            .ForMember(d => d.QuoteVolume, o => o.MapFrom(s => BybitValueParsers.ParseDecimal(s.Turnover24h)))
+            .ForMember(d => d.PriceChange, o => o.MapFrom(s => BybitValueParsers.ParseDecimal(s.LastPrice) - BybitValueParsers.ParseDecimal(s.PrevPrice24h)))
+            .ForMember(d => d.PriceChangePercent, o => o.MapFrom(s => BybitValueParsers.ParseDecimal(s.Price24hPcnt) * 100m))
+            .ForMember(d => d.Timestamp, o => o.Ignore());
 
         // TickerDto -> Ticker. price24hPcnt is a fraction (0.01 = +1%); scale to a percent.
         CreateMap<TickerDto, Ticker>()

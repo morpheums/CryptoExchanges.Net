@@ -1,5 +1,5 @@
 ---
-status: PLANNED
+status: IMPLEMENTED
 ---
 # TASK-078: AddBybitStreams() DI extension + DI wiring tests
 
@@ -13,8 +13,9 @@ status: PLANNED
 - **Wave**: 4
 - **Traces to**: PRD AC#1/#2 + Feature "DI opt-in"; TRD §"Per-Exchange Variation Points" §5; ADR-009-001
 - **Created at**: 2026-06-24T07:40:00Z
-- **Claimed at**:
-- **Implemented at**:
+- **Claimed at**: 2026-06-24T08:00:00Z
+- **Base SHA**: c34ce57aeb3b1797f429cbb7f7a490323285da31
+- **Implemented at**: 2026-06-24T08:10:00Z
 - **Completed at**:
 - **Blocked at**:
 - **Retry count**: 0/3
@@ -56,9 +57,9 @@ in-process `ServiceCollection` with `AddBybitExchange(...)` + `AddBybitStreams()
 4. `dotnet build` 0W/0E; `dotnet test --filter 'Category!=Integration'` green.
 
 ## Acceptance Criteria
-- [ ] `AddBybitStreams(this IServiceCollection, Action<BybitStreamOptions>?)` (public, XML-documented) delegates to `StreamServiceRegistration.AddStreams<BybitStreamOptions>(...)` supplying only protocol + decoder factories; resolves keyed `IMapper`/`ISymbolMapper` for `ExchangeId.Bybit`; no change to `IStreamClient`/`IStreamClientFactory`.
-- [ ] `BybitStreamDiTests.cs` (3 cases: factory resolves, GetClient returns Bybit client, Available contains Bybit) passes using in-process `AddBybitExchange()+AddBybitStreams()`, mirroring `BinanceStreamDiTests.cs`.
-- [ ] `dotnet build CryptoExchanges.Net.sln` → 0W/0E; `dotnet test --filter 'Category!=Integration'` green.
+- [x] `AddBybitStreams(this IServiceCollection, Action<BybitStreamOptions>?)` (public, XML-documented) delegates to `StreamServiceRegistration.AddStreams<BybitStreamOptions>(...)` supplying only protocol + decoder factories; resolves keyed `IMapper`/`ISymbolMapper` for `ExchangeId.Bybit`; no change to `IStreamClient`/`IStreamClientFactory`.
+- [x] `BybitStreamDiTests.cs` (3 cases: factory resolves, GetClient returns Bybit client, Available contains Bybit) passes using in-process `AddBybitExchange()+AddBybitStreams()`, mirroring `BinanceStreamDiTests.cs`.
+- [x] `dotnet build CryptoExchanges.Net.sln` → 0W/0E; `dotnet test --filter 'Category!=Integration'` green.
 
 ## Pattern Reference
 - DI extension: `src/CryptoExchanges.Net.Binance/StreamServiceCollectionExtensions.cs`, `src/CryptoExchanges.Net.Kucoin/StreamServiceCollectionExtensions.cs`
@@ -80,6 +81,17 @@ in-process `ServiceCollection` with `AddBybitExchange(...)` + `AddBybitStreams()
 ## Implementation Log
 
 ### Attempt 1
+
+**Files created:**
+- `src/CryptoExchanges.Net.Bybit/StreamServiceCollectionExtensions.cs` — public `AddBybitStreams()` delegating to `StreamServiceRegistration.AddStreams<BybitStreamOptions>`. Mirrors Binance pattern exactly: resolves `BybitStreamOptions` for `BybitStreamProtocol`; resolves keyed `IMapper`/`ISymbolMapper` for `ExchangeId.Bybit` to call `BybitStreamDecoders.Build`. Full XML docs on the public method.
+- `tests/CryptoExchanges.Net.Bybit.Tests.Unit/Streaming/BybitStreamDiTests.cs` — 3 DI wiring tests mirroring `BinanceStreamDiTests.cs`: factory resolves, GetClient returns keyed Bybit client, Available contains ExchangeId.Bybit.
+
+**Build:** 0W/0E (`dotnet build CryptoExchanges.Net.sln`)
+**Tests:** 127 Bybit unit tests passed (3 new DI tests + 124 pre-existing)
+
+## Commits
+
+- `f9515ce` — feat(FEAT-009): TASK-078 AddBybitStreams() DI extension + DI wiring tests
 
 ## Review Results
 

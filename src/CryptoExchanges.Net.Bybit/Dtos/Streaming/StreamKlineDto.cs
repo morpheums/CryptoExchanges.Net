@@ -31,6 +31,10 @@ internal sealed record StreamKlineDto
     [JsonPropertyName("volume")]
     public string Volume { get; init; } = "0";
 
+    /// <summary>Quote-asset volume (turnover).</summary>
+    [JsonPropertyName("turnover")]
+    public string Turnover { get; init; } = "0";
+
     /// <summary>Kline interval string (e.g. <c>"1"</c> for 1 minute).</summary>
     [JsonPropertyName("interval")]
     public string Interval { get; init; } = string.Empty;

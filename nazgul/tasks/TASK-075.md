@@ -1,5 +1,5 @@
 ---
-status: CHANGES_REQUESTED
+status: IN_PROGRESS
 ---
 # TASK-075: Bybit streaming wire DTOs + BybitStreamOptions
 

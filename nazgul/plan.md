@@ -1,8 +1,8 @@
 # Nazgul Plan — FEAT-009
 
 ## Recovery Pointer
-**Active task**: TASK-075 (CHANGES_REQUESTED, retry 1/3) — Bybit streaming wire DTOs + `BybitStreamOptions`. Review gate completed: 3/4 APPROVED, code-reviewer CHANGES_REQUESTED. Blocking fix: add `Turnover` field (`[JsonPropertyName("turnover")]`) to `StreamKlineDto`. 15 tasks across 3 exchange groups; strict sequential merge order Bybit → OKX → Bitget (one PR per exchange).
-**Next action**: Implementer fixes TASK-075 (add `Turnover` property to `StreamKlineDto`, commit, set IMPLEMENTED). Then re-run review gate. After APPROVED, proceed to TASK-076 (BybitStreamProtocol + protocol tests).
+**Active task**: TASK-075 (IN_PROGRESS, retry 1/3) — Adding `Turnover` property to `StreamKlineDto` per code-reviewer F1 feedback. 15 tasks across 3 exchange groups; strict sequential merge order Bybit → OKX → Bitget (one PR per exchange).
+**Next action**: Commit the Turnover fix, set TASK-075 to IMPLEMENTED, re-run review gate. After APPROVED, proceed to TASK-076 (BybitStreamProtocol + protocol tests).
 
 ─── ◈ NAZGUL ▸ PLANNING ────────────────────────────────
 

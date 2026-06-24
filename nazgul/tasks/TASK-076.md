@@ -1,5 +1,5 @@
 ---
-status: IN_PROGRESS
+status: IMPLEMENTED
 ---
 # TASK-076: BybitStreamProtocol (IStreamProtocol) + protocol unit tests
 
@@ -15,7 +15,7 @@ status: IN_PROGRESS
 - **Created at**: 2026-06-24T07:40:00Z
 - **Claimed at**: 2026-06-24T08:00:00Z
 - **Base SHA**: 7746044a5f51406874fc3b6195b3df497351bd6f
-- **Implemented at**:
+- **Implemented at**: 2026-06-24T08:30:00Z
 - **Completed at**:
 - **Blocked at**:
 - **Retry count**: 0/3
@@ -80,6 +80,29 @@ Tests (`BybitStreamProtocolTests.cs` under `tests/CryptoExchanges.Net.Bybit.Test
 ## Implementation Log
 
 ### Attempt 1
+
+**Commit**: 3ec30eb — `feat(FEAT-009): implement BybitStreamProtocol + protocol unit tests (TASK-076)`
+
+**Confirmed Bybit v5 WS values (recorded per task requirement):**
+- **Heartbeat direction**: `HeartbeatDirection.ServerPingClientPong` — Bybit sends server-side WebSocket control Ping every ~20 s; .NET `ClientWebSocket` auto-pongs RFC 6455 control Pong frames.
+- **Heartbeat interval**: 20 s; timeout: 60 s.
+- **Order-book depth levels available** (Bybit v5 public spot): 1, 50, 200. Default used in `BuildSubscribe`/topic = **50** (`orderbook.50.BTCUSDT`).
+- **Batch cap**: 100 topics per frame (matches engine pre-chunk cap; Bybit allows many args per frame).
+- **MinOutboundInterval**: 100 ms (10 msg/s; conservative per-venue pacing aligned with KuCoin).
+- **Snapshot vs delta**: both classify as `FrameKind.Data` on the same `topic` routing key — confirmed, decoder handles shape differences.
+
+**Files created:**
+- `src/CryptoExchanges.Net.Bybit/Streaming/BybitStreamProtocol.cs`
+- `tests/CryptoExchanges.Net.Bybit.Tests.Unit/Streaming/BybitStreamProtocolTests.cs`
+
+**Files modified:**
+- `src/CryptoExchanges.Net.Http/CryptoExchanges.Net.Http.csproj` — added `InternalsVisibleTo` for `CryptoExchanges.Net.Bybit.Tests.Unit` (mirrors Binance + KuCoin pattern)
+
+**Build**: 0W / 0E. **Tests**: 117 Bybit unit tests passed; all suites green.
+
+## Commits
+
+- **3ec30eb** — feat(FEAT-009): implement BybitStreamProtocol + protocol unit tests (TASK-076)
 
 ## Review Results
 

@@ -8,12 +8,6 @@ using CryptoExchanges.Net.Core.Enums;
 
 namespace CryptoExchanges.Net.Bybit.Tests.Unit.Streaming;
 
-/// <summary>
-/// No-network unit tests for <see cref="BybitStreamProtocol"/>: Classify, BuildSubscribe,
-/// BuildUnsubscribe, BuildSubscribeBatch, BuildUnsubscribeBatch, RoutingKeyFor, and
-/// ResolveConnectionAsync. Canned byte frames only — no sockets.
-/// </summary>
-/// <remarks>Excluded from CI integration-test runs via the Category trait where applicable.</remarks>
 [Trait("Category", "Unit")]
 public class BybitStreamProtocolTests
 {
@@ -62,7 +56,6 @@ public class BybitStreamProtocolTests
     [Fact]
     public void Classify_OrderBookDeltaDataFrame_ReturnsDataWithSameRoutingKey()
     {
-        // Confirmed: snapshot and delta both classify as Data on the same topic routing key.
         var protocol = MakeProtocol();
         var frame = Utf8("{\"topic\":\"orderbook.50.BTCUSDT\",\"type\":\"delta\",\"ts\":1700000001000,\"data\":{\"s\":\"BTCUSDT\"}}");
 

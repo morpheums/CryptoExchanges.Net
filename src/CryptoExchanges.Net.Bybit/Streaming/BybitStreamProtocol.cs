@@ -4,31 +4,9 @@ using CryptoExchanges.Net.Http.Streaming;
 namespace CryptoExchanges.Net.Bybit.Streaming;
 
 /// <summary>
-/// Per-exchange protocol strategy for the Bybit v5 public spot WebSocket endpoint
-/// (<c>wss://stream.bybit.com/v5/public/spot</c>). Implements the subscribe/unsubscribe
-/// wire format, frame classification, and heartbeat policy. Pure data + classification —
-/// no timers or threads (binding constraint C1).
+/// <see cref="IStreamProtocol"/> for the Bybit v5 public spot WebSocket — subscribe/unsubscribe
+/// wire format, frame classification, and heartbeat/pacing policy.
 /// </summary>
-/// <remarks>
-/// <para>
-/// Bybit v5 WebSocket confirmed specifics (verified against Bybit v5 WS API docs):
-/// <list type="bullet">
-///   <item><description><strong>Heartbeat</strong>: Bybit sends a server-side WebSocket
-///   control Ping every ~20 s; <c>ClientWebSocket</c> auto-pongs RFC 6455 control Pong
-///   frames. Protocol uses <see cref="HeartbeatDirection.ServerPingClientPong"/>,
-///   Interval = 20 s, Timeout = 60 s.</description></item>
-///   <item><description><strong>Order-book depth levels</strong>: 1, 50, 200 (spot).
-///   Default depth = 50 (<c>orderbook.50.BTCUSDT</c>).</description></item>
-///   <item><description><strong>Batch cap</strong>: 100 topics per frame (Bybit allows many
-///   args per frame; 100 matches the engine pre-chunk cap).</description></item>
-///   <item><description><strong>MinOutboundInterval</strong>: 100 ms (10 msg/s; conservative
-///   per-venue pacing aligned with KuCoin).</description></item>
-///   <item><description><strong>Snapshot vs delta</strong>: both classify as
-///   <see cref="FrameKind.Data"/> on the same <c>topic</c> routing key — the decoder
-///   handles shape differences (no local-book maintenance required).</description></item>
-/// </list>
-/// </para>
-/// </remarks>
 internal sealed class BybitStreamProtocol : IStreamProtocol
 {
     private static readonly HeartbeatPolicy s_heartbeatPolicy = new(
@@ -42,11 +20,7 @@ internal sealed class BybitStreamProtocol : IStreamProtocol
 
     private int _nextReqId;
 
-    /// <summary>
-    /// Initialises the protocol with the streaming base URL from options.
-    /// The resolved <see cref="StreamConnectionInfo"/> is cached in the constructor
-    /// and returned on every <see cref="ResolveConnectionAsync"/> call (static URL — no token negotiation).
-    /// </summary>
+    /// <summary>Caches the connection info from <paramref name="options"/> (static endpoint, no token negotiation).</summary>
     /// <param name="options">Stream options supplying the base URL.</param>
     public BybitStreamProtocol(BybitStreamOptions options)
     {
@@ -164,16 +138,7 @@ internal sealed class BybitStreamProtocol : IStreamProtocol
         return builder.ToString();
     }
 
-    /// <summary>
-    /// Builds the Bybit v5 venue-native topic string from a canonical <see cref="StreamRequest"/>.
-    /// This is the single source of truth for both <see cref="RoutingKeyFor"/> and
-    /// <see cref="Classify"/>. Symbol wire format: UPPERCASE, no delimiter (per <c>BybitSymbolFormat</c>).
-    /// </summary>
-    /// <remarks>
-    /// Kline interval mapping: canonical <see cref="KlineInterval"/> enum names → Bybit codes
-    /// <c>1 3 5 15 30 60 120 240 360 720 D W M</c>.
-    /// Order-book default depth = 50 (confirmed available levels: 1, 50, 200 on Bybit v5 spot).
-    /// </remarks>
+    // Venue-native topic — the single source of truth for both RoutingKeyFor and Classify.
     private static string BuildTopic(StreamRequest request) => request.Kind switch
     {
         StreamKind.Ticker => $"tickers.{request.WireSymbol}",
@@ -187,10 +152,6 @@ internal sealed class BybitStreamProtocol : IStreamProtocol
             $"Unsupported stream kind: {request.Kind}")
     };
 
-    /// <summary>
-    /// Maps the canonical <see cref="KlineInterval"/> enum name to the Bybit v5 wire interval code.
-    /// Bybit v5 spot kline intervals: <c>1 3 5 15 30 60 120 240 360 720 D W M</c>.
-    /// </summary>
     private static string MapInterval(string intervalToken) => intervalToken switch
     {
         nameof(KlineInterval.OneMinute) => "1",

@@ -7,16 +7,9 @@ using DeltaMapper;
 namespace CryptoExchanges.Net.Bybit.Streaming;
 
 /// <summary>
-/// Builds the <see cref="StreamDecoderRegistry"/> for the Bybit v5 public WebSocket streams.
-/// Each closure unwraps the Bybit v5 data envelope <c>{"topic":...,"type":...,"data":{...}|[...]}</c>
-/// before deserializing the leaf DTO, then maps to the matching <c>Core.Models</c> type via the
-/// keyed <see cref="IMapper"/> and bespoke <see cref="ISymbolMapper"/>.
+/// Builds the <see cref="StreamDecoderRegistry"/> for the Bybit v5 public WebSocket streams —
+/// each closure unwraps the data envelope, deserializes the leaf DTO, and maps to <c>Core.Models</c>.
 /// </summary>
-/// <remarks>
-/// Binding constraint K1: DTO deserialization, DeltaMapper projection, and symbol resolution
-/// all happen here in the Bybit package. The Http engine receives only the resulting opaque
-/// <see cref="StreamDecoderRegistry"/> of <c>Func&lt;ReadOnlyMemory&lt;byte&gt;, object&gt;</c>.
-/// </remarks>
 internal static class BybitStreamDecoders
 {
     // Case-sensitive: Bybit v5 publicTrade uses single-character keys where case distinguishes
@@ -136,8 +129,6 @@ internal static class BybitStreamDecoders
         return enumerator.Current.Deserialize<T>(JsonOpts);
     }
 
-    // Maps the Bybit v5 wire interval code to the canonical KlineInterval.
-    // Bybit v5 spot kline intervals: 1 3 5 15 30 60 120 240 360 720 D W M.
     private static KlineInterval? MapWireInterval(string wire) => wire switch
     {
         "1" => KlineInterval.OneMinute,

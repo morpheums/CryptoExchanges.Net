@@ -37,7 +37,6 @@ internal static class OkxStreamDecoders
             var instId = ReadInstId(bytes);
             var dto = DeserializeFirstDataElement<StreamTickerDto>(bytes)!;
             var result = mapper.Map<StreamTickerDto, Ticker>(dto);
-            // Symbol comes from arg.instId — passed through the canonical wire-resolution path.
             return result with { Symbol = symbolMapper.FromWire(instId) };
         });
 
@@ -109,14 +108,14 @@ internal static class OkxStreamDecoders
         var reader = new Utf8JsonReader(frame.Span);
         using var doc = JsonDocument.ParseValue(ref reader);
         if (!doc.RootElement.TryGetProperty("arg"u8, out var arg)
-            || !arg.TryGetProperty("instId"u8, out var instId))
+            || !arg.TryGetProperty("instId"u8, out var instId)
+            || instId.ValueKind != JsonValueKind.String)
             throw new InvalidOperationException(
-                "OKX push frame missing 'arg.instId'; cannot resolve symbol.");
-        return instId.GetString()
-            ?? throw new InvalidOperationException("OKX 'arg.instId' is null.");
+                "OKX push frame missing or non-string 'arg.instId'; cannot resolve symbol.");
+        return instId.GetString()!;
     }
 
-    // Unwrap data array and take the first element (FEAT-008/TASK-074: never deserialize the raw envelope).
+    // Unwrap the data array, take the first element (never deserialize the raw envelope).
     private static T? DeserializeFirstDataElement<T>(ReadOnlyMemory<byte> frame)
     {
         var reader = new Utf8JsonReader(frame.Span);

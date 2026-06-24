@@ -33,7 +33,6 @@ internal static class BitgetStreamDecoders
 
         var registry = new StreamDecoderRegistry();
 
-        // Ticker: symbol is inside the DTO (instId field); DeltaMapper resolves it via the profile.
         registry.Register(StreamKind.Ticker, bytes =>
         {
             var dto = DeserializeFirstArrayElement<StreamTickerDto>(bytes)!;

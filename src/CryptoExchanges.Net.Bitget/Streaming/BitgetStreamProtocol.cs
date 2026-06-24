@@ -14,7 +14,6 @@ namespace CryptoExchanges.Net.Bitget.Streaming;
 /// </summary>
 internal sealed class BitgetStreamProtocol : IStreamProtocol
 {
-    // Bitget v2: client sends text "ping" every 30 s; server replies with text "pong".
     private static readonly ReadOnlyMemory<byte> s_pingPayload = "ping"u8.ToArray();
 
     private static readonly HeartbeatPolicy s_heartbeatPolicy = new(

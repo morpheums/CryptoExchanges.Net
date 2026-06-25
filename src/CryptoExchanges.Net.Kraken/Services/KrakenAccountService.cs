@@ -52,7 +52,7 @@ internal sealed class KrakenAccountService(IKrakenHttpClient http, ISymbolMapper
         if (endTime.HasValue)
             parameters["end"] = endTime.Value.ToUnixTimeSeconds().ToString(CultureInfo.InvariantCulture);
 
-        var response = await http.PostAsync<ResponseDto<TradesHistoryResultDto>>(
+        var response = await http.PostAsync<ResponseDto<TradesFillsEnvelopeDto>>(
             "/0/private/TradesHistory", parameters, signed: true, ct: ct).ConfigureAwait(false);
 
         IEnumerable<FillDto> fills = response.Result?.Trades is { } t ? t.Values : [];

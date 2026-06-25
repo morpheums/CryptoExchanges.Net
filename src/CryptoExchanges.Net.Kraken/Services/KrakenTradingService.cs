@@ -45,7 +45,7 @@ internal sealed class KrakenTradingService(IKrakenHttpClient http, ISymbolMapper
     /// <inheritdoc />
     public async Task<Order> CancelOrderAsync(Symbol symbol, string orderId, CancellationToken ct = default)
     {
-        ArgumentNullException.ThrowIfNull(orderId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(orderId);
         var parameters = new Dictionary<string, string> { ["txid"] = orderId };
         await http.PostAsync<ResponseDto<JsonElement>>(
             "/0/private/CancelOrder", parameters, signed: true, ct: ct).ConfigureAwait(false);
@@ -55,7 +55,7 @@ internal sealed class KrakenTradingService(IKrakenHttpClient http, ISymbolMapper
     /// <inheritdoc />
     public async Task<Order> CancelOrderByClientIdAsync(Symbol symbol, string clientOrderId, CancellationToken ct = default)
     {
-        ArgumentNullException.ThrowIfNull(clientOrderId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(clientOrderId);
         // Kraken uses integer userref; the client order id must be parseable as int.
         if (!int.TryParse(clientOrderId, out var userRef))
             throw new ArgumentException("Kraken client order ids must be integers (userref).", nameof(clientOrderId));
@@ -69,7 +69,7 @@ internal sealed class KrakenTradingService(IKrakenHttpClient http, ISymbolMapper
         {
             ["userref"] = userRef.ToString(CultureInfo.InvariantCulture)
         };
-        var closed = await http.PostAsync<ResponseDto<ClosedOrdersResultDto>>(
+        var closed = await http.PostAsync<ResponseDto<ClosedOrdersEnvelopeDto>>(
             "/0/private/ClosedOrders", closedParams, signed: true, ct: ct).ConfigureAwait(false);
         var (txId, dto) = closed.Result?.Closed.FirstOrDefault() ?? default;
         if (dto is null)
@@ -84,7 +84,6 @@ internal sealed class KrakenTradingService(IKrakenHttpClient http, ISymbolMapper
         if (open.Count == 0)
             return [];
 
-        var wireSymbol = symbolMapper.ToWire(symbol);
         var canceled = new List<Order>(open.Count);
         foreach (var order in open)
         {
@@ -101,14 +100,14 @@ internal sealed class KrakenTradingService(IKrakenHttpClient http, ISymbolMapper
     /// <inheritdoc />
     public async Task<Order> GetOrderAsync(Symbol symbol, string orderId, CancellationToken ct = default)
     {
-        ArgumentNullException.ThrowIfNull(orderId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(orderId);
         return await FetchOrderAsync(orderId, ct).ConfigureAwait(false);
     }
 
     /// <inheritdoc />
     public async Task<IReadOnlyList<Order>> GetOpenOrdersAsync(Symbol? symbol = null, CancellationToken ct = default)
     {
-        var response = await http.PostAsync<ResponseDto<OpenOrdersResultDto>>(
+        var response = await http.PostAsync<ResponseDto<OpenOrdersEnvelopeDto>>(
             "/0/private/OpenOrders", signed: true, ct: ct).ConfigureAwait(false);
 
         var orders = response.Result?.Open ?? [];
@@ -140,7 +139,7 @@ internal sealed class KrakenTradingService(IKrakenHttpClient http, ISymbolMapper
         if (endTime.HasValue)
             parameters["end"] = endTime.Value.ToUnixTimeSeconds().ToString(CultureInfo.InvariantCulture);
 
-        var response = await http.PostAsync<ResponseDto<ClosedOrdersResultDto>>(
+        var response = await http.PostAsync<ResponseDto<ClosedOrdersEnvelopeDto>>(
             "/0/private/ClosedOrders", parameters, signed: true, ct: ct).ConfigureAwait(false);
 
         var wireSymbol = symbolMapper.ToWire(symbol);

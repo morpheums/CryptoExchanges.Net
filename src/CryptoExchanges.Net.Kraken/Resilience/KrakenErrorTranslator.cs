@@ -33,6 +33,9 @@ internal sealed class KrakenErrorTranslator : IExchangeErrorTranslator
         if (firstError.StartsWith("EOrder:", StringComparison.Ordinal))
             return new InvalidOrderException(text, null, body);
 
+        if (firstError.StartsWith("EAPI:Rate limit exceeded", StringComparison.Ordinal))
+            return new RateLimitExceededException(text, retryAfter: null, code: null, rawBody: body);
+
         if (firstError.StartsWith("EGeneral:Insufficient", StringComparison.Ordinal))
             return new InsufficientBalanceException(text, null, body);
 

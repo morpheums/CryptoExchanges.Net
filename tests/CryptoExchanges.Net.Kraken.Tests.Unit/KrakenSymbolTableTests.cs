@@ -64,8 +64,8 @@ public class KrakenSymbolTableTests
 
         await market.GetExchangeInfoAsync(TestContext.Current.CancellationToken);
 
-        // After warmup, the legacy code XXBTZUSD maps to XBT/USD through the table.
-        http.ToWire(BtcUsd).Should().Be("XBT/USD");
+        // After warmup, wsname "XBT/USD" reverse-maps to legacy pair code "XXBTZUSD" for REST params.
+        http.ToWire(BtcUsd).Should().Be("XXBTZUSD");
     }
 
     [Fact]

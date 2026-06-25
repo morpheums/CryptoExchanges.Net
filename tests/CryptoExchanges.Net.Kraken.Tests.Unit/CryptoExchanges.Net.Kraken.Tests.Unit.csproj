@@ -12,6 +12,7 @@
     <ProjectReference Include="..\..\src\CryptoExchanges.Net.Core\CryptoExchanges.Net.Core.csproj" />
     <ProjectReference Include="..\..\src\CryptoExchanges.Net.Kraken\CryptoExchanges.Net.Kraken.csproj" />
     <ProjectReference Include="..\..\src\CryptoExchanges.Net.Http\CryptoExchanges.Net.Http.csproj" />
+    <ProjectReference Include="..\..\src\CryptoExchanges.Net\CryptoExchanges.Net.csproj" />
   </ItemGroup>
 
   <ItemGroup>

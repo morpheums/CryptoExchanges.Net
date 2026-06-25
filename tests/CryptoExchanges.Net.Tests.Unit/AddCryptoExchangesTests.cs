@@ -43,6 +43,18 @@ public class AddCryptoExchangesTests
         client.ExchangeId.Should().Be(ExchangeId.Coinbase);
     }
 
+    /// <summary>Asserts that <c>AddCryptoExchanges()</c> registers a resolvable keyed <see cref="IExchangeClient"/> for Kraken.</summary>
+    [Fact]
+    public async Task AddCryptoExchanges_IncludesKraken()
+    {
+        var services = new ServiceCollection();
+        services.AddCryptoExchanges();
+        await using var sp = services.BuildServiceProvider();
+
+        var client = sp.GetRequiredKeyedService<IExchangeClient>(ExchangeId.Kraken);
+        client.ExchangeId.Should().Be(ExchangeId.Kraken);
+    }
+
     /// <summary>Validates that <c>CryptoExchangesOptions.BinanceApiKey</c> flows through <c>AddCryptoExchanges</c> into the resolved <see cref="BinanceOptions"/>.</summary>
     [Fact]
     public async Task AddCryptoExchanges_OptionsFlow_ReachesExchangeOptions()

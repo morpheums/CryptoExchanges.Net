@@ -42,7 +42,7 @@ internal sealed class KrakenStreamProtocol : IStreamProtocol
     public string RoutingKeyFor(StreamRequest request)
     {
         ArgumentNullException.ThrowIfNull(request);
-        return BuildRoutingKey(request.Kind, request.WireSymbol);
+        return BuildRoutingKey(request.Kind, NormalizeV2Symbol(request.WireSymbol));
     }
 
     /// <inheritdoc/>
@@ -114,6 +114,14 @@ internal sealed class KrakenStreamProtocol : IStreamProtocol
     private static string BuildRoutingKey(StreamKind kind, string wireSymbol)
         => MapChannel(kind) + ":" + wireSymbol;
 
+    // WS v2 uses canonical names (BTC, DOGE); REST aliases (XBT, XDG) must be normalized.
+    private static string NormalizeV2Symbol(string wireSymbol) =>
+        wireSymbol
+            .Replace("XBT/", "BTC/", StringComparison.Ordinal)
+            .Replace("/XBT", "/BTC", StringComparison.Ordinal)
+            .Replace("XDG/", "DOGE/", StringComparison.Ordinal)
+            .Replace("/XDG", "/DOGE", StringComparison.Ordinal);
+
     private static StreamFrame ClassifyDataFrame(JsonElement root)
     {
         if (!root.TryGetProperty("channel"u8, out var channelProp) ||
@@ -146,9 +154,10 @@ internal sealed class KrakenStreamProtocol : IStreamProtocol
     private static string BuildMessage(string method, StreamRequest request)
     {
         var channel = MapChannel(request.Kind);
+        var v2Symbol = NormalizeV2Symbol(request.WireSymbol);
         var sb = new StringBuilder(128);
         sb.Append("{\"method\":\"").Append(method).Append("\",\"params\":{\"channel\":\"")
-          .Append(channel).Append("\",\"symbol\":[\"").Append(request.WireSymbol).Append("\"]");
+          .Append(channel).Append("\",\"symbol\":[\"").Append(v2Symbol).Append("\"]");
         if (request.Kind == StreamKind.Kline)
             sb.Append(",\"interval\":").Append(MapIntervalMinutes(request.Interval));
         sb.Append("}}");
@@ -179,7 +188,7 @@ internal sealed class KrakenStreamProtocol : IStreamProtocol
         {
             if (i > 0)
                 sb.Append(',');
-            sb.Append('"').Append(requests[i].WireSymbol).Append('"');
+            sb.Append('"').Append(NormalizeV2Symbol(requests[i].WireSymbol)).Append('"');
         }
         sb.Append(']');
         if (firstKind == StreamKind.Kline)

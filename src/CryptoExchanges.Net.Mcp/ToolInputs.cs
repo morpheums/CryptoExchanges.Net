@@ -14,6 +14,8 @@ public static class ToolInputs
             ["okx"] = ExchangeId.Okx,
             ["bitget"] = ExchangeId.Bitget,
             ["kucoin"] = ExchangeId.Kucoin,
+            ["coinbase"] = ExchangeId.Coinbase,
+            ["kraken"] = ExchangeId.Kraken,
         };
 
     private static readonly Dictionary<string, KlineInterval> Intervals =

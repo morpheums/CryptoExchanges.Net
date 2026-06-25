@@ -13,6 +13,9 @@ public class ToolPrimitivesTests
     [InlineData("BYBIT", ExchangeId.Bybit)]
     [InlineData("okx", ExchangeId.Okx)]
     [InlineData("Bitget", ExchangeId.Bitget)]
+    [InlineData("kucoin", ExchangeId.Kucoin)]
+    [InlineData("coinbase", ExchangeId.Coinbase)]
+    [InlineData("Kraken", ExchangeId.Kraken)]
     public void TryParseExchange_AcceptsKnown_CaseInsensitive(string input, ExchangeId expected)
     {
         ToolInputs.TryParseExchange(input, out var id).Should().BeTrue();
@@ -20,7 +23,6 @@ public class ToolPrimitivesTests
     }
 
     [Theory]
-    [InlineData("kraken")]   // not registered in our 4
     [InlineData("nope")]
     [InlineData("")]
     public void TryParseExchange_RejectsUnknown(string input)

@@ -11,7 +11,7 @@ using Microsoft.Extensions.DependencyInjection;
 namespace CryptoExchanges.Net.Coinbase.Internal;
 
 /// <summary>Single composition point for a Coinbase client — shared by the container-free Create path
-/// and the DI registration. TASK-094 wires account/trading services additively via <see cref="ComposeServices"/>.</summary>
+/// and the DI registration.</summary>
 internal static class CoinbaseClientComposer
 {
     /// <summary>Builds an <see cref="IMapper"/> from the Coinbase response profile bound to the given symbol mapper.</summary>
@@ -22,22 +22,26 @@ internal static class CoinbaseClientComposer
         return config.CreateMapper();
     }
 
-    /// <summary>
-    /// Builds all market-data-era services over the given http client. TASK-094 expands this with
-    /// account and trading services when the full <c>CoinbaseExchangeClient</c> is added.
-    /// </summary>
-    public static CoinbaseMarketDataService ComposeServices(ICoinbaseHttpClient http, ISymbolMapper symbolMapper, IMapper mapper)
-        => new(http, symbolMapper, mapper);
+    /// <summary>Builds the full set of Coinbase services over a shared http client.</summary>
+    public static (CoinbaseMarketDataService marketData, CoinbaseAccountService account, CoinbaseTradingService trading)
+        ComposeServices(ICoinbaseHttpClient http, ISymbolMapper symbolMapper, IMapper mapper)
+        => (new(http, symbolMapper, mapper), new(http, symbolMapper, mapper), new(http, symbolMapper, mapper));
 
-    /// <summary>DI composition: resolves the keyed symbol mapper + IMapper from the container and wires
-    /// the services over the factory-owned http client (IHttpClientFactory owns the HttpClient lifetime).</summary>
-    public static (CoinbaseMarketDataService marketData, ISymbolMapper symbolMapper, IMapper mapper) ComposeForDi(
-        IServiceProvider sp, ICoinbaseHttpClient http)
+    /// <summary>
+    /// DI composition: resolves the keyed symbol mapper and <see cref="IMapper"/> from the container and
+    /// wires all services over the factory-owned <paramref name="httpClient"/>
+    /// (IHttpClientFactory owns the HttpClient lifetime).
+    /// </summary>
+    public static IExchangeClient ComposeForDi(IServiceProvider sp, HttpClient httpClient, long[] _)
     {
         ArgumentNullException.ThrowIfNull(sp);
+        ArgumentNullException.ThrowIfNull(httpClient);
+
         var symbolMapper = sp.GetRequiredKeyedService<ISymbolMapper>(ExchangeId.Coinbase);
         var mapper = sp.GetRequiredKeyedService<IMapper>(ExchangeId.Coinbase);
-        return (ComposeServices(http, symbolMapper, mapper), symbolMapper, mapper);
+        var http = new CoinbaseHttpClient(httpClient);
+        var (marketData, account, trading) = ComposeServices(http, symbolMapper, mapper);
+        return new CoinbaseExchangeClient(marketData, account, trading);
     }
 
     /// <summary>Builds the resilient HttpClient (factory-less path). A client missing the private key

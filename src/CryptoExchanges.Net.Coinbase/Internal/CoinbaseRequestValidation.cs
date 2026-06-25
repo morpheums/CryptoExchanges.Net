@@ -20,6 +20,18 @@ internal static class CoinbaseRequestValidation
     public const int MaxTradesLimit = 1000;
 
     /// <summary>
+    /// Maximum number of fill records returned per call for the
+    /// <c>/api/v3/brokerage/orders/historical/fills</c> endpoint.
+    /// </summary>
+    public const int MaxFillsLimit = 100;
+
+    /// <summary>
+    /// Maximum number of order records returned per call for the
+    /// <c>/api/v3/brokerage/orders/historical/batch</c> endpoint.
+    /// </summary>
+    public const int MaxOrdersLimit = 1000;
+
+    /// <summary>
     /// Validates the shared constraints for Coinbase candle requests: <paramref name="limit"/>
     /// must be in <c>1..350</c>, and any supplied <paramref name="startTime"/>/<paramref name="endTime"/>
     /// window must be ordered (start no later than end).

@@ -56,15 +56,20 @@ internal sealed class KrakenSignatureService
     }
 
     /// <summary>
-    /// Mints a strictly-increasing nonce based on the current UTC timestamp in milliseconds.
-    /// Uses <see cref="Interlocked"/> to guarantee monotonicity under concurrent calls.
+    /// Mints a strictly-increasing nonce. Each value is <c>max(lastNonce + 1, utcMillis)</c>, so it
+    /// tracks the UTC millisecond clock yet never repeats or regresses — even on a cold start or when
+    /// many calls land within the same millisecond. A compare-and-swap loop guarantees monotonicity
+    /// under concurrent callers (the published value is exactly what this caller observed and reserved).
     /// </summary>
     internal static long MintNonce()
     {
-        var candidate = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-        return Interlocked.Increment(ref s_lastNonce) > candidate
-            ? s_lastNonce
-            : Interlocked.Exchange(ref s_lastNonce, candidate);
+        while (true)
+        {
+            var last = Interlocked.Read(ref s_lastNonce);
+            var candidate = Math.Max(last + 1, DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
+            if (Interlocked.CompareExchange(ref s_lastNonce, candidate, last) == last)
+                return candidate;
+        }
     }
 
     private static long s_lastNonce;

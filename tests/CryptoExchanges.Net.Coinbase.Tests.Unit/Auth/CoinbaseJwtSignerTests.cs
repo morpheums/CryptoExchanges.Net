@@ -34,6 +34,18 @@ public class CoinbaseJwtSignerTests
         return (signer, ecdsa);
     }
 
+    // PKCS8-wrapped EC key ("BEGIN PRIVATE KEY") — exercises OID-based EC detection (id-ecPublicKey).
+    private static (CoinbaseJwtSigner signer, ECDsa publicKey) BuildEcPkcs8Signer()
+    {
+        var ecdsa = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+        var pkcs8 = ecdsa.ExportPkcs8PrivateKey();
+        var pem = new StringBuilder();
+        pem.AppendLine("-----BEGIN PRIVATE KEY-----");
+        pem.AppendLine(Convert.ToBase64String(pkcs8, Base64FormattingOptions.InsertLineBreaks));
+        pem.AppendLine("-----END PRIVATE KEY-----");
+        return (new CoinbaseJwtSigner(KeyName, pem.ToString()), ecdsa);
+    }
+
     private static (string header, string payload, byte[] sig) SplitJwt(string jwt)
     {
         var parts = jwt.Split('.');
@@ -117,6 +129,61 @@ public class CoinbaseJwtSignerTests
     }
 
     [Fact]
+    public void SignRequest_EcPkcs8_DetectedAsEc_ProducesEs256Jwt()
+    {
+        // "BEGIN PRIVATE KEY" with id-ecPublicKey OID must classify as EC and sign with ES256.
+        var (signer, ecdsa) = BuildEcPkcs8Signer();
+
+        var jwt = signer.MintJwt("GET", Host, Path);
+        var (headerSeg, _, sigBytes) = SplitJwt(jwt);
+
+        DecodeJson<Dictionary<string, string>>(headerSeg)["alg"].Should().Be("ES256");
+        sigBytes.Should().HaveCount(64);
+        var jwtParts = jwt.Split('.');
+        ecdsa.VerifyData(
+            Encoding.ASCII.GetBytes($"{jwtParts[0]}.{jwtParts[1]}"), sigBytes,
+            HashAlgorithmName.SHA256, DSASignatureFormat.IeeeP1363FixedFieldConcatenation)
+            .Should().BeTrue();
+    }
+
+    [Fact]
+    public void SignRequest_RealEd25519Pkcs8_ClassifiedAsEd25519_ThrowsClearMessage()
+    {
+        // PKCS8 with the Ed25519 OID (1.3.101.112). Before the OID fix this was misclassified as EC and
+        // threw a confusing import error; now it must throw the clear "Ed25519" deferral message.
+        const string ed25519Pkcs8 = """
+            -----BEGIN PRIVATE KEY-----
+            MC4CAQAwBQYDK2VwBCIEIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+            -----END PRIVATE KEY-----
+            """;
+        var signer = new CoinbaseJwtSigner(KeyName, ed25519Pkcs8);
+
+        var act = () => signer.MintJwt("GET", Host, Path);
+        act.Should().Throw<CryptographicException>().WithMessage("*Ed25519*");
+    }
+
+    [Fact]
+    public async Task SigningHandler_StripsQueryStringFromJwtUriClaim()
+    {
+        // CDP signs the path only; the handler must build the uri claim from AbsolutePath (no query).
+        var (signer, _) = BuildEcSigner();
+        HttpRequestMessage? captured = null;
+        var stub = new StubHandler(req => { captured = req; return new HttpResponseMessage(HttpStatusCode.OK); });
+        var handler = new CoinbaseSigningHandler(signer) { InnerHandler = stub };
+        using var client = new HttpClient(handler) { BaseAddress = new Uri($"https://{Host}") };
+
+        var request = new HttpRequestMessage(HttpMethod.Get, $"https://{Host}{Path}?limit=100&cursor=abc");
+        CoinbaseSigningRequest.MarkSigned(request);
+        await client.SendAsync(request, TestContext.Current.CancellationToken);
+
+        var jwt = captured!.Headers.Authorization!.Parameter!;
+        var (_, payloadSeg, _) = SplitJwt(jwt);
+        var uri = DecodeJson<Dictionary<string, JsonElement>>(payloadSeg)["uri"].GetString();
+        uri.Should().Be($"GET {Host}{Path}");
+        uri.Should().NotContain("?");
+    }
+
+    [Fact]
     public void SignRequest_EdDSA_Deferred()
     {
         // Ed25519/EdDSA is deferred: BCL ECDsa rejects OID 1.3.101.112 on .NET 10.
@@ -190,6 +257,13 @@ public class CoinbaseJwtSignerTests
         using var response = new HttpResponseMessage(HttpStatusCode.BadGateway);
         var ex = new CoinbaseErrorTranslator().Translate(response, "<html>502</html>");
         ex.Should().BeOfType<ExchangeApiException>();
+    }
+
+    private sealed class StubHandler(Func<HttpRequestMessage, HttpResponseMessage> handler) : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request, CancellationToken cancellationToken)
+            => Task.FromResult(handler(request));
     }
 
     [Theory]

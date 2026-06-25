@@ -46,6 +46,12 @@ internal sealed class KrakenErrorTranslator : IExchangeErrorTranslator
         return new ExchangeApiException(text, null, body);
     }
 
+    /// <summary>
+    /// True when the response body carries a non-empty <c>error[]</c> array. Kraken returns HTTP 200
+    /// even for failures, so callers gate on this before deserializing the <c>result</c> payload.
+    /// </summary>
+    internal static bool HasError(string body) => ParseFirstError(body) is not null;
+
     /// <summary>Returns the first non-empty string from <c>error[]</c>, or null when absent/empty/invalid JSON.</summary>
     private static string? ParseFirstError(string body)
     {

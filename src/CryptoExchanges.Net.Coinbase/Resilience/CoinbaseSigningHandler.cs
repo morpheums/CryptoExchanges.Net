@@ -27,9 +27,10 @@ internal sealed class CoinbaseSigningHandler(CoinbaseJwtSigner signer) : Delegat
     {
         var method = request.Method.Method;
         var host = request.RequestUri!.Host;
-        var pathAndQuery = request.RequestUri.PathAndQuery;
+        // CDP signs the path only; including the query string makes signed GETs with params 401.
+        var path = request.RequestUri.AbsolutePath;
 
-        var jwt = signer.MintJwt(method, host, pathAndQuery);
+        var jwt = signer.MintJwt(method, host, path);
 
         request.Headers.Remove("Authorization");
         request.Headers.Add("Authorization", $"Bearer {jwt}");

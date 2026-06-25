@@ -1,3 +1,4 @@
+using System.Formats.Asn1;
 using System.Security.Cryptography;
 using System.Text;
 
@@ -29,21 +30,20 @@ internal sealed class CoinbaseJwtSigner
     /// </summary>
     /// <param name="method">HTTP method (e.g. <c>GET</c>, <c>POST</c>).</param>
     /// <param name="host">The request host (e.g. <c>api.coinbase.com</c>).</param>
-    /// <param name="pathAndQuery">The path and optional query string (e.g. <c>/api/v3/brokerage/products</c>).</param>
+    /// <param name="path">The request path only, no query string (e.g. <c>/api/v3/brokerage/products</c>).</param>
     /// <returns>A compact JWT string (<c>header.payload.signature</c>).</returns>
     /// <exception cref="CryptographicException">Thrown when the key cannot be imported or signing fails.</exception>
-    public string MintJwt(string method, string host, string pathAndQuery)
+    public string MintJwt(string method, string host, string path)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(method);
         ArgumentException.ThrowIfNullOrWhiteSpace(host);
-        ArgumentException.ThrowIfNullOrWhiteSpace(pathAndQuery);
+        ArgumentException.ThrowIfNullOrWhiteSpace(path);
 
         var now = DateTimeOffset.UtcNow;
         var nbf = now.ToUnixTimeSeconds();
         var exp = nbf + 120;
 
-        // uri claim: "<METHOD> <host><path>" — no scheme.
-        var uri = $"{method.ToUpperInvariant()} {host}{pathAndQuery}";
+        var uri = $"{method.ToUpperInvariant()} {host}{path}";
 
         if (IsEc(_pemKey))
             return SignEs256(nbf, exp, uri);
@@ -88,10 +88,37 @@ internal sealed class CoinbaseJwtSigner
                 "PEM key must begin with '-----BEGIN EC PRIVATE KEY-----' or '-----BEGIN PRIVATE KEY-----'.");
     }
 
+    private const string EcPublicKeyOid = "1.2.840.10045.2.1"; // id-ecPublicKey (Ed25519 is 1.3.101.112)
+
+    /// <summary>
+    /// True for an EC (ES256) key: SEC1 is always EC; for PKCS8 the real algorithm OID is read from the
+    /// DER (id-ecPublicKey ⇒ EC, Ed25519 ⇒ not EC). The old base64-text scan never matched, so Ed25519
+    /// keys were misclassified as EC.
+    /// </summary>
     private static bool IsEc(string pem)
-        => pem.Contains("BEGIN EC PRIVATE KEY", StringComparison.Ordinal)
-        || (pem.Contains("BEGIN PRIVATE KEY", StringComparison.Ordinal)
-            && !pem.Contains("1.3.101.112", StringComparison.Ordinal));
+    {
+        if (pem.Contains("BEGIN EC PRIVATE KEY", StringComparison.Ordinal))
+            return true;
+        if (!pem.Contains("BEGIN PRIVATE KEY", StringComparison.Ordinal))
+            return false;
+        return Pkcs8AlgorithmOid(DecodePemPayload(pem, "PRIVATE KEY")) == EcPublicKeyOid;
+    }
+
+    // PKCS8 PrivateKeyInfo ::= SEQUENCE { version INTEGER, privateKeyAlgorithm AlgorithmIdentifier, ... }
+    // AlgorithmIdentifier ::= SEQUENCE { algorithm OBJECT IDENTIFIER, parameters ANY OPTIONAL }
+    private static string? Pkcs8AlgorithmOid(byte[] pkcs8)
+    {
+        try
+        {
+            var info = new AsnReader(pkcs8, AsnEncodingRules.DER).ReadSequence();
+            info.ReadInteger();
+            return info.ReadSequence().ReadObjectIdentifier();
+        }
+        catch (AsnContentException)
+        {
+            return null;
+        }
+    }
 
     private static byte[] DecodePemPayload(string pem, string label)
     {

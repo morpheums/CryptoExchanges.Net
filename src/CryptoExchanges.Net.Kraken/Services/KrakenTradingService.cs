@@ -25,7 +25,10 @@ internal sealed class KrakenTradingService(IKrakenHttpClient http, ISymbolMapper
         if (request.Quantity.HasValue)
             parameters["volume"] = request.Quantity.Value.ToString(CultureInfo.InvariantCulture);
         else if (request.QuoteOrderQuantity.HasValue)
-            parameters["volume"] = request.QuoteOrderQuantity.Value.ToString(CultureInfo.InvariantCulture);
+            // Kraken AddOrder 'volume' is base-asset only; no quote-size param exists, so reject rather than mis-size.
+            throw new NotSupportedException(
+                "Kraken AddOrder 'volume' is denominated in the base asset; quote-denominated order "
+                + "quantity (QuoteOrderQuantity) is not supported. Specify Quantity (base size) instead.");
 
         if (request.Price.HasValue && request.Type != OrderType.Market)
             parameters["price"] = request.Price.Value.ToString(CultureInfo.InvariantCulture);

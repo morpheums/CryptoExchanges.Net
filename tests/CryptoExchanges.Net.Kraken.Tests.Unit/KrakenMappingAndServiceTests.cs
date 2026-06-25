@@ -533,6 +533,90 @@ public class KrakenMappingAndServiceTests
         order.Status.Should().Be(OrderStatus.New);
     }
 
+    [Fact]
+    public async Task HttpClient_InBodyError_On200_ThrowsTranslatedException()
+    {
+        // Kraken signals failures as HTTP 200 + error[]; the client must translate, not deserialize.
+        var fakeHandler = new FakeHttpHandler(_ => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent(
+                """{"error":["EAuth:Invalid key"],"result":null}""",
+                Encoding.UTF8, "application/json")
+        });
+        using var httpClient = new HttpClient(fakeHandler) { BaseAddress = new Uri("https://api.kraken.com") };
+        var krakenHttp = new KrakenHttpClient(httpClient, new SymbolMapper(KrakenSymbolFormat.Instance));
+
+        var act = async () => await krakenHttp.GetAsync<Dtos.ResponseDto<Dictionary<string, string>>>(
+            "/0/public/Ticker", ct: TestContext.Current.CancellationToken);
+
+        (await act.Should().ThrowAsync<Core.Exceptions.AuthenticationException>())
+            .Which.Message.Should().Contain("EAuth:");
+    }
+
+    [Fact]
+    public async Task HttpClient_EmptyErrorArray_On200_DeserializesResult()
+    {
+        var fakeHandler = new FakeHttpHandler(_ => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent(
+                """{"error":[],"result":{"USDT":"1.0"}}""",
+                Encoding.UTF8, "application/json")
+        });
+        using var httpClient = new HttpClient(fakeHandler) { BaseAddress = new Uri("https://api.kraken.com") };
+        var krakenHttp = new KrakenHttpClient(httpClient, new SymbolMapper(KrakenSymbolFormat.Instance));
+
+        var result = await krakenHttp.GetAsync<Dtos.ResponseDto<Dictionary<string, string>>>(
+            "/0/public/Ticker", ct: TestContext.Current.CancellationToken);
+
+        result.Result.Should().ContainKey("USDT");
+    }
+
+    [Fact]
+    public async Task Trading_PlaceOrder_QuoteQuantity_ThrowsNotSupported()
+    {
+        // Kraken AddOrder 'volume' is base-asset only; a quote-denominated quantity must be rejected,
+        // never stuffed into 'volume' (which would mis-size the order).
+        var (symbolMapper, mapper) = BuildMappers();
+        var http = Substitute.For<IKrakenHttpClient>();
+        var service = new KrakenTradingService(http, symbolMapper, mapper);
+
+        var request = PlaceOrderRequest.Create(
+            BtcUsdt, OrderSide.Buy, OrderType.Market, quoteOrderQuantity: 1000m);
+        var act = async () => await service.PlaceOrderAsync(request, TestContext.Current.CancellationToken);
+
+        await act.Should().ThrowAsync<NotSupportedException>();
+        await http.DidNotReceive().PostAsync<Dtos.ResponseDto<Dtos.OrderAckDto>>(
+            "/0/private/AddOrder", Arg.Any<Dictionary<string, string>>(), true, Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Trading_PlaceOrder_BaseQuantity_GoesIntoVolume()
+    {
+        var (symbolMapper, mapper) = BuildMappers();
+        var http = Substitute.For<IKrakenHttpClient>();
+
+        Dictionary<string, string>? placed = null;
+        http.PostAsync<Dtos.ResponseDto<Dtos.OrderAckDto>>(
+                "/0/private/AddOrder", Arg.Do<Dictionary<string, string>>(p => placed = p), true, Arg.Any<CancellationToken>())
+            .Returns(new Dtos.ResponseDto<Dtos.OrderAckDto> { Result = new Dtos.OrderAckDto { TxId = ["ORD-1"] } });
+        http.PostAsync<Dtos.ResponseDto<Dictionary<string, Dtos.OrderDto>>>(
+                "/0/private/QueryOrders", Arg.Any<Dictionary<string, string>>(), true, Arg.Any<CancellationToken>())
+            .Returns(new Dtos.ResponseDto<Dictionary<string, Dtos.OrderDto>>
+            {
+                Result = new Dictionary<string, Dtos.OrderDto>
+                {
+                    ["ORD-1"] = new Dtos.OrderDto { Descr = new Dtos.OrderDescrDto { Pair = "XBT/USDT", Side = "buy", OrderType = "market" }, Status = "open", Vol = "0.25" }
+                }
+            });
+
+        var service = new KrakenTradingService(http, symbolMapper, mapper);
+        var request = PlaceOrderRequest.Create(BtcUsdt, OrderSide.Buy, OrderType.Market, quantity: 0.25m);
+        await service.PlaceOrderAsync(request, TestContext.Current.CancellationToken);
+
+        placed.Should().NotBeNull();
+        placed!["volume"].Should().Be("0.25");
+    }
+
     private sealed class FakeHttpHandler(Func<HttpRequestMessage, HttpResponseMessage> respond)
         : HttpMessageHandler
     {

@@ -40,6 +40,49 @@ public class KrakenSignatureServiceTests
     }
 
     [Fact]
+    public void MintNonce_ColdStart_IsClockSeededNotCounter()
+    {
+        // Reset the process-global counter to simulate a cold start (other tests advance it).
+        typeof(KrakenSignatureService)
+            .GetField("s_lastNonce", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!
+            .SetValue(null, 0L);
+
+        var before = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+        var nonce = KrakenSignatureService.MintNonce();
+
+        // From a zero seed the value must be the ms clock (max(1, clock)), never a tiny 1-based counter.
+        nonce.Should().BeGreaterThanOrEqualTo(before);
+    }
+
+    [Fact]
+    public void MintNonce_SameMillisecond_StillStrictlyIncreasing()
+    {
+        // Many calls inside one millisecond must never repeat (max(last+1, clock)).
+        var values = new long[1000];
+        for (var i = 0; i < values.Length; i++)
+            values[i] = KrakenSignatureService.MintNonce();
+        values.Should().OnlyHaveUniqueItems();
+        values.Should().BeInAscendingOrder();
+    }
+
+    [Fact]
+    public async Task MintNonce_ConcurrentCallers_AllUniqueAndMonotonic()
+    {
+        const int perTask = 2000;
+        const int tasks = 8;
+        var results = await Task.WhenAll(Enumerable.Range(0, tasks).Select(_ => Task.Run(() =>
+        {
+            var local = new long[perTask];
+            for (var i = 0; i < perTask; i++)
+                local[i] = KrakenSignatureService.MintNonce();
+            return local;
+        })));
+
+        var all = results.SelectMany(r => r).ToArray();
+        all.Should().OnlyHaveUniqueItems("each concurrent caller must reserve a distinct nonce");
+    }
+
+    [Fact]
     public void ComputeSignature_NonceInBodyMatchesPrehash()
     {
         // If nonce in body differs from the prehash nonce, Kraken rejects the signature.

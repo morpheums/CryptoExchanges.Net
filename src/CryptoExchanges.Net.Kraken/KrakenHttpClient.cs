@@ -1,4 +1,3 @@
-using System.Net.Http.Json;
 using System.Text;
 using CryptoExchanges.Net.Kraken.Internal;
 using CryptoExchanges.Net.Kraken.Resilience;
@@ -22,6 +21,8 @@ internal sealed class KrakenHttpClient(HttpClient httpClient, ISymbolMapper symb
         NumberHandling = System.Text.Json.Serialization.JsonNumberHandling.AllowReadingFromString,
         DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull
     };
+
+    private static readonly KrakenErrorTranslator ErrorTranslator = new();
 
     // Wsname→legacyCode reverse table (e.g. "XBT/USD"→"XXBTZUSD"); warmed by GetExchangeInfoAsync.
     private volatile Dictionary<string, string> _wsnameToLegacy = [];
@@ -59,7 +60,7 @@ internal sealed class KrakenHttpClient(HttpClient httpClient, ISymbolMapper symb
         using var request = new HttpRequestMessage(HttpMethod.Get, BuildUrl(endpoint, parameters));
         if (signed) KrakenSigningRequest.MarkSigned(request);
         using var response = await httpClient.SendAsync(request, ct).ConfigureAwait(false);
-        return (await response.Content.ReadFromJsonAsync<T>(JsonOptions, ct).ConfigureAwait(false))!;
+        return await ReadResultAsync<T>(response, ct).ConfigureAwait(false);
     }
 
     /// <inheritdoc />
@@ -74,7 +75,20 @@ internal sealed class KrakenHttpClient(HttpClient httpClient, ISymbolMapper symb
         using var request = new HttpRequestMessage(HttpMethod.Post, endpoint) { Content = content };
         if (signed) KrakenSigningRequest.MarkSigned(request);
         using var response = await httpClient.SendAsync(request, ct).ConfigureAwait(false);
-        return (await response.Content.ReadFromJsonAsync<T>(JsonOptions, ct).ConfigureAwait(false))!;
+        return await ReadResultAsync<T>(response, ct).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Reads a Kraken 200 response, surfacing in-body errors. Kraken signals failures via a non-empty
+    /// <c>error[]</c> array on an HTTP 200, which the shared (non-2xx) error pipeline never sees — so this
+    /// inspects the body and throws the translated typed exception before deserializing the payload.
+    /// </summary>
+    private static async Task<T> ReadResultAsync<T>(HttpResponseMessage response, CancellationToken ct)
+    {
+        var body = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
+        if (KrakenErrorTranslator.HasError(body))
+            throw ErrorTranslator.Translate(response, body);
+        return JsonSerializer.Deserialize<T>(body, JsonOptions)!;
     }
 
     private static string BuildUrl(string endpoint, Dictionary<string, string>? parameters)

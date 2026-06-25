@@ -1,6 +1,7 @@
 using System.Formats.Asn1;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
 
 namespace CryptoExchanges.Net.Coinbase.Auth;
 
@@ -60,11 +61,12 @@ internal sealed class CoinbaseJwtSigner
         using var ecdsa = ECDsa.Create();
         ImportEcKey(ecdsa, _pemKey);
 
-        var header = Base64UrlEncode(Encoding.UTF8.GetBytes(
-            $"{{\"alg\":\"ES256\",\"kid\":\"{_keyName}\",\"typ\":\"JWT\"}}"));
+        // Build via System.Text.Json so a kid/sub/uri containing a quote or backslash is escaped.
+        var header = Base64UrlEncode(JsonSerializer.SerializeToUtf8Bytes(
+            new { alg = "ES256", kid = _keyName, typ = "JWT" }));
 
-        var payload = Base64UrlEncode(Encoding.UTF8.GetBytes(
-            $"{{\"sub\":\"{_keyName}\",\"iss\":\"cdp\",\"nbf\":{nbf},\"exp\":{exp},\"uri\":\"{uriClaim}\"}}"));
+        var payload = Base64UrlEncode(JsonSerializer.SerializeToUtf8Bytes(
+            new { sub = _keyName, iss = "cdp", nbf, exp, uri = uriClaim }));
 
         var signingInput = $"{header}.{payload}";
         var signingBytes = Encoding.ASCII.GetBytes(signingInput);

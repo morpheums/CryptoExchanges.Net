@@ -19,7 +19,7 @@ internal sealed class KrakenTradingService(IKrakenHttpClient http, ISymbolMapper
         {
             ["pair"] = wireSymbol,
             ["type"] = MapOrderSide(request.Side),
-            ["ordertype"] = MapOrderType(request.Type, request.TimeInForce)
+            ["ordertype"] = MapOrderType(request.Type)
         };
 
         if (request.Quantity.HasValue)
@@ -30,8 +30,18 @@ internal sealed class KrakenTradingService(IKrakenHttpClient http, ISymbolMapper
                 "Kraken AddOrder 'volume' is denominated in the base asset; quote-denominated order "
                 + "quantity (QuoteOrderQuantity) is not supported. Specify Quantity (base size) instead.");
 
-        if (request.Price.HasValue && request.Type != OrderType.Market)
+        if (IsStopOrder(request.Type))
+        {
+            // Kraken carries the trigger price in 'price'; for *-limit variants the limit price goes in 'price2'.
+            // Validate() guarantees StopPrice (all stop types) and Price (the -limit variants) are present.
+            parameters["price"] = request.StopPrice!.Value.ToString(CultureInfo.InvariantCulture);
+            if (request.Type is OrderType.StopLossLimit or OrderType.TakeProfitLimit)
+                parameters["price2"] = request.Price!.Value.ToString(CultureInfo.InvariantCulture);
+        }
+        else if (request.Price.HasValue && request.Type != OrderType.Market)
+        {
             parameters["price"] = request.Price.Value.ToString(CultureInfo.InvariantCulture);
+        }
 
         if (request.ClientOrderId is not null
             && int.TryParse(request.ClientOrderId, out var userRef))
@@ -76,7 +86,8 @@ internal sealed class KrakenTradingService(IKrakenHttpClient http, ISymbolMapper
             "/0/private/ClosedOrders", "closed", closedParams, signed: true, ct: ct).ConfigureAwait(false) ?? [];
         var (txId, dto) = closed.FirstOrDefault();
         if (dto is null)
-            return new Order(symbol, clientOrderId);
+            // The exchange txid is unknown here; carry the client id in ClientOrderId, never in OrderId.
+            return new Order(symbol, string.Empty, ClientOrderId: clientOrderId, Status: OrderStatus.Canceled);
         return MapOrder(txId ?? string.Empty, dto);
     }
 
@@ -178,16 +189,17 @@ internal sealed class KrakenTradingService(IKrakenHttpClient http, ISymbolMapper
         _ => throw new ArgumentOutOfRangeException(nameof(side), side, $"Unsupported order side: {side}")
     };
 
-    private static string MapOrderType(OrderType type, TimeInForce? tif) => type switch
+    private static bool IsStopOrder(OrderType type) => type
+        is OrderType.StopLoss or OrderType.StopLossLimit or OrderType.TakeProfit or OrderType.TakeProfitLimit;
+
+    private static string MapOrderType(OrderType type) => type switch
     {
-        OrderType.Market or OrderType.StopLoss or OrderType.TakeProfit => "market",
-        OrderType.LimitMaker => "limit",
-        OrderType.Limit or OrderType.StopLossLimit or OrderType.TakeProfitLimit => tif switch
-        {
-            TimeInForce.Ioc => "limit",
-            TimeInForce.Fok => "limit",
-            _ => "limit"
-        },
+        OrderType.Market => "market",
+        OrderType.Limit or OrderType.LimitMaker => "limit",
+        OrderType.StopLoss => "stop-loss",
+        OrderType.StopLossLimit => "stop-loss-limit",
+        OrderType.TakeProfit => "take-profit",
+        OrderType.TakeProfitLimit => "take-profit-limit",
         _ => throw new ArgumentOutOfRangeException(nameof(type), type, $"Unsupported order type: {type}")
     };
 }

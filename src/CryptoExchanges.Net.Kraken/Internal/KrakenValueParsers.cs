@@ -57,8 +57,12 @@ internal static class KrakenValueParsers
     /// <exception cref="ArgumentOutOfRangeException">Thrown for any unrecognized type string.</exception>
     public static OrderType ParseOrderType(string s) => s switch
     {
-        "limit"  => OrderType.Limit,
-        "market" => OrderType.Market,
+        "limit"             => OrderType.Limit,
+        "market"            => OrderType.Market,
+        "stop-loss"         => OrderType.StopLoss,
+        "stop-loss-limit"   => OrderType.StopLossLimit,
+        "take-profit"       => OrderType.TakeProfit,
+        "take-profit-limit" => OrderType.TakeProfitLimit,
         _ => throw new ArgumentOutOfRangeException(nameof(s), s, $"Unknown order type: {s}")
     };
 

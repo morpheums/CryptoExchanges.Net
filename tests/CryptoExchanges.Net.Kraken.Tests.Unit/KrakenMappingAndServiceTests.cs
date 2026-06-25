@@ -626,6 +626,94 @@ public class KrakenMappingAndServiceTests
         placed!["volume"].Should().Be("0.25");
     }
 
+    [Fact]
+    public async Task Trading_CancelOrderByClientId_NoClosedMatch_CarriesClientIdInClientOrderIdNotOrderId()
+    {
+        var (symbolMapper, mapper) = BuildMappers();
+        var http = Substitute.For<IKrakenHttpClient>();
+
+        http.PostAsync<Dtos.ResponseDto<System.Text.Json.JsonElement>>(
+                "/0/private/CancelOrder", Arg.Any<Dictionary<string, string>>(), true, Arg.Any<CancellationToken>())
+            .Returns(new Dtos.ResponseDto<System.Text.Json.JsonElement>());
+
+        // ClosedOrders returns no match for the userref, forcing the fallback Order.
+        http.PostResultPropertyAsync<Dictionary<string, Dtos.OrderDto>>(
+                "/0/private/ClosedOrders", "closed", Arg.Any<Dictionary<string, string>>(), true, Arg.Any<CancellationToken>())
+            .Returns(new Dictionary<string, Dtos.OrderDto>());
+
+        var service = new KrakenTradingService(http, symbolMapper, mapper);
+        var order = await service.CancelOrderByClientIdAsync(BtcUsdt, "42", TestContext.Current.CancellationToken);
+
+        order.ClientOrderId.Should().Be("42");
+        order.OrderId.Should().BeEmpty();
+        order.Status.Should().Be(OrderStatus.Canceled);
+    }
+
+    [Theory]
+    [InlineData(OrderType.StopLoss, "stop-loss")]
+    [InlineData(OrderType.TakeProfit, "take-profit")]
+    public async Task Trading_PlaceStopOrder_MapsOrderTypeAndTriggerPrice(OrderType type, string expectedOrderType)
+    {
+        var (symbolMapper, mapper) = BuildMappers();
+        var http = Substitute.For<IKrakenHttpClient>();
+
+        Dictionary<string, string>? placed = null;
+        http.PostAsync<Dtos.ResponseDto<Dtos.OrderAckDto>>(
+                "/0/private/AddOrder", Arg.Do<Dictionary<string, string>>(p => placed = p), true, Arg.Any<CancellationToken>())
+            .Returns(new Dtos.ResponseDto<Dtos.OrderAckDto> { Result = new Dtos.OrderAckDto { TxId = ["ORD-S"] } });
+        http.PostAsync<Dtos.ResponseDto<Dictionary<string, Dtos.OrderDto>>>(
+                "/0/private/QueryOrders", Arg.Any<Dictionary<string, string>>(), true, Arg.Any<CancellationToken>())
+            .Returns(new Dtos.ResponseDto<Dictionary<string, Dtos.OrderDto>>
+            {
+                Result = new Dictionary<string, Dtos.OrderDto>
+                {
+                    ["ORD-S"] = new Dtos.OrderDto { Descr = new Dtos.OrderDescrDto { Pair = "XBT/USDT", Side = "sell", OrderType = expectedOrderType }, Status = "open", Vol = "0.5" }
+                }
+            });
+
+        var service = new KrakenTradingService(http, symbolMapper, mapper);
+        var request = PlaceOrderRequest.Create(BtcUsdt, OrderSide.Sell, type, quantity: 0.5m, stopPrice: 45000m);
+        await service.PlaceOrderAsync(request, TestContext.Current.CancellationToken);
+
+        placed.Should().NotBeNull();
+        placed!["ordertype"].Should().Be(expectedOrderType);
+        // Trigger price is carried in Kraken's 'price' param; no 'price2' for non-limit stop orders.
+        placed["price"].Should().Be("45000");
+        placed.ContainsKey("price2").Should().BeFalse();
+    }
+
+    [Theory]
+    [InlineData(OrderType.StopLossLimit, "stop-loss-limit")]
+    [InlineData(OrderType.TakeProfitLimit, "take-profit-limit")]
+    public async Task Trading_PlaceStopLimitOrder_SendsTriggerInPriceAndLimitInPrice2(OrderType type, string expectedOrderType)
+    {
+        var (symbolMapper, mapper) = BuildMappers();
+        var http = Substitute.For<IKrakenHttpClient>();
+
+        Dictionary<string, string>? placed = null;
+        http.PostAsync<Dtos.ResponseDto<Dtos.OrderAckDto>>(
+                "/0/private/AddOrder", Arg.Do<Dictionary<string, string>>(p => placed = p), true, Arg.Any<CancellationToken>())
+            .Returns(new Dtos.ResponseDto<Dtos.OrderAckDto> { Result = new Dtos.OrderAckDto { TxId = ["ORD-SL"] } });
+        http.PostAsync<Dtos.ResponseDto<Dictionary<string, Dtos.OrderDto>>>(
+                "/0/private/QueryOrders", Arg.Any<Dictionary<string, string>>(), true, Arg.Any<CancellationToken>())
+            .Returns(new Dtos.ResponseDto<Dictionary<string, Dtos.OrderDto>>
+            {
+                Result = new Dictionary<string, Dtos.OrderDto>
+                {
+                    ["ORD-SL"] = new Dtos.OrderDto { Descr = new Dtos.OrderDescrDto { Pair = "XBT/USDT", Side = "sell", OrderType = expectedOrderType, Price = "44000" }, Status = "open", Vol = "0.5" }
+                }
+            });
+
+        var service = new KrakenTradingService(http, symbolMapper, mapper);
+        var request = PlaceOrderRequest.Create(BtcUsdt, OrderSide.Sell, type, quantity: 0.5m, price: 44000m, stopPrice: 45000m);
+        await service.PlaceOrderAsync(request, TestContext.Current.CancellationToken);
+
+        placed.Should().NotBeNull();
+        placed!["ordertype"].Should().Be(expectedOrderType);
+        placed["price"].Should().Be("45000");
+        placed["price2"].Should().Be("44000");
+    }
+
     private static HttpResponseMessage Ok(string json) =>
         new(HttpStatusCode.OK) { Content = new StringContent(json, Encoding.UTF8, "application/json") };
 

@@ -9,9 +9,18 @@ using CryptoExchanges.Net.Core.Exceptions;
 namespace CryptoExchanges.Net.Kraken.Tests.Unit.Auth;
 
 /// <summary>
+/// Serializes this class so its MintNonce tests (which reflectively reset the process-wide
+/// <c>s_lastNonce</c> to simulate a cold start) cannot race other collections under xUnit
+/// parallelization.
+/// </summary>
+[CollectionDefinition("KrakenNonce", DisableParallelization = true)]
+public sealed class KrakenNonceTestGroup;
+
+/// <summary>
 /// Unit tests for Kraken HMAC-SHA-512 signature computation, nonce generation, signing handler
 /// behaviour, and in-body error translation.
 /// </summary>
+[Collection("KrakenNonce")]
 public class KrakenSignatureServiceTests
 {
     // Published Kraken documentation vector: https://docs.kraken.com/api/docs/guides/spot-rest-auth

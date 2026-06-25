@@ -80,7 +80,14 @@ internal static class KrakenStreamDecoders
             var asks = new List<OrderBookEntry>(dto.Asks.Count);
             foreach (var a in dto.Asks)
                 asks.Add(new OrderBookEntry(a.Price, a.Qty));
-            return new OrderBook(symbol, bids, asks, null, dto.Checksum > 0 ? dto.Checksum : null);
+            // Kraken's 'checksum' is a CRC, not a monotonic sequence id, so it must not feed
+            // LastUpdateId (gap-detection); leave it null and surface the frame timestamp instead.
+            var timestamp = DateTimeOffset.TryParse(dto.Timestamp,
+                System.Globalization.CultureInfo.InvariantCulture,
+                System.Globalization.DateTimeStyles.RoundtripKind, out var parsed)
+                ? parsed
+                : (DateTimeOffset?)null;
+            return new OrderBook(symbol, bids, asks, timestamp);
         });
 
         registry.Register(StreamKind.Kline, bytes =>

@@ -135,7 +135,10 @@ public class KrakenStreamDecodeTests
         var result = (OrderBook)decoder(frame);
 
         result.Symbol.Should().Be(BtcUsd);
-        result.LastUpdateId.Should().Be(9900001L);
+        // Kraken's checksum is a CRC, not a monotonic sequence id, so LastUpdateId stays null and
+        // the frame timestamp populates Timestamp instead.
+        result.LastUpdateId.Should().BeNull();
+        result.Timestamp.Should().Be(DateTimeOffset.Parse("2024-06-19T08:00:00Z", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.RoundtripKind));
         result.Bids.Should().HaveCount(2);
         result.Bids[0].Price.Should().Be(66990.00m);
         result.Bids[0].Quantity.Should().Be(0.5m);

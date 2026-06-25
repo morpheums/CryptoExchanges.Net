@@ -92,6 +92,35 @@ public class CoinbaseJwtSignerTests
     }
 
     [Fact]
+    public void SignRequest_KidWithQuoteAndBackslash_ProducesValidJsonAndVerifiableSignature()
+    {
+        // A keyName containing a double-quote and backslash must be JSON-escaped, not interpolated raw,
+        // or the header/payload become invalid JSON.
+        const string trickyKey = "org/key\"name\\with\"quotes";
+        var ecdsa = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+        var pem = new StringBuilder();
+        pem.AppendLine("-----BEGIN EC PRIVATE KEY-----");
+        pem.AppendLine(Convert.ToBase64String(ecdsa.ExportECPrivateKey(), Base64FormattingOptions.InsertLineBreaks));
+        pem.AppendLine("-----END EC PRIVATE KEY-----");
+        var signer = new CoinbaseJwtSigner(trickyKey, pem.ToString());
+
+        var jwt = signer.MintJwt("GET", Host, Path);
+        var (headerSeg, payloadSeg, sigBytes) = SplitJwt(jwt);
+
+        // Both segments must parse as JSON and round-trip the exact tricky value.
+        var header = DecodeJson<Dictionary<string, string>>(headerSeg);
+        header["kid"].Should().Be(trickyKey);
+        var payload = DecodeJson<Dictionary<string, JsonElement>>(payloadSeg);
+        payload["sub"].GetString().Should().Be(trickyKey);
+
+        var jwtParts = jwt.Split('.');
+        ecdsa.VerifyData(
+            Encoding.ASCII.GetBytes($"{jwtParts[0]}.{jwtParts[1]}"), sigBytes,
+            HashAlgorithmName.SHA256, DSASignatureFormat.IeeeP1363FixedFieldConcatenation)
+            .Should().BeTrue("a properly escaped JWT must still sign and verify");
+    }
+
+    [Fact]
     public void SignRequest_ES256_DifferentAttemptsProduceDifferentJwts()
     {
         var (signer, _) = BuildEcSigner();

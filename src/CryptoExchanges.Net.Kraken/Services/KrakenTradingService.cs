@@ -72,9 +72,9 @@ internal sealed class KrakenTradingService(IKrakenHttpClient http, ISymbolMapper
         {
             ["userref"] = userRef.ToString(CultureInfo.InvariantCulture)
         };
-        var closed = await http.PostAsync<ResponseDto<ClosedOrdersEnvelopeDto>>(
-            "/0/private/ClosedOrders", closedParams, signed: true, ct: ct).ConfigureAwait(false);
-        var (txId, dto) = closed.Result?.Closed.FirstOrDefault() ?? default;
+        var closed = await http.PostResultPropertyAsync<Dictionary<string, OrderDto>>(
+            "/0/private/ClosedOrders", "closed", closedParams, signed: true, ct: ct).ConfigureAwait(false) ?? [];
+        var (txId, dto) = closed.FirstOrDefault();
         if (dto is null)
             return new Order(symbol, clientOrderId);
         return MapOrder(txId ?? string.Empty, dto);
@@ -110,10 +110,8 @@ internal sealed class KrakenTradingService(IKrakenHttpClient http, ISymbolMapper
     /// <inheritdoc />
     public async Task<IReadOnlyList<Order>> GetOpenOrdersAsync(Symbol? symbol = null, CancellationToken ct = default)
     {
-        var response = await http.PostAsync<ResponseDto<OpenOrdersEnvelopeDto>>(
-            "/0/private/OpenOrders", signed: true, ct: ct).ConfigureAwait(false);
-
-        var orders = response.Result?.Open ?? [];
+        var orders = await http.PostResultPropertyAsync<Dictionary<string, OrderDto>>(
+            "/0/private/OpenOrders", "open", signed: true, ct: ct).ConfigureAwait(false) ?? [];
         IEnumerable<KeyValuePair<string, OrderDto>> filtered = orders;
 
         if (symbol.HasValue)
@@ -142,11 +140,10 @@ internal sealed class KrakenTradingService(IKrakenHttpClient http, ISymbolMapper
         if (endTime.HasValue)
             parameters["end"] = endTime.Value.ToUnixTimeSeconds().ToString(CultureInfo.InvariantCulture);
 
-        var response = await http.PostAsync<ResponseDto<ClosedOrdersEnvelopeDto>>(
-            "/0/private/ClosedOrders", parameters, signed: true, ct: ct).ConfigureAwait(false);
+        var orders = await http.PostResultPropertyAsync<Dictionary<string, OrderDto>>(
+            "/0/private/ClosedOrders", "closed", parameters, signed: true, ct: ct).ConfigureAwait(false) ?? [];
 
         var wireSymbol = symbolMapper.ToWire(symbol);
-        var orders = response.Result?.Closed ?? [];
         return orders
             .Where(kv => string.Equals(kv.Value.Descr.Pair, wireSymbol, StringComparison.OrdinalIgnoreCase))
             .Take(limit)

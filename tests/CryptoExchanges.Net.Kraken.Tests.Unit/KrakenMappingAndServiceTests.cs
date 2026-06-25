@@ -157,21 +157,16 @@ public class KrakenMappingAndServiceTests
     public async Task Account_GetTradeHistory_FiltersToSymbol()
     {
         var (symbolMapper, mapper) = BuildMappers();
-        var http = Substitute.For<IKrakenHttpClient>();
-
-        http.PostAsync<Dtos.ResponseDto<Dtos.TradesFillsEnvelopeDto>>(
-                "/0/private/TradesHistory", Arg.Any<Dictionary<string, string>>(), true, Arg.Any<CancellationToken>())
-            .Returns(new Dtos.ResponseDto<Dtos.TradesFillsEnvelopeDto>
-            {
-                Result = new Dtos.TradesFillsEnvelopeDto
-                {
-                    Trades = new Dictionary<string, Dtos.FillDto>
-                    {
-                        ["T1"] = new Dtos.FillDto { Pair = "XBT/USDT", Price = "50000", Volume = "0.1", Side = "buy" },
-                        ["T2"] = new Dtos.FillDto { Pair = "ETH/USD",  Price = "3000",  Volume = "1",   Side = "sell" }
-                    }
-                }
-            });
+        // Full Kraken envelope: fills nested under result -> trades, extracted by the HTTP client.
+        const string body = """
+            {"error":[],"result":{"trades":{
+                "T1":{"pair":"XBT/USDT","price":"50000","vol":"0.1","type":"buy"},
+                "T2":{"pair":"ETH/USD","price":"3000","vol":"1","type":"sell"}
+            }}}
+            """;
+        var handler = new FakeHttpHandler(_ => Ok(body));
+        using var httpClient = new HttpClient(handler) { BaseAddress = new Uri("https://api.kraken.com") };
+        var http = new KrakenHttpClient(httpClient, symbolMapper);
 
         var service = new KrakenAccountService(http, symbolMapper, mapper);
         var trades = await service.GetTradeHistoryAsync(BtcUsdt, ct: TestContext.Current.CancellationToken);
@@ -225,21 +220,16 @@ public class KrakenMappingAndServiceTests
     public async Task Trading_GetOpenOrders_FiltersToSymbol()
     {
         var (symbolMapper, mapper) = BuildMappers();
-        var http = Substitute.For<IKrakenHttpClient>();
-
-        http.PostAsync<Dtos.ResponseDto<Dtos.OpenOrdersEnvelopeDto>>(
-                "/0/private/OpenOrders", Arg.Any<Dictionary<string, string>>(), true, Arg.Any<CancellationToken>())
-            .Returns(new Dtos.ResponseDto<Dtos.OpenOrdersEnvelopeDto>
-            {
-                Result = new Dtos.OpenOrdersEnvelopeDto
-                {
-                    Open = new Dictionary<string, Dtos.OrderDto>
-                    {
-                        ["O1"] = new Dtos.OrderDto { Descr = new Dtos.OrderDescrDto { Pair = "XBT/USDT", Side = "buy", OrderType = "limit", Price = "50000" }, Status = "open", Vol = "1" },
-                        ["O2"] = new Dtos.OrderDto { Descr = new Dtos.OrderDescrDto { Pair = "ETH/USD",  Side = "sell", OrderType = "limit", Price = "3000"  }, Status = "open", Vol = "2" }
-                    }
-                }
-            });
+        // Full Kraken envelope: orders nested under result -> open, extracted by the HTTP client.
+        const string body = """
+            {"error":[],"result":{"open":{
+                "O1":{"descr":{"pair":"XBT/USDT","type":"buy","ordertype":"limit","price":"50000"},"status":"open","vol":"1"},
+                "O2":{"descr":{"pair":"ETH/USD","type":"sell","ordertype":"limit","price":"3000"},"status":"open","vol":"2"}
+            }}}
+            """;
+        var handler = new FakeHttpHandler(_ => Ok(body));
+        using var httpClient = new HttpClient(handler) { BaseAddress = new Uri("https://api.kraken.com") };
+        var http = new KrakenHttpClient(httpClient, symbolMapper);
 
         var service = new KrakenTradingService(http, symbolMapper, mapper);
         var orders = await service.GetOpenOrdersAsync(BtcUsdt, TestContext.Current.CancellationToken);
@@ -252,20 +242,22 @@ public class KrakenMappingAndServiceTests
     public async Task Trading_GetOrderHistory_AppliesTimeWindowParam()
     {
         var (symbolMapper, mapper) = BuildMappers();
-        var http = Substitute.For<IKrakenHttpClient>();
-        Dictionary<string, string>? captured = null;
-
-        http.PostAsync<Dtos.ResponseDto<Dtos.ClosedOrdersEnvelopeDto>>(
-                "/0/private/ClosedOrders", Arg.Do<Dictionary<string, string>>(p => captured = p), true, Arg.Any<CancellationToken>())
-            .Returns(new Dtos.ResponseDto<Dtos.ClosedOrdersEnvelopeDto>());
+        string? capturedBody = null;
+        var handler = new FakeHttpHandler(req =>
+        {
+            capturedBody = req.Content!.ReadAsStringAsync().GetAwaiter().GetResult();
+            return Ok("""{"error":[],"result":{"closed":{}}}""");
+        });
+        using var httpClient = new HttpClient(handler) { BaseAddress = new Uri("https://api.kraken.com") };
+        var http = new KrakenHttpClient(httpClient, symbolMapper);
 
         var service = new KrakenTradingService(http, symbolMapper, mapper);
         var start = DateTimeOffset.FromUnixTimeSeconds(1700000000);
         var act = async () => await service.GetOrderHistoryAsync(BtcUsdt, startTime: start, ct: TestContext.Current.CancellationToken);
         await act.Should().NotThrowAsync();
 
-        captured.Should().NotBeNull();
-        captured!.Should().ContainKey("start");
+        capturedBody.Should().NotBeNull();
+        capturedBody!.Should().Contain("start");
     }
 
     [Fact]
@@ -446,22 +438,16 @@ public class KrakenMappingAndServiceTests
                 "/0/private/CancelOrder", Arg.Any<Dictionary<string, string>>(), true, Arg.Any<CancellationToken>())
             .Returns(new Dtos.ResponseDto<System.Text.Json.JsonElement>());
 
-        http.PostAsync<Dtos.ResponseDto<Dtos.ClosedOrdersEnvelopeDto>>(
-                "/0/private/ClosedOrders", Arg.Any<Dictionary<string, string>>(), true, Arg.Any<CancellationToken>())
-            .Returns(new Dtos.ResponseDto<Dtos.ClosedOrdersEnvelopeDto>
+        http.PostResultPropertyAsync<Dictionary<string, Dtos.OrderDto>>(
+                "/0/private/ClosedOrders", "closed", Arg.Any<Dictionary<string, string>>(), true, Arg.Any<CancellationToken>())
+            .Returns(new Dictionary<string, Dtos.OrderDto>
             {
-                Result = new Dtos.ClosedOrdersEnvelopeDto
+                ["ORD-CLI-1"] = new Dtos.OrderDto
                 {
-                    Closed = new Dictionary<string, Dtos.OrderDto>
-                    {
-                        ["ORD-CLI-1"] = new Dtos.OrderDto
-                        {
-                            Descr = new Dtos.OrderDescrDto { Pair = "XBT/USDT", Side = "buy", OrderType = "limit", Price = "50000" },
-                            Status = "canceled",
-                            Vol = "0.1",
-                            UserRef = 42
-                        }
-                    }
+                    Descr = new Dtos.OrderDescrDto { Pair = "XBT/USDT", Side = "buy", OrderType = "limit", Price = "50000" },
+                    Status = "canceled",
+                    Vol = "0.1",
+                    UserRef = 42
                 }
             });
 
@@ -479,18 +465,12 @@ public class KrakenMappingAndServiceTests
         var (symbolMapper, mapper) = BuildMappers();
         var http = Substitute.For<IKrakenHttpClient>();
 
-        http.PostAsync<Dtos.ResponseDto<Dtos.OpenOrdersEnvelopeDto>>(
-                "/0/private/OpenOrders", Arg.Any<Dictionary<string, string>>(), true, Arg.Any<CancellationToken>())
-            .Returns(new Dtos.ResponseDto<Dtos.OpenOrdersEnvelopeDto>
+        http.PostResultPropertyAsync<Dictionary<string, Dtos.OrderDto>>(
+                "/0/private/OpenOrders", "open", Arg.Any<Dictionary<string, string>>(), true, Arg.Any<CancellationToken>())
+            .Returns(new Dictionary<string, Dtos.OrderDto>
             {
-                Result = new Dtos.OpenOrdersEnvelopeDto
-                {
-                    Open = new Dictionary<string, Dtos.OrderDto>
-                    {
-                        ["ORD-A"] = new Dtos.OrderDto { Descr = new Dtos.OrderDescrDto { Pair = "XBT/USDT", Side = "buy", OrderType = "limit", Price = "50000" }, Status = "open", Vol = "0.5" },
-                        ["ORD-B"] = new Dtos.OrderDto { Descr = new Dtos.OrderDescrDto { Pair = "XBT/USDT", Side = "sell", OrderType = "limit", Price = "55000" }, Status = "open", Vol = "0.3" }
-                    }
-                }
+                ["ORD-A"] = new Dtos.OrderDto { Descr = new Dtos.OrderDescrDto { Pair = "XBT/USDT", Side = "buy", OrderType = "limit", Price = "50000" }, Status = "open", Vol = "0.5" },
+                ["ORD-B"] = new Dtos.OrderDto { Descr = new Dtos.OrderDescrDto { Pair = "XBT/USDT", Side = "sell", OrderType = "limit", Price = "55000" }, Status = "open", Vol = "0.3" }
             });
 
         http.PostAsync<Dtos.ResponseDto<System.Text.Json.JsonElement>>(
@@ -616,6 +596,9 @@ public class KrakenMappingAndServiceTests
         placed.Should().NotBeNull();
         placed!["volume"].Should().Be("0.25");
     }
+
+    private static HttpResponseMessage Ok(string json) =>
+        new(HttpStatusCode.OK) { Content = new StringContent(json, Encoding.UTF8, "application/json") };
 
     private sealed class FakeHttpHandler(Func<HttpRequestMessage, HttpResponseMessage> respond)
         : HttpMessageHandler

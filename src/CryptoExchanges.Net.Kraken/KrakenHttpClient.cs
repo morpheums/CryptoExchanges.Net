@@ -78,6 +78,21 @@ internal sealed class KrakenHttpClient(HttpClient httpClient, ISymbolMapper symb
         return await ReadResultAsync<T>(response, ct).ConfigureAwait(false);
     }
 
+    /// <inheritdoc />
+    public async Task<T> PostResultPropertyAsync<T>(
+        string endpoint, string propertyKey, Dictionary<string, string>? parameters = null,
+        bool signed = true, CancellationToken ct = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(endpoint);
+        ArgumentException.ThrowIfNullOrWhiteSpace(propertyKey);
+        var form = ExchangeUrl.BuildQueryString(parameters);
+        using var content = new StringContent(form, Encoding.UTF8, "application/x-www-form-urlencoded");
+        using var request = new HttpRequestMessage(HttpMethod.Post, endpoint) { Content = content };
+        if (signed) KrakenSigningRequest.MarkSigned(request);
+        using var response = await httpClient.SendAsync(request, ct).ConfigureAwait(false);
+        return await ReadResultPropertyAsync<T>(response, propertyKey, ct).ConfigureAwait(false);
+    }
+
     /// <summary>
     /// Reads a Kraken 200 response, surfacing in-body errors. Kraken signals failures via a non-empty
     /// <c>error[]</c> array on an HTTP 200, which the shared (non-2xx) error pipeline never sees — so this
@@ -89,6 +104,25 @@ internal sealed class KrakenHttpClient(HttpClient httpClient, ISymbolMapper symb
         if (KrakenErrorTranslator.HasError(body))
             throw ErrorTranslator.Translate(response, body);
         return JsonSerializer.Deserialize<T>(body, JsonOptions)!;
+    }
+
+    /// <summary>
+    /// As <see cref="ReadResultAsync{T}"/> for the in-body error check, then extracts the named property
+    /// nested under <c>result</c> (Kraken wraps per-endpoint payloads under a named key) and deserializes
+    /// it as <typeparamref name="T"/>. Tolerates an absent <c>result</c> or property (returns <c>default</c>)
+    /// for no-NRE parity with the previously-defaulted envelope dictionaries.
+    /// </summary>
+    private static async Task<T> ReadResultPropertyAsync<T>(
+        HttpResponseMessage response, string propertyKey, CancellationToken ct)
+    {
+        var body = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
+        if (KrakenErrorTranslator.HasError(body))
+            throw ErrorTranslator.Translate(response, body);
+        using var doc = JsonDocument.Parse(body);
+        return doc.RootElement.TryGetProperty("result", out var result)
+            && result.TryGetProperty(propertyKey, out var element)
+                ? element.Deserialize<T>(JsonOptions)!
+                : default!;
     }
 
     private static string BuildUrl(string endpoint, Dictionary<string, string>? parameters)

@@ -48,7 +48,7 @@ internal static class CoinbaseClientComposer
 
         var inner = new SocketsHttpHandler { PooledConnectionLifetime = TimeSpan.FromMinutes(2) };
         var resilienceOptions = new CryptoExchanges.Net.Core.Resilience.ResilienceOptions();
-        var translator = new CoinbaseErrorTranslator();
+        var translator = new CryptoExchanges.Net.Coinbase.Resilience.CoinbaseErrorTranslator();
         var gate = new CryptoExchanges.Net.Http.ReactiveRateLimitGate();
 
         // A missing private key gets a no-op finalizer; full credentials are needed for signing.

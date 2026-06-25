@@ -41,7 +41,7 @@ internal sealed class CoinbaseMarketDataService(ICoinbaseHttpClient http, ISymbo
             return [modelMapper.Map<TickerDto, Ticker>(single)];
         }
 
-        var response = await http.GetAsync<TickerListResponseDto>("/api/v3/brokerage/products", signed: false, ct: ct).ConfigureAwait(false);
+        var response = await http.GetAsync<TickerEnvelopeDto>("/api/v3/brokerage/products", signed: false, ct: ct).ConfigureAwait(false);
         // The full universe can include pairs that don't resolve; skip those rather than failing the whole batch.
         return response.Products.SelectMany(TryMapTicker).ToList();
     }
@@ -55,7 +55,7 @@ internal sealed class CoinbaseMarketDataService(ICoinbaseHttpClient http, ISymbo
             ["limit"] = Math.Clamp(depth, 1, 1000).ToString(System.Globalization.CultureInfo.InvariantCulture)
         };
 
-        var response = await http.GetAsync<OrderBookResponseDto>("/api/v3/brokerage/product_book", parameters, false, ct).ConfigureAwait(false);
+        var response = await http.GetAsync<OrderBookEnvelopeDto>("/api/v3/brokerage/product_book", parameters, false, ct).ConfigureAwait(false);
         var book = response.Pricebook;
 
         var bids = book.Bids.Select(b => new OrderBookEntry(CoinbaseValueParsers.ParseDecimal(b.Price), CoinbaseValueParsers.ParseDecimal(b.Size))).ToList();
@@ -90,7 +90,7 @@ internal sealed class CoinbaseMarketDataService(ICoinbaseHttpClient http, ISymbo
         if (endTime.HasValue)
             parameters["end"] = endTime.Value.ToUnixTimeSeconds().ToString(System.Globalization.CultureInfo.InvariantCulture);
 
-        var response = await http.GetAsync<CandlesResponseDto>(
+        var response = await http.GetAsync<CandlesEnvelopeDto>(
             $"/api/v3/brokerage/products/{Uri.EscapeDataString(wire)}/candles", parameters, false, ct)
             .ConfigureAwait(false);
 
@@ -119,7 +119,7 @@ internal sealed class CoinbaseMarketDataService(ICoinbaseHttpClient http, ISymbo
             ["limit"] = Math.Clamp(limit, 1, CoinbaseRequestValidation.MaxTradesLimit).ToString(System.Globalization.CultureInfo.InvariantCulture)
         };
 
-        var response = await http.GetAsync<TradesResponseDto>("/api/v3/brokerage/market/market-trades", parameters, false, ct).ConfigureAwait(false);
+        var response = await http.GetAsync<TradesEnvelopeDto>("/api/v3/brokerage/market/market-trades", parameters, false, ct).ConfigureAwait(false);
 
         // Trade.Symbol is the caller's typed argument; no wire-string resolution needed here.
         return response.Trades.Select(t => new Trade(
@@ -135,7 +135,7 @@ internal sealed class CoinbaseMarketDataService(ICoinbaseHttpClient http, ISymbo
     /// <inheritdoc />
     public async Task<ExchangeInfo> GetExchangeInfoAsync(CancellationToken ct = default)
     {
-        var response = await http.GetAsync<ProductsResponseDto>("/api/v3/brokerage/products", signed: false, ct: ct).ConfigureAwait(false);
+        var response = await http.GetAsync<ProductsEnvelopeDto>("/api/v3/brokerage/products", signed: false, ct: ct).ConfigureAwait(false);
 
         // Products can include entries whose base/quote are not representable assets; skip those.
         var representable = response.Products

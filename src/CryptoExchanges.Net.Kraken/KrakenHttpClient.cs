@@ -1,6 +1,7 @@
 using System.Net.Http.Json;
 using System.Text;
 using CryptoExchanges.Net.Kraken.Internal;
+using CryptoExchanges.Net.Kraken.Resilience;
 using CryptoExchanges.Net.Http;
 
 namespace CryptoExchanges.Net.Kraken;

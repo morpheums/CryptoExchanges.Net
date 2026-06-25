@@ -1,6 +1,7 @@
 using System.Net.Http.Json;
 using System.Text;
 using CryptoExchanges.Net.Coinbase.Internal;
+using CryptoExchanges.Net.Coinbase.Resilience;
 using CryptoExchanges.Net.Http;
 
 namespace CryptoExchanges.Net.Coinbase;

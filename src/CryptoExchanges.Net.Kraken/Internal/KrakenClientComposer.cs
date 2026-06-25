@@ -39,7 +39,7 @@ internal static class KrakenClientComposer
 
         var inner = new SocketsHttpHandler { PooledConnectionLifetime = TimeSpan.FromMinutes(2) };
         var resilienceOptions = new ResilienceOptions();
-        var translator = new KrakenErrorTranslator();
+        var translator = new CryptoExchanges.Net.Kraken.Resilience.KrakenErrorTranslator();
         var gate = new CryptoExchanges.Net.Http.ReactiveRateLimitGate();
 
         // Signing handler (TASK-101) will replace PassThroughHandler when credentials are available.

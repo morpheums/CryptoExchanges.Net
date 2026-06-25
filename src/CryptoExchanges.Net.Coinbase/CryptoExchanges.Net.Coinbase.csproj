@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>CryptoExchanges.Net.Coinbase</RootNamespace>
+    <AssemblyName>CryptoExchanges.Net.Coinbase</AssemblyName>
+    <Description>Coinbase exchange implementation for CryptoExchanges.Net.</Description>
+    <PackageId>CryptoExchanges.Net.Coinbase</PackageId>
+    <NoWarn>$(NoWarn);CA1812;CA1056;CA1031;CA2000;CA1305;CA1032;CS1591</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CryptoExchanges.Net.Core\CryptoExchanges.Net.Core.csproj" />
+    <ProjectReference Include="..\CryptoExchanges.Net.Http\CryptoExchanges.Net.Http.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="CryptoExchanges.Net.Coinbase.Tests.Unit" />
+    <InternalsVisibleTo Include="CryptoExchanges.Net.Coinbase.Tests.Integration" />
+    <InternalsVisibleTo Include="DynamicProxyGenAssembly2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="DeltaMapper" Version="1.2.0" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.*" />
+    <PackageReference Include="Microsoft.Extensions.Http" Version="10.0.*" />
+    <PackageReference Include="Microsoft.Extensions.Options" Version="10.0.*" />
+  </ItemGroup>
+</Project>

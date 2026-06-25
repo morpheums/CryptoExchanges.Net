@@ -119,7 +119,8 @@ internal sealed class CoinbaseStreamProtocol : IStreamProtocol
         }
     }
 
-    // product_id extraction differs by channel: candles embeds it per candle; others have it at the event level.
+    // product_id location differs by channel: l2_data has it directly on the event; others embed
+    // it inside a nested array (candles→"candles", ticker→"tickers", market_trades→"trades").
     private static string? ExtractProductId(string pushChannel, JsonElement eventsArray)
     {
         var enumerator = eventsArray.EnumerateArray();
@@ -129,24 +130,31 @@ internal sealed class CoinbaseStreamProtocol : IStreamProtocol
         var firstEvent = enumerator.Current;
 
         if (string.Equals(pushChannel, "candles", StringComparison.Ordinal))
-        {
-            if (!firstEvent.TryGetProperty("candles"u8, out var candlesArr) ||
-                candlesArr.ValueKind != JsonValueKind.Array)
-                return null;
-            var candleEnum = candlesArr.EnumerateArray();
-            if (!candleEnum.MoveNext())
-                return null;
-            if (!candleEnum.Current.TryGetProperty("product_id"u8, out var pid) ||
-                pid.ValueKind != JsonValueKind.String)
-                return null;
-            return pid.GetString();
-        }
+            return ExtractProductIdFromNestedArray(firstEvent, "candles"u8);
+
+        if (string.Equals(pushChannel, "ticker", StringComparison.Ordinal))
+            return ExtractProductIdFromNestedArray(firstEvent, "tickers"u8);
+
+        if (string.Equals(pushChannel, "market_trades", StringComparison.Ordinal))
+            return ExtractProductIdFromNestedArray(firstEvent, "trades"u8);
 
         if (!firstEvent.TryGetProperty("product_id"u8, out var productIdProp) ||
             productIdProp.ValueKind != JsonValueKind.String)
             return null;
 
         return productIdProp.GetString();
+    }
+
+    private static string? ExtractProductIdFromNestedArray(JsonElement eventEl, ReadOnlySpan<byte> arrayPropertyName)
+    {
+        if (!eventEl.TryGetProperty(arrayPropertyName, out var arr) || arr.ValueKind != JsonValueKind.Array)
+            return null;
+        var inner = arr.EnumerateArray();
+        if (!inner.MoveNext())
+            return null;
+        if (!inner.Current.TryGetProperty("product_id"u8, out var pid) || pid.ValueKind != JsonValueKind.String)
+            return null;
+        return pid.GetString();
     }
 
     private static string BuildRoutingKey(StreamKind kind, string wireSymbol)

@@ -33,7 +33,8 @@ internal static class CoinbaseStreamDecoders
 
         registry.Register(StreamKind.Ticker, bytes =>
         {
-            var dto = DeserializeFirstEvent<StreamTickerDto>(bytes)!;
+            // Real Coinbase ticker frame: events[0].tickers[0] holds the data.
+            var dto = DeserializeFirstItemInNestedArray<StreamTickerDto>(bytes, "tickers"u8)!;
             var symbol = symbolMapper.FromWire(dto.ProductId);
             return new Ticker(
                 Symbol: symbol,
@@ -99,6 +100,32 @@ internal static class CoinbaseStreamDecoders
         });
 
         return registry;
+    }
+
+    // Unwraps the outer events array, navigates into a named nested array, and deserializes the first element as T.
+    // Used for channels (e.g. ticker) where real Coinbase embeds data in events[0].<arrayName>[0].
+    private static T? DeserializeFirstItemInNestedArray<T>(ReadOnlyMemory<byte> frame, ReadOnlySpan<byte> arrayPropertyName)
+    {
+        var reader = new Utf8JsonReader(frame.Span);
+        using var doc = JsonDocument.ParseValue(ref reader);
+        if (!doc.RootElement.TryGetProperty("events"u8, out var events) ||
+            events.ValueKind != JsonValueKind.Array)
+            throw new InvalidOperationException(
+                $"Coinbase push frame missing or non-array 'events'; cannot decode {typeof(T).Name}.");
+        var evtEnum = events.EnumerateArray();
+        if (!evtEnum.MoveNext())
+            throw new InvalidOperationException(
+                $"Coinbase 'events' array is empty; cannot decode {typeof(T).Name}.");
+        var firstEvent = evtEnum.Current;
+        if (!firstEvent.TryGetProperty(arrayPropertyName, out var nested) ||
+            nested.ValueKind != JsonValueKind.Array)
+            throw new InvalidOperationException(
+                $"Coinbase event missing nested array; cannot decode {typeof(T).Name}.");
+        var innerEnum = nested.EnumerateArray();
+        if (!innerEnum.MoveNext())
+            throw new InvalidOperationException(
+                $"Coinbase nested array is empty; cannot decode {typeof(T).Name}.");
+        return innerEnum.Current.Deserialize<T>(JsonOpts);
     }
 
     // Unwraps the outer events array and deserializes the first element as T.

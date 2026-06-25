@@ -47,12 +47,13 @@ public class CoinbaseStreamDecodeTests
         var registry = BuildRegistry();
         var decoder = registry.Resolve(StreamKind.Ticker);
 
+        // Real Coinbase ticker format: events[0].tickers[0] holds the data.
         var frame = Utf8Bytes(
-            "{\"channel\":\"ticker\",\"events\":[{\"product_id\":\"BTC-USD\"," +
+            "{\"channel\":\"ticker\",\"events\":[{\"type\":\"snapshot\",\"tickers\":[{\"product_id\":\"BTC-USD\"," +
             "\"price\":\"67000.00\",\"price_percent_chg_24h\":\"1.5\"," +
             "\"high_24h\":\"68000.00\",\"low_24h\":\"64000.00\"," +
             "\"volume_24h\":\"12345.678\",\"volume_24h_usd\":\"826000000.00\"," +
-            "\"time\":\"2024-06-19T00:00:01Z\"}]}");
+            "\"time\":\"2024-06-19T00:00:01Z\"}]}]}");
 
         var result = (Ticker)decoder(frame);
 

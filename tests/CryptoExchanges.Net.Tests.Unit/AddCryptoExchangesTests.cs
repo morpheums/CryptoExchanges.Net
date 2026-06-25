@@ -31,6 +31,18 @@ public class AddCryptoExchangesTests
             .Should().Be(ExchangeId.Kucoin);
     }
 
+    /// <summary>Asserts that <c>AddCryptoExchanges()</c> registers a resolvable keyed <see cref="IExchangeClient"/> for Coinbase.</summary>
+    [Fact]
+    public async Task AddCryptoExchanges_IncludesCoinbase()
+    {
+        var services = new ServiceCollection();
+        services.AddCryptoExchanges();
+        await using var sp = services.BuildServiceProvider();
+
+        var client = sp.GetRequiredKeyedService<IExchangeClient>(ExchangeId.Coinbase);
+        client.ExchangeId.Should().Be(ExchangeId.Coinbase);
+    }
+
     /// <summary>Validates that <c>CryptoExchangesOptions.BinanceApiKey</c> flows through <c>AddCryptoExchanges</c> into the resolved <see cref="BinanceOptions"/>.</summary>
     [Fact]
     public async Task AddCryptoExchanges_OptionsFlow_ReachesExchangeOptions()

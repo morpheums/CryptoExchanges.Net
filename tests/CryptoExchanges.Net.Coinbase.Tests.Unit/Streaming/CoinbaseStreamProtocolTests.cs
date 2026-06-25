@@ -21,7 +21,8 @@ public class CoinbaseStreamProtocolTests
     public void Classify_TickerDataFrame_ReturnsDataWithRoutingKey()
     {
         var protocol = MakeProtocol();
-        var frame = Utf8("{\"channel\":\"ticker\",\"events\":[{\"product_id\":\"BTC-USD\",\"tickers\":[{}]}]}");
+        // product_id is inside tickers[0], not at the event level (real Coinbase format).
+        var frame = Utf8("{\"channel\":\"ticker\",\"events\":[{\"type\":\"snapshot\",\"tickers\":[{\"product_id\":\"BTC-USD\",\"price\":\"50000\"}]}]}");
 
         var result = protocol.Classify(frame);
 
@@ -33,7 +34,8 @@ public class CoinbaseStreamProtocolTests
     public void Classify_TradeDataFrame_ReturnsDataWithRoutingKey()
     {
         var protocol = MakeProtocol();
-        var frame = Utf8("{\"channel\":\"market_trades\",\"events\":[{\"product_id\":\"ETH-USD\",\"trades\":[]}]}");
+        // product_id is inside trades[0], not at the event level (real Coinbase format).
+        var frame = Utf8("{\"channel\":\"market_trades\",\"events\":[{\"type\":\"snapshot\",\"trades\":[{\"product_id\":\"ETH-USD\",\"price\":\"2000\",\"size\":\"0.001\",\"side\":\"BUY\",\"time\":\"2024-01-01T00:00:00Z\",\"trade_id\":\"1\"}]}]}");
 
         var result = protocol.Classify(frame);
 
@@ -282,7 +284,7 @@ public class CoinbaseStreamProtocolTests
     {
         var protocol = MakeProtocol();
         var request = new StreamRequest(StreamKind.Ticker, "BTC-USD");
-        var frame = Utf8("{\"channel\":\"ticker\",\"events\":[{\"product_id\":\"BTC-USD\",\"tickers\":[{}]}]}");
+        var frame = Utf8("{\"channel\":\"ticker\",\"events\":[{\"type\":\"snapshot\",\"tickers\":[{\"product_id\":\"BTC-USD\",\"price\":\"50000\"}]}]}");
 
         var subscribeKey = protocol.RoutingKeyFor(request);
         var classifiedKey = protocol.Classify(frame).RoutingKey;

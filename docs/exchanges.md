@@ -1,6 +1,6 @@
 # Exchanges
 
-CryptoExchanges.Net supports five exchanges today.
+CryptoExchanges.Net supports six exchanges today.
 All supported exchanges expose the same `IExchangeClient` interface (REST, spot).
 
 ---
@@ -252,6 +252,62 @@ services.AddKucoinStreams();  // opt-in — REST-only consumers skip this
 
 ---
 
+### Coinbase
+
+<img src="assets/exchanges/coinbase.svg" alt="Coinbase" width="32" height="32" />
+
+| | |
+|---|---|
+| **Package** | `CryptoExchanges.Net.Coinbase` |
+| **Client class** | `CoinbaseExchangeClient` |
+| **Credentials** | `ApiKey`, `PrivateKey` |
+| **Env vars** | `COINBASE_API_KEY`, `COINBASE_PRIVATE_KEY` |
+| **Signing** | JWT/ES256 (ECDSA P-256) |
+| **Endpoints** | REST v3 brokerage spot |
+| **Symbol format** | `BTC-USD` (dash-separated) |
+| **Streaming** | Public market-data streams (ticker, trade, order book, kline) |
+
+> **JWT signing.** Coinbase Advanced Trade uses ES256 JWT tokens (not HMAC). The `PrivateKey` is an
+> EC private key in PEM format. Supply it via `PrivateKey` or `COINBASE_PRIVATE_KEY`.
+
+```bash
+dotnet add package CryptoExchanges.Net.Coinbase
+```
+
+```csharp
+using CryptoExchanges.Net.Coinbase;
+
+await using var client = CoinbaseExchangeClient.Create(new CoinbaseOptions
+{
+    ApiKey     = "...",
+    PrivateKey = "-----BEGIN EC PRIVATE KEY-----\n...\n-----END EC PRIVATE KEY-----"
+});
+```
+
+```csharp
+// From environment variables (COINBASE_API_KEY / COINBASE_PRIVATE_KEY)
+await using var client = CoinbaseExchangeClient.CreateFromEnvironment();
+```
+
+DI registration:
+
+```csharp
+services.AddCoinbaseExchange(opt =>
+{
+    opt.ApiKey     = configuration["Coinbase:ApiKey"];
+    opt.PrivateKey = configuration["Coinbase:PrivateKey"];
+});
+```
+
+Public streaming:
+
+```csharp
+services.AddCoinbaseExchange(opt => { /* credentials */ });
+services.AddCoinbaseStreams();  // opt-in — REST-only consumers skip this
+```
+
+---
+
 ## Register all exchanges at once
 
 `CryptoExchanges.Net` provides a single `AddCryptoExchanges()` call that
@@ -283,6 +339,9 @@ services.AddCryptoExchanges(opt =>
     opt.KucoinApiKey     = configuration["Kucoin:ApiKey"];
     opt.KucoinSecretKey  = configuration["Kucoin:SecretKey"];
     opt.KucoinPassphrase = configuration["Kucoin:Passphrase"];
+
+    opt.CoinbaseApiKey     = configuration["Coinbase:ApiKey"];
+    opt.CoinbasePrivateKey = configuration["Coinbase:PrivateKey"];
 });
 ```
 
@@ -296,7 +355,8 @@ IExchangeClient binance = factory.GetClient(ExchangeId.Binance);
 IExchangeClient bybit   = factory.GetClient(ExchangeId.Bybit);
 IExchangeClient okx     = factory.GetClient(ExchangeId.Okx);
 IExchangeClient bitget  = factory.GetClient(ExchangeId.Bitget);
-IExchangeClient kucoin  = factory.GetClient(ExchangeId.Kucoin);
+IExchangeClient kucoin   = factory.GetClient(ExchangeId.Kucoin);
+IExchangeClient coinbase = factory.GetClient(ExchangeId.Coinbase);
 ```
 
 ---
@@ -305,7 +365,6 @@ IExchangeClient kucoin  = factory.GetClient(ExchangeId.Kucoin);
 
 | Exchange | Package |
 |----------|---------|
-| <img src="assets/exchanges/coinbase.svg" alt="Coinbase" width="20" height="20" /> Coinbase | `CryptoExchanges.Net.Coinbase` |
 | <img src="assets/exchanges/kraken.svg" alt="Kraken" width="20" height="20" /> Kraken | `CryptoExchanges.Net.Kraken` |
 
 These exchange IDs are present in the `ExchangeId` enum but are not yet implemented.

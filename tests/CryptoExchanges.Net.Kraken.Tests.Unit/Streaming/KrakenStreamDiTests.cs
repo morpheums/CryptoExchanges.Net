@@ -17,7 +17,8 @@ public class KrakenStreamDiTests
     private static ServiceProvider Build()
     {
         var services = new ServiceCollection();
-        services.AddKrakenExchange(o => { o.ApiKey = "k"; o.ApiSecret = "s"; });
+        // No-network DI wiring test: credentials are never used, so none are configured.
+        services.AddKrakenExchange();
         services.AddKrakenStreams();
         return services.BuildServiceProvider();
     }

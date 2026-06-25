@@ -714,6 +714,89 @@ public class KrakenMappingAndServiceTests
         placed["price2"].Should().Be("44000");
     }
 
+    [Fact]
+    public async Task Trading_GetOrderHistory_OrdersByCloseTimeDescending_AppliesLimit()
+    {
+        // ClosedOrders enumeration order is non-deterministic; the service must sort most-recent-first
+        // before Take(limit) so the latest N are returned in order, not an arbitrary subset.
+        var (symbolMapper, mapper) = BuildMappers();
+        var http = Substitute.For<IKrakenHttpClient>();
+
+        http.PostResultPropertyAsync<Dictionary<string, Dtos.OrderDto>>(
+                "/0/private/ClosedOrders", "closed", Arg.Any<Dictionary<string, string>>(), true, Arg.Any<CancellationToken>())
+            .Returns(new Dictionary<string, Dtos.OrderDto>
+            {
+                ["OLD"] = ClosedOrder(closeTime: 100m),
+                ["NEW"] = ClosedOrder(closeTime: 300m),
+                ["MID"] = ClosedOrder(closeTime: 200m)
+            });
+
+        var service = new KrakenTradingService(http, symbolMapper, mapper);
+        var orders = await service.GetOrderHistoryAsync(BtcUsdt, limit: 2, ct: TestContext.Current.CancellationToken);
+
+        orders.Select(o => o.OrderId).Should().Equal("NEW", "MID");
+    }
+
+    [Fact]
+    public async Task Trading_CancelOrderByClientId_MultipleClosed_ReturnsMostRecentTxId()
+    {
+        // When several closed orders share the userref, selection must be deterministic (most recent by
+        // close time), not the arbitrary first dictionary entry.
+        var (symbolMapper, mapper) = BuildMappers();
+        var http = Substitute.For<IKrakenHttpClient>();
+
+        http.PostAsync<Dtos.ResponseDto<System.Text.Json.JsonElement>>(
+                "/0/private/CancelOrder", Arg.Any<Dictionary<string, string>>(), true, Arg.Any<CancellationToken>())
+            .Returns(new Dtos.ResponseDto<System.Text.Json.JsonElement>());
+
+        http.PostResultPropertyAsync<Dictionary<string, Dtos.OrderDto>>(
+                "/0/private/ClosedOrders", "closed", Arg.Any<Dictionary<string, string>>(), true, Arg.Any<CancellationToken>())
+            .Returns(new Dictionary<string, Dtos.OrderDto>
+            {
+                ["ORD-OLD"] = ClosedOrder(closeTime: 100m, userRef: 42),
+                ["ORD-NEW"] = ClosedOrder(closeTime: 300m, userRef: 42),
+                ["ORD-MID"] = ClosedOrder(closeTime: 200m, userRef: 42)
+            });
+
+        var service = new KrakenTradingService(http, symbolMapper, mapper);
+        var order = await service.CancelOrderByClientIdAsync(BtcUsdt, "42", TestContext.Current.CancellationToken);
+
+        order.OrderId.Should().Be("ORD-NEW");
+        order.ClientOrderId.Should().Be("42");
+    }
+
+    [Fact]
+    public async Task Account_GetTradeHistory_OrdersByTimeDescending_AppliesLimit()
+    {
+        // TradesHistory enumeration order is non-deterministic; the service must sort most-recent-first
+        // before Take(limit) so the latest N fills are returned in order, not an arbitrary subset.
+        var (symbolMapper, mapper) = BuildMappers();
+        var http = Substitute.For<IKrakenHttpClient>();
+
+        http.PostResultPropertyAsync<Dictionary<string, Dtos.FillDto>>(
+                "/0/private/TradesHistory", "trades", Arg.Any<Dictionary<string, string>>(), true, Arg.Any<CancellationToken>())
+            .Returns(new Dictionary<string, Dtos.FillDto>
+            {
+                ["T-OLD"] = new Dtos.FillDto { Pair = "XBT/USDT", Price = "1", Volume = "0.1", Time = 100m, Side = "buy" },
+                ["T-NEW"] = new Dtos.FillDto { Pair = "XBT/USDT", Price = "3", Volume = "0.1", Time = 300m, Side = "buy" },
+                ["T-MID"] = new Dtos.FillDto { Pair = "XBT/USDT", Price = "2", Volume = "0.1", Time = 200m, Side = "buy" }
+            });
+
+        var service = new KrakenAccountService(http, symbolMapper, mapper);
+        var trades = await service.GetTradeHistoryAsync(BtcUsdt, limit: 2, ct: TestContext.Current.CancellationToken);
+
+        trades.Select(t => t.Price).Should().Equal(3m, 2m);
+    }
+
+    private static Dtos.OrderDto ClosedOrder(decimal closeTime, int? userRef = null) => new()
+    {
+        Descr = new Dtos.OrderDescrDto { Pair = "XBT/USDT", Side = "buy", OrderType = "limit", Price = "50000" },
+        Status = "closed",
+        Vol = "0.1",
+        CloseTime = closeTime,
+        UserRef = userRef
+    };
+
     private static HttpResponseMessage Ok(string json) =>
         new(HttpStatusCode.OK) { Content = new StringContent(json, Encoding.UTF8, "application/json") };
 

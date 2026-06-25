@@ -393,16 +393,4 @@ public class CoinbaseStreamProtocolTests
 
         info.Endpoint.Should().Be(new Uri("wss://advanced-trade-ws-user.coinbase.com"));
     }
-
-    [Fact]
-    public void HeartbeatsSubscribeFrame_IsValidJson()
-    {
-        var ex = Record.Exception(() => JsonDocument.Parse(CoinbaseStreamProtocol.HeartbeatsSubscribeFrame));
-        ex.Should().BeNull("heartbeats subscribe frame must be valid JSON");
-
-        using var doc = JsonDocument.Parse(CoinbaseStreamProtocol.HeartbeatsSubscribeFrame);
-        doc.RootElement.GetProperty("type").GetString().Should().Be("subscribe");
-        doc.RootElement.GetProperty("channel").GetString().Should().Be("heartbeats");
-        doc.RootElement.GetProperty("product_ids").GetArrayLength().Should().Be(0);
-    }
 }

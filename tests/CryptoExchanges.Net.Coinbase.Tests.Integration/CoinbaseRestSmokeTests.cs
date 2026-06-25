@@ -8,10 +8,9 @@ using CryptoExchanges.Net.Core.Models;
 namespace CryptoExchanges.Net.Coinbase.Tests.Integration;
 
 /// <summary>
-/// Live integration smoke tests for the Coinbase REST client. Tests self-skip when
-/// <c>COINBASE_API_KEY</c> is not set or when the REST endpoint is unreachable, so the
-/// default non-integration gate (<c>dotnet test --filter 'Category!=Integration'</c>)
-/// is unaffected.
+/// Live integration smoke tests for the Coinbase REST client. Public tests self-skip when the REST
+/// endpoint is unreachable; credentialed tests self-skip when <c>COINBASE_API_KEY</c> is not set, so the
+/// default non-integration gate (<c>dotnet test --filter 'Category!=Integration'</c>) is unaffected.
 /// </summary>
 [Trait("Category", "Integration")]
 [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1001:Types that own disposable fields should be disposable", Justification = "Disposed in DisposeAsync")]

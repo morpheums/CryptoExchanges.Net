@@ -11,12 +11,8 @@ internal sealed class CoinbaseStreamProtocol : IStreamProtocol
         Interval: TimeSpan.FromSeconds(30),
         Timeout: TimeSpan.FromSeconds(60));
 
-    // Heartbeats channel subscribe — sent on connect/reconnect so idle sockets stay open (ADR-010-007).
-    internal const string HeartbeatsSubscribeFrame =
-        "{\"type\":\"subscribe\",\"channel\":\"heartbeats\",\"product_ids\":[]}";
-
-    internal const string HeartbeatsUnsubscribeFrame =
-        "{\"type\":\"unsubscribe\",\"channel\":\"heartbeats\",\"product_ids\":[]}";
+    // Proactive "heartbeats" channel keepalive is not wired (no connect-time protocol hook; the engine only
+    // replays the stored subscribe-set). Liveness is handled by the engine's heartbeat watchdog (s_heartbeatPolicy).
 
     // level2 subscribe frames → push frames arrive as "l2_data"; routing key uses the push channel.
     private const string OrderBookSubscribeChannel = "level2";

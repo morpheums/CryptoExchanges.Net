@@ -84,7 +84,11 @@ internal sealed class KrakenTradingService(IKrakenHttpClient http, ISymbolMapper
         };
         var closed = await http.PostResultPropertyAsync<Dictionary<string, OrderDto>>(
             "/0/private/ClosedOrders", "closed", closedParams, signed: true, ct: ct).ConfigureAwait(false) ?? [];
-        var (txId, dto) = closed.FirstOrDefault();
+        // The dictionary's enumeration order is non-deterministic; if multiple closed orders share the
+        // userref, pick the most recent by close time so we return a stable, correct txid.
+        var (txId, dto) = closed
+            .OrderByDescending(kv => kv.Value.CloseTime)
+            .FirstOrDefault();
         if (dto is null)
             // The exchange txid is unknown here; carry the client id in ClientOrderId, never in OrderId.
             return new Order(symbol, string.Empty, ClientOrderId: clientOrderId, Status: OrderStatus.Canceled);
@@ -155,8 +159,11 @@ internal sealed class KrakenTradingService(IKrakenHttpClient http, ISymbolMapper
             "/0/private/ClosedOrders", "closed", parameters, signed: true, ct: ct).ConfigureAwait(false) ?? [];
 
         var wireSymbol = symbolMapper.ToWire(symbol);
+        // Kraken returns ClosedOrders as a dictionary with non-deterministic enumeration order;
+        // sort most-recent-first by close time so Take(limit) yields the latest N, not an arbitrary subset.
         return orders
             .Where(kv => string.Equals(kv.Value.Descr.Pair, wireSymbol, StringComparison.OrdinalIgnoreCase))
+            .OrderByDescending(kv => kv.Value.CloseTime)
             .Take(limit)
             .Select(kv => MapOrder(kv.Key, kv.Value))
             .ToList();

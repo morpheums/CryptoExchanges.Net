@@ -58,10 +58,13 @@ internal sealed class KrakenAccountService(IKrakenHttpClient http, ISymbolMapper
         IEnumerable<FillDto> fills = trades.Values;
         var wireSymbol = symbolMapper.ToWire(symbol);
 
+        // Kraken returns TradesHistory as a dictionary with non-deterministic enumeration order;
+        // sort most-recent-first by fill time so Take(limit) yields the latest N, not an arbitrary subset.
         return fills
             .Where(f => string.Equals(f.Pair, wireSymbol, StringComparison.OrdinalIgnoreCase))
-            .Select(f => modelMapper.Map<FillDto, Trade>(f))
+            .OrderByDescending(f => f.Time)
             .Take(limit)
+            .Select(f => modelMapper.Map<FillDto, Trade>(f))
             .ToList();
     }
 

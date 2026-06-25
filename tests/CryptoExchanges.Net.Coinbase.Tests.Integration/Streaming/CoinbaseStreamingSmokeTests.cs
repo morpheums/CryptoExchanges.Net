@@ -185,7 +185,7 @@ public class CoinbaseStreamingSmokeTests
             var orderBook = await received.Task.WaitAsync(MultiSymbolReceiveTimeout, TestContext.Current.CancellationToken);
             orderBook.Should().NotBeNull();
             (orderBook.Bids.Count + orderBook.Asks.Count).Should().BeGreaterThan(0);
-            // No reconnect loop: all subscriptions must remain Live (not Reconnecting/Closed).
+            // No reconnect loop: at least one subscription must remain Live.
             subscriptions.Should().Contain(s => s.State == StreamConnectionState.Live);
         }
         finally

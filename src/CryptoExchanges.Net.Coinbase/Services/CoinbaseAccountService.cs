@@ -53,9 +53,9 @@ internal sealed class CoinbaseAccountService(ICoinbaseHttpClient http, ISymbolMa
         if (endTime.HasValue)
             parameters["end_sequence_timestamp"] = endTime.Value.ToString("O", System.Globalization.CultureInfo.InvariantCulture);
 
-        var response = await http.GetAsync<FillsEnvelopeDto>("/api/v3/brokerage/orders/historical/fills", parameters, true, ct).ConfigureAwait(false);
+        var fills = await http.GetPropertyAsync<List<FillDto>>("/api/v3/brokerage/orders/historical/fills", "fills", parameters, true, ct).ConfigureAwait(false) ?? [];
 
-        return response.Fills.Select(f => new Trade(
+        return fills.Select(f => new Trade(
             symbol,
             f.TradeId,
             CoinbaseValueParsers.ParseDecimal(f.Price),
@@ -67,9 +67,6 @@ internal sealed class CoinbaseAccountService(ICoinbaseHttpClient http, ISymbolMa
         )).ToList();
     }
 
-    private async Task<IReadOnlyList<AccountDto>> FetchAccountsAsync(CancellationToken ct)
-    {
-        var response = await http.GetAsync<AccountsEnvelopeDto>("/api/v3/brokerage/accounts", signed: true, ct: ct).ConfigureAwait(false);
-        return response.Accounts;
-    }
+    private async Task<IReadOnlyList<AccountDto>> FetchAccountsAsync(CancellationToken ct) =>
+        await http.GetPropertyAsync<List<AccountDto>>("/api/v3/brokerage/accounts", "accounts", signed: true, ct: ct).ConfigureAwait(false) ?? [];
 }

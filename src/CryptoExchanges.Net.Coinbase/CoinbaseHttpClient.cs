@@ -75,6 +75,46 @@ internal sealed class CoinbaseHttpClient(HttpClient httpClient) : ICoinbaseHttpC
         return (await response.Content.ReadFromJsonAsync<T>(JsonOptions, ct).ConfigureAwait(false))!;
     }
 
+    /// <inheritdoc />
+    public async Task<T> GetPropertyAsync<T>(
+        string endpoint, string propertyKey,
+        Dictionary<string, string>? parameters = null, bool signed = false, CancellationToken ct = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(endpoint);
+        ArgumentException.ThrowIfNullOrWhiteSpace(propertyKey);
+        using var request = new HttpRequestMessage(HttpMethod.Get, BuildUrl(endpoint, parameters));
+        if (signed) CoinbaseSigningRequest.MarkSigned(request);
+        using var response = await httpClient.SendAsync(request, ct).ConfigureAwait(false);
+        return await ReadPropertyAsync<T>(response, propertyKey, ct).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public async Task<T> PostPropertyAsync<T>(
+        string endpoint, string propertyKey,
+        object body, bool signed = true, CancellationToken ct = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(endpoint);
+        ArgumentException.ThrowIfNullOrWhiteSpace(propertyKey);
+        ArgumentNullException.ThrowIfNull(body);
+        var json = JsonSerializer.Serialize(body, JsonOptions);
+        using var content = new StringContent(json, Encoding.UTF8, "application/json");
+        using var request = new HttpRequestMessage(HttpMethod.Post, endpoint) { Content = content };
+        if (signed) CoinbaseSigningRequest.MarkSigned(request);
+        using var response = await httpClient.SendAsync(request, ct).ConfigureAwait(false);
+        return await ReadPropertyAsync<T>(response, propertyKey, ct).ConfigureAwait(false);
+    }
+
+    // Coinbase wraps each endpoint's payload under a per-endpoint property name; extract it here so
+    // the DTO/service layers see canonical types only. TryGetProperty tolerates unexpected shapes.
+    private static async Task<T> ReadPropertyAsync<T>(HttpResponseMessage response, string propertyKey, CancellationToken ct)
+    {
+        using var stream = await response.Content.ReadAsStreamAsync(ct).ConfigureAwait(false);
+        using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: ct).ConfigureAwait(false);
+        return doc.RootElement.TryGetProperty(propertyKey, out var element)
+            ? element.Deserialize<T>(JsonOptions)!
+            : default!;
+    }
+
     private static string BuildUrl(string endpoint, Dictionary<string, string>? parameters)
     {
         var query = ExchangeUrl.BuildQueryString(parameters);

@@ -17,4 +17,10 @@ internal interface ICoinbaseHttpClient
 
     /// <summary>Sends a DELETE and deserializes the JSON response.</summary>
     Task<T> DeleteAsync<T>(string endpoint, Dictionary<string, string>? parameters = null, bool signed = true, CancellationToken ct = default);
+
+    /// <summary>Sends a GET and returns the named JSON property (Coinbase's per-endpoint envelope) deserialized as <typeparamref name="T"/>; <c>default</c> when absent.</summary>
+    Task<T> GetPropertyAsync<T>(string endpoint, string propertyKey, Dictionary<string, string>? parameters = null, bool signed = false, CancellationToken ct = default);
+
+    /// <summary>Sends a POST with <paramref name="body"/> and returns the named JSON property (Coinbase's per-endpoint envelope) deserialized as <typeparamref name="T"/>; <c>default</c> when absent.</summary>
+    Task<T> PostPropertyAsync<T>(string endpoint, string propertyKey, object body, bool signed = true, CancellationToken ct = default);
 }

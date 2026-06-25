@@ -38,7 +38,7 @@ internal sealed class CoinbaseTradingService(ICoinbaseHttpClient http, ISymbolMa
         ArgumentException.ThrowIfNullOrWhiteSpace(orderId);
 
         var body = new { order_ids = new[] { orderId } };
-        await http.PostAsync<CancelOrdersEnvelopeDto>("/api/v3/brokerage/orders/batch_cancel", body, true, ct).ConfigureAwait(false);
+        await http.PostPropertyAsync<List<CancelOrderEntryDto>>("/api/v3/brokerage/orders/batch_cancel", "results", body, true, ct).ConfigureAwait(false);
 
         return await FetchOrderAsync(orderId, ct).ConfigureAwait(false);
     }
@@ -77,9 +77,9 @@ internal sealed class CoinbaseTradingService(ICoinbaseHttpClient http, ISymbolMa
             return [];
 
         var body = new { order_ids = orderIds };
-        var cancelResponse = await http.PostAsync<CancelOrdersEnvelopeDto>("/api/v3/brokerage/orders/batch_cancel", body, true, ct).ConfigureAwait(false);
+        var cancelResults = await http.PostPropertyAsync<List<CancelOrderEntryDto>>("/api/v3/brokerage/orders/batch_cancel", "results", body, true, ct).ConfigureAwait(false) ?? [];
 
-        var canceledIds = cancelResponse.Results
+        var canceledIds = cancelResults
             .Where(r => r.Success)
             .Select(r => r.OrderId)
             .ToHashSet(StringComparer.Ordinal);
@@ -108,8 +108,8 @@ internal sealed class CoinbaseTradingService(ICoinbaseHttpClient http, ISymbolMa
         if (symbol.HasValue)
             parameters["product_id"] = symbolMapper.ToWire(symbol.Value);
 
-        var response = await http.GetAsync<OrdersEnvelopeDto>("/api/v3/brokerage/orders/historical/batch", parameters, true, ct).ConfigureAwait(false);
-        return modelMapper.Map<OrderDto, Order>(response.Orders);
+        var orders = await http.GetPropertyAsync<List<OrderDto>>("/api/v3/brokerage/orders/historical/batch", "orders", parameters, true, ct).ConfigureAwait(false) ?? [];
+        return modelMapper.Map<OrderDto, Order>(orders);
     }
 
     /// <inheritdoc />
@@ -133,18 +133,18 @@ internal sealed class CoinbaseTradingService(ICoinbaseHttpClient http, ISymbolMa
         if (endTime.HasValue)
             parameters["end_date"] = endTime.Value.ToString("O", System.Globalization.CultureInfo.InvariantCulture);
 
-        var response = await http.GetAsync<OrdersEnvelopeDto>("/api/v3/brokerage/orders/historical/batch", parameters, true, ct).ConfigureAwait(false);
-        return modelMapper.Map<OrderDto, Order>(response.Orders);
+        var orders = await http.GetPropertyAsync<List<OrderDto>>("/api/v3/brokerage/orders/historical/batch", "orders", parameters, true, ct).ConfigureAwait(false) ?? [];
+        return modelMapper.Map<OrderDto, Order>(orders);
     }
 
     private async Task<Order> FetchOrderAsync(string orderId, CancellationToken ct)
     {
-        var response = await http.GetAsync<OrderEnvelopeDto>(
-            $"/api/v3/brokerage/orders/historical/{Uri.EscapeDataString(orderId)}", signed: true, ct: ct)
+        var dto = await http.GetPropertyAsync<OrderDto?>(
+            $"/api/v3/brokerage/orders/historical/{Uri.EscapeDataString(orderId)}", "order", signed: true, ct: ct)
             .ConfigureAwait(false);
 
-        if (response.Order is { } dto)
-            return modelMapper.Map<OrderDto, Order>(dto);
+        if (dto is { } order)
+            return modelMapper.Map<OrderDto, Order>(order);
 
         // Order did not surface (e.g. just placed and not yet propagated); return a minimal record.
         return new Order(default, orderId);

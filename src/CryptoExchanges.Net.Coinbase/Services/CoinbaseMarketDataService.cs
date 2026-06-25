@@ -41,9 +41,9 @@ internal sealed class CoinbaseMarketDataService(ICoinbaseHttpClient http, ISymbo
             return [modelMapper.Map<TickerDto, Ticker>(single)];
         }
 
-        var response = await http.GetAsync<TickerEnvelopeDto>("/api/v3/brokerage/products", signed: false, ct: ct).ConfigureAwait(false);
+        var products = await http.GetPropertyAsync<List<TickerDto>>("/api/v3/brokerage/products", "products", signed: false, ct: ct).ConfigureAwait(false) ?? [];
         // The full universe can include pairs that don't resolve; skip those rather than failing the whole batch.
-        return response.Products.SelectMany(TryMapTicker).ToList();
+        return products.SelectMany(TryMapTicker).ToList();
     }
 
     /// <inheritdoc />
@@ -55,8 +55,7 @@ internal sealed class CoinbaseMarketDataService(ICoinbaseHttpClient http, ISymbo
             ["limit"] = Math.Clamp(depth, 1, 1000).ToString(System.Globalization.CultureInfo.InvariantCulture)
         };
 
-        var response = await http.GetAsync<OrderBookEnvelopeDto>("/api/v3/brokerage/product_book", parameters, false, ct).ConfigureAwait(false);
-        var book = response.Pricebook;
+        var book = await http.GetPropertyAsync<OrderBookDto>("/api/v3/brokerage/product_book", "pricebook", parameters, false, ct).ConfigureAwait(false) ?? new OrderBookDto();
 
         var bids = book.Bids.Select(b => new OrderBookEntry(CoinbaseValueParsers.ParseDecimal(b.Price), CoinbaseValueParsers.ParseDecimal(b.Size))).ToList();
         var asks = book.Asks.Select(a => new OrderBookEntry(CoinbaseValueParsers.ParseDecimal(a.Price), CoinbaseValueParsers.ParseDecimal(a.Size))).ToList();
@@ -90,11 +89,11 @@ internal sealed class CoinbaseMarketDataService(ICoinbaseHttpClient http, ISymbo
         if (endTime.HasValue)
             parameters["end"] = endTime.Value.ToUnixTimeSeconds().ToString(System.Globalization.CultureInfo.InvariantCulture);
 
-        var response = await http.GetAsync<CandlesEnvelopeDto>(
-            $"/api/v3/brokerage/products/{Uri.EscapeDataString(wire)}/candles", parameters, false, ct)
-            .ConfigureAwait(false);
+        var candles = await http.GetPropertyAsync<List<CandlestickDto>>(
+            $"/api/v3/brokerage/products/{Uri.EscapeDataString(wire)}/candles", "candles", parameters, false, ct)
+            .ConfigureAwait(false) ?? [];
 
-        return response.Candles.Select(c =>
+        return candles.Select(c =>
         {
             var mapped = modelMapper.Map<CandlestickDto, Candlestick>(c);
             // DeltaMapper leaves Interval and TradingSymbol unset (no source field); populate them here.
@@ -119,10 +118,10 @@ internal sealed class CoinbaseMarketDataService(ICoinbaseHttpClient http, ISymbo
             ["limit"] = Math.Clamp(limit, 1, CoinbaseRequestValidation.MaxTradesLimit).ToString(System.Globalization.CultureInfo.InvariantCulture)
         };
 
-        var response = await http.GetAsync<TradesEnvelopeDto>("/api/v3/brokerage/market/market-trades", parameters, false, ct).ConfigureAwait(false);
+        var trades = await http.GetPropertyAsync<List<TradeDto>>("/api/v3/brokerage/market/market-trades", "trades", parameters, false, ct).ConfigureAwait(false) ?? [];
 
         // Trade.Symbol is the caller's typed argument; no wire-string resolution needed here.
-        return response.Trades.Select(t => new Trade(
+        return trades.Select(t => new Trade(
             symbol,
             t.TradeId,
             CoinbaseValueParsers.ParseDecimal(t.Price),
@@ -135,10 +134,10 @@ internal sealed class CoinbaseMarketDataService(ICoinbaseHttpClient http, ISymbo
     /// <inheritdoc />
     public async Task<ExchangeInfo> GetExchangeInfoAsync(CancellationToken ct = default)
     {
-        var response = await http.GetAsync<ProductsEnvelopeDto>("/api/v3/brokerage/products", signed: false, ct: ct).ConfigureAwait(false);
+        var products = await http.GetPropertyAsync<List<SymbolInfoDto>>("/api/v3/brokerage/products", "products", signed: false, ct: ct).ConfigureAwait(false) ?? [];
 
         // Products can include entries whose base/quote are not representable assets; skip those.
-        var representable = response.Products
+        var representable = products
             .Where(s => Asset.TryOf(s.BaseCurrencyId, out _) && Asset.TryOf(s.QuoteCurrencyId, out _));
         var symbols = modelMapper.Map<SymbolInfoDto, SymbolInfo>(representable);
 

@@ -276,12 +276,12 @@ public class CoinbaseMappingAndServiceTests
         var http = Substitute.For<ICoinbaseHttpClient>();
 
         object? capturedBody = null;
-        http.PostAsync<PlaceOrderResponseDto>(
+        http.PostAsync<PlaceOrderAckDto>(
                 "/api/v3/brokerage/orders",
                 Arg.Do<object>(b => capturedBody = b),
                 true,
                 Arg.Any<CancellationToken>())
-            .Returns(new PlaceOrderResponseDto
+            .Returns(new PlaceOrderAckDto
             {
                 Success = true,
                 SuccessResponse = new PlaceOrderSuccessDto { OrderId = "ord-placed" }
@@ -319,15 +319,15 @@ public class CoinbaseMappingAndServiceTests
         var (symbolMapper, mapper) = BuildMappers();
         var http = Substitute.For<ICoinbaseHttpClient>();
 
-        http.PostAsync<PlaceOrderResponseDto>(
+        http.PostAsync<PlaceOrderAckDto>(
                 "/api/v3/brokerage/orders",
                 Arg.Any<object>(),
                 true,
                 Arg.Any<CancellationToken>())
-            .Returns(new PlaceOrderResponseDto
+            .Returns(new PlaceOrderAckDto
             {
                 Success = false,
-                ErrorResponse = new PlaceOrderErrorDto { Error = "INSUFFICIENT_FUNDS", Message = "Not enough funds" }
+                ErrorResponse = new PlaceOrderRejectionDto { Error = "INSUFFICIENT_FUNDS", Message = "Not enough funds" }
             });
 
         var service = new CoinbaseTradingService(http, symbolMapper, mapper);
@@ -376,6 +376,227 @@ public class CoinbaseMappingAndServiceTests
 
         captured.Should().HaveCount(1);
         captured[0].Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task Account_GetBalance_SingleAsset_ReturnsMappedBalance()
+    {
+        var (symbolMapper, mapper) = BuildMappers();
+        var http = Substitute.For<ICoinbaseHttpClient>();
+        http.GetAsync<AccountsEnvelopeDto>(
+                "/api/v3/brokerage/accounts", null, true, Arg.Any<CancellationToken>())
+            .Returns(new AccountsEnvelopeDto
+            {
+                Accounts =
+                [
+                    new AccountDto { Currency = "BTC", AvailableBalance = new AmountDto { Value = "2.5" }, Hold = new AmountDto { Value = "0.5" } },
+                    new AccountDto { Currency = "ETH", AvailableBalance = new AmountDto { Value = "10" }, Hold = new AmountDto { Value = "0" } }
+                ]
+            });
+
+        var service = new CoinbaseAccountService(http, symbolMapper, mapper);
+        var balance = await service.GetBalanceAsync(Asset.Btc, TestContext.Current.CancellationToken);
+
+        balance.Asset.Should().Be(Asset.Btc);
+        balance.Free.Should().Be(2.5m);
+        balance.Locked.Should().Be(0.5m);
+        balance.Total.Should().Be(3m);
+    }
+
+    [Fact]
+    public async Task Trading_CancelOrder_PostsBatchCancel_AndRefetchesOrder()
+    {
+        var (symbolMapper, mapper) = BuildMappers();
+        var http = Substitute.For<ICoinbaseHttpClient>();
+
+        http.PostAsync<CancelOrdersEnvelopeDto>(
+                "/api/v3/brokerage/orders/batch_cancel",
+                Arg.Any<object>(),
+                true,
+                Arg.Any<CancellationToken>())
+            .Returns(new CancelOrdersEnvelopeDto
+            {
+                Results = [new CancelOrderEntryDto { OrderId = "ord-cancel", Success = true }]
+            });
+
+        http.GetAsync<OrderEnvelopeDto>(
+                Arg.Is<string>(s => s.Contains("ord-cancel")),
+                null,
+                true,
+                Arg.Any<CancellationToken>())
+            .Returns(new OrderEnvelopeDto
+            {
+                Order = new OrderDto
+                {
+                    OrderId = "ord-cancel",
+                    ProductId = "BTC-USDT",
+                    Side = "SELL",
+                    Status = "CANCELLED",
+                    OrderConfiguration = new OrderConfigurationDto { LimitGtc = new LimitGtcDto { BaseSize = "1", LimitPrice = "30000" } }
+                }
+            });
+
+        var service = new CoinbaseTradingService(http, symbolMapper, mapper);
+        var order = await service.CancelOrderAsync(BtcUsdt, "ord-cancel", TestContext.Current.CancellationToken);
+
+        order.OrderId.Should().Be("ord-cancel");
+        order.Status.Should().Be(OrderStatus.Canceled);
+    }
+
+    [Fact]
+    public async Task Trading_CancelOrderByClientId_FoundOpenOrder_CancelsAndRefetches()
+    {
+        var (symbolMapper, mapper) = BuildMappers();
+        var http = Substitute.For<ICoinbaseHttpClient>();
+
+        // Mock GetOpenOrdersAsync (used to find the exchange order_id for the client_order_id).
+        http.GetAsync<OrdersEnvelopeDto>(
+                "/api/v3/brokerage/orders/historical/batch",
+                Arg.Any<Dictionary<string, string>>(),
+                true,
+                Arg.Any<CancellationToken>())
+            .Returns(new OrdersEnvelopeDto
+            {
+                Orders =
+                [
+                    new OrderDto
+                    {
+                        OrderId = "ord-bycli",
+                        ClientOrderId = "cli-abc",
+                        ProductId = "BTC-USDT",
+                        Side = "BUY",
+                        Status = "OPEN",
+                        OrderConfiguration = new OrderConfigurationDto { LimitGtc = new LimitGtcDto { BaseSize = "1", LimitPrice = "40000" } }
+                    }
+                ]
+            });
+
+        http.PostAsync<CancelOrdersEnvelopeDto>(
+                "/api/v3/brokerage/orders/batch_cancel",
+                Arg.Any<object>(),
+                true,
+                Arg.Any<CancellationToken>())
+            .Returns(new CancelOrdersEnvelopeDto
+            {
+                Results = [new CancelOrderEntryDto { OrderId = "ord-bycli", Success = true }]
+            });
+
+        http.GetAsync<OrderEnvelopeDto>(
+                Arg.Is<string>(s => s.Contains("ord-bycli")),
+                null,
+                true,
+                Arg.Any<CancellationToken>())
+            .Returns(new OrderEnvelopeDto
+            {
+                Order = new OrderDto
+                {
+                    OrderId = "ord-bycli",
+                    ClientOrderId = "cli-abc",
+                    ProductId = "BTC-USDT",
+                    Side = "BUY",
+                    Status = "CANCELLED",
+                    OrderConfiguration = new OrderConfigurationDto { LimitGtc = new LimitGtcDto { BaseSize = "1", LimitPrice = "40000" } }
+                }
+            });
+
+        var service = new CoinbaseTradingService(http, symbolMapper, mapper);
+        var order = await service.CancelOrderByClientIdAsync(BtcUsdt, "cli-abc", TestContext.Current.CancellationToken);
+
+        order.OrderId.Should().Be("ord-bycli");
+        order.ClientOrderId.Should().Be("cli-abc");
+        order.Status.Should().Be(OrderStatus.Canceled);
+    }
+
+    [Fact]
+    public async Task Trading_CancelAllOrders_BatchCancelsAndReturnsSucceeded()
+    {
+        var (symbolMapper, mapper) = BuildMappers();
+        var http = Substitute.For<ICoinbaseHttpClient>();
+
+        http.GetAsync<OrdersEnvelopeDto>(
+                "/api/v3/brokerage/orders/historical/batch",
+                Arg.Any<Dictionary<string, string>>(),
+                true,
+                Arg.Any<CancellationToken>())
+            .Returns(new OrdersEnvelopeDto
+            {
+                Orders =
+                [
+                    new OrderDto
+                    {
+                        OrderId = "ord-all-1",
+                        ProductId = "BTC-USDT",
+                        Side = "BUY",
+                        Status = "OPEN",
+                        OrderConfiguration = new OrderConfigurationDto { LimitGtc = new LimitGtcDto { BaseSize = "1", LimitPrice = "40000" } }
+                    },
+                    new OrderDto
+                    {
+                        OrderId = "ord-all-2",
+                        ProductId = "BTC-USDT",
+                        Side = "SELL",
+                        Status = "CANCELLED",
+                        OrderConfiguration = new OrderConfigurationDto { LimitGtc = new LimitGtcDto { BaseSize = "0.5", LimitPrice = "41000" } }
+                    }
+                ]
+            });
+
+        http.PostAsync<CancelOrdersEnvelopeDto>(
+                "/api/v3/brokerage/orders/batch_cancel",
+                Arg.Any<object>(),
+                true,
+                Arg.Any<CancellationToken>())
+            .Returns(new CancelOrdersEnvelopeDto
+            {
+                Results =
+                [
+                    new CancelOrderEntryDto { OrderId = "ord-all-1", Success = true },
+                    new CancelOrderEntryDto { OrderId = "ord-all-2", Success = false }
+                ]
+            });
+
+        var service = new CoinbaseTradingService(http, symbolMapper, mapper);
+        var canceled = await service.CancelAllOrdersAsync(BtcUsdt, TestContext.Current.CancellationToken);
+
+        // Only the successfully canceled order should be returned.
+        canceled.Should().HaveCount(1);
+        canceled[0].OrderId.Should().Be("ord-all-1");
+    }
+
+    [Fact]
+    public async Task Trading_GetOrder_FetchesAndMapsOrder()
+    {
+        var (symbolMapper, mapper) = BuildMappers();
+        var http = Substitute.For<ICoinbaseHttpClient>();
+
+        http.GetAsync<OrderEnvelopeDto>(
+                Arg.Is<string>(s => s.Contains("ord-fetch")),
+                null,
+                true,
+                Arg.Any<CancellationToken>())
+            .Returns(new OrderEnvelopeDto
+            {
+                Order = new OrderDto
+                {
+                    OrderId = "ord-fetch",
+                    ClientOrderId = "cli-fetch",
+                    ProductId = "BTC-USDT",
+                    Side = "BUY",
+                    Status = "FILLED",
+                    FilledSize = "1",
+                    FilledValue = "40000",
+                    OrderConfiguration = new OrderConfigurationDto { LimitGtc = new LimitGtcDto { BaseSize = "1", LimitPrice = "40000" } }
+                }
+            });
+
+        var service = new CoinbaseTradingService(http, symbolMapper, mapper);
+        var order = await service.GetOrderAsync(BtcUsdt, "ord-fetch", TestContext.Current.CancellationToken);
+
+        order.OrderId.Should().Be("ord-fetch");
+        order.ClientOrderId.Should().Be("cli-fetch");
+        order.Symbol.Should().Be(BtcUsdt);
+        order.Status.Should().Be(OrderStatus.Filled);
+        order.Side.Should().Be(OrderSide.Buy);
     }
 
     private sealed class CapturingHandler(Func<HttpRequestMessage, HttpResponseMessage> handler) : HttpMessageHandler

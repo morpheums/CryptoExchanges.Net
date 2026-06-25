@@ -18,7 +18,7 @@ internal sealed class CoinbaseTradingService(ICoinbaseHttpClient http, ISymbolMa
         var wireSymbol = symbolMapper.ToWire(request.Symbol);
         var body = BuildPlaceOrderBody(wireSymbol, request);
 
-        var response = await http.PostAsync<PlaceOrderResponseDto>("/api/v3/brokerage/orders", body, true, ct).ConfigureAwait(false);
+        var response = await http.PostAsync<PlaceOrderAckDto>("/api/v3/brokerage/orders", body, true, ct).ConfigureAwait(false);
 
         if (!response.Success)
         {
@@ -38,7 +38,7 @@ internal sealed class CoinbaseTradingService(ICoinbaseHttpClient http, ISymbolMa
         ArgumentException.ThrowIfNullOrWhiteSpace(orderId);
 
         var body = new { order_ids = new[] { orderId } };
-        await http.PostAsync<CancelOrdersResponseDto>("/api/v3/brokerage/orders/batch_cancel", body, true, ct).ConfigureAwait(false);
+        await http.PostAsync<CancelOrdersEnvelopeDto>("/api/v3/brokerage/orders/batch_cancel", body, true, ct).ConfigureAwait(false);
 
         return await FetchOrderAsync(orderId, ct).ConfigureAwait(false);
     }
@@ -77,7 +77,7 @@ internal sealed class CoinbaseTradingService(ICoinbaseHttpClient http, ISymbolMa
             return [];
 
         var body = new { order_ids = orderIds };
-        var cancelResponse = await http.PostAsync<CancelOrdersResponseDto>("/api/v3/brokerage/orders/batch_cancel", body, true, ct).ConfigureAwait(false);
+        var cancelResponse = await http.PostAsync<CancelOrdersEnvelopeDto>("/api/v3/brokerage/orders/batch_cancel", body, true, ct).ConfigureAwait(false);
 
         var canceledIds = cancelResponse.Results
             .Where(r => r.Success)

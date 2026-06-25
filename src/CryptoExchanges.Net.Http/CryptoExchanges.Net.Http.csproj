@@ -9,6 +9,8 @@
     <InternalsVisibleTo Include="CryptoExchanges.Net.Bybit" />
     <InternalsVisibleTo Include="CryptoExchanges.Net.Okx" />
     <InternalsVisibleTo Include="CryptoExchanges.Net.Bitget" />
+    <InternalsVisibleTo Include="CryptoExchanges.Net.Coinbase" />
+    <InternalsVisibleTo Include="CryptoExchanges.Net.Kraken" />
     <InternalsVisibleTo Include="CryptoExchanges.Net.Kucoin" />
     <InternalsVisibleTo Include="CryptoExchanges.Net.Http.Tests.Unit" />
     <InternalsVisibleTo Include="CryptoExchanges.Net.Binance.Tests.Unit" />

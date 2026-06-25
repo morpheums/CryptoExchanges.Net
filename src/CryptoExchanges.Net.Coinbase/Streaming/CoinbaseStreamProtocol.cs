@@ -3,23 +3,7 @@ using CryptoExchanges.Net.Http.Streaming;
 
 namespace CryptoExchanges.Net.Coinbase.Streaming;
 
-/// <summary>
-/// <see cref="IStreamProtocol"/> for the Coinbase Advanced Trade public WebSocket.
-/// Subscribe/unsubscribe wire format: <c>{"type":"subscribe","product_ids":["BTC-USD"],"channel":"ticker"}</c>.
-/// Heartbeat policy: <c>ServerPingClientPong</c> — Coinbase sends WebSocket Ping control frames;
-/// the engine responds automatically. Interval 30 s, Timeout 60 s.
-/// Order-book channel: subscribe with <c>level2</c>; push frames arrive with <c>channel: l2_data</c>.
-/// The routing key uses the push-frame channel name (<c>l2_data</c>) so subscribe-time registration
-/// and receive-time lookup share the same keyspace.
-/// Kline channel: <c>candles</c> (fixed 1-minute on Coinbase Advanced Trade); product_id is extracted
-/// from the first candle object inside the event's <c>candles</c> array.
-/// Heartbeats subscribe: on every connect/reconnect an extra
-/// <c>{"type":"subscribe","channel":"heartbeats","product_ids":[]}</c> frame is sent so idle
-/// sockets stay open (ADR-010-007).
-/// Routing key: <c>&lt;push-channel&gt;:&lt;product_id&gt;</c> (e.g. <c>ticker:BTC-USD</c>),
-/// single-sourced in one private helper used by both <see cref="RoutingKeyFor"/> and
-/// <see cref="Classify"/>.
-/// </summary>
+/// <summary><see cref="IStreamProtocol"/> for the Coinbase Advanced Trade public WebSocket (subscribe/unsubscribe, heartbeat, routing).</summary>
 internal sealed class CoinbaseStreamProtocol : IStreamProtocol
 {
     private static readonly HeartbeatPolicy s_heartbeatPolicy = new(

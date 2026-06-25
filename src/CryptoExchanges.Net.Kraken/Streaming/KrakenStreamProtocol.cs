@@ -120,9 +120,6 @@ internal sealed class KrakenStreamProtocol : IStreamProtocol
             channelProp.ValueKind != JsonValueKind.String)
             return new StreamFrame(FrameKind.Error, null);
 
-        if (!root.TryGetProperty("data"u8, out _))
-            return new StreamFrame(FrameKind.Error, null);
-
         if (!root.TryGetProperty("data"u8, out var dataProp) ||
             dataProp.ValueKind != JsonValueKind.Array)
             return new StreamFrame(FrameKind.Error, null);
@@ -139,8 +136,10 @@ internal sealed class KrakenStreamProtocol : IStreamProtocol
             symbolProp.ValueKind != JsonValueKind.String)
             return new StreamFrame(FrameKind.Error, null);
 
-        var symbol = symbolProp.GetString()!;
-        var routingKey = channel + ":" + symbol;
+        var wireSymbol = symbolProp.GetString()!;
+        // Derive the routing key using the channel name as the StreamKind proxy.
+        // BuildRoutingKey expects a StreamKind, so reconstruct directly from channel+wireSymbol.
+        var routingKey = channel + ":" + wireSymbol;
         return new StreamFrame(FrameKind.Data, routingKey);
     }
 

@@ -1,6 +1,6 @@
 # Exchanges
 
-CryptoExchanges.Net supports six exchanges today.
+CryptoExchanges.Net supports seven exchanges today.
 All supported exchanges expose the same `IExchangeClient` interface (REST, spot).
 
 ---
@@ -252,6 +252,59 @@ services.AddKucoinStreams();  // opt-in — REST-only consumers skip this
 
 ---
 
+### Kraken
+
+<img src="assets/exchanges/kraken.svg" alt="Kraken" width="32" height="32" />
+
+| | |
+|---|---|
+| **Package** | `CryptoExchanges.Net.Kraken` |
+| **Client class** | `KrakenExchangeClient` |
+| **Credentials** | `ApiKey`, `ApiSecret` |
+| **Env vars** | `KRAKEN_API_KEY`, `KRAKEN_API_SECRET` |
+| **Signing** | HMAC-SHA512 + nonce |
+| **Endpoints** | REST v0 (spot) |
+| **Symbol format** | Kraken wsname format (e.g. `XBT/USD`) |
+| **Streaming** | Public market-data streams (ticker, trade, order book, kline) |
+
+```bash
+dotnet add package CryptoExchanges.Net.Kraken
+```
+
+```csharp
+using CryptoExchanges.Net.Kraken;
+
+await using var client = KrakenExchangeClient.Create(new KrakenOptions
+{
+    ApiKey    = "...",
+    ApiSecret = "..."
+});
+```
+
+```csharp
+// From environment variables (KRAKEN_API_KEY / KRAKEN_API_SECRET)
+await using var client = KrakenExchangeClient.CreateFromEnvironment();
+```
+
+DI registration:
+
+```csharp
+services.AddKrakenExchange(opt =>
+{
+    opt.ApiKey    = configuration["Kraken:ApiKey"];
+    opt.ApiSecret = configuration["Kraken:ApiSecret"];
+});
+```
+
+Public streaming:
+
+```csharp
+services.AddKrakenExchange(opt => { /* credentials */ });
+services.AddKrakenStreams();  // opt-in — REST-only consumers skip this
+```
+
+---
+
 ### Coinbase
 
 <img src="assets/exchanges/coinbase.svg" alt="Coinbase" width="32" height="32" />
@@ -342,6 +395,9 @@ services.AddCryptoExchanges(opt =>
 
     opt.CoinbaseApiKey     = configuration["Coinbase:ApiKey"];
     opt.CoinbasePrivateKey = configuration["Coinbase:PrivateKey"];
+
+    opt.KrakenApiKey    = configuration["Kraken:ApiKey"];
+    opt.KrakenApiSecret = configuration["Kraken:ApiSecret"];
 });
 ```
 
@@ -355,19 +411,10 @@ IExchangeClient binance = factory.GetClient(ExchangeId.Binance);
 IExchangeClient bybit   = factory.GetClient(ExchangeId.Bybit);
 IExchangeClient okx     = factory.GetClient(ExchangeId.Okx);
 IExchangeClient bitget  = factory.GetClient(ExchangeId.Bitget);
-IExchangeClient kucoin   = factory.GetClient(ExchangeId.Kucoin);
+IExchangeClient kucoin  = factory.GetClient(ExchangeId.Kucoin);
 IExchangeClient coinbase = factory.GetClient(ExchangeId.Coinbase);
+IExchangeClient kraken  = factory.GetClient(ExchangeId.Kraken);
 ```
-
----
-
-## Coming soon
-
-| Exchange | Package |
-|----------|---------|
-| <img src="assets/exchanges/kraken.svg" alt="Kraken" width="20" height="20" /> Kraken | `CryptoExchanges.Net.Kraken` |
-
-These exchange IDs are present in the `ExchangeId` enum but are not yet implemented.
 
 ---
 

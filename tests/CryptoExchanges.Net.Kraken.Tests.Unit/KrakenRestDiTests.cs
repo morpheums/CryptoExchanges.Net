@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using CryptoExchanges.Net.Kraken;
 using CryptoExchanges.Net.Core.Enums;
 using CryptoExchanges.Net.Core.Interfaces;
+using CryptoExchanges.Net;
 
 namespace CryptoExchanges.Net.Kraken.Tests.Unit;
 
@@ -44,5 +45,16 @@ public class KrakenRestDiTests
 
         var factory = sp.GetRequiredService<IExchangeClientFactory>();
         factory.Available.Should().Contain(ExchangeId.Kraken);
+    }
+
+    [Fact]
+    public async Task AddCryptoExchanges_IncludesKraken()
+    {
+        var services = new ServiceCollection();
+        services.AddCryptoExchanges();
+        await using var sp = services.BuildServiceProvider();
+
+        var client = sp.GetRequiredKeyedService<IExchangeClient>(ExchangeId.Kraken);
+        client.ExchangeId.Should().Be(ExchangeId.Kraken);
     }
 }

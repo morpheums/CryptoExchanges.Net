@@ -23,25 +23,31 @@ internal sealed class KrakenHttpClient(HttpClient httpClient, ISymbolMapper symb
         DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull
     };
 
-    // Legacy→wsname table warmed by GetExchangeInfoAsync. Replaced atomically; reads are safe
-    // after population because no concurrent writes occur once the field is set.
-    private volatile Dictionary<string, string> _legacyToWsname = [];
+    // Wsname→legacyCode reverse table (e.g. "XBT/USD"→"XXBTZUSD"); warmed by GetExchangeInfoAsync.
+    private volatile Dictionary<string, string> _wsnameToLegacy = [];
 
-    /// <summary>Updates the warm legacy→wsname lookup table from a freshly fetched AssetPairs response.</summary>
-    internal void UpdateLegacyTable(Dictionary<string, string> table)
+    /// <summary>
+    /// Updates the reverse wsname→legacyCode table from a freshly fetched AssetPairs response.
+    /// Using the legacy pair code in REST params avoids URL-encoding issues with the wsname slash.
+    /// </summary>
+    internal void UpdateLegacyTable(Dictionary<string, string> legacyToWsname)
     {
-        ArgumentNullException.ThrowIfNull(table);
-        _legacyToWsname = table;
+        ArgumentNullException.ThrowIfNull(legacyToWsname);
+        var reverse = new Dictionary<string, string>(legacyToWsname.Count, StringComparer.OrdinalIgnoreCase);
+        foreach (var kvp in legacyToWsname)
+            reverse[kvp.Value] = kvp.Key;
+        _wsnameToLegacy = reverse;
     }
 
     /// <summary>
-    /// Resolves <paramref name="symbol"/> to its Kraken wire string (wsname, e.g. XBT/USD).
-    /// Checks the warm legacy table first; falls back to <see cref="KrakenSymbolFormat"/> when cold.
+    /// Resolves <paramref name="symbol"/> to its Kraken REST pair string.
+    /// Prefers the legacy pair code (e.g. XXBTZUSD) when the warm table is populated;
+    /// falls back to <see cref="KrakenSymbolFormat"/> wsname when cold.
     /// </summary>
     public string ToWire(Symbol symbol)
     {
-        var wire = symbolMapper.ToWire(symbol);
-        return _legacyToWsname.TryGetValue(wire, out var wsname) ? wsname : wire;
+        var wsname = symbolMapper.ToWire(symbol);
+        return _wsnameToLegacy.TryGetValue(wsname, out var legacy) ? legacy : wsname;
     }
 
     /// <inheritdoc />

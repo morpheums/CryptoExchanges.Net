@@ -68,4 +68,13 @@ public sealed class CryptoExchangesOptions
 
     /// <summary>Coinbase EC private key in PEM format.</summary>
     public string? CoinbasePrivateKey { get; set; }
+
+    /// <summary>Kraken API base URL override.</summary>
+    public string? KrakenBaseUrl { get; set; }
+
+    /// <summary>Kraken API key.</summary>
+    public string? KrakenApiKey { get; set; }
+
+    /// <summary>Kraken API secret (base64-encoded).</summary>
+    public string? KrakenApiSecret { get; set; }
 }

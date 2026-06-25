@@ -534,6 +534,35 @@ public class KrakenMappingAndServiceTests
     }
 
     [Fact]
+    public async Task PostResultProperty_InBodyError_On200_ThrowsTranslatedException()
+    {
+        // The named-property extraction path must still surface in-body error[] before navigating result.
+        var fakeHandler = new FakeHttpHandler(_ => Ok("""{"error":["EAuth:Invalid key"],"result":null}"""));
+        using var httpClient = new HttpClient(fakeHandler) { BaseAddress = new Uri("https://api.kraken.com") };
+        var krakenHttp = new KrakenHttpClient(httpClient, new SymbolMapper(KrakenSymbolFormat.Instance));
+
+        var act = async () => await krakenHttp.PostResultPropertyAsync<Dictionary<string, Dtos.OrderDto>>(
+            "/0/private/OpenOrders", "open", ct: TestContext.Current.CancellationToken);
+
+        (await act.Should().ThrowAsync<Core.Exceptions.AuthenticationException>())
+            .Which.Message.Should().Contain("EAuth:");
+    }
+
+    [Fact]
+    public async Task PostResultProperty_AbsentProperty_ReturnsDefault()
+    {
+        // No-NRE parity: an absent result/property yields default (null), which services coalesce to empty.
+        var fakeHandler = new FakeHttpHandler(_ => Ok("""{"error":[],"result":{}}"""));
+        using var httpClient = new HttpClient(fakeHandler) { BaseAddress = new Uri("https://api.kraken.com") };
+        var krakenHttp = new KrakenHttpClient(httpClient, new SymbolMapper(KrakenSymbolFormat.Instance));
+
+        var result = await krakenHttp.PostResultPropertyAsync<Dictionary<string, Dtos.OrderDto>>(
+            "/0/private/OpenOrders", "open", ct: TestContext.Current.CancellationToken);
+
+        result.Should().BeNull();
+    }
+
+    [Fact]
     public async Task HttpClient_EmptyErrorArray_On200_DeserializesResult()
     {
         var fakeHandler = new FakeHttpHandler(_ => new HttpResponseMessage(HttpStatusCode.OK)

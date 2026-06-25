@@ -43,37 +43,3 @@ internal sealed record OrderDto
     [JsonPropertyName("created_time")]
     public string CreatedTime { get; init; } = string.Empty;
 }
-
-/// <summary>Minimally models the nested <c>order_configuration</c> object; covers the most common limit/market spot shapes.</summary>
-internal sealed record OrderConfigurationDto
-{
-    [JsonPropertyName("limit_limit_gtc")]
-    public LimitGtcDto? LimitGtc { get; init; }
-
-    [JsonPropertyName("limit_limit_gtd")]
-    public LimitGtcDto? LimitGtd { get; init; }
-
-    [JsonPropertyName("market_market_ioc")]
-    public MarketIocDto? MarketIoc { get; init; }
-}
-
-internal sealed record LimitGtcDto
-{
-    [JsonPropertyName("base_size")]
-    public string BaseSize { get; init; } = "0";
-
-    [JsonPropertyName("limit_price")]
-    public string LimitPrice { get; init; } = "0";
-
-    [JsonPropertyName("post_only")]
-    public bool PostOnly { get; init; }
-}
-
-internal sealed record MarketIocDto
-{
-    [JsonPropertyName("quote_size")]
-    public string QuoteSize { get; init; } = "0";
-
-    [JsonPropertyName("base_size")]
-    public string BaseSize { get; init; } = "0";
-}

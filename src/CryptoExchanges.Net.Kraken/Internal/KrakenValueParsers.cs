@@ -101,6 +101,7 @@ internal static class KrakenValueParsers
     /// </summary>
     public static string GetArrayString(List<JsonElement> row, int index)
     {
+        ArgumentNullException.ThrowIfNull(row);
         if (index >= row.Count)
             return string.Empty;
         var el = row[index];
@@ -112,6 +113,7 @@ internal static class KrakenValueParsers
     /// </summary>
     public static long GetArrayLong(List<JsonElement> row, int index)
     {
+        ArgumentNullException.ThrowIfNull(row);
         if (index >= row.Count)
             return 0L;
         var el = row[index];

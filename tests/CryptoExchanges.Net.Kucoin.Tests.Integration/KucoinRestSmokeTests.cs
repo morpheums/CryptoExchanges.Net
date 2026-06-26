@@ -38,13 +38,11 @@ public class KucoinRestSmokeTests : IAsyncLifetime
             ? KucoinExchangeClient.CreateFromEnvironment()
             : KucoinExchangeClient.Create(new KucoinOptions());
 
-        // Skip ONLY when no HTTP response was received (null StatusCode — DNS/refused/socket) or timeout.
-        // A real HTTP error response (non-null StatusCode) and any ExchangeException propagate and fail.
+        // Probe a public endpoint directly (not PingAsync, which masks 401/HTTP errors into false): skip
+        // only on no-response (null StatusCode) or timeout; a StatusCode or ExchangeException propagates.
         try
         {
-            var reachable = await _client.PingAsync().ConfigureAwait(false);
-            if (!reachable)
-                _skipReason = "KuCoin REST endpoint unreachable (connectivity) — skipping integration smoke tests.";
+            _ = await _client.MarketData.GetExchangeInfoAsync().ConfigureAwait(false);
         }
         catch (HttpRequestException ex) when (ex.StatusCode is null)
         {

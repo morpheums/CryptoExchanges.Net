@@ -17,7 +17,7 @@
     <PackageTags>crypto;exchange;trading;sdk;binance;coinbase;bybit;bitcoin;ethereum</PackageTags>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageIcon>icon.png</PackageIcon>
-    <Version>0.6.0-preview.1</Version>
+    <Version>0.6.0-preview.2</Version>
   </PropertyGroup>
 
   <!-- NuGet does not render raw HTML in READMEs, so the rich GitHub README.md (centered banner,

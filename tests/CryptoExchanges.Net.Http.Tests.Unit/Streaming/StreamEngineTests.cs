@@ -1643,6 +1643,113 @@ public sealed class StreamEngineTests
 
     // ── TASK-071 test helpers ─────────────────────────────────────────────────
 
+    [Fact]
+    public async Task Engine_ConnectFrames_SentOnInitialConnect_BeforeSubscribe()
+    {
+        var protocol = new FakeStreamProtocol { ConnectFramesResult = ["CONNECT_HB"] };
+        var (engine, fake) = BuildEngine(protocol);
+
+        await using (engine)
+        {
+            await engine.SubscribeAsync(
+                new StreamRequest(StreamKind.Ticker, "BTCUSDT"),
+                MakeHandlers(),
+                TestContext.Current.CancellationToken);
+
+            var sent = fake.SentText.ToArray();
+            sent.Should().Equal("CONNECT_HB", "SUBSCRIBE:btcusdt@ticker");
+        }
+    }
+
+    [Fact]
+    public async Task Engine_ConnectFrames_ReSentOnReconnect_BeforeReplay()
+    {
+        var protocol = new FakeStreamProtocol { ConnectFramesResult = ["CONNECT_HB"] };
+        var (engine, fake) = BuildEngine(protocol);
+
+        await using (engine)
+        {
+            await engine.SubscribeAsync(
+                new StreamRequest(StreamKind.Ticker, "BTCUSDT"),
+                MakeHandlers(),
+                TestContext.Current.CancellationToken);
+
+            fake.SimulateDisconnect();
+
+            // Wait until BOTH the reconnect connect frame AND its following replay subscribe land,
+            // so the ordering snapshot below is never taken between the two sends.
+            var deadline = Task.Delay(5000, TestContext.Current.CancellationToken);
+            while ((fake.SentText.Count(m => m == "CONNECT_HB") < 2
+                    || fake.SentText.Count(m => m.Contains("SUBSCRIBE", StringComparison.Ordinal)) < 2)
+                   && !deadline.IsCompleted)
+                await Task.Delay(20, TestContext.Current.CancellationToken);
+
+            var sent = fake.SentText.ToArray();
+            sent.Count(m => m == "CONNECT_HB").Should().BeGreaterThanOrEqualTo(2,
+                "connect frames are re-sent on every physical reconnect.");
+
+            // The reconnect's connect frame precedes the replayed subscribe set (K2).
+            var reconnectConnectIdx = sent.Select((m, i) => (m, i))
+                .Where(x => x.m == "CONNECT_HB").Skip(1).First().i;
+            var replayIdx = Array.FindIndex(sent, reconnectConnectIdx,
+                m => m.Contains("SUBSCRIBE", StringComparison.Ordinal));
+            replayIdx.Should().BeGreaterThan(reconnectConnectIdx,
+                "connect frames precede the subscribe-set replay on reconnect.");
+        }
+    }
+
+    [Fact]
+    public async Task Engine_ConnectFrames_ArePacedByMinOutboundInterval()
+    {
+        var interval = TimeSpan.FromMilliseconds(120);
+        var protocol = new FakeStreamProtocol
+        {
+            MinOutboundInterval = interval,
+            ConnectFramesResult = ["CF1", "CF2"],
+        };
+        var recording = new RecordingWebSocketConnection();
+        var engine = BuildEngineWith(protocol, recording);
+
+        await using (engine)
+        {
+            await engine.SubscribeAsync(
+                new StreamRequest(StreamKind.Ticker, "BTCUSDT"),
+                MakeHandlers(),
+                TestContext.Current.CancellationToken);
+
+            var stamps = recording.SendStartStamps.ToArray();
+            stamps.Should().HaveCountGreaterThanOrEqualTo(3,
+                "two connect frames plus one subscribe frame are sent.");
+
+            var tolerance = TimeSpan.FromMilliseconds(30);
+            for (var i = 1; i < stamps.Length; i++)
+            {
+                var gap = stamps[i] - stamps[i - 1];
+                gap.Should().BeGreaterThanOrEqualTo(interval - tolerance,
+                    "connect frames must be paced by MinOutboundInterval, like every control frame.");
+            }
+        }
+    }
+
+    [Fact]
+    public async Task Engine_ConnectFrames_DefaultEmpty_NothingExtraSent()
+    {
+        var protocol = new FakeStreamProtocol(); // ConnectFramesResult defaults to []
+        var (engine, fake) = BuildEngine(protocol);
+
+        await using (engine)
+        {
+            await engine.SubscribeAsync(
+                new StreamRequest(StreamKind.Ticker, "BTCUSDT"),
+                MakeHandlers(),
+                TestContext.Current.CancellationToken);
+
+            fake.SentText.ToArray().Should().ContainSingle()
+                .Which.Should().Be("SUBSCRIBE:btcusdt@ticker",
+                    "with no connect frames the engine sends only the subscribe.");
+        }
+    }
+
     private static StreamEngine BuildEngineWith(
         FakeStreamProtocol protocol,
         IWebSocketConnection fake,

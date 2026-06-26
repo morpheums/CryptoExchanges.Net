@@ -59,4 +59,22 @@ public sealed class CryptoExchangesOptions
 
     /// <summary>KuCoin API passphrase (the third KuCoin credential, required for signed endpoints).</summary>
     public string? KucoinPassphrase { get; set; }
+
+    /// <summary>Coinbase API base URL override.</summary>
+    public string? CoinbaseBaseUrl { get; set; }
+
+    /// <summary>Coinbase API key name (key ID).</summary>
+    public string? CoinbaseApiKey { get; set; }
+
+    /// <summary>Coinbase EC private key in PEM format.</summary>
+    public string? CoinbasePrivateKey { get; set; }
+
+    /// <summary>Kraken API base URL override.</summary>
+    public string? KrakenBaseUrl { get; set; }
+
+    /// <summary>Kraken API key.</summary>
+    public string? KrakenApiKey { get; set; }
+
+    /// <summary>Kraken API secret (base64-encoded).</summary>
+    public string? KrakenApiSecret { get; set; }
 }

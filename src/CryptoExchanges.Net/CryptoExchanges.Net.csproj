@@ -14,6 +14,8 @@
     <ProjectReference Include="..\CryptoExchanges.Net.Okx\CryptoExchanges.Net.Okx.csproj" />
     <ProjectReference Include="..\CryptoExchanges.Net.Bitget\CryptoExchanges.Net.Bitget.csproj" />
     <ProjectReference Include="..\CryptoExchanges.Net.Kucoin\CryptoExchanges.Net.Kucoin.csproj" />
+    <ProjectReference Include="..\CryptoExchanges.Net.Coinbase\CryptoExchanges.Net.Coinbase.csproj" />
+    <ProjectReference Include="..\CryptoExchanges.Net.Kraken\CryptoExchanges.Net.Kraken.csproj" />
     <ProjectReference Include="..\CryptoExchanges.Net.Http\CryptoExchanges.Net.Http.csproj" />
   </ItemGroup>
 

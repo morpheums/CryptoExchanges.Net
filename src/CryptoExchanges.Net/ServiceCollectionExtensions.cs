@@ -3,6 +3,8 @@ using CryptoExchanges.Net.Bybit;
 using CryptoExchanges.Net.Okx;
 using CryptoExchanges.Net.Bitget;
 using CryptoExchanges.Net.Kucoin;
+using CryptoExchanges.Net.Coinbase;
+using CryptoExchanges.Net.Kraken;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace CryptoExchanges.Net;
@@ -67,6 +69,20 @@ public static class ServiceCollectionExtensions
             opt.ApiKey = options.KucoinApiKey ?? opt.ApiKey;
             opt.SecretKey = options.KucoinSecretKey ?? opt.SecretKey;
             opt.Passphrase = options.KucoinPassphrase ?? opt.Passphrase;
+        });
+
+        services.AddCoinbaseExchange(opt =>
+        {
+            opt.BaseUrl = options.CoinbaseBaseUrl ?? opt.BaseUrl;
+            opt.ApiKey = options.CoinbaseApiKey ?? opt.ApiKey;
+            opt.PrivateKey = options.CoinbasePrivateKey ?? opt.PrivateKey;
+        });
+
+        services.AddKrakenExchange(opt =>
+        {
+            opt.BaseUrl = options.KrakenBaseUrl ?? opt.BaseUrl;
+            opt.ApiKey = options.KrakenApiKey ?? opt.ApiKey;
+            opt.ApiSecret = options.KrakenApiSecret ?? opt.ApiSecret;
         });
 
         return services;

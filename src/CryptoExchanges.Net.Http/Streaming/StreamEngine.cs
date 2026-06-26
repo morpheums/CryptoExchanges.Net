@@ -77,6 +77,9 @@ internal sealed class StreamEngine : IAsyncDisposable
     private static readonly Action<ILogger, int, int, Exception?> s_logBatchedReplay =
         LoggerMessage.Define<int, int>(LogLevel.Information, new EventId(18, "BatchedReplay"), "Replaying {Count} subscriptions in {Frames} frame(s) on reconnect.");
 
+    private static readonly Action<ILogger, Exception?> s_logConnectFrameFailed =
+        LoggerMessage.Define(LogLevel.Warning, new EventId(19, "ConnectFrameFailed"), "Failed to send a connect-time frame; continuing.");
+
     private static readonly Action<ILogger, Exception?> s_logSocketCloseException =
         LoggerMessage.Define(LogLevel.Debug, new EventId(12, "SocketCloseException"), "Socket close raised an exception during idle-close (ignored).");
 
@@ -327,6 +330,41 @@ internal sealed class StreamEngine : IAsyncDisposable
         await _socket.ConnectAsync(info.Endpoint, ct).ConfigureAwait(false);
         ApplyConnectionPacing(info);
         StartPump(info.Heartbeat);
+
+        // Connect frames precede any per-channel subscribe. If the subscriber cancels here (no
+        // subscription registered yet), tear the half-open socket down before rethrowing.
+        try
+        {
+            await SendConnectFramesAsync(ct).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            await CloseSocketAsync().ConfigureAwait(false);
+            throw;
+        }
+    }
+
+    // Sends each connect-time frame paced/serialised via SendControlAsync (like K2 replay); the gate
+    // is already held by both callers so this must NOT take _gate. Per-frame catch logs and continues.
+    private async Task SendConnectFramesAsync(CancellationToken ct)
+    {
+        foreach (var frame in _protocol.ConnectFrames())
+        {
+            try
+            {
+                await SendControlAsync(frame, ct).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+#pragma warning disable CA1031 // intentional: a connect-frame send failure must not block remaining frames
+            catch (Exception ex)
+#pragma warning restore CA1031
+            {
+                s_logConnectFrameFailed(_logger, ex);
+            }
+        }
     }
 
     // Applies the new connection's pacing floor; backdates the clock so the first frame isn't delayed.
@@ -610,6 +648,9 @@ internal sealed class StreamEngine : IAsyncDisposable
                 // Reconnecting (the Live broadcast below has already passed). ReconnectAsync's
                 // finally re-clears it (idempotent 0→0).
                 Interlocked.Exchange(ref _reconnecting, 0);
+
+                // Re-establish connection-level frames on the new socket before replaying subscribes.
+                await SendConnectFramesAsync(_disposeCts.Token).ConfigureAwait(false);
 
                 await ReplaySubscribeSetAsync().ConfigureAwait(false); // K2
 

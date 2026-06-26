@@ -9,7 +9,7 @@ namespace CryptoExchanges.Net.Mcp.Tools;
 [McpServerToolType]
 public static class MarketDataTools
 {
-    private const string ExchangeParam = "Exchange id: one of binance, bybit, okx, bitget.";
+    private const string ExchangeParam = "Exchange id: one of binance, bybit, okx, bitget, kucoin, coinbase, kraken.";
     private const string SymbolParam = "Trading pair as BASE/QUOTE, e.g. 'BTC/USDT'.";
 
     [McpServerTool, Description("Latest price for a trading pair on an exchange.")]
@@ -124,7 +124,7 @@ public static class MarketDataTools
     }
 
     private static ToolError Unavailable(string exchange) =>
-        new("ExchangeUnavailable", $"Exchange '{exchange}' is not one of: binance, bybit, okx, bitget.");
+        new("ExchangeUnavailable", $"Exchange '{exchange}' is not one of: binance, bybit, okx, bitget, kucoin, coinbase, kraken.");
 
     private static ToolError BadCount(string name) =>
         new("BadRequest", $"{name} must be >= 1.");

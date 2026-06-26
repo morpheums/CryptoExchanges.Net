@@ -115,7 +115,7 @@ hooks:
 2. For every new method, check: guards at entry, `.ConfigureAwait(false)` on awaits, CT forwarding
 3. For every new public type/member, verify XML doc is present
 4. For every new `catch` block, check for silent swallowing
-5. Run `dotnet build CryptoExchanges.Net.sln` to verify compilation with TreatWarningsAsErrors
+5. Run `dotnet build CryptoExchanges.Net.slnx` to verify compilation with TreatWarningsAsErrors
 6. Run `dotnet test` (unit tests only — skip integration) to verify tests still pass
 
 ## Output Format

@@ -1,7 +1,7 @@
 namespace CryptoExchanges.Net.Coinbase.Dtos;
 
 /// <summary>
-/// A single candlestick entry from <c>/api/v3/brokerage/products/{product_id}/candles</c>.
+/// A single candlestick entry from <c>/api/v3/brokerage/market/products/{product_id}/candles</c>.
 /// Coinbase returns candles as objects with unix-second timestamps.
 /// </summary>
 internal sealed record CandlestickDto

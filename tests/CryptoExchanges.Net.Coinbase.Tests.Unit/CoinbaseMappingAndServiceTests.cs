@@ -732,13 +732,14 @@ public class CoinbaseMappingAndServiceTests
         trades.Should().BeEmpty();
     }
 
-    // Builds a real CoinbaseHttpClient whose handler asserts the requested absolute path, then
-    // returns canned JSON — a regression to an authed path throws (and fails) before any network call.
+    // Asserts the requested path is the expected public endpoint AND that the call is unsigned, so a
+    // regression to an authed path or a signed market-data call fails offline before any network call.
     private static CoinbaseHttpClient BuildAssertingClient(string expectedAbsolutePath, string json)
     {
         var handler = new CapturingHandler(r =>
         {
             r.RequestUri!.AbsolutePath.Should().Be(expectedAbsolutePath);
+            Resilience.CoinbaseSigningRequest.IsSigned(r).Should().BeFalse();
             return new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(json) };
         });
         var httpClient = new HttpClient(handler) { BaseAddress = new Uri("https://api.coinbase.com") };

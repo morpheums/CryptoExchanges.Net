@@ -1,6 +1,6 @@
 namespace CryptoExchanges.Net.Coinbase.Dtos;
 
-/// <summary>A single product entry from <c>/api/v3/brokerage/products</c>.</summary>
+/// <summary>A single product entry from <c>/api/v3/brokerage/market/products</c>.</summary>
 internal sealed record SymbolInfoDto
 {
     [JsonPropertyName("product_id")]

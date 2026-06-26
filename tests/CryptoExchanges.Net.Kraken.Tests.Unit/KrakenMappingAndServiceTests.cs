@@ -740,8 +740,8 @@ public class KrakenMappingAndServiceTests
     [Fact]
     public async Task Trading_CancelOrderByClientId_MultipleClosed_ReturnsMostRecentTxId()
     {
-        // When several closed orders share the userref, selection must be deterministic (most recent by
-        // close time), not the arbitrary first dictionary entry.
+        // Selection must be deterministic (most recent by close time for the requested symbol). userref is
+        // reusable across pairs, so the newer off-symbol ORD-OTHER must be excluded by the symbol filter.
         var (symbolMapper, mapper) = BuildMappers();
         var http = Substitute.For<IKrakenHttpClient>();
 
@@ -755,7 +755,8 @@ public class KrakenMappingAndServiceTests
             {
                 ["ORD-OLD"] = ClosedOrder(closeTime: 100m, userRef: 42),
                 ["ORD-NEW"] = ClosedOrder(closeTime: 300m, userRef: 42),
-                ["ORD-MID"] = ClosedOrder(closeTime: 200m, userRef: 42)
+                ["ORD-MID"] = ClosedOrder(closeTime: 200m, userRef: 42),
+                ["ORD-OTHER"] = ClosedOrder(closeTime: 500m, userRef: 42, pair: "ETH/USD")
             });
 
         var service = new KrakenTradingService(http, symbolMapper, mapper);
@@ -788,9 +789,9 @@ public class KrakenMappingAndServiceTests
         trades.Select(t => t.Price).Should().Equal(3m, 2m);
     }
 
-    private static Dtos.OrderDto ClosedOrder(decimal closeTime, int? userRef = null) => new()
+    private static Dtos.OrderDto ClosedOrder(decimal closeTime, int? userRef = null, string pair = "XBT/USDT") => new()
     {
-        Descr = new Dtos.OrderDescrDto { Pair = "XBT/USDT", Side = "buy", OrderType = "limit", Price = "50000" },
+        Descr = new Dtos.OrderDescrDto { Pair = pair, Side = "buy", OrderType = "limit", Price = "50000" },
         Status = "closed",
         Vol = "0.1",
         CloseTime = closeTime,

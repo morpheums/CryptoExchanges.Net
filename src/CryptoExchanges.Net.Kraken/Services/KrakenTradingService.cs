@@ -84,9 +84,11 @@ internal sealed class KrakenTradingService(IKrakenHttpClient http, ISymbolMapper
         };
         var closed = await http.PostResultPropertyAsync<Dictionary<string, OrderDto>>(
             "/0/private/ClosedOrders", "closed", closedParams, signed: true, ct: ct).ConfigureAwait(false) ?? [];
-        // The dictionary's enumeration order is non-deterministic; if multiple closed orders share the
-        // userref, pick the most recent by close time so we return a stable, correct txid.
+        // Kraken userref can be reused across pairs; restrict to the requested symbol, then pick the most
+        // recent match by close time (dictionary enumeration order is non-deterministic) for a stable txid.
+        var wireSymbol = symbolMapper.ToWire(symbol);
         var (txId, dto) = closed
+            .Where(kv => string.Equals(kv.Value.Descr.Pair, wireSymbol, StringComparison.OrdinalIgnoreCase))
             .OrderByDescending(kv => kv.Value.CloseTime)
             .FirstOrDefault();
         if (dto is null)

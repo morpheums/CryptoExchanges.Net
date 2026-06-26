@@ -221,6 +221,35 @@ public class CoinbaseStreamDecodeTests
     }
 
     [Fact]
+    public void Trade_NullTradeElement_ThrowsClearDecodeException_NotNre()
+    {
+        var registry = BuildRegistry();
+        var decoder = registry.Resolve(StreamKind.Trade);
+
+        // A null trades[last] element must surface a clear decode exception, never an opaque NRE.
+        var frame = Utf8Bytes("{\"channel\":\"market_trades\",\"events\":[{\"product_id\":\"BTC-USD\",\"trades\":[null]}]}");
+
+        var act = () => decoder(frame);
+
+        act.Should().Throw<InvalidOperationException>()
+            .Which.Message.Should().Contain("null");
+    }
+
+    [Fact]
+    public void Trade_EmptyTradesArray_ThrowsClearDecodeException_NotNre()
+    {
+        var registry = BuildRegistry();
+        var decoder = registry.Resolve(StreamKind.Trade);
+
+        var frame = Utf8Bytes("{\"channel\":\"market_trades\",\"events\":[{\"product_id\":\"BTC-USD\",\"trades\":[]}]}");
+
+        var act = () => decoder(frame);
+
+        act.Should().Throw<InvalidOperationException>()
+            .Which.Message.Should().Contain("empty");
+    }
+
+    [Fact]
     public void Kline_EmptyCandlesArray_ThrowsClearDecodeException_NotNre()
     {
         var registry = BuildRegistry();

@@ -166,13 +166,15 @@ internal static class CoinbaseStreamDecoders
             tradesArr.ValueKind != JsonValueKind.Array)
             throw new InvalidOperationException(
                 "Coinbase market_trades event missing 'trades' array; cannot decode StreamTradeDto.");
-        StreamTradeDto? last = null;
+        JsonElement? lastEl = null;
         foreach (var tradeEl in tradesArr.EnumerateArray())
-            last = tradeEl.Deserialize<StreamTradeDto>(JsonOpts);
-        if (last is null)
+            lastEl = tradeEl;
+        if (lastEl is null)
             throw new InvalidOperationException(
                 "Coinbase market_trades 'trades' array is empty; cannot decode StreamTradeDto.");
-        return last;
+        return lastEl.Value.Deserialize<StreamTradeDto>(JsonOpts)
+            ?? throw new InvalidOperationException(
+                "Coinbase market_trades 'trades' element deserialized to null; cannot decode StreamTradeDto.");
     }
 
     // candles events contain a "candles" array; take the first entry.

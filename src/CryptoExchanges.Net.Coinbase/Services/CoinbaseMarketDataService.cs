@@ -37,11 +37,11 @@ internal sealed class CoinbaseMarketDataService(ICoinbaseHttpClient http, ISymbo
         if (symbol.HasValue)
         {
             var wire = symbolMapper.ToWire(symbol.Value);
-            var single = await http.GetAsync<TickerDto>($"/api/v3/brokerage/products/{Uri.EscapeDataString(wire)}", signed: false, ct: ct).ConfigureAwait(false);
+            var single = await http.GetAsync<TickerDto>($"/api/v3/brokerage/market/products/{Uri.EscapeDataString(wire)}", signed: false, ct: ct).ConfigureAwait(false);
             return [modelMapper.Map<TickerDto, Ticker>(single)];
         }
 
-        var products = await http.GetPropertyAsync<List<TickerDto>>("/api/v3/brokerage/products", "products", signed: false, ct: ct).ConfigureAwait(false) ?? [];
+        var products = await http.GetPropertyAsync<List<TickerDto>>("/api/v3/brokerage/market/products", "products", signed: false, ct: ct).ConfigureAwait(false) ?? [];
         // The full universe can include pairs that don't resolve; skip those rather than failing the whole batch.
         return products.SelectMany(TryMapTicker).ToList();
     }
@@ -55,7 +55,7 @@ internal sealed class CoinbaseMarketDataService(ICoinbaseHttpClient http, ISymbo
             ["limit"] = Math.Clamp(depth, 1, 1000).ToString(System.Globalization.CultureInfo.InvariantCulture)
         };
 
-        var book = await http.GetPropertyAsync<OrderBookDto>("/api/v3/brokerage/product_book", "pricebook", parameters, false, ct).ConfigureAwait(false) ?? new OrderBookDto();
+        var book = await http.GetPropertyAsync<OrderBookDto>("/api/v3/brokerage/market/product_book", "pricebook", parameters, false, ct).ConfigureAwait(false) ?? new OrderBookDto();
 
         var bids = book.Bids.Select(b => new OrderBookEntry(CoinbaseValueParsers.ParseDecimal(b.Price), CoinbaseValueParsers.ParseDecimal(b.Size))).ToList();
         var asks = book.Asks.Select(a => new OrderBookEntry(CoinbaseValueParsers.ParseDecimal(a.Price), CoinbaseValueParsers.ParseDecimal(a.Size))).ToList();
@@ -90,7 +90,7 @@ internal sealed class CoinbaseMarketDataService(ICoinbaseHttpClient http, ISymbo
             parameters["end"] = endTime.Value.ToUnixTimeSeconds().ToString(System.Globalization.CultureInfo.InvariantCulture);
 
         var candles = await http.GetPropertyAsync<List<CandlestickDto>>(
-            $"/api/v3/brokerage/products/{Uri.EscapeDataString(wire)}/candles", "candles", parameters, false, ct)
+            $"/api/v3/brokerage/market/products/{Uri.EscapeDataString(wire)}/candles", "candles", parameters, false, ct)
             .ConfigureAwait(false) ?? [];
 
         return candles.Select(c =>
@@ -105,20 +105,21 @@ internal sealed class CoinbaseMarketDataService(ICoinbaseHttpClient http, ISymbo
     public async Task<decimal> GetPriceAsync(Symbol symbol, CancellationToken ct = default)
     {
         var wire = symbolMapper.ToWire(symbol);
-        var product = await http.GetAsync<TickerDto>($"/api/v3/brokerage/products/{Uri.EscapeDataString(wire)}", signed: false, ct: ct).ConfigureAwait(false);
+        var product = await http.GetAsync<TickerDto>($"/api/v3/brokerage/market/products/{Uri.EscapeDataString(wire)}", signed: false, ct: ct).ConfigureAwait(false);
         return CoinbaseValueParsers.ParseDecimal(product.Price);
     }
 
     /// <inheritdoc />
     public async Task<IReadOnlyList<Trade>> GetRecentTradesAsync(Symbol symbol, int limit = 500, CancellationToken ct = default)
     {
+        var wire = symbolMapper.ToWire(symbol);
         var parameters = new Dictionary<string, string>
         {
-            ["product_id"] = symbolMapper.ToWire(symbol),
             ["limit"] = Math.Clamp(limit, 1, CoinbaseRequestValidation.MaxTradesLimit).ToString(System.Globalization.CultureInfo.InvariantCulture)
         };
 
-        var trades = await http.GetPropertyAsync<List<TradeDto>>("/api/v3/brokerage/market/market-trades", "trades", parameters, false, ct).ConfigureAwait(false) ?? [];
+        var trades = await http.GetPropertyAsync<List<TradeDto>>(
+            $"/api/v3/brokerage/market/products/{Uri.EscapeDataString(wire)}/ticker", "trades", parameters, false, ct).ConfigureAwait(false) ?? [];
 
         // Trade.Symbol is the caller's typed argument; no wire-string resolution needed here.
         return trades.Select(t => new Trade(
@@ -134,7 +135,7 @@ internal sealed class CoinbaseMarketDataService(ICoinbaseHttpClient http, ISymbo
     /// <inheritdoc />
     public async Task<ExchangeInfo> GetExchangeInfoAsync(CancellationToken ct = default)
     {
-        var products = await http.GetPropertyAsync<List<SymbolInfoDto>>("/api/v3/brokerage/products", "products", signed: false, ct: ct).ConfigureAwait(false) ?? [];
+        var products = await http.GetPropertyAsync<List<SymbolInfoDto>>("/api/v3/brokerage/market/products", "products", signed: false, ct: ct).ConfigureAwait(false) ?? [];
 
         // Products can include entries whose base/quote are not representable assets; skip those.
         var representable = products

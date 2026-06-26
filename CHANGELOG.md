@@ -9,6 +9,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.6.0-preview.2] — 2026-06-26
+
+### Fixed
+
+- **Coinbase public market data returned HTTP 401 without credentials** — `CoinbaseMarketDataService`
+  was calling Coinbase's authenticated Advanced Trade endpoints (`/api/v3/brokerage/products`,
+  `/product_book`, `/products/{id}`, `/products/{id}/candles`) for public reads, so credential-less
+  consumers got `401 Unauthorized`. Repointed all public market-data reads to Coinbase's public
+  `/api/v3/brokerage/market/...` endpoints; `GetRecentTradesAsync` now uses the correct public
+  `/market/products/{id}/ticker` path. Account and trading endpoints (which require auth) and
+  WebSocket streaming are unchanged.
+
+### Changed
+
+- **Integration smoke tests are now honest** — REST and WebSocket reachability probes skip only on
+  genuine connectivity failure (no HTTP response / timeout) and let real HTTP/auth/handshake errors
+  fail the run, instead of masking them as "unreachable"; the REST probe now calls a public endpoint
+  directly rather than `PingAsync` (which swallowed errors). Coinbase service unit tests now assert
+  the exact public, unsigned market-data paths. KuCoin public market-data smoke tests no longer
+  require credentials. (Test-only; no library behavior change.)
+
 ## [0.6.0-preview.1] — 2026-06-26
 
 ### Added
@@ -213,7 +234,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Account operations: balances, trade history
 - Comprehensive unit and integration test suite
 
-[Unreleased]: https://github.com/OrodruinLabs/CryptoExchanges.Net/compare/v0.6.0-preview.1...HEAD
+[Unreleased]: https://github.com/OrodruinLabs/CryptoExchanges.Net/compare/v0.6.0-preview.2...HEAD
+[0.6.0-preview.2]: https://github.com/OrodruinLabs/CryptoExchanges.Net/compare/v0.6.0-preview.1...v0.6.0-preview.2
 [0.6.0-preview.1]: https://github.com/OrodruinLabs/CryptoExchanges.Net/compare/v0.5.0-preview.4...v0.6.0-preview.1
 [0.5.0-preview.4]: https://github.com/OrodruinLabs/CryptoExchanges.Net/compare/v0.5.0-preview.3...v0.5.0-preview.4
 [0.5.0-preview.3]: https://github.com/OrodruinLabs/CryptoExchanges.Net/compare/v0.5.0-preview.2...v0.5.0-preview.3

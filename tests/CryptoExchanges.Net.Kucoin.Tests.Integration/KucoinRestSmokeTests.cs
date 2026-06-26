@@ -71,15 +71,12 @@ public class KucoinRestSmokeTests : IAsyncLifetime
         Assert.SkipWhen(!_hasCredentials, "KuCoin credentials (KUCOIN_API_KEY/KUCOIN_SECRET_KEY/KUCOIN_PASSPHRASE) not fully set — skipping credential-required smoke test.");
     }
 
-    // ── Public REST ──
-
     [Fact]
     public async Task GetServerTime_ReturnsTimestamp()
     {
         SkipIfUnavailable();
         // SyncServerTimeAsync exercises the /api/v1/timestamp public endpoint without requiring credentials.
         await _client.SyncServerTimeAsync(TestContext.Current.CancellationToken);
-        // If we reach here without throwing, the endpoint returned a positive timestamp.
     }
 
     [Fact]
@@ -104,8 +101,6 @@ public class KucoinRestSmokeTests : IAsyncLifetime
         orderBook.Bids[0].Price.Should().BeGreaterThan(0);
         orderBook.Asks[0].Price.Should().BeGreaterThan(0);
     }
-
-    // ── Signed REST (requires credentials) ──
 
     [Fact]
     public async Task GetBalances_WithCredentials_ReturnsBalances()

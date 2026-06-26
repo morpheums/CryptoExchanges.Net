@@ -650,6 +650,101 @@ public class CoinbaseMappingAndServiceTests
         order.OrderId.Should().Be("missing-id");
     }
 
+    // Public market-data must hit Coinbase's unauthenticated /api/v3/brokerage/market/... endpoints.
+    // The asserting handler fails offline (no network/creds) if a method regresses to an authed path.
+
+    [Fact]
+    public async Task GetExchangeInfo_RequestsPublicProductsPath()
+    {
+        var (symbolMapper, mapper) = BuildMappers();
+        var http = BuildAssertingClient("/api/v3/brokerage/market/products", """{"products":[]}""");
+        var service = new CoinbaseMarketDataService(http, symbolMapper, mapper);
+
+        var info = await service.GetExchangeInfoAsync(TestContext.Current.CancellationToken);
+        info.Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task GetTickers_List_RequestsPublicProductsPath()
+    {
+        var (symbolMapper, mapper) = BuildMappers();
+        var http = BuildAssertingClient("/api/v3/brokerage/market/products", """{"products":[]}""");
+        var service = new CoinbaseMarketDataService(http, symbolMapper, mapper);
+
+        var tickers = await service.GetTickersAsync(ct: TestContext.Current.CancellationToken);
+        tickers.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task GetTickers_SingleSymbol_RequestsPublicProductPath()
+    {
+        var (symbolMapper, mapper) = BuildMappers();
+        var http = BuildAssertingClient("/api/v3/brokerage/market/products/BTC-USDT", """{"product_id":"BTC-USDT","price":"42000"}""");
+        var service = new CoinbaseMarketDataService(http, symbolMapper, mapper);
+
+        var tickers = await service.GetTickersAsync(BtcUsdt, TestContext.Current.CancellationToken);
+        tickers.Should().HaveCount(1);
+        tickers[0].LastPrice.Should().Be(42000m);
+    }
+
+    [Fact]
+    public async Task GetPrice_RequestsPublicProductPath()
+    {
+        var (symbolMapper, mapper) = BuildMappers();
+        var http = BuildAssertingClient("/api/v3/brokerage/market/products/BTC-USDT", """{"product_id":"BTC-USDT","price":"42000"}""");
+        var service = new CoinbaseMarketDataService(http, symbolMapper, mapper);
+
+        var price = await service.GetPriceAsync(BtcUsdt, TestContext.Current.CancellationToken);
+        price.Should().Be(42000m);
+    }
+
+    [Fact]
+    public async Task GetOrderBook_RequestsPublicProductBookPath()
+    {
+        var (symbolMapper, mapper) = BuildMappers();
+        const string json = """{"pricebook":{"product_id":"BTC-USDT","bids":[],"asks":[],"time":"2024-01-01T00:00:00Z"}}""";
+        var http = BuildAssertingClient("/api/v3/brokerage/market/product_book", json);
+        var service = new CoinbaseMarketDataService(http, symbolMapper, mapper);
+
+        var book = await service.GetOrderBookAsync(BtcUsdt, 10, TestContext.Current.CancellationToken);
+        book.Symbol.Should().Be(BtcUsdt);
+    }
+
+    [Fact]
+    public async Task GetCandlesticks_RequestsPublicCandlesPath()
+    {
+        var (symbolMapper, mapper) = BuildMappers();
+        var http = BuildAssertingClient("/api/v3/brokerage/market/products/BTC-USDT/candles", """{"candles":[]}""");
+        var service = new CoinbaseMarketDataService(http, symbolMapper, mapper);
+
+        var candles = await service.GetCandlesticksAsync(BtcUsdt, KlineInterval.OneMinute, ct: TestContext.Current.CancellationToken);
+        candles.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task GetRecentTrades_RequestsPublicMarketTradesPath()
+    {
+        var (symbolMapper, mapper) = BuildMappers();
+        var http = BuildAssertingClient("/api/v3/brokerage/market/products/BTC-USDT/ticker", """{"trades":[]}""");
+        var service = new CoinbaseMarketDataService(http, symbolMapper, mapper);
+
+        var trades = await service.GetRecentTradesAsync(BtcUsdt, ct: TestContext.Current.CancellationToken);
+        trades.Should().BeEmpty();
+    }
+
+    // Builds a real CoinbaseHttpClient whose handler asserts the requested absolute path, then
+    // returns canned JSON — a regression to an authed path throws (and fails) before any network call.
+    private static CoinbaseHttpClient BuildAssertingClient(string expectedAbsolutePath, string json)
+    {
+        var handler = new CapturingHandler(r =>
+        {
+            r.RequestUri!.AbsolutePath.Should().Be(expectedAbsolutePath);
+            return new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(json) };
+        });
+        var httpClient = new HttpClient(handler) { BaseAddress = new Uri("https://api.coinbase.com") };
+        return new CoinbaseHttpClient(httpClient);
+    }
+
     private static CoinbaseHttpClient BuildRealClient(Func<HttpRequestMessage, string> bodyFactory)
     {
         var handler = new CapturingHandler(r =>

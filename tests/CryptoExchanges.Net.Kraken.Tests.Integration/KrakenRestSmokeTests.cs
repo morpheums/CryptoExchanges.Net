@@ -34,17 +34,21 @@ public class KrakenRestSmokeTests : IAsyncLifetime
             ? KrakenExchangeClient.CreateFromEnvironment()
             : KrakenExchangeClient.Create(new KrakenOptions());
 
-        // Skip ONLY on genuine connectivity failure (no HTTP response / timeout). Real HTTP, auth
-        // (e.g. 401 → ExchangeException) and protocol errors propagate and fail the run.
+        // Skip ONLY when no HTTP response was received (null StatusCode — DNS/refused/socket) or timeout.
+        // A real HTTP error response (non-null StatusCode) and any ExchangeException propagate and fail.
         try
         {
             var reachable = await _client.PingAsync().ConfigureAwait(false);
             if (!reachable)
                 _skipReason = "Kraken REST endpoint unreachable (connectivity) — skipping integration smoke tests.";
         }
-        catch (Exception ex) when (ex is HttpRequestException or OperationCanceledException)
+        catch (HttpRequestException ex) when (ex.StatusCode is null)
         {
             _skipReason = "Kraken REST endpoint unreachable (connectivity) — skipping integration smoke tests.";
+        }
+        catch (OperationCanceledException)
+        {
+            _skipReason = "Kraken REST endpoint unreachable (timeout) — skipping integration smoke tests.";
         }
     }
 

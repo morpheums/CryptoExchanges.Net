@@ -27,24 +27,32 @@ public class KucoinRestSmokeTests : IAsyncLifetime
     /// <inheritdoc />
     public async ValueTask InitializeAsync()
     {
-        var apiKey = Environment.GetEnvironmentVariable("KUCOIN_API_KEY");
-        _hasCredentials = !string.IsNullOrEmpty(apiKey);
+        // KuCoin signs with key + secret + passphrase; partial creds → public-only so credentialed
+        // tests skip rather than running through a broken CreateFromEnvironment.
+        _hasCredentials =
+            !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("KUCOIN_API_KEY"))
+            && !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("KUCOIN_SECRET_KEY"))
+            && !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("KUCOIN_PASSPHRASE"));
 
         _client = _hasCredentials
             ? KucoinExchangeClient.CreateFromEnvironment()
             : KucoinExchangeClient.Create(new KucoinOptions());
 
-        // Probe the public /api/v1/timestamp endpoint (no credentials). Skip ONLY on genuine
-        // connectivity failure (no HTTP response / timeout); real HTTP/auth/protocol errors propagate.
+        // Skip ONLY when no HTTP response was received (null StatusCode — DNS/refused/socket) or timeout.
+        // A real HTTP error response (non-null StatusCode) and any ExchangeException propagate and fail.
         try
         {
             var reachable = await _client.PingAsync().ConfigureAwait(false);
             if (!reachable)
                 _skipReason = "KuCoin REST endpoint unreachable (connectivity) — skipping integration smoke tests.";
         }
-        catch (Exception ex) when (ex is HttpRequestException or OperationCanceledException)
+        catch (HttpRequestException ex) when (ex.StatusCode is null)
         {
             _skipReason = "KuCoin REST endpoint unreachable (connectivity) — skipping integration smoke tests.";
+        }
+        catch (OperationCanceledException)
+        {
+            _skipReason = "KuCoin REST endpoint unreachable (timeout) — skipping integration smoke tests.";
         }
     }
 
@@ -62,7 +70,7 @@ public class KucoinRestSmokeTests : IAsyncLifetime
     private void SkipIfNoCredentials()
     {
         SkipIfUnavailable();
-        Assert.SkipWhen(!_hasCredentials, "KUCOIN_API_KEY not set — skipping credential-required smoke test.");
+        Assert.SkipWhen(!_hasCredentials, "KuCoin credentials (KUCOIN_API_KEY/KUCOIN_SECRET_KEY/KUCOIN_PASSPHRASE) not fully set — skipping credential-required smoke test.");
     }
 
     // ── Public REST ──

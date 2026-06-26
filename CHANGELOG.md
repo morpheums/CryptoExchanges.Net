@@ -9,6 +9,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.6.0-preview.1] — 2026-06-26
+
+### Added
+
+- **Coinbase and Kraken exchange integrations** — two new exchanges at full parity with the existing
+  five: REST market data + account + trading, and public WebSocket streaming (ticker / trade /
+  order-book L2 / kline) via the existing `IStreamClient` surface. Opt-in per exchange via
+  `AddCoinbaseExchange()` / `AddCoinbaseStreams()` and `AddKrakenExchange()` / `AddKrakenStreams()`.
+  Two new NuGet packages — `CryptoExchanges.Net.Coinbase` and `CryptoExchanges.Net.Kraken`
+  (published set 9 → 11). Coinbase uses per-request ES256 JWT auth; Kraken uses HMAC-SHA512 with a
+  nonce. Spot only; public streams only.
+- **Connect-time frames engine hook** — `IStreamProtocol.ConnectFrames()` lets a venue send
+  connection-level frames on every (re)connect (paced, replayed on reconnect); used to subscribe
+  Coinbase's `heartbeats` channel so idle sockets stay alive. Default no-op for all other venues.
+
+### Changed
+
+- **Solution migrated to the `.slnx` format** (replaces `CryptoExchanges.Net.sln`); CI workflows
+  updated accordingly.
+- **Cross-exchange consistency hardening** — all exchanges now honor `CancellationToken` in
+  `IMarketDataService` symbol resolution (`IsSupportedAsync` / `ResolveSymbolAsync`), and their
+  WebSocket stream decoders throw a clear decode exception (instead of a `NullReferenceException`)
+  on malformed frames.
+- **README** — dropped the redundant Status column from the Supported Exchanges table.
+
 ## [0.5.0-preview.4] — 2026-06-24
 
 ### Added
@@ -188,7 +213,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Account operations: balances, trade history
 - Comprehensive unit and integration test suite
 
-[Unreleased]: https://github.com/OrodruinLabs/CryptoExchanges.Net/compare/v0.5.0-preview.4...HEAD
+[Unreleased]: https://github.com/OrodruinLabs/CryptoExchanges.Net/compare/v0.6.0-preview.1...HEAD
+[0.6.0-preview.1]: https://github.com/OrodruinLabs/CryptoExchanges.Net/compare/v0.5.0-preview.4...v0.6.0-preview.1
 [0.5.0-preview.4]: https://github.com/OrodruinLabs/CryptoExchanges.Net/compare/v0.5.0-preview.3...v0.5.0-preview.4
 [0.5.0-preview.3]: https://github.com/OrodruinLabs/CryptoExchanges.Net/compare/v0.5.0-preview.2...v0.5.0-preview.3
 [0.5.0-preview.2]: https://github.com/OrodruinLabs/CryptoExchanges.Net/compare/v0.5.0-preview.1...v0.5.0-preview.2

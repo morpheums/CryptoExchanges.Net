@@ -143,13 +143,23 @@ internal sealed class BybitStreamProtocol : IStreamProtocol
     {
         StreamKind.Ticker => $"tickers.{request.WireSymbol}",
         StreamKind.Trade => $"publicTrade.{request.WireSymbol}",
-        StreamKind.OrderBook when request.Depth.HasValue => $"orderbook.{request.Depth}.{request.WireSymbol}",
-        StreamKind.OrderBook => $"orderbook.{DefaultOrderBookDepth}.{request.WireSymbol}",
+        StreamKind.OrderBook => $"orderbook.{MapOrderBookDepth(request.Depth)}.{request.WireSymbol}",
         StreamKind.Kline when request.Interval is not null =>
             $"kline.{MapInterval(request.Interval)}.{request.WireSymbol}",
         StreamKind.Kline => $"kline.1.{request.WireSymbol}",
         _ => throw new ArgumentOutOfRangeException(nameof(request), request.Kind,
             $"Unsupported stream kind: {request.Kind}")
+    };
+
+    // Bybit v5 spot order books publish only at depths 1/50/200/1000; an unsupported depth
+    // yields an invalid topic the venue rejects, so round each request UP to the nearest tier.
+    private static int MapOrderBookDepth(int? requested) => requested switch
+    {
+        null => DefaultOrderBookDepth,
+        <= 1 => 1,
+        <= 50 => 50,
+        <= 200 => 200,
+        _ => 1000
     };
 
     private static string MapInterval(string intervalToken) => intervalToken switch

@@ -161,7 +161,7 @@ internal sealed class BybitStreamProtocol : IStreamProtocol
         <= 200 => 200,
         <= 1000 => 1000,
         _ => throw new ArgumentOutOfRangeException(nameof(requested), requested,
-            $"Bybit v5 spot supports order-book depths up to 1000; requested {requested}.")
+            $"Bybit v5 spot supports order-book depths 1, 50, 200, or 1000; requested {requested}.")
     };
 
     private static string MapInterval(string intervalToken) => intervalToken switch

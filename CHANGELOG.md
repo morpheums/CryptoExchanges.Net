@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.6.0-preview.3] — 2026-06-26
+
+### Fixed
+
+- **Bybit order-book WebSocket stream delivered no updates for non-tier depths** —
+  `SubscribeToOrderBookAsync` built the Bybit topic `orderbook.{depth}.{symbol}` from the raw
+  requested depth, but Bybit v5 spot only supports depths `1`, `50`, `200`, and `1000`. A depth such
+  as `20` produced the invalid topic `orderbook.20.{symbol}`, which Bybit rejected, so no book
+  updates were delivered. The requested depth is now mapped up to the nearest supported tier (e.g.
+  `20` → `50`); a depth above the maximum `1000` throws `ArgumentOutOfRangeException` rather than
+  silently under-delivering.
+
 ## [0.6.0-preview.2] — 2026-06-26
 
 ### Fixed
@@ -234,7 +246,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Account operations: balances, trade history
 - Comprehensive unit and integration test suite
 
-[Unreleased]: https://github.com/OrodruinLabs/CryptoExchanges.Net/compare/v0.6.0-preview.2...HEAD
+[Unreleased]: https://github.com/OrodruinLabs/CryptoExchanges.Net/compare/v0.6.0-preview.3...HEAD
+[0.6.0-preview.3]: https://github.com/OrodruinLabs/CryptoExchanges.Net/compare/v0.6.0-preview.2...v0.6.0-preview.3
 [0.6.0-preview.2]: https://github.com/OrodruinLabs/CryptoExchanges.Net/compare/v0.6.0-preview.1...v0.6.0-preview.2
 [0.6.0-preview.1]: https://github.com/OrodruinLabs/CryptoExchanges.Net/compare/v0.5.0-preview.4...v0.6.0-preview.1
 [0.5.0-preview.4]: https://github.com/OrodruinLabs/CryptoExchanges.Net/compare/v0.5.0-preview.3...v0.5.0-preview.4

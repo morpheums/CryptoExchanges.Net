@@ -43,7 +43,7 @@ internal static class BinanceStreamDecoders
         // ── Ticker ────────────────────────────────────────────────────────────
         registry.Register(StreamKind.Ticker, bytes =>
         {
-            var dto = DeserializeData<StreamTickerDto>(bytes)!;
+            var dto = DeserializeData<StreamTickerDto>(bytes);
             return mapper.Map<StreamTickerDto, Ticker>(dto);
         });
 
@@ -52,7 +52,7 @@ internal static class BinanceStreamDecoders
         // matches the REST convention: FillDto -> Trade is skipped in the profile).
         registry.Register(StreamKind.Trade, bytes =>
         {
-            var dto = DeserializeData<StreamTradeDto>(bytes)!;
+            var dto = DeserializeData<StreamTradeDto>(bytes);
             var symbol = symbolMapper.FromWire(dto.Symbol);
             return new Trade(
                 Symbol: symbol,
@@ -94,7 +94,7 @@ internal static class BinanceStreamDecoders
         // Hand-mapped following the REST GetCandlesticksAsync convention.
         registry.Register(StreamKind.Kline, bytes =>
         {
-            var dto = DeserializeData<StreamKlineDto>(bytes)!;
+            var dto = DeserializeData<StreamKlineDto>(bytes);
             var k = dto.Kline;
             var interval = MapWireInterval(k.Interval);
             return new Candlestick(
@@ -134,14 +134,16 @@ internal static class BinanceStreamDecoders
     };
 
     // Combined-stream frames wrap the leaf payload as {"stream":..,"data":{..}}; unwrap "data" first.
-    private static T? DeserializeData<T>(ReadOnlyMemory<byte> frame)
+    private static T DeserializeData<T>(ReadOnlyMemory<byte> frame)
     {
         var reader = new Utf8JsonReader(frame.Span);
         using var doc = JsonDocument.ParseValue(ref reader);
         if (!doc.RootElement.TryGetProperty("data"u8, out var dataProp))
             throw new InvalidOperationException(
                 "Combined-stream frame has no 'data' element; cannot decode the payload.");
-        return dataProp.Deserialize<T>(JsonOpts);
+        return dataProp.Deserialize<T>(JsonOpts)
+            ?? throw new InvalidOperationException(
+                $"Binance 'data' element deserialized to null; cannot decode {typeof(T).Name}.");
     }
 
     // Partial-book ('@depthN') frames omit the symbol from "data", so also return the "stream" token.
@@ -157,7 +159,10 @@ internal static class BinanceStreamDecoders
             && streamProp.ValueKind == JsonValueKind.String
             ? streamProp.GetString()
             : null;
-        return (dataProp.Deserialize<StreamDepthDto>(JsonOpts)!, streamToken);
+        var dto = dataProp.Deserialize<StreamDepthDto>(JsonOpts)
+            ?? throw new InvalidOperationException(
+                $"Binance 'data' element deserialized to null; cannot decode {nameof(StreamDepthDto)}.");
+        return (dto, streamToken);
     }
 
     // "btcusdt@depth20" -> "BTCUSDT" (upper-cased to match FromWire's table).

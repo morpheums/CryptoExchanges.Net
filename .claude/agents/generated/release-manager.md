@@ -40,7 +40,7 @@ CryptoExchanges.Net is a multi-package NuGet SDK. Versioning is centralized in `
 3. Update `<Version>` in `Directory.Build.props` ONLY — this propagates to all packages
 4. Update the NuGet badge URL in `README.md` line 7 to match
 5. Create/update `CHANGELOG.md` with the new version header and release date
-6. Run `dotnet build CryptoExchanges.Net.sln` to confirm all packages build cleanly
+6. Run `dotnet build CryptoExchanges.Net.slnx` to confirm all packages build cleanly
 7. Run `dotnet pack --configuration Release` to verify `.nupkg` files generate without error
 8. Create a git tag `v{new-version}` (do not push unless explicitly asked)
 

@@ -32,13 +32,13 @@ internal static class KucoinStreamDecoders
         // Ticker: snapshot channel wraps payload as data.data (double-nested).
         registry.Register(StreamKind.Ticker, bytes =>
         {
-            var dto = DeserializeSnapshotData<StreamTickerDto>(bytes)!;
+            var dto = DeserializeSnapshotData<StreamTickerDto>(bytes);
             return mapper.Map<StreamTickerDto, Ticker>(dto);
         });
 
         registry.Register(StreamKind.Trade, bytes =>
         {
-            var dto = DeserializeData<StreamTradeDto>(bytes)!;
+            var dto = DeserializeData<StreamTradeDto>(bytes);
             var symbol = symbolMapper.FromWire(dto.Symbol);
             // "buy" taker → seller is maker (IsBuyerMaker = false).
             var isBuyerMaker = string.Equals(dto.Side, "sell", StringComparison.OrdinalIgnoreCase);
@@ -55,7 +55,7 @@ internal static class KucoinStreamDecoders
         // KuCoin level2 stream delivers incremental diffs; each entry is [price, size, sequence].
         registry.Register(StreamKind.OrderBook, bytes =>
         {
-            var dto = DeserializeData<StreamDepthDto>(bytes)!;
+            var dto = DeserializeData<StreamDepthDto>(bytes);
             var symbol = symbolMapper.FromWire(dto.Symbol);
             var bidEntries = dto.Changes.Bids;
             var bids = new List<OrderBookEntry>(bidEntries.Count);
@@ -71,7 +71,7 @@ internal static class KucoinStreamDecoders
         // KuCoin candles array: [startAt(s), open, close, high, low, vol, quoteVol]; interval not in payload.
         registry.Register(StreamKind.Kline, bytes =>
         {
-            var dto = DeserializeData<StreamKlineDto>(bytes)!;
+            var dto = DeserializeData<StreamKlineDto>(bytes);
             var c = dto.Candles;
             var openTimeSec = c.Count > 0 ? KucoinValueParsers.ParseMs(c[0]) : 0L;
             var openTime = openTimeSec > 0
@@ -95,28 +95,32 @@ internal static class KucoinStreamDecoders
     }
 
     /// <summary>Deserializes the <c>data</c> field from a push frame, or the raw bytes when no outer wrapper is present.</summary>
-    private static T? DeserializeData<T>(ReadOnlyMemory<byte> frame)
+    private static T DeserializeData<T>(ReadOnlyMemory<byte> frame)
     {
         try
         {
             var reader = new Utf8JsonReader(frame.Span);
             using var doc = JsonDocument.ParseValue(ref reader);
             if (doc.RootElement.TryGetProperty("data"u8, out var dataProp))
-                return dataProp.Deserialize<T>(JsonOpts);
+                return dataProp.Deserialize<T>(JsonOpts)
+                    ?? throw new InvalidOperationException(
+                        $"KuCoin 'data' element deserialized to null; cannot decode {typeof(T).Name}.");
         }
         catch (JsonException)
         {
             // Malformed outer wrapper: fall through and try deserializing as bare payload.
         }
 
-        return JsonSerializer.Deserialize<T>(frame.Span, JsonOpts);
+        return JsonSerializer.Deserialize<T>(frame.Span, JsonOpts)
+            ?? throw new InvalidOperationException(
+                $"KuCoin frame deserialized to null; cannot decode {typeof(T).Name}.");
     }
 
     /// <summary>
     /// Deserializes the double-nested <c>data.data</c> payload for the <c>/market/snapshot</c> channel.
     /// Falls back to deserializing the raw bytes when no outer wrapper is present (unit-test fixtures).
     /// </summary>
-    private static T? DeserializeSnapshotData<T>(ReadOnlyMemory<byte> frame)
+    private static T DeserializeSnapshotData<T>(ReadOnlyMemory<byte> frame)
     {
         try
         {
@@ -128,11 +132,15 @@ internal static class KucoinStreamDecoders
             if (root.TryGetProperty("data"u8, out var outerData))
             {
                 if (outerData.TryGetProperty("data"u8, out var innerData))
-                    return innerData.Deserialize<T>(JsonOpts);
+                    return innerData.Deserialize<T>(JsonOpts)
+                        ?? throw new InvalidOperationException(
+                            $"KuCoin 'data.data' element deserialized to null; cannot decode {typeof(T).Name}.");
 
                 // Outer data present but no inner data — try deserializing outer as the payload
                 // (handles bare single-level test fixtures that already represent the inner object).
-                return outerData.Deserialize<T>(JsonOpts);
+                return outerData.Deserialize<T>(JsonOpts)
+                    ?? throw new InvalidOperationException(
+                        $"KuCoin 'data' element deserialized to null; cannot decode {typeof(T).Name}.");
             }
         }
         catch (JsonException)
@@ -141,6 +149,8 @@ internal static class KucoinStreamDecoders
         }
 
         // Bare inner payload (unit-test fixture with no envelope at all).
-        return JsonSerializer.Deserialize<T>(frame.Span, JsonOpts);
+        return JsonSerializer.Deserialize<T>(frame.Span, JsonOpts)
+            ?? throw new InvalidOperationException(
+                $"KuCoin frame deserialized to null; cannot decode {typeof(T).Name}.");
     }
 }

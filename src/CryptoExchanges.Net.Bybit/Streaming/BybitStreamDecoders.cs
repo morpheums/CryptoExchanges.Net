@@ -37,7 +37,7 @@ internal static class BybitStreamDecoders
         // Bybit v5 ticker frame: data is a single object {"symbol":...,"lastPrice":...,...}.
         registry.Register(StreamKind.Ticker, bytes =>
         {
-            var dto = DeserializeData<StreamTickerDto>(bytes)!;
+            var dto = DeserializeData<StreamTickerDto>(bytes);
             return mapper.Map<StreamTickerDto, Ticker>(dto);
         });
 
@@ -46,7 +46,7 @@ internal static class BybitStreamDecoders
         // intra-frame trade batches are not fanned out. S == "Sell" ⇒ buyer was the maker.
         registry.Register(StreamKind.Trade, bytes =>
         {
-            var dto = DeserializeLastArrayElement<StreamTradeDto>(bytes)!;
+            var dto = DeserializeLastArrayElement<StreamTradeDto>(bytes);
             var symbol = symbolMapper.FromWire(dto.Symbol);
             return new Trade(
                 Symbol: symbol,
@@ -63,7 +63,7 @@ internal static class BybitStreamDecoders
         // Both snapshot and delta frames share this shape; no local-book maintenance required.
         registry.Register(StreamKind.OrderBook, bytes =>
         {
-            var dto = DeserializeData<StreamDepthDto>(bytes)!;
+            var dto = DeserializeData<StreamDepthDto>(bytes);
             var symbol = symbolMapper.FromWire(dto.Symbol);
             var bids = new List<OrderBookEntry>(dto.Bids.Count);
             foreach (var b in dto.Bids)
@@ -81,7 +81,7 @@ internal static class BybitStreamDecoders
         // Bybit v5 kline frame: data is an ARRAY holding the current bar; emit its single entry.
         registry.Register(StreamKind.Kline, bytes =>
         {
-            var dto = DeserializeFirstArrayElement<StreamKlineDto>(bytes)!;
+            var dto = DeserializeFirstArrayElement<StreamKlineDto>(bytes);
             var interval = MapWireInterval(dto.Interval);
             // dto.Confirm indicates a closed bar; the Candlestick model does not carry that flag.
             return new Candlestick(
@@ -102,18 +102,20 @@ internal static class BybitStreamDecoders
 
     // Bybit v5 push frames: {"topic":..., "type":..., "ts":..., "data": <object>}
     // Unwrap "data" before deserializing the leaf DTO (FEAT-008/TASK-074 lesson).
-    private static T? DeserializeData<T>(ReadOnlyMemory<byte> frame)
+    private static T DeserializeData<T>(ReadOnlyMemory<byte> frame)
     {
         var reader = new Utf8JsonReader(frame.Span);
         using var doc = JsonDocument.ParseValue(ref reader);
         if (!doc.RootElement.TryGetProperty("data"u8, out var dataProp))
             throw new InvalidOperationException(
                 "Bybit v5 push frame has no 'data' element; cannot decode the payload.");
-        return dataProp.Deserialize<T>(JsonOpts);
+        return dataProp.Deserialize<T>(JsonOpts)
+            ?? throw new InvalidOperationException(
+                $"Bybit v5 'data' element deserialized to null; cannot decode {typeof(T).Name}.");
     }
 
     // Bybit v5 kline frames carry data as an ARRAY holding the current bar; take the first element.
-    private static T? DeserializeFirstArrayElement<T>(ReadOnlyMemory<byte> frame)
+    private static T DeserializeFirstArrayElement<T>(ReadOnlyMemory<byte> frame)
     {
         var reader = new Utf8JsonReader(frame.Span);
         using var doc = JsonDocument.ParseValue(ref reader);
@@ -127,12 +129,14 @@ internal static class BybitStreamDecoders
         if (!enumerator.MoveNext())
             throw new InvalidOperationException(
                 $"Bybit v5 'data' array is empty; cannot decode {typeof(T).Name}.");
-        return enumerator.Current.Deserialize<T>(JsonOpts);
+        return enumerator.Current.Deserialize<T>(JsonOpts)
+            ?? throw new InvalidOperationException(
+                $"Bybit v5 'data' element deserialized to null; cannot decode {typeof(T).Name}.");
     }
 
     // Bybit v5 publicTrade frames carry data as an ARRAY (oldest→newest); take the last (latest)
     // element. v1 emits one model per frame, so earlier trades in a batched frame are not delivered.
-    private static T? DeserializeLastArrayElement<T>(ReadOnlyMemory<byte> frame)
+    private static T DeserializeLastArrayElement<T>(ReadOnlyMemory<byte> frame)
     {
         var reader = new Utf8JsonReader(frame.Span);
         using var doc = JsonDocument.ParseValue(ref reader);
@@ -148,7 +152,9 @@ internal static class BybitStreamDecoders
         if (last is null)
             throw new InvalidOperationException(
                 $"Bybit v5 'data' array is empty; cannot decode {typeof(T).Name}.");
-        return last.Value.Deserialize<T>(JsonOpts);
+        return last.Value.Deserialize<T>(JsonOpts)
+            ?? throw new InvalidOperationException(
+                $"Bybit v5 'data' element deserialized to null; cannot decode {typeof(T).Name}.");
     }
 
     private static KlineInterval? MapWireInterval(string wire) => wire switch

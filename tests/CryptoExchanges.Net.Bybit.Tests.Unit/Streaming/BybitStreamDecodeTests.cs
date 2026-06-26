@@ -223,4 +223,47 @@ public class BybitStreamDecodeTests
         result.Open.Should().Be(66900.00m);
         result.Interval.Should().Be(KlineInterval.OneHour);
     }
+
+    [Fact]
+    public void Ticker_NullData_ThrowsClearDecodeException_NotNre()
+    {
+        var registry = BuildRegistry();
+        var decoder = registry.Resolve(StreamKind.Ticker);
+
+        // A null 'data' element must surface a clear decode exception, never an opaque NRE.
+        var frame = Envelope("tickers.BTCUSDT", "snapshot", "null");
+
+        var act = () => decoder(frame);
+
+        act.Should().Throw<InvalidOperationException>()
+            .Which.Message.Should().Contain("null");
+    }
+
+    [Fact]
+    public void Trade_NullDataElement_ThrowsClearDecodeException_NotNre()
+    {
+        var registry = BuildRegistry();
+        var decoder = registry.Resolve(StreamKind.Trade);
+
+        var frame = Envelope("publicTrade.BTCUSDT", "snapshot", "[null]");
+
+        var act = () => decoder(frame);
+
+        act.Should().Throw<InvalidOperationException>()
+            .Which.Message.Should().Contain("null");
+    }
+
+    [Fact]
+    public void Kline_EmptyDataArray_ThrowsClearDecodeException_NotNre()
+    {
+        var registry = BuildRegistry();
+        var decoder = registry.Resolve(StreamKind.Kline);
+
+        var frame = Envelope("kline.60.BTCUSDT", "snapshot", "[]");
+
+        var act = () => decoder(frame);
+
+        act.Should().Throw<InvalidOperationException>()
+            .Which.Message.Should().Contain("empty");
+    }
 }

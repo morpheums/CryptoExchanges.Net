@@ -29,10 +29,10 @@ jobs:
           dotnet-version: '10.0.x'
 
       - name: Restore
-        run: dotnet restore CryptoExchanges.Net.sln
+        run: dotnet restore CryptoExchanges.Net.slnx
 
       - name: Build
-        run: dotnet build CryptoExchanges.Net.sln --no-restore --configuration Release
+        run: dotnet build CryptoExchanges.Net.slnx --no-restore --configuration Release
 
       - name: Test
-        run: dotnet test CryptoExchanges.Net.sln --no-build --configuration Release --verbosity normal --filter 'Category!=Integration'
+        run: dotnet test CryptoExchanges.Net.slnx --no-build --configuration Release --verbosity normal --filter 'Category!=Integration'

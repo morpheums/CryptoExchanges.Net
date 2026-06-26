@@ -1,0 +1,41 @@
+<Solution>
+  <Configurations>
+    <Platform Name="Any CPU" />
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Folder Name="/src/">
+    <Project Path="src/CryptoExchanges.Net.Bitget/CryptoExchanges.Net.Bitget.csproj" />
+    <Project Path="src/CryptoExchanges.Net.Coinbase/CryptoExchanges.Net.Coinbase.csproj" />
+    <Project Path="src/CryptoExchanges.Net.Http/CryptoExchanges.Net.Http.csproj" />
+    <Project Path="src/CryptoExchanges.Net.Kraken/CryptoExchanges.Net.Kraken.csproj" />
+    <Project Path="src/CryptoExchanges.Net.Kucoin/CryptoExchanges.Net.Kucoin.csproj" />
+    <Project Path="src/CryptoExchanges.Net.Mcp/CryptoExchanges.Net.Mcp.csproj" />
+    <Project Path="src/CryptoExchanges.Net.Okx/CryptoExchanges.Net.Okx.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/CryptoExchanges.Net.Binance.Tests.Unit/CryptoExchanges.Net.Binance.Tests.Unit.csproj" />
+    <Project Path="tests/CryptoExchanges.Net.Bitget.Tests.Integration/CryptoExchanges.Net.Bitget.Tests.Integration.csproj" />
+    <Project Path="tests/CryptoExchanges.Net.Bitget.Tests.Unit/CryptoExchanges.Net.Bitget.Tests.Unit.csproj" />
+    <Project Path="tests/CryptoExchanges.Net.Bybit.Tests.Integration/CryptoExchanges.Net.Bybit.Tests.Integration.csproj" />
+    <Project Path="tests/CryptoExchanges.Net.Bybit.Tests.Unit/CryptoExchanges.Net.Bybit.Tests.Unit.csproj" />
+    <Project Path="tests/CryptoExchanges.Net.Coinbase.Tests.Integration/CryptoExchanges.Net.Coinbase.Tests.Integration.csproj" />
+    <Project Path="tests/CryptoExchanges.Net.Coinbase.Tests.Unit/CryptoExchanges.Net.Coinbase.Tests.Unit.csproj" />
+    <Project Path="tests/CryptoExchanges.Net.Http.Tests.Unit/CryptoExchanges.Net.Http.Tests.Unit.csproj" />
+    <Project Path="tests/CryptoExchanges.Net.Kraken.Tests.Integration/CryptoExchanges.Net.Kraken.Tests.Integration.csproj" />
+    <Project Path="tests/CryptoExchanges.Net.Kraken.Tests.Unit/CryptoExchanges.Net.Kraken.Tests.Unit.csproj" />
+    <Project Path="tests/CryptoExchanges.Net.Kucoin.Tests.Integration/CryptoExchanges.Net.Kucoin.Tests.Integration.csproj" />
+    <Project Path="tests/CryptoExchanges.Net.Kucoin.Tests.Unit/CryptoExchanges.Net.Kucoin.Tests.Unit.csproj" />
+    <Project Path="tests/CryptoExchanges.Net.Mcp.Tests.Unit/CryptoExchanges.Net.Mcp.Tests.Unit.csproj" />
+    <Project Path="tests/CryptoExchanges.Net.Okx.Tests.Integration/CryptoExchanges.Net.Okx.Tests.Integration.csproj" />
+    <Project Path="tests/CryptoExchanges.Net.Okx.Tests.Unit/CryptoExchanges.Net.Okx.Tests.Unit.csproj" />
+    <Project Path="tests/CryptoExchanges.Net.Tests.Unit/CryptoExchanges.Net.Tests.Unit.csproj" />
+  </Folder>
+  <Project Path="samples/BasicUsage/BasicUsage.csproj" />
+  <Project Path="src/CryptoExchanges.Net.Binance/CryptoExchanges.Net.Binance.csproj" />
+  <Project Path="src/CryptoExchanges.Net.Bybit/CryptoExchanges.Net.Bybit.csproj" />
+  <Project Path="src/CryptoExchanges.Net.Core/CryptoExchanges.Net.Core.csproj" />
+  <Project Path="src/CryptoExchanges.Net/CryptoExchanges.Net.csproj" />
+  <Project Path="tests/CryptoExchanges.Net.Binance.Tests.Integration/CryptoExchanges.Net.IntegrationTests.csproj" />
+  <Project Path="tests/CryptoExchanges.Net.Core.Tests.Unit/CryptoExchanges.Net.Core.Tests.csproj" />
+</Solution>

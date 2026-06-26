@@ -1,3 +1,4 @@
+using System.Net.Http;
 using Xunit;
 using AwesomeAssertions;
 using CryptoExchanges.Net.Kraken;
@@ -33,15 +34,17 @@ public class KrakenRestSmokeTests : IAsyncLifetime
             ? KrakenExchangeClient.CreateFromEnvironment()
             : KrakenExchangeClient.Create(new KrakenOptions());
 
+        // Skip ONLY on genuine connectivity failure (no HTTP response / timeout). Real HTTP, auth
+        // (e.g. 401 → ExchangeException) and protocol errors propagate and fail the run.
         try
         {
             var reachable = await _client.PingAsync().ConfigureAwait(false);
             if (!reachable)
-                _skipReason = "Kraken REST endpoint unreachable — skipping integration smoke tests.";
+                _skipReason = "Kraken REST endpoint unreachable (connectivity) — skipping integration smoke tests.";
         }
-        catch
+        catch (Exception ex) when (ex is HttpRequestException or OperationCanceledException)
         {
-            _skipReason = "Kraken REST endpoint unreachable — skipping integration smoke tests.";
+            _skipReason = "Kraken REST endpoint unreachable (connectivity) — skipping integration smoke tests.";
         }
     }
 

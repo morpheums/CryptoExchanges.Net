@@ -1,3 +1,4 @@
+using System.Net.Sockets;
 using System.Net.WebSockets;
 using Xunit;
 using AwesomeAssertions;
@@ -55,9 +56,10 @@ public class BinanceStreamSmokeTests
                     .ConfigureAwait(false);
             return null;
         }
-        catch
+        // Skip ONLY on genuine connect failure (no socket / timeout); auth/TLS/protocol errors propagate.
+        catch (Exception ex) when (ex is WebSocketException or SocketException or OperationCanceledException)
         {
-            return "Binance WebSocket endpoint unreachable — skipping integration smoke tests.";
+            return "Binance WebSocket endpoint unreachable (connectivity) — skipping integration smoke tests.";
         }
     }
 

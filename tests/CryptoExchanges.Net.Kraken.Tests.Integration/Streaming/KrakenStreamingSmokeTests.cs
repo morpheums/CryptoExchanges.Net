@@ -1,3 +1,4 @@
+using System.Net.Sockets;
 using System.Net.WebSockets;
 using Xunit;
 using AwesomeAssertions;
@@ -50,9 +51,10 @@ public class KrakenStreamingSmokeTests
                     .ConfigureAwait(false);
             return null;
         }
-        catch
+        // Skip ONLY on genuine connect failure (no socket / timeout); auth/TLS/protocol errors propagate.
+        catch (Exception ex) when (ex is WebSocketException or SocketException or OperationCanceledException)
         {
-            return "Kraken WebSocket endpoint unreachable — skipping integration streaming smoke tests.";
+            return "Kraken WebSocket endpoint unreachable (connectivity) — skipping integration streaming smoke tests.";
         }
     }
 

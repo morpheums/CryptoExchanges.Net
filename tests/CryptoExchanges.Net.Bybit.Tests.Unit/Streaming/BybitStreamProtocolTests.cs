@@ -235,7 +235,7 @@ public class BybitStreamProtocolTests
     [Fact]
     public void BuildSubscribe_OrderBook_DefaultDepth50()
     {
-        // Confirmed default depth = 50 (Bybit v5 spot available levels: 1, 50, 200).
+        // Confirmed default depth = 50 (Bybit v5 spot available levels: 1, 50, 200, 1000).
         var protocol = MakeProtocol();
         var request = new StreamRequest(StreamKind.OrderBook, "BTCUSDT");
 
@@ -267,6 +267,73 @@ public class BybitStreamProtocolTests
         using var doc = JsonDocument.Parse(wire);
 
         doc.RootElement.GetProperty("args")[0].GetString().Should().Be("orderbook.200.BTCUSDT");
+    }
+
+    [Theory]
+    [InlineData(20, "orderbook.50.BTCUSDT")]
+    [InlineData(5, "orderbook.50.BTCUSDT")]
+    [InlineData(1, "orderbook.1.BTCUSDT")]
+    [InlineData(50, "orderbook.50.BTCUSDT")]
+    [InlineData(200, "orderbook.200.BTCUSDT")]
+    [InlineData(500, "orderbook.1000.BTCUSDT")]
+    [InlineData(1000, "orderbook.1000.BTCUSDT")]
+    public void BuildSubscribe_OrderBook_RoundsDepthUpToSupportedTier(int requestedDepth, string expectedTopic)
+    {
+        // Bybit v5 spot publishes order books only at depths 1/50/200/1000; a non-tier depth
+        // would yield an invalid topic the venue rejects, so each request rounds UP to a tier.
+        var protocol = MakeProtocol();
+        var request = new StreamRequest(StreamKind.OrderBook, "BTCUSDT", Depth: requestedDepth);
+
+        var wire = protocol.BuildSubscribe(request);
+        using var doc = JsonDocument.Parse(wire);
+
+        doc.RootElement.GetProperty("args")[0].GetString().Should().Be(expectedTopic);
+    }
+
+    [Theory]
+    [InlineData(1001)]
+    [InlineData(5000)]
+    public void BuildSubscribe_OrderBook_DepthAbove1000_Throws(int requestedDepth)
+    {
+        // 1000 is the deepest Bybit v5 spot tier; a deeper request is unsatisfiable and must
+        // throw rather than silently clamp DOWN to a shallower book than asked for.
+        var protocol = MakeProtocol();
+        var request = new StreamRequest(StreamKind.OrderBook, "BTCUSDT", Depth: requestedDepth);
+
+        var act = () => protocol.BuildSubscribe(request);
+
+        act.Should().Throw<ArgumentOutOfRangeException>();
+    }
+
+    [Fact]
+    public void BuildSubscribe_OrderBook_NullDepth_MapsToDefaultTier50()
+    {
+        var protocol = MakeProtocol();
+        var request = new StreamRequest(StreamKind.OrderBook, "BTCUSDT", Depth: null);
+
+        var wire = protocol.BuildSubscribe(request);
+        using var doc = JsonDocument.Parse(wire);
+
+        doc.RootElement.GetProperty("args")[0].GetString().Should().Be("orderbook.50.BTCUSDT");
+    }
+
+    [Fact]
+    public void RoutingKeyFor_OrderBook_NonTierDepth_MatchesBuildSubscribeTopic()
+    {
+        // Depth 20 is not a Bybit tier; both RoutingKeyFor and the subscribe topic must map it
+        // to the same tier (50) or data frames would never route back to the subscription.
+        var protocol = MakeProtocol();
+        var request = new StreamRequest(StreamKind.OrderBook, "BTCUSDT", Depth: 20);
+
+        var routingKey = protocol.RoutingKeyFor(request);
+        var wire = protocol.BuildSubscribe(request);
+        using var doc = JsonDocument.Parse(wire);
+        var subscribeTopic = doc.RootElement.GetProperty("args")[0].GetString();
+
+        routingKey.Should().Be("orderbook.50.BTCUSDT");
+        subscribeTopic.Should().Be("orderbook.50.BTCUSDT");
+        routingKey.Should().Be(subscribeTopic,
+            "RoutingKeyFor and BuildSubscribe must share one mapped keyspace so frames reach their subscription");
     }
 
     [Fact]

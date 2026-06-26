@@ -34,7 +34,7 @@ internal static class CoinbaseStreamDecoders
         registry.Register(StreamKind.Ticker, bytes =>
         {
             // Real Coinbase ticker frame: events[0].tickers[0] holds the data.
-            var dto = DeserializeFirstItemInNestedArray<StreamTickerDto>(bytes, "tickers"u8)!;
+            var dto = DeserializeFirstItemInNestedArray<StreamTickerDto>(bytes, "tickers"u8);
             var symbol = symbolMapper.FromWire(dto.ProductId);
             return new Ticker(
                 Symbol: symbol,
@@ -52,7 +52,7 @@ internal static class CoinbaseStreamDecoders
         registry.Register(StreamKind.Trade, bytes =>
         {
             // market_trades events embed a "trades" array; take the last entry (newest trade).
-            var dto = DeserializeLastTrade(bytes)!;
+            var dto = DeserializeLastTrade(bytes);
             return new Trade(
                 Symbol: symbolMapper.FromWire(dto.ProductId),
                 Id: dto.TradeId,
@@ -65,7 +65,7 @@ internal static class CoinbaseStreamDecoders
 
         registry.Register(StreamKind.OrderBook, bytes =>
         {
-            var dto = DeserializeFirstEvent<StreamDepthDto>(bytes)!;
+            var dto = DeserializeFirstEvent<StreamDepthDto>(bytes);
             var symbol = symbolMapper.FromWire(dto.ProductId);
             var bids = new List<OrderBookEntry>();
             var asks = new List<OrderBookEntry>();
@@ -85,7 +85,7 @@ internal static class CoinbaseStreamDecoders
         registry.Register(StreamKind.Kline, bytes =>
         {
             // candles events embed a "candles" array; take the first candle.
-            var dto = DeserializeFirstCandle(bytes)!;
+            var dto = DeserializeFirstCandle(bytes);
             return new Candlestick(
                 OpenTime: CoinbaseValueParsers.ParseUnixSecondsToTimestamp(dto.Start) ?? DateTimeOffset.MinValue,
                 CloseTime: null,
@@ -104,7 +104,7 @@ internal static class CoinbaseStreamDecoders
 
     // Unwraps the outer events array, navigates into a named nested array, and deserializes the first element as T.
     // Used for channels (e.g. ticker) where real Coinbase embeds data in events[0].<arrayName>[0].
-    private static T? DeserializeFirstItemInNestedArray<T>(ReadOnlyMemory<byte> frame, ReadOnlySpan<byte> arrayPropertyName)
+    private static T DeserializeFirstItemInNestedArray<T>(ReadOnlyMemory<byte> frame, ReadOnlySpan<byte> arrayPropertyName)
     {
         var reader = new Utf8JsonReader(frame.Span);
         using var doc = JsonDocument.ParseValue(ref reader);
@@ -125,11 +125,13 @@ internal static class CoinbaseStreamDecoders
         if (!innerEnum.MoveNext())
             throw new InvalidOperationException(
                 $"Coinbase nested array is empty; cannot decode {typeof(T).Name}.");
-        return innerEnum.Current.Deserialize<T>(JsonOpts);
+        return innerEnum.Current.Deserialize<T>(JsonOpts)
+            ?? throw new InvalidOperationException(
+                $"Coinbase nested array element deserialized to null; cannot decode {typeof(T).Name}.");
     }
 
     // Unwraps the outer events array and deserializes the first element as T.
-    private static T? DeserializeFirstEvent<T>(ReadOnlyMemory<byte> frame)
+    private static T DeserializeFirstEvent<T>(ReadOnlyMemory<byte> frame)
     {
         var reader = new Utf8JsonReader(frame.Span);
         using var doc = JsonDocument.ParseValue(ref reader);
@@ -141,11 +143,13 @@ internal static class CoinbaseStreamDecoders
         if (!enumerator.MoveNext())
             throw new InvalidOperationException(
                 $"Coinbase 'events' array is empty; cannot decode {typeof(T).Name}.");
-        return enumerator.Current.Deserialize<T>(JsonOpts);
+        return enumerator.Current.Deserialize<T>(JsonOpts)
+            ?? throw new InvalidOperationException(
+                $"Coinbase 'events' element deserialized to null; cannot decode {typeof(T).Name}.");
     }
 
     // market_trades events contain a "trades" array; take the last (newest) entry.
-    private static StreamTradeDto? DeserializeLastTrade(ReadOnlyMemory<byte> frame)
+    private static StreamTradeDto DeserializeLastTrade(ReadOnlyMemory<byte> frame)
     {
         var reader = new Utf8JsonReader(frame.Span);
         using var doc = JsonDocument.ParseValue(ref reader);
@@ -172,7 +176,7 @@ internal static class CoinbaseStreamDecoders
     }
 
     // candles events contain a "candles" array; take the first entry.
-    private static StreamKlineDto? DeserializeFirstCandle(ReadOnlyMemory<byte> frame)
+    private static StreamKlineDto DeserializeFirstCandle(ReadOnlyMemory<byte> frame)
     {
         var reader = new Utf8JsonReader(frame.Span);
         using var doc = JsonDocument.ParseValue(ref reader);
@@ -193,6 +197,8 @@ internal static class CoinbaseStreamDecoders
         if (!candleEnum.MoveNext())
             throw new InvalidOperationException(
                 "Coinbase candles 'candles' array is empty; cannot decode StreamKlineDto.");
-        return candleEnum.Current.Deserialize<StreamKlineDto>(JsonOpts);
+        return candleEnum.Current.Deserialize<StreamKlineDto>(JsonOpts)
+            ?? throw new InvalidOperationException(
+                "Coinbase candles 'candles' element deserialized to null; cannot decode StreamKlineDto.");
     }
 }

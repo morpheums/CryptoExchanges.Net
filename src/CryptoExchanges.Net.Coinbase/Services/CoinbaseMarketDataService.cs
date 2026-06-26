@@ -150,7 +150,7 @@ internal sealed class CoinbaseMarketDataService(ICoinbaseHttpClient http, ISymbo
     public async Task<bool> IsSupportedAsync(Symbol symbol, CancellationToken ct = default)
     {
         ct.ThrowIfCancellationRequested();
-        var supported = await EnsureSupportedSymbols().Value.ConfigureAwait(false);
+        var supported = await EnsureSupportedSymbols().Value.WaitAsync(ct).ConfigureAwait(false);
         return supported.ContainsKey(symbol);
     }
 
@@ -158,7 +158,7 @@ internal sealed class CoinbaseMarketDataService(ICoinbaseHttpClient http, ISymbo
     public async Task<Symbol?> ResolveSymbolAsync(Symbol symbol, CancellationToken ct = default)
     {
         ct.ThrowIfCancellationRequested();
-        var supported = await EnsureSupportedSymbols().Value.ConfigureAwait(false);
+        var supported = await EnsureSupportedSymbols().Value.WaitAsync(ct).ConfigureAwait(false);
         return supported.TryGetValue(symbol, out var canonical) ? canonical : null;
     }
 

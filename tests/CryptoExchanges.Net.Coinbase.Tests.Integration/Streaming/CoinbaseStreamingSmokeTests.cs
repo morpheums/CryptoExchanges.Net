@@ -56,7 +56,9 @@ public class CoinbaseStreamingSmokeTests
         }
     }
 
-    private static IStreamClient BuildStreamClient()
+    // Returns the provider so the caller can dispose it (await using). The provider owns the keyed
+    // IStreamClient singleton, so disposing it tears down the engine/transport/timers — no leak.
+    private static ServiceProvider BuildStreamClient(out IStreamClient client)
     {
         var services = new ServiceCollection();
         services.AddCoinbaseExchange(o =>
@@ -66,8 +68,8 @@ public class CoinbaseStreamingSmokeTests
         });
         services.AddCoinbaseStreams();
         var sp = services.BuildServiceProvider();
-        var factory = sp.GetRequiredService<IStreamClientFactory>();
-        return factory.GetClient(ExchangeId.Coinbase);
+        client = sp.GetRequiredService<IStreamClientFactory>().GetClient(ExchangeId.Coinbase);
+        return sp;
     }
 
     [Fact]
@@ -76,7 +78,7 @@ public class CoinbaseStreamingSmokeTests
         var skipReason = await CheckReachabilityAsync();
         Assert.SkipWhen(skipReason is not null, skipReason ?? string.Empty);
 
-        await using var client = BuildStreamClient();
+        await using var provider = BuildStreamClient(out var client);
         var received = new TaskCompletionSource<Ticker>(TaskCreationOptions.RunContinuationsAsynchronously);
 
         var subscription = await client.SubscribeToTickerAsync(
@@ -102,7 +104,7 @@ public class CoinbaseStreamingSmokeTests
         var skipReason = await CheckReachabilityAsync();
         Assert.SkipWhen(skipReason is not null, skipReason ?? string.Empty);
 
-        await using var client = BuildStreamClient();
+        await using var provider = BuildStreamClient(out var client);
         var received = new TaskCompletionSource<Trade>(TaskCreationOptions.RunContinuationsAsynchronously);
 
         var subscription = await client.SubscribeToTradesAsync(
@@ -129,7 +131,7 @@ public class CoinbaseStreamingSmokeTests
         var skipReason = await CheckReachabilityAsync();
         Assert.SkipWhen(skipReason is not null, skipReason ?? string.Empty);
 
-        await using var client = BuildStreamClient();
+        await using var provider = BuildStreamClient(out var client);
         var received = new TaskCompletionSource<Candlestick>(TaskCreationOptions.RunContinuationsAsynchronously);
 
         var subscription = await client.SubscribeToKlinesAsync(
@@ -162,7 +164,7 @@ public class CoinbaseStreamingSmokeTests
         var skipReason = await CheckReachabilityAsync();
         Assert.SkipWhen(skipReason is not null, skipReason ?? string.Empty);
 
-        await using var client = BuildStreamClient();
+        await using var provider = BuildStreamClient(out var client);
         var received = new TaskCompletionSource<OrderBook>(TaskCreationOptions.RunContinuationsAsynchronously);
         var subscriptions = new List<IStreamSubscription>(MultiSymbolSet.Length);
 

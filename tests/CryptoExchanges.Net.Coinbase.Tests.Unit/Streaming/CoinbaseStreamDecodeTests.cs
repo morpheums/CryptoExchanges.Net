@@ -176,4 +176,61 @@ public class CoinbaseStreamDecodeTests
         result.Interval.Should().Be(KlineInterval.OneMinute);
         result.OpenTime.ToUnixTimeSeconds().Should().Be(1718784000L);
     }
+
+    [Fact]
+    public void Ticker_EmptyEventsArray_ThrowsClearDecodeException_NotNre()
+    {
+        var registry = BuildRegistry();
+        var decoder = registry.Resolve(StreamKind.Ticker);
+
+        var frame = Utf8Bytes("{\"channel\":\"ticker\",\"events\":[]}");
+
+        var act = () => decoder(frame);
+
+        act.Should().Throw<InvalidOperationException>()
+            .Which.Message.Should().Contain("empty");
+    }
+
+    [Fact]
+    public void Ticker_NullNestedArrayElement_ThrowsClearDecodeException_NotNre()
+    {
+        var registry = BuildRegistry();
+        var decoder = registry.Resolve(StreamKind.Ticker);
+
+        // A null tickers[0] element must surface a clear decode exception, never an opaque NRE.
+        var frame = Utf8Bytes("{\"channel\":\"ticker\",\"events\":[{\"type\":\"snapshot\",\"tickers\":[null]}]}");
+
+        var act = () => decoder(frame);
+
+        act.Should().Throw<InvalidOperationException>()
+            .Which.Message.Should().Contain("null");
+    }
+
+    [Fact]
+    public void OrderBook_NullEventElement_ThrowsClearDecodeException_NotNre()
+    {
+        var registry = BuildRegistry();
+        var decoder = registry.Resolve(StreamKind.OrderBook);
+
+        var frame = Utf8Bytes("{\"channel\":\"l2_data\",\"events\":[null]}");
+
+        var act = () => decoder(frame);
+
+        act.Should().Throw<InvalidOperationException>()
+            .Which.Message.Should().Contain("null");
+    }
+
+    [Fact]
+    public void Kline_EmptyCandlesArray_ThrowsClearDecodeException_NotNre()
+    {
+        var registry = BuildRegistry();
+        var decoder = registry.Resolve(StreamKind.Kline);
+
+        var frame = Utf8Bytes("{\"channel\":\"candles\",\"events\":[{\"candles\":[]}]}");
+
+        var act = () => decoder(frame);
+
+        act.Should().Throw<InvalidOperationException>()
+            .Which.Message.Should().Contain("empty");
+    }
 }

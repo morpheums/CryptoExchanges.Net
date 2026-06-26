@@ -34,7 +34,7 @@ internal static class KrakenStreamDecoders
 
         registry.Register(StreamKind.Ticker, bytes =>
         {
-            var dto = DeserializeFirstDataElement<StreamTickerDto>(bytes)!;
+            var dto = DeserializeFirstDataElement<StreamTickerDto>(bytes);
             var symbol = symbolMapper.FromWire(dto.Symbol);
             return new Ticker(
                 Symbol: symbol,
@@ -52,7 +52,7 @@ internal static class KrakenStreamDecoders
         registry.Register(StreamKind.Trade, bytes =>
         {
             // Kraken trade frames may batch multiple trades; emit the most recent (last).
-            var dto = DeserializeLastDataElement<StreamTradeDto>(bytes)!;
+            var dto = DeserializeLastDataElement<StreamTradeDto>(bytes);
             var symbol = symbolMapper.FromWire(dto.Symbol);
             // "side" is the taker side: "sell" taker ⇒ buyer is the maker.
             var isBuyerMaker = string.Equals(dto.Side, "sell", StringComparison.Ordinal);
@@ -72,7 +72,7 @@ internal static class KrakenStreamDecoders
 
         registry.Register(StreamKind.OrderBook, bytes =>
         {
-            var dto = DeserializeFirstDataElement<StreamDepthDto>(bytes)!;
+            var dto = DeserializeFirstDataElement<StreamDepthDto>(bytes);
             var symbol = symbolMapper.FromWire(dto.Symbol);
             var bids = new List<OrderBookEntry>(dto.Bids.Count);
             foreach (var b in dto.Bids)
@@ -92,7 +92,7 @@ internal static class KrakenStreamDecoders
 
         registry.Register(StreamKind.Kline, bytes =>
         {
-            var dto = DeserializeFirstDataElement<StreamKlineDto>(bytes)!;
+            var dto = DeserializeFirstDataElement<StreamKlineDto>(bytes);
             var symbol = symbolMapper.FromWire(dto.Symbol);
             var openTime = DateTimeOffset.TryParse(dto.IntervalBegin,
                 System.Globalization.CultureInfo.InvariantCulture,
@@ -115,7 +115,7 @@ internal static class KrakenStreamDecoders
         return registry;
     }
 
-    private static T? DeserializeFirstDataElement<T>(ReadOnlyMemory<byte> frame)
+    private static T DeserializeFirstDataElement<T>(ReadOnlyMemory<byte> frame)
     {
         var reader = new Utf8JsonReader(frame.Span);
         using var doc = JsonDocument.ParseValue(ref reader);
@@ -127,10 +127,12 @@ internal static class KrakenStreamDecoders
         if (!enumerator.MoveNext())
             throw new InvalidOperationException(
                 $"Kraken 'data' array is empty; cannot decode {typeof(T).Name}.");
-        return enumerator.Current.Deserialize<T>(JsonOpts);
+        return enumerator.Current.Deserialize<T>(JsonOpts)
+            ?? throw new InvalidOperationException(
+                $"Kraken 'data' element deserialized to null; cannot decode {typeof(T).Name}.");
     }
 
-    private static T? DeserializeLastDataElement<T>(ReadOnlyMemory<byte> frame)
+    private static T DeserializeLastDataElement<T>(ReadOnlyMemory<byte> frame)
     {
         var reader = new Utf8JsonReader(frame.Span);
         using var doc = JsonDocument.ParseValue(ref reader);
@@ -144,6 +146,8 @@ internal static class KrakenStreamDecoders
         if (last is null)
             throw new InvalidOperationException(
                 $"Kraken 'data' array is empty; cannot decode {typeof(T).Name}.");
-        return last.Value.Deserialize<T>(JsonOpts);
+        return last.Value.Deserialize<T>(JsonOpts)
+            ?? throw new InvalidOperationException(
+                $"Kraken 'data' element deserialized to null; cannot decode {typeof(T).Name}.");
     }
 }

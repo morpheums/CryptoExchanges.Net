@@ -169,4 +169,47 @@ public class KrakenStreamDecodeTests
         result.Volume.Should().Be(45.678m);
         result.OpenTime.Should().NotBe(DateTimeOffset.MinValue);
     }
+
+    [Fact]
+    public void Ticker_EmptyDataArray_ThrowsClearDecodeException_NotNre()
+    {
+        var registry = BuildRegistry();
+        var decoder = registry.Resolve(StreamKind.Ticker);
+
+        var frame = Envelope("ticker", "[]");
+
+        var act = () => decoder(frame);
+
+        act.Should().Throw<InvalidOperationException>()
+            .Which.Message.Should().Contain("empty");
+    }
+
+    [Fact]
+    public void Trade_NullDataElement_ThrowsClearDecodeException_NotNre()
+    {
+        var registry = BuildRegistry();
+        var decoder = registry.Resolve(StreamKind.Trade);
+
+        // A null element must surface a clear decode exception, never an opaque NullReferenceException.
+        var frame = Envelope("trade", "[null]");
+
+        var act = () => decoder(frame);
+
+        act.Should().Throw<InvalidOperationException>()
+            .Which.Message.Should().Contain("null");
+    }
+
+    [Fact]
+    public void OrderBook_NullDataElement_ThrowsClearDecodeException_NotNre()
+    {
+        var registry = BuildRegistry();
+        var decoder = registry.Resolve(StreamKind.OrderBook);
+
+        var frame = Envelope("book", "[null]");
+
+        var act = () => decoder(frame);
+
+        act.Should().Throw<InvalidOperationException>()
+            .Which.Message.Should().Contain("null");
+    }
 }

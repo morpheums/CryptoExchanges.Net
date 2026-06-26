@@ -235,7 +235,7 @@ public class BybitStreamProtocolTests
     [Fact]
     public void BuildSubscribe_OrderBook_DefaultDepth50()
     {
-        // Confirmed default depth = 50 (Bybit v5 spot available levels: 1, 50, 200).
+        // Confirmed default depth = 50 (Bybit v5 spot available levels: 1, 50, 200, 1000).
         var protocol = MakeProtocol();
         var request = new StreamRequest(StreamKind.OrderBook, "BTCUSDT");
 

@@ -1,3 +1,4 @@
+using System.Net.Sockets;
 using System.Net.WebSockets;
 using Xunit;
 using AwesomeAssertions;
@@ -42,10 +43,10 @@ public class KucoinStreamingSmokeTests
     /// </summary>
     private static async Task<string?> CheckReachabilityAsync()
     {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(8));
         try
         {
             using var ws = new ClientWebSocket();
-            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(8));
             // A successful TLS handshake proves the host is reachable even if the token
             // is missing — bullet-public negotiation happens over HTTP, not here.
             await ws.ConnectAsync(new Uri("wss://ws-api.kucoin.com/endpoint"), cts.Token)
@@ -54,10 +55,27 @@ public class KucoinStreamingSmokeTests
                     .ConfigureAwait(false);
             return null;
         }
-        catch
+        // Skip ONLY on a transport failure (a SocketException, possibly nested in the WebSocketException
+        // chain) or the probe's own timeout. Handshake/auth/HTTP-status/TLS rejections propagate and fail.
+        catch (Exception ex) when (
+            ex is SocketException
+            || (ex is OperationCanceledException && cts.IsCancellationRequested)
+            || (ex is WebSocketException && HasInnerSocketException(ex)))
         {
-            return "KuCoin WebSocket endpoint unreachable — skipping integration streaming smoke tests.";
+            return "KuCoin WebSocket endpoint unreachable (connectivity) — skipping integration streaming smoke tests.";
         }
+    }
+
+    // A transport connect failure (DNS/refused/reset) nests a SocketException in the chain; a server
+    // handshake rejection (non-101 status) does not — let those propagate.
+    private static bool HasInnerSocketException(Exception ex)
+    {
+        for (Exception? inner = ex.InnerException; inner is not null; inner = inner.InnerException)
+        {
+            if (inner is SocketException)
+                return true;
+        }
+        return false;
     }
 
     /// <summary>

@@ -1,3 +1,4 @@
+using System.Net.Http;
 using Xunit;
 using AwesomeAssertions;
 using CryptoExchanges.Net.Coinbase;
@@ -32,15 +33,19 @@ public class CoinbaseRestSmokeTests : IAsyncLifetime
             ? CoinbaseExchangeClient.CreateFromEnvironment()
             : CoinbaseExchangeClient.Create(new CoinbaseOptions());
 
+        // Probe a public endpoint directly (not PingAsync, which masks 401/HTTP errors into false): skip
+        // only on no-response (null StatusCode) or timeout; a StatusCode or ExchangeException propagates.
         try
         {
-            var reachable = await _client.PingAsync().ConfigureAwait(false);
-            if (!reachable)
-                _skipReason = "Coinbase REST endpoint unreachable — skipping integration smoke tests.";
+            _ = await _client.MarketData.GetExchangeInfoAsync().ConfigureAwait(false);
         }
-        catch
+        catch (HttpRequestException ex) when (ex.StatusCode is null)
         {
-            _skipReason = "Coinbase REST endpoint unreachable — skipping integration smoke tests.";
+            _skipReason = "Coinbase REST endpoint unreachable (connectivity) — skipping integration smoke tests.";
+        }
+        catch (OperationCanceledException)
+        {
+            _skipReason = "Coinbase REST endpoint unreachable (timeout) — skipping integration smoke tests.";
         }
     }
 

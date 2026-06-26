@@ -1,3 +1,4 @@
+using System.Net.Sockets;
 using System.Net.WebSockets;
 using Xunit;
 using AwesomeAssertions;
@@ -45,20 +46,37 @@ public class BinanceStreamSmokeTests
     /// </summary>
     private static async Task<string?> CheckReachabilityAsync()
     {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(8));
         try
         {
             using var ws = new ClientWebSocket();
-            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(8));
             await ws.ConnectAsync(new Uri("wss://stream.binance.com:9443/stream"), cts.Token)
                     .ConfigureAwait(false);
             await ws.CloseAsync(WebSocketCloseStatus.NormalClosure, "probe", CancellationToken.None)
                     .ConfigureAwait(false);
             return null;
         }
-        catch
+        // Skip ONLY on a transport failure (a SocketException, possibly nested in the WebSocketException
+        // chain) or the probe's own timeout. Handshake/auth/HTTP-status/TLS rejections propagate and fail.
+        catch (Exception ex) when (
+            ex is SocketException
+            || (ex is OperationCanceledException && cts.IsCancellationRequested)
+            || (ex is WebSocketException && HasInnerSocketException(ex)))
         {
-            return "Binance WebSocket endpoint unreachable — skipping integration smoke tests.";
+            return "Binance WebSocket endpoint unreachable (connectivity) — skipping integration smoke tests.";
         }
+    }
+
+    // A transport connect failure (DNS/refused/reset) nests a SocketException in the chain; a server
+    // handshake rejection (non-101 status) does not — let those propagate.
+    private static bool HasInnerSocketException(Exception ex)
+    {
+        for (Exception? inner = ex.InnerException; inner is not null; inner = inner.InnerException)
+        {
+            if (inner is SocketException)
+                return true;
+        }
+        return false;
     }
 
     private static IStreamClient BuildClient()

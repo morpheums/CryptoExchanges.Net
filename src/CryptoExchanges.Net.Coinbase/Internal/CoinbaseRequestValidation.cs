@@ -8,14 +8,14 @@ internal static class CoinbaseRequestValidation
 {
     /// <summary>
     /// Maximum number of candles Coinbase returns per call for the
-    /// <c>/api/v3/brokerage/products/{product_id}/candles</c> endpoint.
+    /// <c>/api/v3/brokerage/market/products/{product_id}/candles</c> endpoint.
     /// Coinbase caps <c>limit</c> at 350 per call.
     /// </summary>
     public const int MaxCandleLimit = 350;
 
     /// <summary>
     /// Maximum number of records returned per call for the
-    /// <c>/api/v3/brokerage/market/market-trades</c> endpoint.
+    /// <c>/api/v3/brokerage/market/products/{product_id}/ticker</c> (market trades) endpoint.
     /// </summary>
     public const int MaxTradesLimit = 1000;
 

@@ -1,3 +1,4 @@
+using System.Net.Http;
 using Xunit;
 using AwesomeAssertions;
 using CryptoExchanges.Net.Kucoin;
@@ -8,10 +9,10 @@ using CryptoExchanges.Net.Core.Interfaces;
 namespace CryptoExchanges.Net.Kucoin.Tests.Integration;
 
 /// <summary>
-/// Live integration smoke tests for the KuCoin REST client. Tests self-skip when
-/// <c>KUCOIN_API_KEY</c> is not set or when the REST endpoint is unreachable, so the
-/// default non-integration gate (<c>dotnet test --filter 'Category!=Integration'</c>)
-/// is unaffected.
+/// Live integration smoke tests for the KuCoin REST client. Public market-data tests self-skip only
+/// when the REST endpoint is unreachable; credentialed tests additionally self-skip when
+/// <c>KUCOIN_API_KEY</c> is absent, so the default non-integration gate
+/// (<c>dotnet test --filter 'Category!=Integration'</c>) is unaffected.
 /// </summary>
 [Trait("Category", "Integration")]
 [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1001:Types that own disposable fields should be disposable", Justification = "Disposed in DisposeAsync")]
@@ -21,30 +22,35 @@ public class KucoinRestSmokeTests : IAsyncLifetime
 
     private KucoinExchangeClient _client = null!;
     private string? _skipReason;
+    private bool _hasCredentials;
 
     /// <inheritdoc />
     public async ValueTask InitializeAsync()
     {
-        var apiKey = Environment.GetEnvironmentVariable("KUCOIN_API_KEY");
-        if (string.IsNullOrEmpty(apiKey))
-        {
-            _skipReason = "KUCOIN_API_KEY not set — skipping KuCoin integration smoke tests.";
-            // Still need a valid client instance for DisposeAsync, so use empty credentials.
-            _client = KucoinExchangeClient.Create(new KucoinOptions());
-            return;
-        }
+        // KuCoin signs with key + secret + passphrase; partial creds → public-only so credentialed
+        // tests skip rather than running through a broken CreateFromEnvironment.
+        _hasCredentials =
+            !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("KUCOIN_API_KEY"))
+            && !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("KUCOIN_SECRET_KEY"))
+            && !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("KUCOIN_PASSPHRASE"));
 
-        _client = KucoinExchangeClient.CreateFromEnvironment();
+        _client = _hasCredentials
+            ? KucoinExchangeClient.CreateFromEnvironment()
+            : KucoinExchangeClient.Create(new KucoinOptions());
 
+        // Probe a public endpoint directly (not PingAsync, which masks 401/HTTP errors into false): skip
+        // only on no-response (null StatusCode) or timeout; a StatusCode or ExchangeException propagates.
         try
         {
-            var reachable = await _client.PingAsync().ConfigureAwait(false);
-            if (!reachable)
-                _skipReason = "KuCoin REST endpoint unreachable — skipping integration smoke tests.";
+            _ = await _client.MarketData.GetExchangeInfoAsync().ConfigureAwait(false);
         }
-        catch
+        catch (HttpRequestException ex) when (ex.StatusCode is null)
         {
-            _skipReason = "KuCoin REST endpoint unreachable — skipping integration smoke tests.";
+            _skipReason = "KuCoin REST endpoint unreachable (connectivity) — skipping integration smoke tests.";
+        }
+        catch (OperationCanceledException)
+        {
+            _skipReason = "KuCoin REST endpoint unreachable (timeout) — skipping integration smoke tests.";
         }
     }
 
@@ -55,11 +61,15 @@ public class KucoinRestSmokeTests : IAsyncLifetime
         GC.SuppressFinalize(this);
     }
 
-    // Self-skip guard: reports the test as genuinely skipped (not failed) when env vars / network absent.
+    // Self-skip guard: reports the test as genuinely skipped (not failed) when the endpoint is unreachable.
     private void SkipIfUnavailable()
         => Assert.SkipWhen(_skipReason is not null, _skipReason ?? string.Empty);
 
-    // ── Public REST ──
+    private void SkipIfNoCredentials()
+    {
+        SkipIfUnavailable();
+        Assert.SkipWhen(!_hasCredentials, "KuCoin credentials (KUCOIN_API_KEY/KUCOIN_SECRET_KEY/KUCOIN_PASSPHRASE) not fully set — skipping credential-required smoke test.");
+    }
 
     [Fact]
     public async Task GetServerTime_ReturnsTimestamp()
@@ -67,7 +77,6 @@ public class KucoinRestSmokeTests : IAsyncLifetime
         SkipIfUnavailable();
         // SyncServerTimeAsync exercises the /api/v1/timestamp public endpoint without requiring credentials.
         await _client.SyncServerTimeAsync(TestContext.Current.CancellationToken);
-        // If we reach here without throwing, the endpoint returned a positive timestamp.
     }
 
     [Fact]
@@ -93,12 +102,10 @@ public class KucoinRestSmokeTests : IAsyncLifetime
         orderBook.Asks[0].Price.Should().BeGreaterThan(0);
     }
 
-    // ── Signed REST (requires credentials) ──
-
     [Fact]
     public async Task GetBalances_WithCredentials_ReturnsBalances()
     {
-        SkipIfUnavailable();
+        SkipIfNoCredentials();
         var balances = await _client.Account.GetBalancesAsync(TestContext.Current.CancellationToken);
         // A valid signed request must return a non-null list (empty is acceptable for a fresh account).
         balances.Should().NotBeNull();
@@ -107,7 +114,7 @@ public class KucoinRestSmokeTests : IAsyncLifetime
     [Fact]
     public async Task PlaceAndCancelOrder_LimitBuy_Roundtrip()
     {
-        SkipIfUnavailable();
+        SkipIfNoCredentials();
 
         // Use a price far below market to avoid accidental fills.
         // KuCoin minimum order size for BTC-USDT spot is 0.00001 BTC.

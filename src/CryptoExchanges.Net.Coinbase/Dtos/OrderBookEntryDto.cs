@@ -1,6 +1,6 @@
 namespace CryptoExchanges.Net.Coinbase.Dtos;
 
-/// <summary>A single price-level entry in a Coinbase order book (<c>/api/v3/brokerage/product_book</c>).</summary>
+/// <summary>A single price-level entry in a Coinbase order book (<c>/api/v3/brokerage/market/product_book</c>).</summary>
 internal sealed record OrderBookEntryDto
 {
     [JsonPropertyName("price")]

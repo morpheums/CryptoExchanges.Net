@@ -11,7 +11,7 @@ namespace CryptoExchanges.Net.Coinbase;
 /// and typed error translation are all provided by the resilience pipeline on the injected
 /// <see cref="HttpClient"/>. BaseAddress is host-only (no path) so <c>RequestUri.PathAndQuery</c> equals
 /// the path the JWT <c>uri</c> claim binds (sign-consistency with the Coinbase signer).
-/// Callers pass the full path (e.g. <c>/api/v3/brokerage/products</c>) as the endpoint.
+/// Callers pass the full path (e.g. <c>/api/v3/brokerage/accounts</c>) as the endpoint.
 /// </summary>
 internal sealed class CoinbaseHttpClient(HttpClient httpClient) : ICoinbaseHttpClient
 {

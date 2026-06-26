@@ -2,7 +2,7 @@ namespace CryptoExchanges.Net.Kraken.Dtos.Streaming;
 
 /// <summary>
 /// One element of the <c>data</c> array in a Kraken WS v2 ticker frame (<c>channel: ticker</c>).
-/// Symbol is sourced from routing key; the data element carries the symbol redundantly.
+/// The symbol is read from the <c>symbol</c> field carried in this frame payload.
 /// </summary>
 internal sealed record StreamTickerDto
 {

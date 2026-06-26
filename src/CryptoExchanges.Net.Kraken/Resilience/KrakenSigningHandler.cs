@@ -45,7 +45,13 @@ internal sealed class KrakenSigningHandler(string apiKey, KrakenSignatureService
         var nonce = KrakenSignatureService.MintNonce();
         var body = InjectNonce(existingBody, nonce);
 
-        request.Content = new StringContent(body, Encoding.UTF8, "application/x-www-form-urlencoded");
+        // Replace the body and dispose the prior content so retried (re-signed) requests
+        // don't leak the previous StringContent instance.
+        var previous = request.Content;
+        var newContent = new StringContent(body, Encoding.UTF8, "application/x-www-form-urlencoded");
+        request.Content = newContent;
+        if (previous is not null && !ReferenceEquals(previous, newContent))
+            previous.Dispose();
 
         var signature = signatureService.ComputeSignature(path, nonce, body);
 

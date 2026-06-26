@@ -87,7 +87,8 @@ public sealed class CoinbaseExchangeClient : IExchangeClient, IAsyncDisposable
     {
         try
         {
-            // Coinbase time endpoint is public; reaching here without exception means the API is reachable.
+            // Performs a lightweight public call via GetExchangeInfoAsync; reaching here without
+            // exception means the API is reachable.
             _ = await MarketData.GetExchangeInfoAsync(ct).ConfigureAwait(false);
             return true;
         }

@@ -239,6 +239,35 @@ public class KrakenSignatureServiceTests
         captured.Headers.Contains("API-Sign").Should().BeFalse();
     }
 
+    [Fact]
+    public async Task SigningHandler_ReSign_DisposesPriorContent()
+    {
+        var svc = new KrakenSignatureService(KatSecret);
+        var stub = new StubHandler(_ => new HttpResponseMessage(HttpStatusCode.OK));
+        using var handler = BuildHandler("api-key", svc, stub);
+        using var invoker = new HttpMessageInvoker(handler);
+
+        var original = new DisposeTrackingContent("ordertype=limit");
+        using var request = new HttpRequestMessage(
+            HttpMethod.Post, "https://api.kraken.com/0/private/AddOrder")
+        {
+            Content = original
+        };
+        KrakenSigningRequest.MarkSigned(request);
+
+        // Pass 1: signing replaces the original body, which must be disposed (no leak).
+        using var resp1 = await invoker.SendAsync(request, CancellationToken.None);
+        original.Disposed.Should().BeTrue();
+
+        var afterFirstSign = request.Content!;
+
+        // Pass 2 (retry): re-signing replaces and disposes the previously-signed body.
+        using var resp2 = await invoker.SendAsync(request, CancellationToken.None);
+        request.Content.Should().NotBeSameAs(afterFirstSign);
+        var readDisposed = async () => await afterFirstSign.ReadAsStringAsync(CancellationToken.None);
+        await readDisposed.Should().ThrowAsync<ObjectDisposedException>();
+    }
+
     private static ExchangeException Translate(HttpStatusCode status, string body)
     {
         using var resp = new HttpResponseMessage(status);
@@ -290,5 +319,28 @@ public class KrakenSignatureServiceTests
         protected override Task<HttpResponseMessage> SendAsync(
             HttpRequestMessage request, CancellationToken cancellationToken)
             => Task.FromResult(handler(request));
+    }
+
+    private sealed class DisposeTrackingContent : HttpContent
+    {
+        private readonly byte[] _bytes;
+        public bool Disposed { get; private set; }
+
+        public DisposeTrackingContent(string content) => _bytes = Encoding.UTF8.GetBytes(content);
+
+        protected override Task SerializeToStreamAsync(Stream stream, TransportContext? context)
+            => stream.WriteAsync(_bytes, 0, _bytes.Length);
+
+        protected override bool TryComputeLength(out long length)
+        {
+            length = _bytes.Length;
+            return true;
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            Disposed = true;
+            base.Dispose(disposing);
+        }
     }
 }

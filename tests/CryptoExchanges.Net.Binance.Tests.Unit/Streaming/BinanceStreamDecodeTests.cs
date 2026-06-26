@@ -182,6 +182,35 @@ public class BinanceStreamDecodeTests
         result.OpenTime.ToUnixTimeMilliseconds().Should().Be(1718784000000L);
     }
 
+    [Fact]
+    public void Ticker_NullData_ThrowsClearDecodeException_NotNre()
+    {
+        var registry = BuildRegistry();
+        var decoder = registry.Resolve(StreamKind.Ticker);
+
+        // A null 'data' element must surface a clear decode exception, never an opaque NRE.
+        var frame = Envelope("btcusdt@ticker", "null");
+
+        var act = () => decoder(frame);
+
+        act.Should().Throw<InvalidOperationException>()
+            .Which.Message.Should().Contain("null");
+    }
+
+    [Fact]
+    public void OrderBook_NullData_ThrowsClearDecodeException_NotNre()
+    {
+        var registry = BuildRegistry();
+        var decoder = registry.Resolve(StreamKind.OrderBook);
+
+        var frame = Envelope("btcusdt@depth20", "null");
+
+        var act = () => decoder(frame);
+
+        act.Should().Throw<InvalidOperationException>()
+            .Which.Message.Should().Contain("null");
+    }
+
     // ── DI resolution ─────────────────────────────────────────────────────────
 
     [Fact]

@@ -194,6 +194,35 @@ public class KucoinStreamDecodeTests
     }
 
     [Fact]
+    public void Ticker_NullInnerData_ThrowsClearDecodeException_NotNre()
+    {
+        var registry = BuildRegistry();
+        var decoder = registry.Resolve(StreamKind.Ticker);
+
+        // A null data.data element must surface a clear decode exception, never an opaque NRE.
+        var frame = Utf8Bytes("{\"data\":{\"data\":null}}");
+
+        var act = () => decoder(frame);
+
+        act.Should().Throw<InvalidOperationException>()
+            .Which.Message.Should().Contain("null");
+    }
+
+    [Fact]
+    public void Trade_NullData_ThrowsClearDecodeException_NotNre()
+    {
+        var registry = BuildRegistry();
+        var decoder = registry.Resolve(StreamKind.Trade);
+
+        var frame = Utf8Bytes("{\"data\":null}");
+
+        var act = () => decoder(frame);
+
+        act.Should().Throw<InvalidOperationException>()
+            .Which.Message.Should().Contain("null");
+    }
+
+    [Fact]
     public async Task AddKucoinStreams_AfterAddKucoinExchange_ResolvesKeyedStreamClient()
     {
         var services = new ServiceCollection();

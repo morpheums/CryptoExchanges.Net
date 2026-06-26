@@ -207,4 +207,47 @@ public class BitgetStreamDecodeTests
         result.Close.Should().BePositive();
         result.Volume.Should().BePositive();
     }
+
+    [Fact]
+    public void Ticker_EmptyDataArray_ThrowsClearDecodeException_NotNre()
+    {
+        var registry = BuildRegistry();
+        var decoder = registry.Resolve(StreamKind.Ticker);
+
+        var frame = Envelope("ticker", "BTCUSDT", "[]");
+
+        var act = () => decoder(frame);
+
+        act.Should().Throw<InvalidOperationException>()
+            .Which.Message.Should().Contain("empty");
+    }
+
+    [Fact]
+    public void Ticker_NullDataElement_ThrowsClearDecodeException_NotNre()
+    {
+        var registry = BuildRegistry();
+        var decoder = registry.Resolve(StreamKind.Ticker);
+
+        // A null data element must surface a clear decode exception, never an opaque NRE.
+        var frame = Envelope("ticker", "BTCUSDT", "[null]");
+
+        var act = () => decoder(frame);
+
+        act.Should().Throw<InvalidOperationException>()
+            .Which.Message.Should().Contain("null");
+    }
+
+    [Fact]
+    public void Trade_NullDataElement_ThrowsClearDecodeException_NotNre()
+    {
+        var registry = BuildRegistry();
+        var decoder = registry.Resolve(StreamKind.Trade);
+
+        var frame = Envelope("trade", "BTCUSDT", "[null]");
+
+        var act = () => decoder(frame);
+
+        act.Should().Throw<InvalidOperationException>()
+            .Which.Message.Should().Contain("null");
+    }
 }

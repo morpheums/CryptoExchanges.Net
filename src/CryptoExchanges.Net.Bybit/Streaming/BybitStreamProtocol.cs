@@ -151,15 +151,17 @@ internal sealed class BybitStreamProtocol : IStreamProtocol
             $"Unsupported stream kind: {request.Kind}")
     };
 
-    // Bybit v5 spot order books publish only at depths 1/50/200/1000; an unsupported depth
-    // yields an invalid topic the venue rejects, so round each request UP to the nearest tier.
+    // Bybit v5 spot publishes order books only at tiers 1/50/200/1000; round each request UP to
+    // the nearest tier, throwing above 1000 (deepest tier) rather than under-delivering silently.
     private static int MapOrderBookDepth(int? requested) => requested switch
     {
         null => DefaultOrderBookDepth,
         <= 1 => 1,
         <= 50 => 50,
         <= 200 => 200,
-        _ => 1000
+        <= 1000 => 1000,
+        _ => throw new ArgumentOutOfRangeException(nameof(requested), requested,
+            $"Bybit v5 spot supports order-book depths up to 1000; requested {requested}.")
     };
 
     private static string MapInterval(string intervalToken) => intervalToken switch

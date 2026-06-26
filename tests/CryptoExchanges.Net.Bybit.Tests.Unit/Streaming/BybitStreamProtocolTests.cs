@@ -277,7 +277,6 @@ public class BybitStreamProtocolTests
     [InlineData(200, "orderbook.200.BTCUSDT")]
     [InlineData(500, "orderbook.1000.BTCUSDT")]
     [InlineData(1000, "orderbook.1000.BTCUSDT")]
-    [InlineData(5000, "orderbook.1000.BTCUSDT")]
     public void BuildSubscribe_OrderBook_RoundsDepthUpToSupportedTier(int requestedDepth, string expectedTopic)
     {
         // Bybit v5 spot publishes order books only at depths 1/50/200/1000; a non-tier depth
@@ -289,6 +288,21 @@ public class BybitStreamProtocolTests
         using var doc = JsonDocument.Parse(wire);
 
         doc.RootElement.GetProperty("args")[0].GetString().Should().Be(expectedTopic);
+    }
+
+    [Theory]
+    [InlineData(1001)]
+    [InlineData(5000)]
+    public void BuildSubscribe_OrderBook_DepthAbove1000_Throws(int requestedDepth)
+    {
+        // 1000 is the deepest Bybit v5 spot tier; a deeper request is unsatisfiable and must
+        // throw rather than silently clamp DOWN to a shallower book than asked for.
+        var protocol = MakeProtocol();
+        var request = new StreamRequest(StreamKind.OrderBook, "BTCUSDT", Depth: requestedDepth);
+
+        var act = () => protocol.BuildSubscribe(request);
+
+        act.Should().Throw<ArgumentOutOfRangeException>();
     }
 
     [Fact]

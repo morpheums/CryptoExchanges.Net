@@ -35,7 +35,7 @@ internal static class OkxStreamDecoders
         registry.Register(StreamKind.Ticker, bytes =>
         {
             var instId = ReadInstId(bytes);
-            var dto = DeserializeFirstDataElement<StreamTickerDto>(bytes)!;
+            var dto = DeserializeFirstDataElement<StreamTickerDto>(bytes);
             var result = mapper.Map<StreamTickerDto, Ticker>(dto);
             return result with { Symbol = symbolMapper.FromWire(instId) };
         });
@@ -44,7 +44,7 @@ internal static class OkxStreamDecoders
         registry.Register(StreamKind.Trade, bytes =>
         {
             var instId = ReadInstId(bytes);
-            var dto = DeserializeLastDataElement<StreamTradeDto>(bytes)!;
+            var dto = DeserializeLastDataElement<StreamTradeDto>(bytes);
             var symbol = symbolMapper.FromWire(instId);
             return new Trade(
                 Symbol: symbol,
@@ -61,7 +61,7 @@ internal static class OkxStreamDecoders
         registry.Register(StreamKind.OrderBook, bytes =>
         {
             var instId = ReadInstId(bytes);
-            var dto = DeserializeFirstDataElement<StreamDepthDto>(bytes)!;
+            var dto = DeserializeFirstDataElement<StreamDepthDto>(bytes);
             var symbol = symbolMapper.FromWire(instId);
             var bids = new List<OrderBookEntry>(dto.Bids.Count);
             foreach (var b in dto.Bids)
@@ -81,7 +81,7 @@ internal static class OkxStreamDecoders
         {
             var instId = ReadInstId(bytes);
             var symbol = symbolMapper.FromWire(instId);
-            var row = DeserializeFirstDataElement<List<string>>(bytes)!;
+            var row = DeserializeFirstDataElement<List<string>>(bytes);
             if (row.Count < 6)
                 throw new InvalidOperationException(
                     $"OKX kline row has {row.Count} elements; expected at least 6 (ts,o,h,l,c,vol).");
@@ -116,7 +116,7 @@ internal static class OkxStreamDecoders
         return instId.GetString()!;
     }
 
-    private static T? DeserializeFirstDataElement<T>(ReadOnlyMemory<byte> frame)
+    private static T DeserializeFirstDataElement<T>(ReadOnlyMemory<byte> frame)
     {
         var reader = new Utf8JsonReader(frame.Span);
         using var doc = JsonDocument.ParseValue(ref reader);
@@ -128,10 +128,12 @@ internal static class OkxStreamDecoders
         if (!enumerator.MoveNext())
             throw new InvalidOperationException(
                 $"OKX 'data' array is empty; cannot decode {typeof(T).Name}.");
-        return enumerator.Current.Deserialize<T>(JsonOpts);
+        return enumerator.Current.Deserialize<T>(JsonOpts)
+            ?? throw new InvalidOperationException(
+                $"OKX 'data' element deserialized to null; cannot decode {typeof(T).Name}.");
     }
 
-    private static T? DeserializeLastDataElement<T>(ReadOnlyMemory<byte> frame)
+    private static T DeserializeLastDataElement<T>(ReadOnlyMemory<byte> frame)
     {
         var reader = new Utf8JsonReader(frame.Span);
         using var doc = JsonDocument.ParseValue(ref reader);
@@ -145,6 +147,8 @@ internal static class OkxStreamDecoders
         if (last is null)
             throw new InvalidOperationException(
                 $"OKX 'data' array is empty; cannot decode {typeof(T).Name}.");
-        return last.Value.Deserialize<T>(JsonOpts);
+        return last.Value.Deserialize<T>(JsonOpts)
+            ?? throw new InvalidOperationException(
+                $"OKX 'data' element deserialized to null; cannot decode {typeof(T).Name}.");
     }
 }

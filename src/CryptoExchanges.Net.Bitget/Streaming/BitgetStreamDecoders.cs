@@ -33,7 +33,7 @@ internal static class BitgetStreamDecoders
 
         registry.Register(StreamKind.Ticker, bytes =>
         {
-            var dto = DeserializeFirstArrayElement<StreamTickerDto>(bytes)!;
+            var dto = DeserializeFirstArrayElement<StreamTickerDto>(bytes);
             return mapper.Map<StreamTickerDto, Ticker>(dto);
         });
 
@@ -41,7 +41,7 @@ internal static class BitgetStreamDecoders
         registry.Register(StreamKind.Trade, bytes =>
         {
             var symbol = ResolveSymbolFromArg(bytes, symbolMapper);
-            var dto = DeserializeLastArrayElement<StreamTradeDto>(bytes)!;
+            var dto = DeserializeLastArrayElement<StreamTradeDto>(bytes);
             var ms = BitgetValueParsers.ParseMs(dto.Ts);
             return new Trade(
                 Symbol: symbol,
@@ -55,7 +55,7 @@ internal static class BitgetStreamDecoders
         registry.Register(StreamKind.OrderBook, bytes =>
         {
             var symbol = ResolveSymbolFromArg(bytes, symbolMapper);
-            var dto = DeserializeFirstArrayElement<StreamDepthDto>(bytes)!;
+            var dto = DeserializeFirstArrayElement<StreamDepthDto>(bytes);
             var bids = new List<OrderBookEntry>(dto.Bids.Count);
             foreach (var b in dto.Bids)
                 bids.Add(new OrderBookEntry(
@@ -106,7 +106,7 @@ internal static class BitgetStreamDecoders
         return symbolMapper.FromWire(instIdProp.GetString()!);
     }
 
-    private static T? DeserializeFirstArrayElement<T>(ReadOnlyMemory<byte> frame)
+    private static T DeserializeFirstArrayElement<T>(ReadOnlyMemory<byte> frame)
     {
         var reader = new Utf8JsonReader(frame.Span);
         using var doc = JsonDocument.ParseValue(ref reader);
@@ -120,10 +120,12 @@ internal static class BitgetStreamDecoders
         if (!enumerator.MoveNext())
             throw new InvalidOperationException(
                 $"Bitget 'data' array is empty; cannot decode {typeof(T).Name}.");
-        return enumerator.Current.Deserialize<T>(JsonOpts);
+        return enumerator.Current.Deserialize<T>(JsonOpts)
+            ?? throw new InvalidOperationException(
+                $"Bitget 'data' element deserialized to null; cannot decode {typeof(T).Name}.");
     }
 
-    private static T? DeserializeLastArrayElement<T>(ReadOnlyMemory<byte> frame)
+    private static T DeserializeLastArrayElement<T>(ReadOnlyMemory<byte> frame)
     {
         var reader = new Utf8JsonReader(frame.Span);
         using var doc = JsonDocument.ParseValue(ref reader);
@@ -139,7 +141,9 @@ internal static class BitgetStreamDecoders
         if (last is null)
             throw new InvalidOperationException(
                 $"Bitget 'data' array is empty; cannot decode {typeof(T).Name}.");
-        return last.Value.Deserialize<T>(JsonOpts);
+        return last.Value.Deserialize<T>(JsonOpts)
+            ?? throw new InvalidOperationException(
+                $"Bitget 'data' element deserialized to null; cannot decode {typeof(T).Name}.");
     }
 
     private static List<string> DeserializeFirstKlineRow(ReadOnlyMemory<byte> frame)

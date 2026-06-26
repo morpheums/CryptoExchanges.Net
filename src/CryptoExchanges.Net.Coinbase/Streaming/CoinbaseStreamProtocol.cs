@@ -11,8 +11,9 @@ internal sealed class CoinbaseStreamProtocol : IStreamProtocol
         Interval: TimeSpan.FromSeconds(30),
         Timeout: TimeSpan.FromSeconds(60));
 
-    // Proactive "heartbeats" channel keepalive is not wired (no connect-time protocol hook; the engine only
-    // replays the stored subscribe-set). Liveness is handled by the engine's heartbeat watchdog (s_heartbeatPolicy).
+    // Connection-scoped "heartbeats" subscribe keeps idle sockets alive; re-sent on every reconnect.
+    // Coinbase replies with {"channel":"heartbeats",...}, which Classify maps to FrameKind.Pong.
+    private const string HeartbeatsSubscribeFrame = "{\"type\":\"subscribe\",\"channel\":\"heartbeats\",\"product_ids\":[]}";
 
     // level2 subscribe frames → push frames arrive as "l2_data"; routing key uses the push channel.
     private const string OrderBookSubscribeChannel = "level2";
@@ -57,6 +58,9 @@ internal sealed class CoinbaseStreamProtocol : IStreamProtocol
         var (subscribeChannel, productId) = BuildSubscribeChannelAndProductId(request);
         return $"{{\"type\":\"unsubscribe\",\"product_ids\":[\"{productId}\"],\"channel\":\"{subscribeChannel}\"}}";
     }
+
+    /// <inheritdoc/>
+    public IReadOnlyList<string> ConnectFrames() => [HeartbeatsSubscribeFrame];
 
     /// <inheritdoc/>
     public string? BuildSubscribeBatch(IReadOnlyList<StreamRequest> requests)

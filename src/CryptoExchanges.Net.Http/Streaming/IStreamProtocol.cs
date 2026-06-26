@@ -85,6 +85,14 @@ internal interface IStreamProtocol
     string? BuildUnsubscribeBatch(IReadOnlyList<StreamRequest> requests) => null;
 
     /// <summary>
+    /// Connection-level frames the engine sends (paced) immediately after every physical
+    /// (re)connect, before the subscribe-set replay. Returns frame text only — the engine
+    /// executes the sending and pacing (constraint C1). Default none.
+    /// </summary>
+    /// <returns>The connect-time frame payloads in send order, or an empty list for venues that need none.</returns>
+    IReadOnlyList<string> ConnectFrames() => [];
+
+    /// <summary>
     /// Returns the routing key the engine must use to register and look up subscriptions for
     /// the given <paramref name="request"/>. The key produced here must be identical to the
     /// <see cref="StreamFrame.RoutingKey"/> that <see cref="Classify"/> returns for a data frame

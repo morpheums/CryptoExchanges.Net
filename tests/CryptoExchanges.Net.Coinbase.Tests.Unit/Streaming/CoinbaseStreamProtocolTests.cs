@@ -82,6 +82,31 @@ public class CoinbaseStreamProtocolTests
     }
 
     [Fact]
+    public void ConnectFrames_ReturnsHeartbeatsSubscribe()
+    {
+        var protocol = MakeProtocol();
+
+        var frames = protocol.ConnectFrames();
+
+        frames.Should().ContainSingle()
+            .Which.Should().Be("{\"type\":\"subscribe\",\"channel\":\"heartbeats\",\"product_ids\":[]}");
+    }
+
+    [Fact]
+    public void ConnectFrames_FrameIsValidJson()
+    {
+        var protocol = MakeProtocol();
+
+        var frame = protocol.ConnectFrames().Single();
+
+        using var doc = JsonDocument.Parse(frame);
+        doc.RootElement.GetProperty("type").GetString().Should().Be("subscribe");
+        doc.RootElement.GetProperty("channel").GetString().Should().Be("heartbeats");
+        doc.RootElement.GetProperty("product_ids").ValueKind.Should().Be(JsonValueKind.Array);
+        doc.RootElement.GetProperty("product_ids").GetArrayLength().Should().Be(0);
+    }
+
+    [Fact]
     public void Classify_SubscriptionsAckFrame_ReturnsAck()
     {
         var protocol = MakeProtocol();

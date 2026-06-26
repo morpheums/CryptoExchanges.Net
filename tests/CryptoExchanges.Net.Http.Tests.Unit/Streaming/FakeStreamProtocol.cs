@@ -51,6 +51,9 @@ internal sealed class FakeStreamProtocol : IStreamProtocol
     /// <summary>When false, the batch builders return null to exercise the engine's per-frame fallback.</summary>
     public bool SupportsBatch { get; set; } = true;
 
+    /// <summary>Connect-time frames returned by <see cref="ConnectFrames"/>; default none.</summary>
+    public IReadOnlyList<string> ConnectFramesResult { get; set; } = [];
+
     /// <summary>Records each chunk size passed to <see cref="BuildSubscribeBatch"/>, in call order.</summary>
     public ConcurrentQueue<int> SubscribeBatchChunkSizes { get; } = new();
 
@@ -97,6 +100,9 @@ internal sealed class FakeStreamProtocol : IStreamProtocol
         => SupportsBatch
             ? $"UNSUBSCRIBE_BATCH:{requests.Count}:{string.Join(',', requests.Select(RoutingKeyFor))}"
             : null;
+
+    /// <inheritdoc/>
+    public IReadOnlyList<string> ConnectFrames() => ConnectFramesResult;
 
     /// <inheritdoc/>
     public StreamFrame Classify(ReadOnlySpan<byte> frame)
